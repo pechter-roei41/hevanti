@@ -294,13 +294,20 @@ class Server:
         return [text("\n".join(hits) if hits else "לא נמצא.")]
 
     def tool_lectures(self, args):
+        # every course folder is listed, also a course with no lecture yet (a folder with only its glossary)
         by = {}
         for c, n, d, path, mt in self.lib.lectures():
             by.setdefault(c, []).append(n)
-        if not by:
-            return [text("עוד אין הרצאות שמורות.")]
+        try:
+            courses = sorted(x for x in os.listdir(self.lib.root)
+                             if not x.startswith(".") and os.path.isdir(os.path.join(self.lib.root, x)))
+        except OSError:
+            courses = []
+        courses = sorted(set(courses) | set(by))
+        if not courses:
+            return [text("עוד אין קורסים ולא הרצאות שמורות בתיקיית ההרצאות שלי.")]
         out = []
-        for c in sorted(by):
+        for c in courses:
             g = os.path.join(self.lib.root, c, GLOSSARY)
             terms = 0
             try:
@@ -308,8 +315,9 @@ class Server:
                     terms = len([w for w in f.read().splitlines() if w.strip() and not w.startswith("#")])
             except OSError:
                 pass
-            out.append(f"קורס {c} ({len(by[c])} הרצאות, {terms} מונחים במילון):")
-            out += [f"  {c}/{n}" for n in by[c]]
+            lectures = by.get(c, [])
+            out.append(f"קורס {c} ({len(lectures)} הרצאות, {terms} מונחים במילון):")
+            out += [f"  {c}/{n}" for n in lectures] or ["  (עוד אין הרצאות שמורות בקורס הזה)"]
         return [text("\n".join(out))]
 
     # --- the protocol ---
