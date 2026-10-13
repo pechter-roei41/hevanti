@@ -367,6 +367,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
       <div class="what"><b id="cTitle"></b><small id="cSub"></small></div>
       <button class="btn ghost" id="cExport" type="button">קובץ אחד של כל הקורס</button>
       <button class="btn quiet" id="cFolder" type="button">פתיחת התיקייה</button>
+      <button class="btn quiet" id="cDelete" type="button" style="color:var(--danger,#b42318)">מחיקת הקורס</button>
     </div>
     <div class="grid2">
       <div class="card">
@@ -939,6 +940,21 @@ $("#cExport").addEventListener("click", async () => {
   toast(r.ok ? "נשמר הקובץ \"" + courseName + " - כל ההרצאות.txt\" (" + r.lectures + " הרצאות). אפשר להעלות אותו לצ'אט." : (r.error || "לא הצלחתי."));
 });
 $("#cFolder").addEventListener("click", () => api("/api/cmd", {action: "open_folder", what: "course", f: courseName}));
+$("#cDelete").addEventListener("click", async () => {
+  const name = courseName, n = libItems.filter(e => e.course === name).length;
+  if (!name || name === NO_COURSE) return;
+  if (!(await confirmBox("למחוק את הקורס \"" + name + "\"?",
+      (n ? n + " הרצאות, השקופיות שלהן ומילון המונחים של הקורס יימחקו. " : "מילון המונחים של הקורס יימחק. ") +
+      "אפשר לשחזר אותו מסל המחזור של Windows.", "מחיקה"))) return;
+  const r = await api("/api/cmd", {action: "delete_course", course: name});
+  if (!r.ok) { toast(r.error || "לא הצלחתי"); return; }
+  toast(r.where === "bin" ? "הקורס \"" + name + "\" נמחק. אפשר לשחזר אותו מסל המחזור." : "הקורס נמחק (עותק נשמר ב-Hevanti\\deleted).");
+  if (curCourse === name) curCourse = "";
+  if (libCourse === name) libCourse = "";
+  courseName = "";
+  await loadLib(true);
+  location.hash = "";
+});
 
 // ---------- a live lecture ----------
 let liveSince = 0, liveItems = [], liveFollow = true, liveLast = null;
