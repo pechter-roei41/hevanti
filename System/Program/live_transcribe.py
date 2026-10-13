@@ -3251,6 +3251,8 @@ class App:
             return {"ok": True, "terms": len(words)}
         if a in ("move_lecture", "rename_lecture", "delete_lecture"):
             return self.change_lecture(a, d)
+        if a == "delete_course":
+            return self.delete_course(clean_name(d.get("course"), NO_COURSE))
         if a in ("connect", "disconnect"):
             out = connect_app(d.get("app"), a == "connect")
             self._connect_at = 0.0
@@ -3291,6 +3293,29 @@ class App:
             self.quit_evt.set()
             return {"ok": True}
         return {"ok": False, "error": "פקודה לא מוכרת"}
+
+    def delete_course(self, name):
+        """Delete a whole course folder (its lectures, slides and glossary) - to the Recycle Bin when possible."""
+        if not name or name == NO_COURSE:
+            return {"ok": False, "error": "\"ללא קורס\" לא נמחק: שם לכל ההרצאות שעוד לא שויכו לקורס."}
+        src = course_dir(name)
+        if not os.path.isdir(src):
+            return {"ok": False, "error": "הקורס לא נמצא."}
+        prefix = os.path.normcase(os.path.abspath(src)) + os.sep
+        with self.lock:
+            s = self.session
+            busy = s is not None and not s.done and bool(s.transcript) and \
+                os.path.normcase(os.path.abspath(s.transcript)).startswith(prefix)
+        if busy:
+            return {"ok": False, "error": "יש הרצאה פתוחה בקורס הזה עכשיו. אפשר למחוק אותו אחרי שעוצרים אותה."}
+        where = to_recycle_bin(src)
+        if not where:
+            return {"ok": False, "error": "לא הצלחתי למחוק (אולי קובץ מהקורס פתוח בתוכנה אחרת)."}
+        if clean_name(load_settings().get("course"), NO_COURSE) == name:
+            save_settings(course=NO_COURSE)
+        with self.lock:
+            self.lib_rev += 1
+        return {"ok": True, "where": where}
 
     def change_lecture(self, a, d):
         """Move a lecture to another course, rename it (its folder and its transcript file), or delete it."""
