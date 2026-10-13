@@ -855,8 +855,9 @@ class ScreenWatcher(threading.Thread):
     """Saves into the lecture's "שקופיות" folder. The transcript says "שקופיות/<file>" (the lecture folder can
     move to another course); on_shot gets the path inside "ההרצאות שלי" (what the app and Claude use)."""
 
-    def __init__(self, lecture_dir, lecture_rel, start_ts, write_line, on_shot=None):
+    def __init__(self, lecture_dir, lecture_rel, start_ts, write_line, on_shot=None, region_fn=None):
         super().__init__(daemon=True)
+        self.region_fn = region_fn    # YouTube: only the player's rectangle (None = don't look right now)
         self.session_dir = os.path.join(lecture_dir, SLIDES_NAME)
         self.lecture_rel = lecture_rel
         self.start_ts = start_ts
@@ -887,7 +888,14 @@ class ScreenWatcher(threading.Thread):
                 mon = mons[SCREEN_MONITOR] if 0 < SCREEN_MONITOR < len(mons) else mons[1]
                 while not self.stop_evt.is_set():
                     try:
-                        shot = sct.grab(mon)
+                        area = mon
+                        if self.region_fn is not None:
+                            r = self.region_fn()
+                            if r is None:
+                                self.stop_evt.wait(SCREEN_CHECK_S)
+                                continue
+                            area = mon if r == "screen" else r
+                        shot = sct.grab(area)
                         arr = np.frombuffer(shot.bgra, dtype=np.uint8).reshape(shot.height, shot.width, 4)
                         small = arr[::16, ::16, :3].astype(np.int16).mean(axis=2)
                         now = time.time()
@@ -904,7 +912,7 @@ class ScreenWatcher(threading.Thread):
             log(f"צילום מסך הופסק ({e.__class__.__name__}) - התמלול ממשיך כרגיל")
 
     def _save(self, shot, Image, mss_tools, now):
-        name = datetime.datetime.fromtimestamp(now).strftime("%H-%M-%S")
+        name = datetime.datetime.fromtimestamp(now).strftime("%Y%m%d-%H-%M-%S" if self.region_fn else "%H-%M-%S")
         if Image is not None:
             name += ".jpg"
             img = Image.frombytes("RGB", shot.size, shot.bgra, "raw", "BGRX")
@@ -913,9 +921,14 @@ class ScreenWatcher(threading.Thread):
             name += ".png"
             mss_tools.to_png(shot.rgb, shot.size, output=os.path.join(self.session_dir, name))
         self.count += 1
+        rel = f"{self.lecture_rel}/{SLIDES_NAME}/{name}"
+        if self.region_fn is not None:  # YouTube: the line gets the video's time (on_shot knows it)
+            pos = self.on_shot(now, rel)
+            self.write_line(f"[{hms(pos)}] [צילום מסך: {SLIDES_NAME}/{name}]")
+            return
         self._line(now, f"[צילום מסך: {SLIDES_NAME}/{name}]")
         if self.on_shot:
-            self.on_shot(now, f"{self.lecture_rel}/{SLIDES_NAME}/{name}")
+            self.on_shot(now, rel)
 
     def _line(self, now, text):
         stamp = datetime.datetime.fromtimestamp(now).strftime("%H:%M:%S")
@@ -1020,6 +1033,370 @@ class LiveNow(threading.Thread):
         self.stop_evt.set()
         write_now_file(f"מצב: אין כרגע הרצאה חיה ולא צפייה בהקלטה.\n"
                        f"ההרצאה האחרונה: {transcript_rel} (הסתיימה ב-{datetime.datetime.now():%H:%M})\n")
+
+
+# ---------- a YouTube video, watched inside Hevanti ----------
+# YouTube's terms don't allow downloading, so the video plays in YouTube's own player (the official embed)
+# inside the app, and Hevanti does what it does in a live lecture: transcribes the sound the computer plays
+# and photographs the slides - only the player's part of the screen. The page reports the player's time
+# every second, so each line and slide gets the VIDEO's time ([00:23:40]), and the AI knows the exact minute.
+# What was already transcribed is not done again when you go back; a video can be continued another day.
+YT_ID = re.compile(r"[A-Za-z0-9_-]{11}")
+YT_STATE = ".youtube.json"   # in the lecture folder: which parts are transcribed, where you stopped
+YT_HEAD = re.compile(r"# תמלול סרטון יוטיוב \((עברית|אנגלית)\) - (\S+) \| מזהה: ([A-Za-z0-9_-]{11})")
+YT_TITLE = "# כותרת: "
+
+
+def youtube_id(url):
+    """A YouTube link -> (video id, start second) or (None, 0)."""
+    import urllib.parse
+    url = str(url or "").strip()
+    if not url:
+        return None, 0
+    if "://" not in url:
+        url = "https://" + url
+    u = urllib.parse.urlsplit(url)
+    host = (u.hostname or "").lower()
+    q = urllib.parse.parse_qs(u.query)
+    vid = None
+    if host == "youtu.be" or host.endswith(".youtu.be"):
+        vid = u.path.strip("/").split("/")[0]
+    elif host == "youtube.com" or host.endswith(".youtube.com") or host.endswith("youtube-nocookie.com"):
+        if q.get("v"):
+            vid = q["v"][0]
+        else:
+            parts = [p for p in u.path.split("/") if p]
+            if len(parts) >= 2 and parts[0] in ("embed", "shorts", "live", "v", "e"):
+                vid = parts[1]
+    if not vid or not YT_ID.fullmatch(vid):
+        return None, 0
+    start = 0
+    t = (q.get("t") or q.get("start") or [""])[0]
+    m = re.fullmatch(r"(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?", t)
+    if t and m:
+        start = int(m.group(1) or 0) * 3600 + int(m.group(2) or 0) * 60 + int(m.group(3) or 0)
+    return vid, start
+
+
+def find_yt_lecture(course, vid):
+    """The lecture folder of this video in this course, if it was started before."""
+    cdir = course_dir(course)
+    try:
+        names = os.listdir(cdir)
+    except OSError:
+        return None
+    for n in names:
+        d = os.path.join(cdir, n)
+        t = lecture_txt(d)
+        if not os.path.isfile(t):
+            continue
+        try:
+            with open(t, encoding="utf-8", errors="replace") as f:
+                m = YT_HEAD.match(f.readline())
+        except OSError:
+            continue
+        if m and m.group(3) == vid:
+            return d
+    return None
+
+
+class Coverage:
+    """Which parts of the video (seconds) are already transcribed."""
+
+    def __init__(self, spans=None):
+        self.spans = []
+        for s in spans or []:
+            try:
+                self.add(float(s[0]), float(s[1]))
+            except (TypeError, ValueError, IndexError):
+                pass
+
+    def add(self, a, b):
+        if b <= a:
+            return
+        out = []
+        for s, e in self.spans:
+            if e < a - 1 or s > b + 1:
+                out.append((s, e))
+            else:
+                a, b = min(a, s), max(b, e)
+        out.append((a, b))
+        self.spans = sorted(out)
+
+    def covered(self, a, b):
+        """Share of [a, b] already transcribed."""
+        if b <= a:
+            return 0.0
+        got = sum(max(0.0, min(b, e) - max(a, s)) for s, e in self.spans)
+        return got / (b - a)
+
+    def total(self):
+        return sum(e - s for s, e in self.spans)
+
+
+class YtClock:
+    """The player's time, as the page reports it: wall time -> video time."""
+    STALE_S = 12    # no report for this long: we don't know what is playing
+
+    def __init__(self, start=0.0):
+        self.lock = threading.Lock()
+        self.anchors = collections.deque(maxlen=3000)   # (wall, pos, playing, rate)
+        self.page_at = 0.0
+        self.region = None      # the player's rectangle on the screen (physical pixels), or None
+        self.full = False       # the video is full screen
+        self.visible = False
+        self.title = ""
+        self.duration = 0.0
+        self.version = 0
+        self.last_pos = float(start or 0)
+        self.on_title = None
+
+    def set(self, d):
+        now = time.time()
+        title = None
+        with self.lock:
+            self.page_at = now
+            if d.get("closed"):
+                self.page_at, self.visible = 0.0, False
+                self.anchors.append((now, self.last_pos, False, 1.0))
+                self.version += 1
+                return
+            try:
+                pos = max(0.0, float(d.get("pos")))
+            except (TypeError, ValueError):
+                pos = None
+            playing = bool(d.get("playing"))
+            try:
+                rate = min(4.0, max(0.25, float(d.get("rate") or 1)))
+            except (TypeError, ValueError):
+                rate = 1.0
+            if pos is not None:
+                last = self.anchors[-1] if self.anchors else None
+                if last is None or last[2] != playing or abs(pos - self.last_pos) >= 1.5 or not playing:
+                    self.version += 1
+                self.anchors.append((now, pos, playing, rate))
+                self.last_pos = pos
+            self.visible = bool(d.get("visible", True))
+            self.full = bool(d.get("full"))
+            self.region = screen_rect(d.get("view")) if not self.full else None
+            try:
+                self.duration = float(d.get("duration") or self.duration or 0)
+            except (TypeError, ValueError):
+                pass
+            t = str(d.get("title") or "").strip()[:200]
+            if t and t != self.title:
+                self.title, title = t, t
+        if title and self.on_title:
+            self.on_title(title)
+
+    def pos_at(self, wall):
+        """-> (video seconds, playing) at that moment, or None if the player was not reporting."""
+        with self.lock:
+            for w, p, playing, rate in reversed(self.anchors):
+                if w <= wall + 0.05:
+                    if wall - w > self.STALE_S:
+                        return None
+                    return (p + (wall - w) * rate if playing else p), playing
+            return None
+
+    def now(self):
+        """(position, playing, page open)."""
+        with self.lock:
+            alive = time.time() - self.page_at < 75
+        m = self.pos_at(time.time())
+        if m is None:
+            return self.last_pos, False, alive
+        return m[0], m[1], alive
+
+    def rate_at(self, wall):
+        with self.lock:
+            for w, p, playing, rate in reversed(self.anchors):
+                if w <= wall + 0.05:
+                    return rate
+        return 1.0
+
+    def capture_rect(self):
+        """Where to photograph: the player's rectangle, the whole screen (full screen), or None (not visible)."""
+        with self.lock:
+            if time.time() - self.page_at > self.STALE_S or not self.visible:
+                return None
+            if self.full:
+                return "screen"
+            return self.region
+
+
+def screen_rect(v):
+    """The page's report about where the player is -> a rectangle on the screen in physical pixels.
+    (The browser speaks in CSS pixels from the window's corner; the screenshot in real pixels from the screen's.)"""
+    if not isinstance(v, dict):
+        return None
+    try:
+        sx, sy = float(v["sx"]), float(v["sy"])
+        ow, oh, iw, ih = float(v["ow"]), float(v["oh"]), float(v["iw"]), float(v["ih"])
+        x, y, w, h = float(v["x"]), float(v["y"]), float(v["w"]), float(v["h"])
+        dpr = min(4.0, max(0.5, float(v.get("dpr") or 1)))
+    except (KeyError, TypeError, ValueError):
+        return None
+    border = max(0.0, (ow - iw) / 2)
+    top_bar = max(0.0, oh - ih - border)
+    left, top = (sx + border + x) * dpr, (sy + top_bar + y) * dpr
+    if w < 160 or h < 90:
+        return None
+    return {"left": int(round(left)), "top": int(round(top)), "width": int(round(w * dpr)), "height": int(round(h * dpr))}
+
+
+class YtNow(LiveNow):
+    """now_watching.txt (and the page's transcript) while a YouTube video plays in Hevanti. Times are the video's."""
+
+    def __init__(self, transcript_rel, start_dt, clock, url, course="", lines=None, shots=None):
+        super().__init__(transcript_rel, start_dt, drafts=False, course=course)
+        self.lock = threading.RLock()   # text() runs under the lock and looks up the slide
+        self.clock, self.url = clock, url
+        self.yt = True
+        self.rev = 0
+        self.shots = sorted(shots or [])          # (video seconds, path inside ההרצאות שלי)
+        for t, x in sorted(lines or []):
+            self.all.append((t, x))
+        self.seen_version = -1
+
+    def add(self, t, text):
+        import bisect
+        with self.lock:
+            bisect.insort(self.all, (t, text))
+            self.rev += 1
+            self.dirty = True
+
+    def add_shot(self, wall, rel):
+        import bisect
+        m = self.clock.pos_at(wall)
+        pos = m[0] if m else self.clock.last_pos
+        with self.lock:
+            bisect.insort(self.shots, (pos, rel))
+            self.shot = (pos, rel)
+        self.add(pos, f"[צילום מסך: {rel}]")
+        return pos
+
+    def shot_near(self, pos, within):
+        with self.lock:
+            return any(abs(t - pos) <= within for t, _ in self.shots)
+
+    def slide_at(self, pos):
+        with self.lock:
+            best = None
+            for t, rel in self.shots:
+                if t <= pos + 0.5:
+                    best = (t, rel)
+            return best
+
+    def text(self):
+        pos, playing, alive = self.clock.now()
+        title = self.clock.title or "סרטון יוטיוב"
+        dur = f" מתוך {hms(self.clock.duration)}" if self.clock.duration else ""
+        out = [f"מצב: סרטון יוטיוב - התמלול רץ עכשיו, בנגן של הבנתי ({'אנגלית' if LANG == 'en' else 'עברית'})"
+               + (f" | קורס: {self.course}" if self.course and self.course != NO_COURSE else ""),
+               f"סרטון: {title} ({self.url})",
+               f"אתה כאן: {hms(pos)}{dur} ({'מתנגן' if playing else 'בהשהיה'})" + ("" if alive else " - הנגן סגור"),
+               f"עודכן: {datetime.datetime.now():%H:%M:%S}",
+               f"תמלול מלא: {self.transcript_rel} (רק החלקים שכבר נוגנו - הבנתי מתמללת תוך כדי צפייה)"]
+        sl = self.slide_at(pos)
+        if sl:
+            out.append(f"השקופית שעל המסך עכשיו: {sl[1]} (מ-{hms(sl[0])})")
+        before = [(t, x) for t, x in self.all if pos - NOW_BEFORE_S <= t <= pos + 0.5]
+        out += ["", f"מה נאמר ב-{NOW_BEFORE_S // 60} הדקות שלפני המקום שלך:"]
+        out += [f"[{hms(t)}] {x}" for t, x in before] or ["(עוד אין כאן תמלול - החלק הזה עוד לא נוגן)"]
+        if self.pending_s >= 3 and playing:
+            out += ["", f"ממש עכשיו: מה שנאמר ב-{int(self.pending_s)} השניות האחרונות עוד בתמלול."]
+        return "\n".join(out)
+
+    def write(self):
+        if self.clock.version != self.seen_version:
+            self.seen_version = self.clock.version
+            with self.lock:
+                self.dirty = True
+        super().write()
+
+    def finish(self, transcript_rel):
+        self.stop_evt.set()
+        pos, _, _ = self.clock.now()
+        write_now_file(f"מצב: אין כרגע הרצאה חיה ולא צפייה בהקלטה.\n"
+                       f"הסרטון האחרון: {self.clock.title or self.url} - נעצר ב-{hms(pos)}. תמלול: {transcript_rel}\n")
+
+
+def read_yt_lecture(ldir):
+    """An existing YouTube lecture -> (lines [(sec, text)], shots [(sec, rel)], coverage, last place, title)."""
+    lines, shots, title = [], [], ""
+    rel = lib_rel(ldir)
+    try:
+        with open(lecture_txt(ldir), encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.rstrip("\n")
+                if line.startswith(YT_TITLE):
+                    title = line[len(YT_TITLE):].strip()
+                    continue
+                m = REC_LINE.match(line)
+                if not m:
+                    continue
+                t = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3))
+                x = m.group(4)
+                sm = SHOT_RE.match(x)
+                if sm:
+                    r = f"{rel}/{SLIDES_NAME}/{os.path.basename(sm.group(1))}"
+                    shots.append((t, r))
+                    lines.append((t, f"[צילום מסך: {r}]"))
+                else:
+                    lines.append((t, x))
+    except OSError:
+        pass
+    st = {}
+    try:
+        with open(os.path.join(ldir, YT_STATE), encoding="utf-8") as f:
+            st = json.load(f)
+    except (OSError, ValueError):
+        pass
+    cov = Coverage(st.get("covered") if isinstance(st, dict) else None)
+    if not cov.spans:  # no state file: assume what has text is done
+        for t, x in lines:
+            if not x.startswith("[צילום מסך"):
+                cov.add(t, t + 8)
+    pos = float(st.get("pos") or 0) if isinstance(st, dict) else 0.0
+    return lines, shots, cov, pos, title
+
+
+def save_yt_state(ldir, cov, pos):
+    path = os.path.join(ldir, YT_STATE)
+    try:
+        if os.path.exists(path):
+            os.chmod(path, 0o666)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"covered": [[round(a, 1), round(b, 1)] for a, b in cov.spans], "pos": round(pos, 1)}, f)
+        hide_file(path)
+    except OSError:
+        pass
+
+
+def tidy_yt_transcript(path):
+    """At the end: the lines in the video's order, one header, one title, one end mark."""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            rows = f.read().splitlines()
+    except OSError:
+        return
+    head = rows[0] if rows else ""
+    title = next((r for r in rows if r.startswith(YT_TITLE)), "")
+    body = []
+    for i, r in enumerate(rows[1:]):
+        m = REC_LINE.match(r)
+        if m:
+            body.append((int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3)), i, r))
+    body.sort()
+    out = [head] + ([title] if title else []) + [r for _, _, r in body] + [f"# סוף: {datetime.datetime.now():%H:%M}"]
+    tmp = path + ".tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write("\n".join(out) + "\n")
+        os.replace(tmp, path)
+    except OSError:
+        save_error("tidy youtube transcript")
 
 
 # ---------- audio capture ----------
@@ -1371,346 +1748,217 @@ def create_course(name, template=""):
     return name
 
 
-# ---------- the built-in AI ("הבנתי עונה") ----------
-# The student's own OpenAI API key: questions go straight from this computer to OpenAI (no Hevanti server
-# in between), and OpenAI bills the student's account by use. The key is kept encrypted with Windows DPAPI,
-# so only this Windows user on this computer can read it. Claude and Gemini stay as copy-and-open buttons:
-# their subscriptions may not be used by other apps.
-OPENAI_URL = (os.environ.get("BZM_OPENAI_URL") or "https://api.openai.com").rstrip("/")
+# ---------- connecting the student's AI app to Hevanti ----------
+# Hevanti has no AI of its own. The student's own AI app on this computer gets a small "connector"
+# (an MCP server: hevanti_mcp.py) that lets it read what is happening in the lecture right now - the last
+# minutes, the slide on the screen, the whole transcript - so a question can be asked straight in the AI's
+# own window. One button per app, the same for all three:
+#   Claude  - Claude for desktop reads its MCP servers from claude_desktop_config.json
+#   ChatGPT - ChatGPT for Windows (Codex) reads them from ~/.codex/config.toml
+#   Gemini  - the Gemini app for Windows cannot use local files or connectors yet (Mac only, Sept 2026)
 SUMMARY_NAME = "סיכום.txt"
-AI_CONTEXT_MAX = 300_000      # characters of lecture text sent with one request (the end is kept)
-# USD per 1M tokens: input, cached input, output (OpenAI's price list, 13.10.2026). A model not listed here
-# still works - it is counted in tokens only. Dated versions ("gpt-6-luna-2026-...") use their base price.
-OPENAI_PRICES = {
-    "gpt-6-astra": (10.0, 1.0, 50.0),
-    "gpt-6.1-sol": (2.0, 0.10, 10.0),
-    "gpt-6-sol": (2.0, 0.20, 10.0),
-    "gpt-6-luna": (0.10, 0.01, 0.50),
-    "gpt-5.6-sol": (5.0, 0.50, 30.0),
-    "gpt-5.6-terra": (2.0, 0.20, 12.0),
-    "gpt-5.6-luna": (0.20, 0.02, 1.20),
-    "gpt-5.5": (5.0, 0.50, 30.0),
-    "gpt-5.4": (2.50, 0.25, 15.0),
-    "gpt-5.4-mini": (0.75, 0.075, 4.50),
-    "gpt-5.4-nano": (0.20, 0.02, 1.25),
-    "chat-latest": (5.0, 0.50, 30.0),
-}
-# models that are not for questions in text (sound, pictures, search...) - left out of the list
-MODEL_SKIP = ("audio", "realtime", "tts", "transcribe", "whisper", "image", "dall", "embedding", "moderation",
-              "search", "instruct", "codex", "cyber", "computer-use", "-pro", "babbage", "davinci")
-AI_SYSTEM = {
-    "ask": "אתה עוזר לימוד של סטודנט בישראל, בתוך האפליקציה \"הבנתי\". מצורף תמלול אוטומטי של הרצאה (עם שעות), "
-           "ולפעמים צילום של השקופית או הלוח. תענה על השאלה לפי מה שנאמר בהרצאה ולפי מה שרואים בשקופית, "
-           "ותשלים מהידע שלך כשצריך (ותגיד כשזה לא מההרצאה). תסביר צעד אחר צעד ובפשטות, עם דוגמה כשזה עוזר. "
-           "תענה בעברית, ומונחים מקצועיים גם באנגלית בסוגריים. נוסחה - בשורה נפרדת. התמלול אוטומטי ויכולות להיות "
-           "בו טעויות שמיעה: אם מילה לא הגיונית, תנחש לפי ההקשר. תתעלם מפרסומות. בלי הקדמות - ישר לעניין.",
-    "summary": "אתה עוזר לימוד של סטודנט בישראל. מצורף תמלול אוטומטי של הרצאה. תכתוב סיכום מסודר שאפשר ללמוד ממנו: "
-               "כותרת לכל נושא (שורה שמתחילה ב-#), הנקודות העיקריות ב\"- \", הגדרות ונוסחאות חשובות (נוסחה בשורה נפרדת), "
-               "ודוגמאות שהמרצה נתן. בסוף: \"# מה חשוב למבחן\" עם 3-6 נקודות. בעברית, מונחים מקצועיים גם באנגלית "
-               "בסוגריים. התמלול אוטומטי: מילה לא הגיונית - לפי ההקשר. בלי פרסומות ובלי הקדמות.",
-    "exam": "אתה מורה פרטי שמכין סטודנט בישראל למבחן. מצורפים תמלולים של כל ההרצאות בקורס (ומילון המונחים שלו). "
-            "תעשה בדיוק את המשימה שהסטודנט ביקש, רק על סמך החומר של הקורס (ותגיד כשאתה מוסיף משהו שלא נלמד). "
-            "פתרונות - צעד אחר צעד, עם יחידות. בעברית, מונחים מקצועיים גם באנגלית בסוגריים, נוסחה בשורה נפרדת, "
-            "כותרות בשורה שמתחילה ב-#, רשימות ב\"- \". התמלולים אוטומטיים: מילה לא הגיונית - לפי ההקשר.",
-}
-AI_MAX_OUT = {"ask": 6000, "summary": 8000, "exam": 16000}
+MCP_SCRIPT = os.path.join(SCRIPT_DIR, "hevanti_mcp.py")
+MCP_NAME = "hevanti"
+AI_APPS = ("claude", "chatgpt", "gemini")
 
 
-# --- the key, encrypted with DPAPI (Windows) ---
-def _dpapi(data, encrypt):
-    import ctypes
-    from ctypes import wintypes
-
-    class Blob(ctypes.Structure):
-        _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_char))]
-    buf = ctypes.create_string_buffer(data, len(data))
-    src, out = Blob(len(data), ctypes.cast(buf, ctypes.POINTER(ctypes.c_char))), Blob()
-    crypt = ctypes.windll.crypt32
-    fn = crypt.CryptProtectData if encrypt else crypt.CryptUnprotectData
-    entropy = b"Hevanti-openai-key"
-    ebuf = ctypes.create_string_buffer(entropy, len(entropy))
-    eblob = Blob(len(entropy), ctypes.cast(ebuf, ctypes.POINTER(ctypes.c_char)))
-    if not fn(ctypes.byref(src), None, ctypes.byref(eblob), None, None, 0x01, ctypes.byref(out)):  # UI_FORBIDDEN
-        raise OSError("DPAPI failed")
-    try:
-        return ctypes.string_at(out.pbData, out.cbData)
-    finally:
-        ctypes.windll.kernel32.LocalFree(out.pbData)
+def _mcp_entry():
+    return {"command": sys.executable, "args": [MCP_SCRIPT, "--lib", LIB_DIR],
+            "env": {"PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}}
 
 
-def _seal(key):
-    import base64
-    raw = key.encode("utf-8")
-    if os.name == "nt":
-        return "dpapi:" + base64.b64encode(_dpapi(raw, True)).decode("ascii")
-    return "plain:" + base64.b64encode(raw).decode("ascii")  # only when developing on Linux/Mac
-
-
-def _unseal(value):
-    import base64
-    value = str(value or "")
-    try:
-        if value.startswith("dpapi:") and os.name == "nt":
-            return _dpapi(base64.b64decode(value[6:]), False).decode("utf-8")
-        if value.startswith("plain:") and os.name != "nt":
-            return base64.b64decode(value[6:]).decode("utf-8")
-    except Exception:
-        save_error("reading the OpenAI key")
-    return ""
-
-
-def ai_key():
-    return _unseal(load_settings().get("openai_key"))
-
-
-# --- price and the monthly meter ---
-def model_price(model):
-    model = str(model or "")
-    best = ""
-    for k in OPENAI_PRICES:
-        if (model == k or model.startswith(k + "-")) and len(k) > len(best):
-            best = k
-    return OPENAI_PRICES.get(best)
-
-
-def price_label(model):
-    p = model_price(model)
-    return f"קלט ${p[0]:g}, פלט ${p[2]:g} (למיליון טוקנים)" if p else "מחיר לא ידוע (נספר בטוקנים)"
-
-
-def _month():
-    return datetime.date.today().strftime("%Y-%m")
-
-
-def spend_now():
-    sp = load_settings().get("spend") or {}
-    if not isinstance(sp, dict) or sp.get("month") != _month():
-        sp = {"month": _month(), "usd": 0.0, "tokens": 0, "unpriced": 0}
-    return sp
-
-
-def add_spend(model, usage):
-    """Count what one answer cost -> (cost in USD or None when the price is not known, tokens)."""
-    inp = int(usage.get("input_tokens") or 0)
-    cached = int((usage.get("input_tokens_details") or {}).get("cached_tokens") or 0)
-    out = int(usage.get("output_tokens") or 0)
-    sp = spend_now()
-    sp["tokens"] = int(sp.get("tokens") or 0) + inp + out
-    p = model_price(model)
-    cost = None
-    if p:
-        cost = ((inp - cached) * p[0] + cached * p[1] + out * p[2]) / 1e6
-        sp["usd"] = round(float(sp.get("usd") or 0) + cost, 6)
-    else:
-        sp["unpriced"] = int(sp.get("unpriced") or 0) + inp + out
-    save_settings(spend=sp)
-    return cost, inp + out
-
-
-def ai_cap():
-    try:
-        c = float(load_settings().get("cap_usd") or 0)
-        return c if c > 0 else None
-    except (TypeError, ValueError):
-        return None
-
-
-# --- talking to OpenAI ---
-def _openai(method, path, body=None, key=None, timeout=180):
-    import urllib.error
-    import urllib.request
-    key = key or ai_key()
-    if not key:
-        return {"ok": False, "error": "כדי לקבל תשובות כאן צריך לחבר מפתח OpenAI (בתחתית מסך הבית). "
-                                      "בלי מפתח: ChatGPT, Gemini או Claude.", "need_key": True}
-    data = json.dumps(body, ensure_ascii=False).encode("utf-8") if body is not None else None
-    req = urllib.request.Request(OPENAI_URL + path, data=data, method=method,
-                                 headers={"Authorization": "Bearer " + key, "Content-Type": "application/json",
-                                          "User-Agent": "Hevanti/" + VERSION})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            out = json.loads(r.read().decode("utf-8"))
-            if isinstance(out, dict):
-                out["ok"] = True
-            return out
-    except urllib.error.HTTPError as e:
-        err = {}
-        try:
-            err = (json.loads(e.read().decode("utf-8")) or {}).get("error") or {}
-        except Exception:
-            pass
-        code, msg = str(err.get("code") or ""), str(err.get("message") or "")
-        if e.code == 401:
-            return {"ok": False, "error": "OpenAI לא קיבל את המפתח. לבדוק שהעתקת את כולו, או ליצור מפתח חדש.",
-                    "need_key": True}
-        if e.code == 429 and ("quota" in code or "quota" in msg or "billing" in msg):
-            return {"ok": False, "error": "נגמר הקרדיט בחשבון OpenAI שלך. אפשר לטעון קרדיט באתר של OpenAI "
-                                          "(Billing), ובינתיים: ChatGPT, Gemini או Claude."}
-        if e.code == 429:
-            return {"ok": False, "error": "OpenAI מבקש להאט רגע (יותר מדי בקשות). לנסות שוב בעוד דקה."}
-        if e.code == 404 or code == "model_not_found":
-            return {"ok": False, "error": "המודל שבחרת לא זמין בחשבון שלך. לבחור מודל אחר בהגדרות.", "need_key": True}
-        if e.code == 403:
-            return {"ok": False, "error": "OpenAI לא מאפשר לחשבון שלך להשתמש במודל הזה. לבחור מודל אחר בהגדרות.",
-                    "need_key": True}
-        save_error_text(f"OpenAI {e.code} {path}", msg or str(e))
-        return {"ok": False, "error": f"OpenAI החזיר שגיאה ({e.code}){': ' + msg[:200] if msg else ''}. אפשר לנסות שוב."}
-    except Exception:
-        return {"ok": False, "error": "אין חיבור ל-OpenAI. לבדוק את האינטרנט ולנסות שוב."}
-
-
-def chat_models(key=None):
-    """The text models this key may use, cheapest first (models without a known price at the end)."""
-    out = _openai("GET", "/v1/models", key=key, timeout=30)
-    if not out.get("ok"):
-        return out
-    ids = sorted({str(m.get("id") or "") for m in out.get("data") or [] if isinstance(m, dict)})
-    keep = [m for m in ids if (m.startswith("gpt-") or m == "chat-latest" or re.match(r"o\d", m))
-            and not any(s in m for s in MODEL_SKIP)]
-    # one entry per model family: the plain name when there is one, without its dated copies
-    keep = [m for m in keep if not (re.search(r"-\d{4}-\d\d-\d\d$", m) and re.sub(r"-\d{4}-\d\d-\d\d$", "", m) in keep)]
-    keep.sort(key=lambda m: (model_price(m) is None, sum(model_price(m) or (0, 0, 0)), m))
-    return {"ok": True, "models": [{"id": m, "price": price_label(m), "known": model_price(m) is not None}
-                                   for m in keep]}
-
-
-def ai_set_key(key):
-    key = re.sub(r"\s+", "", str(key or ""))
-    if not key.startswith("sk-") or len(key) < 20:
-        return {"ok": False, "error": "מפתח של OpenAI מתחיל ב-sk- והוא ארוך. להעתיק אותו שוב מהאתר של OpenAI."}
-    out = chat_models(key)
-    if not out.get("ok"):
-        return out
-    models = [m["id"] for m in out["models"]]
-    if not models:
-        return {"ok": False, "error": "המפתח עובד, אבל אין בחשבון מודלים לשאלות. לבדוק בחשבון OpenAI."}
-    try:
-        sealed = _seal(key)
-    except Exception:
-        save_error("saving the OpenAI key")
-        return {"ok": False, "error": "לא הצלחתי לשמור את המפתח בצורה מוצפנת במחשב הזה."}
-    st = load_settings()
-    cheap = models[0]
-    save_settings(openai_key=sealed,
-                  model_ask=st.get("model_ask") if st.get("model_ask") in models else cheap,
-                  model_exam=st.get("model_exam") if st.get("model_exam") in models else cheap)
-    out["info"] = APP.ai_info()
+def claude_config_paths():
+    """Claude for desktop's config: the usual installer, and the Microsoft Store (MSIX) copy."""
+    import glob
+    out = []
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        out.append(os.path.join(appdata, "Claude", "claude_desktop_config.json"))
+    local = os.environ.get("LOCALAPPDATA")
+    if local:
+        out += glob.glob(os.path.join(local, "Packages", "Claude_*", "LocalCache", "Roaming", "Claude",
+                                      "claude_desktop_config.json"))
     return out
 
 
-def ai_set_prefs(d):
-    st, upd = load_settings(), {}
-    for k in ("model_ask", "model_exam"):
-        v = str(d.get(k) or "").strip()
-        if v and re.fullmatch(r"[\w.\-:]{1,80}", v):
-            upd[k] = v
-    if "cap" in d:
+def codex_config_path():
+    home = os.environ.get("CODEX_HOME") or os.path.join(os.path.expanduser("~"), ".codex")
+    return os.path.join(home, "config.toml")
+
+
+def _backup_once(path):
+    import shutil
+    bak = path + ".before-hevanti"
+    if os.path.isfile(path) and not os.path.exists(bak):
         try:
-            c = float(d.get("cap") or 0)
-        except (TypeError, ValueError):
-            return {"ok": False, "error": "התקרה צריכה להיות מספר (בדולרים), או ריק בלי תקרה."}
-        upd["cap_usd"] = round(c, 2) if c > 0 else None
-    save_settings(**upd)
-    return {"ok": True, "info": APP.ai_info()}
+            shutil.copy2(path, bak)
+        except OSError:
+            pass
 
 
-def ai_image(rel):
-    """A slide or screenshot to send with the question: a path inside ההרצאות שלי, or "rec:<name>" in the player."""
-    import base64
-    rel = str(rel or "")
-    path = None
-    if rel.startswith("rec:"):
-        rec, name = APP.rec, rel[4:]
-        if rec is not None and re.fullmatch(r"[\w\-]+\.(jpg|png)", name):
-            cand = os.path.join(rec.shots_dir, name)
-            path = cand if os.path.isfile(cand) else None
-    elif rel:
-        path = safe_shot(rel)
-    if not path or os.path.getsize(path) > 4_000_000:
-        return None, None
-    with open(path, "rb") as f:
-        return base64.b64encode(f.read()).decode("ascii"), ("image/png" if path.endswith(".png") else "image/jpeg")
+def _read_json(path):
+    try:
+        with open(path, encoding="utf-8-sig") as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else None
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError):
+        return None  # there but not readable as JSON - don't touch it
 
 
-def _answer_text(out):
-    parts = []
-    for item in out.get("output") or []:
-        if isinstance(item, dict) and item.get("type") == "message":
-            for c in item.get("content") or []:
-                if isinstance(c, dict) and c.get("type") == "output_text":
-                    parts.append(str(c.get("text") or ""))
-    return "".join(parts).strip()
+def _write_text(path, text):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp-hevanti"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.replace(tmp, path)
 
 
-def ai_ask(d):
-    """A question from the app -> the answer. The app sends the context it shows (live, player); for a past
-    lecture ("f") or a whole course ("course") the context is read here."""
-    task = d.get("task") if d.get("task") in ("ask", "summary", "exam") else "ask"
-    context = str(d.get("context") or "")
-    f = d.get("f")
-    if task == "exam":
-        course = clean_name(d.get("course"))
-        if not course or not os.path.isdir(course_dir(course)):
-            return {"ok": False, "error": "הקורס לא נמצא."}
-        context, _ = course_text(course)
-    elif f:
-        v = transcript_view(f)
-        if v is None:
-            return {"ok": False, "error": "ההרצאה לא נמצאה."}
-        e = v["entry"]
-        context = (f"הרצאה: {e['title']} ({e['course']}, {e['when']})\n" +
-                   "\n".join(f"[{x['c']}] {x['x']}" for x in v["lines"] if x.get("x")))
-        terms = read_glossary(e["course"])
-        if terms:
-            context = "מונחים בקורס: " + ", ".join(terms[:60]) + "\n" + context
-    if len(context) > AI_CONTEXT_MAX:
-        context = "(ההתחלה קוצרה כי החומר ארוך)\n" + context[-AI_CONTEXT_MAX:]
-    st = load_settings()
-    if not ai_key():
-        return _openai("POST", "/v1/responses")  # -> the "connect a key" message
-    cap, sp = ai_cap(), spend_now()
-    if cap and float(sp.get("usd") or 0) >= cap:
-        return {"ok": False, "error": f"הגעת לתקרה שקבעת לחודש הזה (${cap:g}). אפשר לשנות אותה בהגדרות, "
-                                      "ובינתיים: ChatGPT, Gemini או Claude.", "need_key": True}
-    model = str(st.get("model_exam" if task == "exam" else "model_ask") or "")
-    if not model:
-        return {"ok": False, "error": "צריך לבחור מודל בהגדרות (בתחתית מסך הבית).", "need_key": True}
-    question = str(d.get("question") or "")[:4000]
-    msgs = [{"role": "user", "content": [{"type": "input_text", "text": "חומר ההרצאה:\n" + (context or "(אין עדיין תמלול)")}]}]
-    for h in (d.get("history") or [])[-6:]:
-        if isinstance(h, dict) and h.get("q") and h.get("a"):
-            msgs.append({"role": "user", "content": [{"type": "input_text", "text": str(h["q"])[:4000]}]})
-            msgs.append({"role": "assistant", "content": [{"type": "output_text", "text": str(h["a"])[:20000]}]})
-    last = [{"type": "input_text", "text": question or "תסכם את ההרצאה."}]
-    img, kind = ai_image(d.get("image"))
-    if img:
-        last.append({"type": "input_image", "image_url": f"data:{kind};base64,{img}"})
-    msgs.append({"role": "user", "content": last})
-    body = {"model": model, "instructions": AI_SYSTEM[task], "input": msgs,
-            "max_output_tokens": AI_MAX_OUT[task], "store": False}
-    out = _openai("POST", "/v1/responses", body, timeout=300)
-    if not out.get("ok"):
-        return out
-    answer = _answer_text(out)
-    cost, tokens = add_spend(model, out.get("usage") or {})
-    cut = out.get("status") == "incomplete"
-    if not answer:
-        return {"ok": False, "error": "התשובה יצאה ריקה" + (" (המודל חשב יותר מדי זמן)" if cut else "") +
-                                      ". לנסות שוב, או לבחור מודל אחר בהגדרות."}
-    sp = spend_now()
-    res = {"ok": True, "answer": answer, "cut": cut, "model": model, "cost": cost, "tokens": tokens,
-           "month_usd": round(float(sp.get("usd") or 0), 4), "month_tokens": int(sp.get("tokens") or 0)}
-    if task == "summary" and f:
-        ld = lecture_from_rel(f)
-        if ld is not None:
-            try:
-                with open(os.path.join(ld, SUMMARY_NAME), "w", encoding="utf-8") as fh:
-                    fh.write(f"# סיכום אוטומטי של {os.path.basename(ld)} ({datetime.datetime.now():%Y-%m-%d %H:%M})\n\n"
-                             + answer + "\n")
-                res["saved"] = lib_rel(os.path.join(ld, SUMMARY_NAME))
-            except OSError:
-                pass
-    return res
+def claude_connected():
+    for p in claude_config_paths():
+        d = _read_json(p)
+        if d and isinstance(d.get("mcpServers"), dict) and MCP_NAME in d["mcpServers"]:
+            return True
+    return False
+
+
+def claude_installed():
+    return any(os.path.isdir(os.path.dirname(p)) for p in claude_config_paths())
+
+
+def claude_set(on):
+    paths = [p for p in claude_config_paths() if os.path.isdir(os.path.dirname(p))]
+    if on and not paths:
+        return {"ok": False, "error": "לא מצאתי את Claude למחשב. להתקין אותו מ-claude.ai/download, להיכנס לחשבון, "
+                                      "ואז ללחוץ שוב על \"חיבור\"."}
+    for p in paths:
+        d = _read_json(p)
+        if d is None:
+            return {"ok": False, "error": f"קובץ ההגדרות של Claude לא תקין, אז לא שיניתי אותו: {p}"}
+        servers = d.get("mcpServers") if isinstance(d.get("mcpServers"), dict) else {}
+        if on:
+            servers[MCP_NAME] = _mcp_entry()
+        elif MCP_NAME in servers:
+            del servers[MCP_NAME]
+        else:
+            continue
+        d["mcpServers"] = servers
+        _backup_once(p)
+        try:
+            _write_text(p, json.dumps(d, ensure_ascii=False, indent=2) + "\n")
+        except OSError:
+            save_error("claude config")
+            return {"ok": False, "error": "לא הצלחתי לכתוב את ההגדרות של Claude. לסגור את Claude ולנסות שוב."}
+    return {"ok": True}
+
+
+_TOML_HEAD = re.compile(r"^\s*\[mcp_servers\.(?:hevanti|\"hevanti\")\]\s*$")
+
+
+def _toml_without_hevanti(text):
+    """config.toml without our [mcp_servers.hevanti] table (and its sub-tables)."""
+    out, skip = [], False
+    for line in text.splitlines():
+        s = line.strip()
+        if s.startswith("["):
+            skip = bool(_TOML_HEAD.match(line)) or s.startswith("[mcp_servers.hevanti.")
+        if not skip:
+            out.append(line)
+    return "\n".join(out).rstrip("\n")
+
+
+def _toml_str(s):
+    s = str(s)
+    if "'" not in s and "\n" not in s:
+        return "'" + s + "'"  # a literal string: Windows backslashes stay as they are
+    return json.dumps(s, ensure_ascii=False)
+
+
+def chatgpt_connected():
+    try:
+        with open(codex_config_path(), encoding="utf-8-sig") as f:
+            return any(_TOML_HEAD.match(line) for line in f)
+    except OSError:
+        return False
+
+
+def chatgpt_set(on):
+    path = codex_config_path()
+    try:
+        with open(path, encoding="utf-8-sig") as f:
+            text = f.read()
+    except FileNotFoundError:
+        text = ""
+    except OSError:
+        return {"ok": False, "error": "לא הצלחתי לקרוא את ההגדרות של ChatGPT (Codex)."}
+    base = _toml_without_hevanti(text)
+    if on:
+        e = _mcp_entry()
+        block = ["[mcp_servers.hevanti]", f"command = {_toml_str(e['command'])}",
+                 "args = [" + ", ".join(_toml_str(a) for a in e["args"]) + "]",
+                 "env = { " + ", ".join(f"{k} = {_toml_str(v)}" for k, v in e["env"].items()) + " }"]
+        new = (base + "\n\n" if base else "") + "\n".join(block) + "\n"
+    else:
+        if base == text.rstrip("\n"):
+            return {"ok": True}
+        new = base + "\n" if base else ""
+    _backup_once(path)
+    try:
+        _write_text(path, new)
+    except OSError:
+        save_error("codex config")
+        return {"ok": False, "error": "לא הצלחתי לכתוב את ההגדרות של ChatGPT. לסגור את ChatGPT ולנסות שוב."}
+    return {"ok": True}
+
+
+def connect_status():
+    return {"claude": claude_connected(), "chatgpt": chatgpt_connected(), "gemini": False,
+            "claude_found": claude_installed()}
+
+
+CONNECT_NEXT = {
+    "claude": "מחובר. עכשיו לסגור את Claude למחשב לגמרי (גם מהאייקון ליד השעון) ולפתוח אותו שוב. "
+              "מהפעם הבאה אפשר פשוט לשאול אותו \"מה המרצה אמר עכשיו?\" או \"מה כתוב בשקופית?\".",
+    "chatgpt": "מחובר. עכשיו לסגור את ChatGPT למחשב ולפתוח אותו שוב, לעבור למצב Codex, ולשאול שם "
+               "\"מה המרצה אמר עכשיו?\". (צריך את ChatGPT ל-Windows מ-chatgpt.com/download.)",
+    "gemini": "Gemini ל-Windows עוד לא יודע לקרוא מהמחשב (בינתיים זה קיים רק ב-Mac). כשגוגל תוסיף את זה, "
+              "הכפתור הזה יחבר אותו כמו את השניים האחרים. עד אז: הכפתור Gemini בתיבת השאלה מעתיק את השאלה "
+              "עם מה שנאמר ופותח את Gemini.",
+}
+
+
+def connect_app(app, on=True):
+    app = str(app or "")
+    if app not in AI_APPS:
+        return {"ok": False, "error": "לא מוכר."}
+    if app == "gemini":
+        return {"ok": False, "unsupported": True, "error": CONNECT_NEXT["gemini"], "status": connect_status()}
+    out = (claude_set if app == "claude" else chatgpt_set)(on)
+    out["status"] = connect_status()
+    if out.get("ok"):
+        out["next"] = CONNECT_NEXT[app] if on else "החיבור הוסר. כדי שזה ייכנס לתוקף: לסגור ולפתוח שוב את " + \
+            ("Claude" if app == "claude" else "ChatGPT") + "."
+    return out
+
+
+def refresh_connections():
+    """The Hevanti folder moved (or Python changed) since connecting: point the connections at the new place."""
+    want = _mcp_entry()
+    try:
+        for p in claude_config_paths():
+            d = _read_json(p)
+            cur = d.get("mcpServers", {}).get(MCP_NAME) if d else None
+            if isinstance(cur, dict) and (cur.get("command"), cur.get("args")) != (want["command"], want["args"]):
+                claude_set(True)
+                break
+        if chatgpt_connected():
+            with open(codex_config_path(), encoding="utf-8-sig") as f:
+                text = f.read()
+            if _toml_str(MCP_SCRIPT) not in text or _toml_str(want["command"]) not in text or _toml_str(LIB_DIR) not in text:
+                chatgpt_set(True)
+    except Exception:
+        save_error("refresh connections")
 
 
 # ---------- is there a newer version? (the GitHub releases of the open-source project) ----------
@@ -2827,11 +3075,12 @@ class Session:
         self.done = False
         self.started = time.time()
         self.transcript = None
+        self.yt = None         # a YouTube video in Hevanti's player: {"id", "url", "start"}
 
     def info(self):
         return {"kind": self.kind, "lang": self.lang, "title": self.title, "course": self.course, "ready": self.ready,
                 "done": self.done, "stopping": self.stop.is_set() and not self.done, "error": self.error,
-                "started": self.started, "transcript": self.transcript}
+                "started": self.started, "transcript": self.transcript, "yt": self.yt}
 
 
 NOTE_WARN = ("אזהרה", "שגיאה", "נכשל", "לא הצלחתי", "חסם", "לא נמצא", "לא מגיע", "שים לב", "נקטעה", "נעצר")
@@ -2859,6 +3108,7 @@ class App:
         self.url = None
         self.lib_rev = 0
         self.first_view = ""
+        self._connect, self._connect_at = {}, 0.0
 
     # --- what the page shows ---
     def add_note(self, text):
@@ -2892,18 +3142,18 @@ class App:
                     "notes": [n for n in self.notes if n["id"] > notes_since],
                     "lib_rev": self.lib_rev, "first_view": self.first_view,
                     "screens": SCREEN_ENABLED, "product": PRODUCT, "migrated": self.migrated,
-                    "course": load_settings().get("course") or "", "ai": self.ai_info(),
+                    "course": load_settings().get("course") or "", "connect": self.connect_info(),
                     "update": self.update}
 
-    def ai_info(self):
-        st, key, sp = load_settings(), ai_key(), spend_now()
-        return {"available": True, "on": bool(key), "key": (key[:3] + "..." + key[-4:]) if key else "",
-                "model_ask": st.get("model_ask") or "", "model_exam": st.get("model_exam") or "",
-                "cap": ai_cap(), "month_usd": round(float(sp.get("usd") or 0), 4),
-                "month_tokens": int(sp.get("tokens") or 0), "unpriced": int(sp.get("unpriced") or 0)}
+    def connect_info(self):
+        """Which AI apps are connected (reading two small config files - at most every few seconds)."""
+        now = time.time()
+        if now - self._connect_at > 4:
+            self._connect, self._connect_at = connect_status(), now
+        return self._connect
 
     # --- commands from the page ---
-    def start(self, kind, lang, fn, *args, title="", course=""):
+    def start(self, kind, lang, fn, *args, title="", course="", yt=None):
         with self.lock:
             old = self.session
         if old is not None and not old.done:
@@ -2911,6 +3161,7 @@ class App:
             if old.thread is not None:
                 old.thread.join(180)
         sess = Session(kind, "en" if lang == "en" else "he", title, course)
+        sess.yt = yt
         with self.lock:
             self.session, self.question, self.pending = sess, None, None
             if kind == "rec":
@@ -2955,6 +3206,17 @@ class App:
             save_settings(course=course)
             self.start("live", d.get("lang"), run_live, d.get("lang"), course, course=course)
             return {"ok": True}
+        if a == "start_youtube" or (a == "start_recording" and is_youtube(d.get("source") or "")):
+            vid, at = youtube_id(d.get("url") or d.get("source"))
+            if not vid:
+                return {"ok": False, "error": "זה לא נראה כמו קישור לסרטון ביוטיוב."}
+            if not at:
+                ld = find_yt_lecture(course, vid)
+                at = read_yt_lecture(ld)[3] if ld else 0
+            save_settings(course=course)
+            self.start("live", d.get("lang"), run_live, d.get("lang"), course, title="סרטון יוטיוב", course=course,
+                       yt={"id": vid, "url": f"https://www.youtube.com/watch?v={vid}", "start": int(at)})
+            return {"ok": True, "youtube": True}
         if a == "start_recording":
             src = str(d.get("source") or "").strip()
             if not src:
@@ -2989,15 +3251,10 @@ class App:
             return {"ok": True, "terms": len(words)}
         if a in ("move_lecture", "rename_lecture", "delete_lecture"):
             return self.change_lecture(a, d)
-        if a == "ai_key":
-            return ai_set_key(d.get("key"))
-        if a == "ai_models":
-            return chat_models()
-        if a == "ai_prefs":
-            return ai_set_prefs(d)
-        if a == "ai_forget":
-            save_settings(openai_key="", model_ask="", model_exam="")
-            return {"ok": True, "info": self.ai_info()}
+        if a in ("connect", "disconnect"):
+            out = connect_app(d.get("app"), a == "connect")
+            self._connect_at = 0.0
+            return out
         if a == "export_course":
             if not os.path.isdir(course_dir(course)):
                 return {"ok": False, "error": "הקורס לא נמצא."}
@@ -3267,6 +3524,17 @@ def library_entry(d, course):
                     if m:
                         e.update(kind="rec", lang="en" if m.group(1) == "אנגלית" else "he", length=m.group(3))
                         continue
+                    m = YT_HEAD.match(line)
+                    if m:
+                        e.update(kind="yt", lang="en" if m.group(1) == "אנגלית" else "he", url=m.group(2))
+                        dm = re.search(r"התחלה (\d{4}-\d\d-\d\d) (\d\d:\d\d)", line)
+                        if dm:
+                            e["when"] = f"{dm.group(1)} {dm.group(2)}"
+                        e["title"] = "סרטון יוטיוב"
+                        continue
+                if line.startswith(YT_TITLE) and e["kind"] == "yt":
+                    e["title"] = line[len(YT_TITLE):].strip() or e["title"]
+                    continue
                 if line.startswith("# סוף"):
                     e["complete"] = True
                     continue
@@ -3286,9 +3554,11 @@ def library_entry(d, course):
                 m = REC_LINE.match(line)
                 if m and not m.group(4).startswith("("):
                     e["lines"] += 1
+                    if e["kind"] == "yt":
+                        last_elapsed = max(last_elapsed or 0, int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3)))
     except OSError:
         pass
-    if e["kind"] == "live" and last_elapsed is not None:
+    if e["kind"] in ("live", "yt") and last_elapsed is not None:
         e["length"] = hms(last_elapsed)
     if e["kind"] == "rec":
         media, _, _ = recording_from_library(e["f"])
@@ -3449,10 +3719,25 @@ def safe_shot(rel):
     return p if os.path.realpath(p).startswith(root + os.sep) and os.path.isfile(p) else None
 
 
+def live_cover(live):
+    cov = getattr(live, "cover", None)
+    return cov.spans if cov is not None else []
+
+
 def live_state(since):
     live = APP.live
     if live is None:
         return {"none": True}
+    if getattr(live, "yt", False):
+        pos, playing, alive = live.clock.now()
+        with live.lock:
+            out = {"yt": True, "rev": live.rev, "pending": round(live.pending_s, 1), "lag": round(live.lag, 1),
+                   "info": dict(live.info), "ended": live.ended, "pos": round(pos, 1), "playing": playing,
+                   "covered": [[round(a, 1), round(b, 1)] for a, b in live_cover(live)]}
+            if since != live.rev:
+                out["items"] = [{"t": t, "c": hms(t), **({"img": x[len("[צילום מסך: "):-1]} if x.startswith("[צילום מסך: ")
+                                                         else {"x": x})} for t, x in live.all]
+        return out
     with live.lock:
         items = live.all[since:]
         out = {"total": len(live.all), "since": since, "draft": live.draft, "pending": round(live.pending_s, 1),
@@ -3652,18 +3937,18 @@ def _app_handler():
                 APP.seen()
                 if p == "/api/upload":
                     return self._json(self._upload(urllib.parse.parse_qs(u.query).get("name", [""])[0]))
-                d = self._body_json(600_000 if p == "/api/ai" else 65536)  # always read it: the connection is reused
+                d = self._body_json()  # always read it: the connection is reused
                 if p == "/api/place":
-                    rec = APP.rec
-                    if rec is not None:
+                    rec, live = APP.rec, APP.live
+                    if d.get("yt") and live is not None and getattr(live, "clock", None) is not None:
+                        live.clock.set(d)
+                    elif rec is not None and not d.get("yt"):
                         rec.set_place(d)
                     return self._send(204, b"", "text/plain")
                 if p == "/api/cmd":
                     return self._json(APP.command(d))
                 if p == "/api/pick":
                     return self._json({"path": pick_file()})
-                if p == "/api/ai":
-                    return self._json(ai_ask(d))
                 return self._send(404, b"not found", "text/plain")
             except (ConnectionError, OSError):
                 pass
@@ -4041,6 +4326,7 @@ def main():
     if APP.migrated:
         log(f"{APP.migrated} הרצאות מגרסה קודמת הועברו לתיקייה \"{LIB_NAME}\\{NO_COURSE}\". אפשר להעביר אותן לקורסים.")
     threading.Thread(target=check_update, daemon=True).start()
+    threading.Thread(target=refresh_connections, daemon=True).start()
     last = clean_name(load_settings().get("course"), NO_COURSE)
     if act["kind"] == "live":
         APP.start("live", act["lang"], run_live, act["lang"], last, course=last)
@@ -4074,7 +4360,8 @@ def main():
         s = APP.session
     if s is None or s.kind != "rec":
         try:
-            if not os.path.exists(NOW_FILE) or "הרצאה חיה - התמלול רץ" in open(NOW_FILE, encoding="utf-8").read():
+            now_text = open(NOW_FILE, encoding="utf-8").read() if os.path.exists(NOW_FILE) else ""
+            if not now_text or "הרצאה חיה - התמלול רץ" in now_text or "סרטון יוטיוב - התמלול רץ" in now_text:
                 write_now_file(f"מצב: {PRODUCT} סגורה - אין כרגע הרצאה חיה ולא צפייה בהקלטה.\n")
         except OSError:
             pass
@@ -4120,9 +4407,18 @@ def run_live(sess, lang, course=""):
     speakers_id = speakers.current() if speakers.ok else None
 
     start = datetime.datetime.now()
-    name = free_folder(course_dir(course), f"{start:%Y-%m-%d %H-%M} הרצאה" + (" באנגלית" if LANG == "en" else ""))
-    ldir = os.path.join(course_dir(course), name)
+    yt = getattr(sess, "yt", None)   # a YouTube video in Hevanti's player (else: a live lecture)
+    ldir, old = None, ([], [], Coverage(), 0.0, "")
+    if yt:
+        ldir = find_yt_lecture(course, yt["id"])  # started before: continue in the same lecture
+        if ldir:
+            old = read_yt_lecture(ldir)
+    if ldir is None:
+        name = free_folder(course_dir(course), f"{start:%Y-%m-%d %H-%M} " + ("יוטיוב" if yt else "הרצאה")
+                           + (" באנגלית" if LANG == "en" and not yt else ""))
+        ldir = os.path.join(course_dir(course), name)
     os.makedirs(ldir, exist_ok=True)
+    cover = old[2]
     path = lecture_txt(ldir)
     lecture_rel = lib_rel(ldir)
     transcript_rel = lecture_rel + "/" + os.path.basename(path)
@@ -4133,12 +4429,36 @@ def run_live(sess, lang, course=""):
             with open(path, "a", encoding="utf-8") as f:
                 f.write(line + "\n")
 
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(f"# תמלול הרצאה ({'אנגלית' if LANG == 'en' else 'עברית'}) - התחלה {start:%Y-%m-%d %H:%M} | גרסה: {VERSION} | מודל: {model_desc} | התקן: {dev}"
-                + (f" | קורס: {course}" if course != NO_COURSE else "")
-                + ("" if SCREEN_ENABLED else " | בלי צילומי מסך") + "\n")
+    lang_he = 'אנגלית' if LANG == 'en' else 'עברית'
+    if yt and os.path.isfile(path):
+        pass  # continuing a video: its header is there
+    elif yt:
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(f"# תמלול סרטון יוטיוב ({lang_he}) - {yt['url']} | מזהה: {yt['id']} | התחלה {start:%Y-%m-%d %H:%M}"
+                    f" | גרסה: {VERSION} | מודל: {model_desc}" + (f" | קורס: {course}" if course != NO_COURSE else "") + "\n")
+    else:
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(f"# תמלול הרצאה ({lang_he}) - התחלה {start:%Y-%m-%d %H:%M} | גרסה: {VERSION} | מודל: {model_desc} | התקן: {dev}"
+                    + (f" | קורס: {course}" if course != NO_COURSE else "")
+                    + ("" if SCREEN_ENABLED else " | בלי צילומי מסך") + "\n")
 
-    now_file = LiveNow(transcript_rel, start, drafts=DRAFTS and on_gpu, course=course)
+    if yt:
+        clock = YtClock(yt.get("start") or old[3])
+        clock.title = old[4]
+
+        def got_title(t):
+            write_line(YT_TITLE + t)
+            sess.title = t
+            with APP.lock:
+                APP.lib_rev += 1
+        clock.on_title = got_title
+        now_file = YtNow(transcript_rel, start, clock, yt["url"], course=course, lines=old[0], shots=old[1])
+        now_file.cover = cover
+        if old[4]:
+            sess.title = old[4]
+    else:
+        clock = None
+        now_file = LiveNow(transcript_rel, start, drafts=DRAFTS and on_gpu, course=course)
     now_file.info.update(transcript=transcript_rel, device=dev, gpu=on_gpu, course=course, f=lecture_rel,
                          lang=LANG, started=start.strftime("%H:%M"), started_ts=start.timestamp())
     sess.transcript = path
@@ -4149,7 +4469,14 @@ def run_live(sess, lang, course=""):
     threading.Thread(target=media_status_loop, daemon=True).start()
     watcher = None
     if SCREEN_ENABLED:
-        watcher = ScreenWatcher(ldir, lecture_rel, start.timestamp(), write_line, now_file.add_shot)
+        def yt_area():
+            """Where to photograph the video - nothing while watching a part that already has its slides."""
+            pos = clock.now()[0]
+            if cover.covered(pos - 2, pos + 2) > 0.9 and now_file.shot_near(pos, 20):
+                return None
+            return clock.capture_rect()
+        watcher = ScreenWatcher(ldir, lecture_rel, start.timestamp(), write_line, now_file.add_shot,
+                                region_fn=yt_area if yt else None)
         watcher.start()
     else:
         log("צילום מסך כבוי - רק תמלול")
@@ -4160,17 +4487,34 @@ def run_live(sess, lang, course=""):
         if ended[0]:
             return
         ended[0] = True
-        write_line(f"# סוף: {datetime.datetime.now():%H:%M}")
+        if yt and not old[0] and not now_file.all:
+            # nothing was played (e.g. the owner doesn't allow playing the video outside YouTube): no empty lecture
+            import shutil
+            now_file.finish(transcript_rel)
+            shutil.rmtree(ldir, ignore_errors=True)
+            with APP.lock:
+                APP.lib_rev += 1
+            return
+        if yt:
+            save_yt_state(ldir, cover, clock.now()[0])
+            tidy_yt_transcript(path)
+        else:
+            write_line(f"# סוף: {datetime.datetime.now():%H:%M}")
         now_file.finish(transcript_rel)
     sess.closing = closing
-    log(f"מוכן לתמלול {'באנגלית' if LANG == 'en' else 'בעברית'}{' (על כרטיס המסך)' if on_gpu else ''}. תפעיל את ההרצאה.")
+    if yt:
+        log(f"מוכן לתמלול {'באנגלית' if LANG == 'en' else 'בעברית'}. הסרטון מתנגן בנגן של הבנתי - "
+            "מה שמתנגן בו מתומלל, ושקופיות נשמרות מהחלק של הנגן במסך.")
+    else:
+        log(f"מוכן לתמלול {'באנגלית' if LANG == 'en' else 'בעברית'}{' (על כרטיס המסך)' if on_gpu else ''}. תפעיל את ההרצאה.")
     sess.ready = True
 
     blocks, n, t0 = [], 0, None
     inflight = []  # the sound being transcribed right now - done again if Ctrl+C stops it in the middle
     state = {"prev_text": "", "fast": False, "calm": 0, "fast_count": 0, "warned_at": 0.0,
              "draft_at": 0.0, "draft_cost": 0.0, "load": 0.0, "lag": 0.0, "batch_ok": True}
-    drafts_on = DRAFTS and on_gpu
+    drafts_on = DRAFTS and on_gpu and not yt
+    saved_at = [time.time()]
 
     def draft(buf, buf_sr):
         """Quick draft of the piece that is still being heard (GPU only, never written to the transcript)."""
@@ -4191,8 +4535,25 @@ def run_live(sess, lang, course=""):
         return (not state["fast"] and state["load"] < DRAFT_MAX_LOAD and state["lag"] < FAST_OFF_LAG_S
                 and time.time() - state["draft_at"] >= max(DRAFT_EVERY_S, state["draft_cost"] / DRAFT_MAX_SHARE))
 
-    def say(line_t, text):
+    def say(line_t, text, dur=None):
         """One finished line: into the transcript, the window and now_watching.txt."""
+        if yt:
+            m = clock.pos_at(line_t)
+            if m is None or not m[1]:
+                return  # the player was not playing - this sound is not the video's
+            a = m[0]
+            b = a + (dur or 6.0) * clock.rate_at(line_t)
+            if cover.covered(a, b) > 0.5:
+                return  # watched again: already transcribed
+            cover.add(a, b)
+            state["prev_text"] = (state["prev_text"] + " " + text)[-400:]
+            write_line(f"[{hms(a)}] {text}")
+            show(f"[{hms(a)}] {text}")
+            now_file.add(a, text)
+            if time.time() - saved_at[0] > 30:
+                saved_at[0] = time.time()
+                save_yt_state(ldir, cover, clock.now()[0])
+            return
         state["prev_text"] = (state["prev_text"] + " " + text)[-400:]
         stamp = datetime.datetime.fromtimestamp(line_t).strftime("%H:%M:%S")
         elapsed = str(datetime.timedelta(seconds=int(max(0, line_t - start.timestamp()))))
@@ -4220,7 +4581,7 @@ def run_live(sess, lang, course=""):
         if not text:
             draft_clear()
             return
-        say(chunk_t, text)
+        say(chunk_t, text, len(chunk) / chunk_sr)
         warn_lag(lag)
 
     def track_lag(lag):
@@ -4290,6 +4651,8 @@ def run_live(sess, lang, course=""):
         inflight.clear()
 
     def note(line):
+        if yt:
+            return  # the video's transcript has only the video's times
         now = time.time()
         stamp = datetime.datetime.fromtimestamp(now).strftime("%H:%M:%S")
         elapsed = str(datetime.timedelta(seconds=int(now - start.timestamp())))
@@ -4480,6 +4843,10 @@ def uninstall():
     if not _ask(f"להסיר את {PRODUCT} מהמחשב?"):
         show("בוטל. לא נמחק כלום.")
         return
+    for app_name, done in (("Claude", claude_set(False) if claude_connected() else None),
+                           ("ChatGPT", chatgpt_set(False) if chatgpt_connected() else None)):
+        if done is not None:
+            show(f"החיבור של הבנתי הוסר מ-{app_name}" + ("" if done.get("ok") else " (לא הצליח - לנתק ידנית בהגדרות שלו)"))
     if os.path.isdir(MODEL_DIR):
         gb = _size_gb(MODEL_DIR)
         shutil.rmtree(MODEL_DIR, ignore_errors=True)

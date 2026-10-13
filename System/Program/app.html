@@ -132,8 +132,19 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .sumtext:empty{display:none}
 .sumtext p{margin:0 0 6px}
 .sumtext ul{margin:0 0 6px;padding-inline-start:20px}
-.aistate{font-size:15px;color:var(--muted)}
-.aistate.ok{color:var(--ok);font-weight:700}
+.cstate{font-size:15px;color:var(--muted);margin:0}
+.cstate.ok{color:var(--ok);font-weight:700}
+.modal .card.wide{max-width:860px}
+.conns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:720px){.conns{grid-template-columns:minmax(0,1fr)}}
+.conncard{border:1.5px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:8px;align-content:start;background:var(--bg)}
+.conncard b{font-size:19px}
+.conncard .st{font-size:14px;font-weight:700;color:var(--muted)}
+.conncard .st.on{color:var(--ok)}
+.conncard p{margin:0;font-size:15px;color:var(--muted);line-height:1.5}
+.conncard .btn{justify-self:start}
+.connbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--accent-soft);border-radius:var(--r);padding:10px 14px;margin:0 0 18px}
+.connbar span{margin-inline-end:auto}
 .foot{margin-top:26px;color:var(--muted);font-size:14px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 
 /* live + transcript */
@@ -161,6 +172,31 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .stat{display:grid;gap:4px;font-size:15px}
 .stat .k{color:var(--muted)}
 .ended{background:var(--ok-soft);color:var(--ok);border-radius:var(--r);padding:12px 16px;font-weight:600;margin-bottom:14px}
+/* youtube */
+.ytsplit{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(300px,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.ytsplit{grid-template-columns:minmax(0,1fr)}}
+.ytscreen{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:16/9}
+.ytscreen iframe,.ytscreen #ytFrame{position:absolute;inset:0;width:100%;height:100%;border:0}
+.ytwait{position:absolute;inset:0;display:grid;place-items:center;color:#fff;background:rgba(0,0,0,.6);text-align:center;padding:16px;font-weight:600}
+.ytcol{display:grid;gap:10px;min-width:0}
+.ycover{position:relative;height:8px;border-radius:4px;background:var(--sunk);direction:ltr}
+.ycover i{position:absolute;top:0;bottom:0;background:var(--accent);border-radius:4px}
+.ycover b{position:absolute;top:-3px;width:3px;height:14px;background:var(--fg);border-radius:2px}
+#ytLines{height:calc(100vh - 250px)}
+#ytLines li{cursor:pointer}
+#ytLines li:hover{background:var(--sunk)}
+#ytLines li.now{background:var(--now);color:var(--now-ink)}
+/* the floating window (picture-in-picture) */
+body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-template-rows:auto minmax(0,1fr) auto auto;height:100vh;box-sizing:border-box}
+.pipbody .phead{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px}
+.pipbody .phead span{margin-inline-end:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pipbody ol{list-style:none;margin:0;padding:4px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;min-height:0}
+.pipbody ol li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;padding:3px 6px;font-size:14px;line-height:1.5}
+.pipbody ol li.draft{color:var(--muted);font-style:italic}
+.pipbody .pshot img{width:100%;max-height:120px;object-fit:contain;border-radius:6px;border:1px solid var(--line);background:#000;display:block}
+.pipbody .card{padding:10px 12px}
+.pipbody .ptoast{position:fixed;bottom:8px;left:8px;right:8px;background:var(--fg);color:var(--bg);padding:8px 12px;border-radius:10px;font-weight:600;font-size:14px;text-align:center;opacity:0;transition:opacity .2s;pointer-events:none}
+.pipbody .ptoast.on{opacity:1}
 
 /* overlays */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:16px;z-index:20}
@@ -207,6 +243,8 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
     <div class="cbar" id="updBar" hidden><span id="updText"></span><a class="btn small" id="updGo" href="#" target="_blank" rel="noopener">להורדה</a></div>
     <div class="msg" id="homeErr" hidden></div>
 
+    <div class="connbar" id="connBar" hidden><span><b>טיפ:</b> מחברים פעם אחת את Claude או ChatGPT למחשב להבנתי, ואז שואלים אותם ישר בחלון שלהם, בלי להעתיק - הם רואים מה נאמר ואת השקופית.</span><button class="btn small" type="button" data-conn-open>חיבור AI</button></div>
+
     <div class="starts">
       <button class="start" type="button" data-start="he">
         <span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 11v2"/></svg></span>
@@ -218,13 +256,13 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
       </button>
       <button class="start" type="button" id="recTile">
         <span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="m17 10 4-2v8l-4-2z"/></svg></span>
-        <b>הרצאה מוקלטת</b><span>קובץ או קישור. מתומלל מראש, ונפתח בנגן שיודע איפה אתם.</span>
+        <b>הרצאה מוקלטת</b><span>קובץ, קישור או סרטון ביוטיוב. נפתח בנגן שיודע איפה אתם.</span>
       </button>
     </div>
 
     <div class="card recbox" id="recBox" hidden>
       <div class="drop" id="drop"><b>לגרור לכאן קובץ הקלטה</b> (סרטון או שמע)<br>או <button class="btn ghost small" id="pickBtn" type="button">בחירת קובץ...</button></div>
-      <div class="row"><input type="url" id="linkIn" placeholder="או להדביק קישור: Google Drive, Dropbox, OneDrive, זום..." aria-label="קישור להקלטה"></div>
+      <div class="row"><input type="url" id="linkIn" placeholder="או להדביק קישור: יוטיוב, Google Drive, Dropbox, OneDrive, זום..." aria-label="קישור להקלטה"></div>
       <div class="meter" id="upMeter" hidden><i id="upBar"></i></div>
       <div id="chosenRow" class="row" hidden>נבחר: <span class="chosen" id="chosen"></span></div>
       <div class="row">
@@ -247,7 +285,7 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 
     <div class="foot">
       <button class="btn quiet small" type="button" data-open="lib">פתיחת "ההרצאות שלי" בתיקייה</button>
-      <button class="btn ghost small" id="aiSetBtn" type="button" hidden>הבנתי עונה: הגדרה</button>
+      <button class="btn ghost small" id="connBtn" type="button" data-conn-open>חיבור AI</button>
       <a href="https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD" target="_blank" rel="noopener">המדריך (הסבר מלא ועדכונים, באינטרנט)</a>
       <span id="ver"></span>
     </div>
@@ -256,7 +294,9 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
   <!-- LIVE -->
   <section id="vLive" aria-label="הרצאה חיה" hidden>
     <div class="livebar">
+      <button class="btn ghost back" type="button" data-home>→ למסך הבית</button>
       <div class="what"><b id="liveWhat">הרצאה חיה</b><small id="liveSub">טוען...</small></div>
+      <button class="btn" type="button" data-float title="חלון קטן שנשאר מעל ההרצאה: מה נאמר, השקופית ושאלה ל-AI">חלון צף</button>
       <button class="btn ghost" id="liveStop" type="button">עצירה</button>
     </div>
     <div class="ended" id="liveEnded" hidden></div>
@@ -273,6 +313,31 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
     </div>
   </section>
 
+  <!-- YOUTUBE -->
+  <section id="vYt" aria-label="סרטון יוטיוב" hidden>
+    <div class="livebar">
+      <button class="btn ghost back" type="button" data-home>→ למסך הבית</button>
+      <div class="what"><b id="ytWhat">סרטון יוטיוב</b><small id="ytSub">טוען...</small></div>
+      <button class="btn" type="button" data-float title="חלון קטן שנשאר מעל הכל: מה נאמר, השקופית ושאלה ל-AI">חלון צף</button>
+      <button class="btn ghost" id="ytStop" type="button">עצירה</button>
+    </div>
+    <div class="ended" id="ytEnded" hidden></div>
+    <div class="msg" id="ytMsg" hidden></div>
+    <div class="ytsplit">
+      <div class="ytcol">
+        <div class="ytscreen"><div id="ytFrame"></div><div class="ytwait" id="ytWait">טוען את הנגן של יוטיוב...</div></div>
+        <div class="ycover" id="ytCover" title="ירוק = כבר תומלל. הבנתי מתמללת את מה שמתנגן, אז מה שעוד לא ראית עוד לא כתוב."><b id="ytHead"></b></div>
+        <p class="lead" style="margin:0;font-size:14px">הבנתי מתמללת את מה שמתנגן כאן ושומרת את השקופיות מהנגן, עם הזמן של הסרטון. מה שכבר תומלל לא מתומלל שוב, ואפשר להמשיך את הסרטון ביום אחר מ"ההרצאות שלי".</p>
+        <div class="card" id="ytAsk"></div>
+        <div class="row"><button class="btn ghost small" id="ytShotCopy" type="button" hidden>העתקת השקופית</button></div>
+      </div>
+      <div class="tbox">
+        <div class="tools"><input type="search" id="ytFind" placeholder="חיפוש בתמלול" aria-label="חיפוש בתמלול"><button class="btn ghost small" id="ytFollow" type="button" hidden>למקום שלי</button></div>
+        <ol class="lines" id="ytLines"></ol>
+      </div>
+    </div>
+  </section>
+
   <!-- PAST LECTURE -->
   <section id="vPast" aria-label="תמלול" hidden>
     <div class="livebar">
@@ -285,7 +350,7 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
     </div>
     <div class="card" id="pastSum" hidden style="margin-bottom:14px">
       <div class="row" style="justify-content:space-between"><h2>סיכום</h2>
-        <div class="row"><button class="btn quiet small" id="sumCopy" type="button" hidden>העתקה</button><button class="btn small" id="sumGo" type="button">סיכום אוטומטי</button></div></div>
+        <div class="row"><button class="btn quiet small" id="sumCopy" type="button" hidden>העתקה</button></div></div>
       <div id="sumText" class="sumtext"></div>
     </div>
     <div class="card" id="pastAsk" style="margin-bottom:14px"></div>
@@ -351,22 +416,12 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
   <p style="margin:0">באיזו שפה ההרצאה?</p>
   <div class="row"><button class="btn" type="button" data-offer="he">עברית</button><button class="btn" type="button" data-offer="en">אנגלית</button><button class="btn quiet" type="button" data-offer="">ביטול</button></div>
 </div></div>
-<div class="modal" id="aiSet" hidden role="dialog" aria-modal="true" aria-labelledby="aiT"><div class="card">
-  <h3 id="aiT">הבנתי עונה: מפתח OpenAI</h3>
-  <p style="margin:0">התשובות מופיעות בתוך האפליקציה, בלי להעתיק. זה עובד עם מפתח API של OpenAI שלך: השאלות יוצאות ישירות מהמחשב שלך ל-OpenAI, ו-OpenAI מחייבת את החשבון שלך לפי שימוש (בדרך כלל סנטים לשאלה). המפתח נשמר מוצפן במחשב הזה בלבד. <a href="https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD#key" target="_blank" rel="noopener">איך משיגים מפתח</a></p>
-  <label for="aiKey">המפתח (מתחיל ב-sk-)</label>
-  <input type="password" id="aiKey" placeholder="sk-..." maxlength="400" dir="ltr" autocomplete="off" spellcheck="false">
-  <p class="aistate" id="aiState"></p>
-  <div id="aiPrefs" hidden style="display:grid;gap:8px">
-    <label for="aiModelAsk">מודל לשאלות ולסיכומים</label>
-    <select id="aiModelAsk"></select>
-    <label for="aiModelExam">מודל להכנה למבחן (כל הקורס)</label>
-    <select id="aiModelExam"></select>
-    <label for="aiCap">תקרה חודשית בדולרים (רשות: כשמגיעים אליה, הבנתי עונה מפסיקה עד החודש הבא)</label>
-    <input type="number" id="aiCap" min="0" step="0.5" placeholder="בלי תקרה" dir="ltr" style="max-width:12em">
-    <p class="aistate" id="aiMeter" style="margin:0"></p>
-  </div>
-  <div class="row"><button class="btn" id="aiSave" type="button">שמירה ובדיקה</button><button class="btn quiet small" id="aiForget" type="button">הסרת המפתח</button><button class="btn quiet" id="aiClose" type="button" style="margin-inline-start:auto">סגירה</button></div>
+<div class="modal" id="conn" hidden role="dialog" aria-modal="true" aria-labelledby="connT"><div class="card wide">
+  <h3 id="connT">חיבור ה-AI שלך להבנתי</h3>
+  <p style="margin:0">מחברים פעם אחת, ואז שואלים את ה-AI ישר בחלון שלו, ליד ההרצאה: "מה הוא אמר עכשיו?", "מה כתוב בשקופית?". הוא קורא לבד מה נאמר בדקות האחרונות, איפה אתם בהקלטה ואת השקופית שעל המסך. צריך את האפליקציה שלו למחשב ואת החשבון שלכם בה. הבנתי לא שולחת שום דבר בעצמה.</p>
+  <div class="conns" id="conns"></div>
+  <p class="cstate" id="connMsg" role="status"></p>
+  <div class="row"><a href="https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD#ai" target="_blank" rel="noopener" style="margin-inline-end:auto">הסבר מלא במדריך</a><button class="btn quiet" id="connClose" type="button">סגירה</button></div>
 </div></div>
 <div class="modal" id="newCourse" hidden role="dialog" aria-modal="true" aria-labelledby="ncT"><div class="card">
   <h3 id="ncT">קורס חדש</h3>
@@ -397,41 +452,42 @@ const api = (p, body) => fetch(p, body === undefined ? {cache: "no-store"} :
 let app = null, notesSince = 0, libRev = -1, libItems = [], fails = 0, lastQ = null, lastOffer = null;
 let wantPlayer = null, recSource = "", recLang = "he", view = "home", pastFile = null, shownErr = "";
 const NO_COURSE = "ללא קורס";
-let courses = [], curCourse = "", libCourse = "", templates = [], templatesData = {}, searchSeq = 0, lastAI = "";
-function aiInfo() { return (app && app.ai) || {}; }
-function usd(x) { x = Number(x || 0); return "$" + (x < 0.01 && x > 0 ? x.toFixed(4) : x.toFixed(2)); }
-function aiMeterText(i) {
-  return "החודש: " + usd(i.month_usd) + " (" + Number(i.month_tokens || 0).toLocaleString("he-IL") + " טוקנים)" +
-    (i.unpriced ? ". חלק מהמודלים בלי מחיר ידוע, אז הסכום חלקי - המחיר המדויק באתר של OpenAI (Usage)." : ".") +
-    (i.cap ? " תקרה: " + usd(i.cap) + "." : "");
-}
-function fillModels(models, i) {
-  for (const [sel, cur] of [["#aiModelAsk", i.model_ask], ["#aiModelExam", i.model_exam]]) {
-    const el = $(sel); el.replaceChildren();
-    for (const m of models) { const o = document.createElement("option"); o.value = m.id; o.textContent = "\u2066" + m.id + "\u2069 · " + m.price; el.appendChild(o); }
-    if (cur && !models.some(m => m.id === cur)) { const o = document.createElement("option"); o.value = cur; o.textContent = cur; el.prepend(o); }
-    el.value = cur || (models[0] && models[0].id) || "";
+let courses = [], curCourse = "", libCourse = "", templates = [], templatesData = {}, searchSeq = 0;
+// ---------- connecting an AI app (Claude, ChatGPT, Gemini - the same card for each) ----------
+const CONN = [
+  {id: "claude", name: "Claude", where: "Claude למחשב (Windows)", ask: "שואלים בחלון של Claude למחשב."},
+  {id: "chatgpt", name: "ChatGPT", where: "ChatGPT ל-Windows, במצב Codex", ask: "שואלים בחלון של ChatGPT, במצב Codex."},
+  {id: "gemini", name: "Gemini", where: "Gemini ל-Windows", ask: "ב-Windows עוד לא אפשרי (רק ב-Mac)."},
+];
+let lastConn = "";
+function connInfo() { return (app && app.connect) || {}; }
+function drawConns(info) {
+  const box = $("#conns"); box.replaceChildren();
+  for (const c of CONN) {
+    const on = !!info[c.id], card = el("div", "conncard");
+    const st = el("span", "st" + (on ? " on" : ""), on ? "מחובר ✓" : (c.id === "gemini" ? "עוד לא זמין ב-Windows" : "לא מחובר"));
+    const b = el("button", on ? "btn ghost small" : "btn small", on ? "ניתוק" : "חיבור"); b.type = "button";
+    b.onclick = () => setConn(c, !on);
+    card.append(el("b", "", c.name), st, el("p", "", c.where + ". " + c.ask), b);
+    box.appendChild(card);
   }
 }
-function drawAIPrefs(i) {
-  $("#aiPrefs").hidden = !i.on; $("#aiForget").hidden = !i.on;
-  $("#aiCap").value = i.cap || ""; $("#aiMeter").textContent = aiMeterText(i);
+function openConn() { $("#connMsg").textContent = ""; $("#connMsg").className = "cstate"; drawConns(connInfo()); $("#conn").hidden = false; }
+async function setConn(c, on) {
+  $("#connMsg").className = "cstate"; $("#connMsg").textContent = on ? "מחבר..." : "מנתק...";
+  let r; try { r = await api("/api/cmd", {action: on ? "connect" : "disconnect", app: c.id}); } catch (e) { r = {ok: false, error: "האפליקציה לא ענתה."}; }
+  if (r.status) { app.connect = r.status; drawConns(r.status); drawConnState(r.status); }
+  $("#connMsg").className = "cstate" + (r.ok ? " ok" : "");
+  $("#connMsg").textContent = r.ok ? (r.next || "") : (r.error || "לא הצלחתי.");
 }
-async function openAISettings() {
-  const i = aiInfo();
-  $("#aiKey").value = ""; $("#aiState").className = "aistate";
-  $("#aiState").textContent = i.on ? "מחובר עם המפתח " + i.key + ". אפשר להדביק מפתח אחר כדי להחליף." : "עוד לא חובר מפתח.";
-  drawAIPrefs(i); $("#aiSet").hidden = false; $("#aiKey").focus();
-  if (i.on) {
-    fillModels([], i);
-    const r = await api("/api/cmd", {action: "ai_models"}).catch(() => ({ok: false}));
-    if (r.ok) fillModels(r.models, aiInfo()); else if (r.error) $("#aiState").textContent = r.error;
-  }
+function drawConnState(info) {
+  const names = CONN.filter(c => info[c.id]).map(c => c.name);
+  $("#connBtn").textContent = names.length ? "חיבור AI: " + names.join(", ") + " ✓" : "חיבור AI";
+  $("#connBar").hidden = names.length > 0;
+  if (window.BZMAsk) BZMAsk.setConnected(info);
 }
-async function saveAIPrefs(extra) {
-  const r = await api("/api/cmd", Object.assign({action: "ai_prefs", model_ask: $("#aiModelAsk").value, model_exam: $("#aiModelExam").value}, extra || {}));
-  if (r.ok) { app.ai = r.info; drawAIPrefs(r.info); toast("נשמר."); } else toast(r.error || "לא נשמר.");
-}
+document.querySelectorAll("[data-conn-open]").forEach(b => b.addEventListener("click", openConn));
+$("#connClose").addEventListener("click", () => { $("#conn").hidden = true; });
 
 function toast(t) { const e = $("#toast"); e.textContent = t; e.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => e.classList.remove("on"), Math.max(2800, t.length * 55)); }
 function hms(t) { t = Math.max(0, Math.floor(t || 0)); return [t / 3600 | 0, (t % 3600) / 60 | 0, t % 60].map(x => String(x).padStart(2, "0")).join(":"); }
@@ -464,15 +520,18 @@ const shotUrl = rel => "/shot?p=" + encodeURIComponent(rel);
 
 // ---------- views ----------
 function show(v) {
+  const was = view;
   view = v;
+  if (was === "yt" && v !== "yt") ytLeave();
   // (the sections are not called "home"/"live": a #live link would scroll the page to them)
-  for (const id of ["home", "live", "past", "course"]) $("#v" + id[0].toUpperCase() + id.slice(1)).hidden = id !== v;
+  for (const id of ["home", "live", "yt", "past", "course"]) $("#v" + id[0].toUpperCase() + id.slice(1)).hidden = id !== v;
   window.scrollTo(0, 0);
 }
 let backTo = "";  // where "חזרה" on a lecture goes: the course page it was opened from, or home
 function route() {
   const raw = location.hash.slice(1), h = decodeURIComponent(raw);
   if (h === "live") { show("live"); liveSince = 0; liveItems = []; $("#liveLines").replaceChildren(); pollLive(); return; }
+  if (h === "yt") { show("yt"); ytOpen(); return; }
   if (raw.startsWith("t=")) { if (view !== "past") backTo = view === "course" && courseName ? "c=" + encodeURIComponent(courseName) : "";
     $("#pastBack").textContent = backTo ? "→ חזרה לקורס" : "→ למסך הבית"; const [f, at] = raw.slice(2).split("&at="); openPast(decodeURIComponent(f), at != null ? +at : null); return; }
   if (raw.startsWith("c=")) { openCourse(decodeURIComponent(raw.slice(2))); return; }
@@ -483,6 +542,7 @@ function route() {
 window.addEventListener("hashchange", route);
 $("#brand").addEventListener("click", () => { location.hash = ""; });
 $("#cBack").addEventListener("click", () => { location.hash = ""; });
+document.querySelectorAll("[data-home]").forEach(b => b.addEventListener("click", () => { location.hash = ""; }));
 // from a lecture: back to where it was opened from (its course page or home)
 $("#pastBack").addEventListener("click", () => { location.hash = backTo; });
 
@@ -500,6 +560,7 @@ async function poll() {
 function sessionName(s) {
   if (!s) return "";
   const c = s.course && s.course !== NO_COURSE ? " · " + s.course : "";
+  if (s.yt) return "סרטון יוטיוב" + (s.title && s.title !== "סרטון יוטיוב" ? ": " + s.title : "") + c;
   return (s.kind === "live" ? "הרצאה חיה ב" + langName(s.lang) : "הקלטה: " + (s.title || "")) + c;
 }
 function render(d) {
@@ -509,12 +570,12 @@ function render(d) {
   $("#updBar").hidden = !up;
   if (up) { $("#updText").textContent = "יש גרסה חדשה: " + up.version + (up.date ? " (" + up.date + ")" : "") + (up.notes ? ". " + up.notes : "");
     $("#updGo").href = up.url || "https://github.com/pechter-roei41/hevanti/releases"; }
-  const ai = d.ai || {}, aiKey = JSON.stringify(ai);
-  if (aiKey !== lastAI) { lastAI = aiKey; if (window.BZMAsk) BZMAsk.setAI(ai); $("#aiSetBtn").hidden = false;
-    $("#aiSetBtn").textContent = ai.on ? "הבנתי עונה: מחובר (" + usd(ai.month_usd) + " החודש)" : "הבנתי עונה: חיבור מפתח OpenAI"; drawSummary(); }
+  const cn = JSON.stringify(d.connect || {});
+  if (cn !== lastConn) { lastConn = cn; drawConnState(d.connect || {}); }
   const s = d.session, active = s && !s.done;
   const pill = $("#statePill");
-  if (active && s.kind === "live") { pill.className = "pill live"; pill.textContent = s.ready ? (s.stopping ? "עוצר..." : "מקליט") : "מתחיל..."; }
+  if (active && s.yt) { pill.className = "pill live"; pill.textContent = s.ready ? (s.stopping ? "עוצר..." : "מתמלל את הסרטון") : "מתחיל..."; }
+  else if (active && s.kind === "live") { pill.className = "pill live"; pill.textContent = s.ready ? (s.stopping ? "עוצר..." : "מקליט") : "מתחיל..."; }
   else if (active) { pill.className = "pill"; pill.textContent = s.ready ? "הקלטה פתוחה" : "מכין הקלטה..."; }
   else { pill.className = "pill"; pill.textContent = "מוכן"; }
   const dp = $("#devPill"); dp.hidden = !d.device; dp.textContent = d.device === "GPU" ? "כרטיס מסך" : "מעבד";
@@ -522,9 +583,9 @@ function render(d) {
   const rb = $("#runBanner");
   rb.hidden = !active;
   if (active) {
-    $("#runWhat").textContent = s.kind === "live" ? "פועל עכשיו: " + sessionName(s) : "פתוח עכשיו בנגן: " + (s.title || "הקלטה");
+    $("#runWhat").textContent = s.yt ? "פתוח עכשיו: " + sessionName(s) : s.kind === "live" ? "פועל עכשיו: " + sessionName(s) : "פתוח עכשיו בנגן: " + (s.title || "הקלטה");
     $("#runSub").textContent = s.ready ? "התחיל בשעה " + new Date(s.started * 1000).toLocaleTimeString("he-IL", {hour: "2-digit", minute: "2-digit"}) : (d.progress || "מתכונן...");
-    $("#runBack").textContent = s.kind === "live" ? "לתמלול" : "לנגן";
+    $("#runBack").textContent = s.yt ? "לסרטון" : s.kind === "live" ? "לתמלול" : "לנגן";
   }
   // starting card
   const sc = $("#startCard");
@@ -555,6 +616,8 @@ function render(d) {
   if (!d.pending) { $("#offer").hidden = true; lastOffer = null; }
   if (d.lib_rev !== libRev && view === "home") loadLib();
   if (view === "live") renderLiveHead(s);
+  if (view === "yt") ytHead(s);
+  floatHead(s);
 }
 function answer(v) { if (!app || !app.question) return; api("/api/cmd", {action: "answer", id: app.question.id, value: v}); $("#ask").hidden = true; }
 $("#askOk").addEventListener("click", () => answer($("#askIn").value));
@@ -581,7 +644,10 @@ document.querySelectorAll("[data-start]").forEach(b => b.addEventListener("click
 function openRec() { $("#recBox").hidden = false; $("#recTile").classList.add("on"); $("#linkIn").focus(); }
 $("#recTile").addEventListener("click", () => { if ($("#recBox").hidden) openRec(); else { $("#recBox").hidden = true; $("#recTile").classList.remove("on"); } });
 function choose(src, label) { recSource = src; $("#chosen").textContent = label || src; $("#chosenRow").hidden = !src; $("#recGo").disabled = !src; }
-$("#linkIn").addEventListener("input", () => { const v = $("#linkIn").value.trim(); choose(v, v); if (!v) $("#chosenRow").hidden = true; });
+$("#linkIn").addEventListener("input", () => {
+  const v = $("#linkIn").value.trim(); choose(v, v); if (!v) $("#chosenRow").hidden = true;
+  $("#recGo").textContent = isYoutube(v) ? "פתיחה בנגן של יוטיוב" : "פתיחה בנגן";
+});
 document.querySelectorAll(".seg [data-lang]").forEach(b => b.addEventListener("click", () => {
   recLang = b.dataset.lang; document.querySelectorAll(".seg [data-lang]").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
 }));
@@ -606,7 +672,16 @@ function upload(file) {
   x.onerror = () => { $("#upMeter").hidden = true; toast("ההעתקה נכשלה. לנסות שוב, או ללחוץ על בחירת קובץ."); };
   x.send(file);
 }
+function isYoutube(u) { return /^(https?:\/\/)?([\w-]+\.)*(youtube\.com|youtu\.be|youtube-nocookie\.com)\//i.test(String(u || "").trim()); }
+async function startYoutube(url, lang, course) {
+  if (!(await okToReplace())) return;
+  const r = await api("/api/cmd", {action: "start_youtube", url, lang, course: course || curCourse || NO_COURSE});
+  if (!r.ok) { toast(r.error || "לא הצלחתי לפתוח את הסרטון."); return; }
+  $("#recBox").hidden = true; $("#recTile").classList.remove("on"); $("#linkIn").value = ""; choose("", "");
+  ytVid = ""; location.hash = "yt";
+}
 async function startRecording(src, lang) {
+  if (isYoutube(src)) return startYoutube(src, lang);
   if (!(await okToReplace())) return;
   wantPlayer = Date.now() / 1000 - 2; shownErr = "";
   await api("/api/cmd", {action: "start_recording", source: src, lang, course: curCourse || NO_COURSE});
@@ -614,7 +689,7 @@ async function startRecording(src, lang) {
 }
 $("#recGo").addEventListener("click", () => { if (recSource) startRecording(recSource, recLang); });
 $("#linkIn").addEventListener("keydown", e => { if (e.key === "Enter" && recSource) startRecording(recSource, recLang); });
-$("#runBack").addEventListener("click", () => { const s = app && app.session; if (!s) return; if (s.kind === "live") location.hash = "live"; else location.href = "/player"; });
+$("#runBack").addEventListener("click", () => { const s = app && app.session; if (!s) return; if (s.yt) location.hash = "yt"; else if (s.kind === "live") location.hash = "live"; else location.href = "/player"; });
 $("#runStop").addEventListener("click", stopSession);
 async function stopSession() {
   const s = app && app.session; if (!s || s.done) return;
@@ -678,7 +753,9 @@ function drawTabs() {
 $("#libCbarGo").addEventListener("click", () => { if (libCourse) location.hash = "c=" + encodeURIComponent(libCourse); });
 function lecItem(e, withCourse) {
   const li = el("li");
-  const k = el("span", "k"); k.innerHTML = e.kind === "rec"
+  const k = el("span", "k"); k.innerHTML = e.kind === "yt"
+    ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="4"/><path d="m10 9 5 3-5 3z" fill="currentColor"/></svg>'
+    : e.kind === "rec"
     ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="m17 10 4-2v8l-4-2z"/></svg>'
     : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 11v2"/></svg>';
   k.setAttribute("aria-hidden", "true");
@@ -695,6 +772,10 @@ function lecItem(e, withCourse) {
   const acts = el("div", "acts");
   if (e.kind === "rec" && e.has_media) {
     const p = el("button", "btn small", "צפייה"); p.type = "button"; p.onclick = () => playRecording(e.f); acts.appendChild(p);
+  }
+  if (e.kind === "yt" && e.url) {
+    const p = el("button", "btn small", "המשך צפייה"); p.type = "button"; p.title = "ממשיך מאיפה שעצרת, ומתמלל רק מה שעוד לא תומלל";
+    p.onclick = () => startYoutube(e.url, e.lang, e.course); acts.appendChild(p);
   }
   const o = el("button", "btn ghost small", "תמלול"); o.type = "button"; o.onclick = () => { location.hash = "t=" + encodeURIComponent(e.f); }; acts.appendChild(o);
   const more = el("button", "btn quiet small", "⋯"); more.type = "button"; more.setAttribute("aria-label", "העברה לקורס, שינוי שם או מחיקה: " + e.title);
@@ -838,10 +919,8 @@ document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("clic
 }));
 if (window.BZMAsk) courseAsk = BZMAsk.mount($("#cAsk"), {
   title: "שליחה ל-AI", sub: "עם כל ההרצאות של הקורס", placeholder: "המשימה: לבחור למעלה, או לכתוב כאן",
-  openSettings: openAISettings, mineLabel: "הבנתי מכינה",
-  builtIn: {task: "exam", defaultQuestion: "תכין לי מבחן תרגול על כל החומר, עם פתרונות מלאים.", payload: () => ({course: courseName})},
+  example: "תכין לי מבחן תרגול מכל ההרצאות בקורס " + "הזה",
   context: q => (courseTextCache || "") + "\n\nהמשימה: " + q + "\nלענות בעברית (מונחים מקצועיים אפשר באנגלית). מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.",
-  local: q => "בתיקייה \"ההרצאות שלי\\" + courseName + "\" יש את כל ההרצאות של הקורס (קובץ txt בכל תיקיית הרצאה) ומילון מונחים. לקרוא את כולן, ואז: " + q,
   toast});
 $("#tmplAdd").addEventListener("click", () => {
   const words = templatesData[$("#tmplSel").value] || []; if (!words.length) return;
@@ -928,16 +1007,6 @@ $("#liveFollow").addEventListener("click", () => { const b = $("#liveLines"); b.
 $("#liveStop").addEventListener("click", stopSession);
 $("#liveFind").addEventListener("input", () => filterLines("#liveLines", "#liveFind"));
 const ANSWER_HINT = "\nלענות בעברית (מונחים מקצועיים אפשר באנגלית). מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.\n";
-function liveBody() {
-  const now = Date.now() / 1000, from = now - 300;
-  const lang = app && app.session ? langName(app.session.lang) : "עברית";
-  const c = app && app.session && app.session.course && app.session.course !== NO_COURSE ? ", בקורס " + app.session.course : "";
-  let out = `הרצאה חיה (ב${lang}${c}). התמלול של 5 הדקות האחרונות:\n`, n = 0;
-  for (const x of liveItems) { if (x.t < from) continue; n++; out += `[${x.c}] ` + (x.img ? "[כאן הופיעה שקופית או כתיבה חדשה על הלוח]" : x.x) + "\n"; }
-  if (liveLast && liveLast.draft) out += `(ממש עכשיו, עוד לא סופי: ${liveLast.draft})\n`;
-  if (!n && !(liveLast && liveLast.draft)) out += "(עוד אין תמלול)\n";
-  return out;
-}
 function liveContext(q) {
   const now = Date.now() / 1000, from = now - 300;
   const lang = app && app.session ? langName(app.session.lang) : "עברית";
@@ -947,14 +1016,8 @@ function liveContext(q) {
   if (!n && !(liveLast && liveLast.draft)) out += "(עוד אין תמלול)\n";
   return out + ANSWER_HINT + "\nהשאלה שלי: " + q;
 }
-function liveLocal(q) {
-  return "אני בהרצאה חיה, והיא מתומללת בהבנתי. לפני שאתה עונה: לקרוא את now_watching.txt בתיקייה \"ההרצאות שלי\" " +
-    "(שם כתוב מה נאמר בדקות האחרונות ומה הצילום האחרון של המסך), ואם צריך גם את קובץ התמלול שכתוב שם.\n\nהשאלה שלי: " + q;
-}
 let liveAskBox = null;
-if (window.BZMAsk) liveAskBox = BZMAsk.mount($("#liveAsk"), {context: liveContext, local: liveLocal, toast, hasImage: () => !!$("#shotSlot img"),
-  openSettings: openAISettings,
-  builtIn: {task: "ask", payload: () => ({context: liveBody()}), image: () => (liveLast && liveLast.shot) || null}});
+if (window.BZMAsk) liveAskBox = BZMAsk.mount($("#liveAsk"), {context: liveContext, toast, hasImage: () => !!$("#shotSlot img")});
 $("#shotCopy").addEventListener("click", async () => {
   const im = $("#shotSlot img"); if (!im) return;
   toast((await copyImage(im.src)) ? "צילום המסך הועתק. להדביק בצ'אט (Ctrl+V)." : "לא הצלחתי להעתיק את התמונה.");
@@ -983,45 +1046,11 @@ $("#pastMore").addEventListener("click", () => { if (pastData) lectureMenu(pastD
 let pastSummary = "";
 function drawSummary() {
   const box = $("#pastSum"); if (!box) return;
-  const ai = aiInfo();
-  box.hidden = !pastSummary && !ai.available;
-  if (window.BZMAsk) BZMAsk.render($("#sumText"), pastSummary); else $("#sumText").textContent = pastSummary;
+  box.hidden = !pastSummary;
+  $("#sumText").replaceChildren(...String(pastSummary || "").split("\n").filter(x => x.trim()).map(x => { const p = el("p", "", x.replace(/^#+\s*/, "")); p.dir = "auto"; return p; }));
   $("#sumCopy").hidden = !pastSummary;
-  $("#sumGo").hidden = !ai.available;
-  $("#sumGo").textContent = pastSummary ? "סיכום מחדש" : "סיכום אוטומטי";
 }
-$("#sumGo").addEventListener("click", async () => {
-  if (!aiInfo().on) { openAISettings(); return; }
-  const f = pastFile; $("#sumGo").disabled = true; $("#sumText").textContent = "מסכם את ההרצאה... (חצי דקה בערך)";
-  let r; try { r = await api("/api/ai", {task: "summary", f, question: "תסכם את ההרצאה."}); } catch (e) { r = {ok: false}; }
-  $("#sumGo").disabled = false;
-  if (pastFile !== f) return;
-  if (r.ok) { pastSummary = r.answer; drawSummary(); toast("הסיכום נשמר בתיקייה של ההרצאה (סיכום.txt)."); }
-  else { $("#sumText").textContent = ""; drawSummary(); toast(r.error || "לא הצלחתי לסכם."); if (r.need_key) openAISettings(); }
-});
 $("#sumCopy").addEventListener("click", async () => { toast((await copyText(pastSummary)) ? "הסיכום הועתק." : "לא הצלחתי להעתיק."); });
-$("#aiSetBtn").addEventListener("click", openAISettings);
-$("#aiClose").addEventListener("click", () => { $("#aiSet").hidden = true; });
-$("#aiKey").addEventListener("keydown", e => { if (e.key === "Enter") $("#aiSave").click(); });
-$("#aiSave").addEventListener("click", async () => {
-  const key = $("#aiKey").value.trim();
-  if (!key) { if (aiInfo().on) { await saveAIPrefs({cap: $("#aiCap").value}); return; } $("#aiState").textContent = "צריך להדביק את המפתח."; $("#aiKey").focus(); return; }
-  $("#aiState").className = "aistate"; $("#aiState").textContent = "בודק מול OpenAI...";
-  const r = await api("/api/cmd", {action: "ai_key", key}).catch(() => ({ok: false}));
-  if (r.ok) {
-    $("#aiKey").value = ""; app.ai = r.info; lastAI = ""; if (window.BZMAsk) BZMAsk.setAI(r.info);
-    $("#aiState").className = "aistate ok";
-    $("#aiState").textContent = "מחובר. אפשר לבחור למטה מודלים (ברירת המחדל: הזול בחשבון שלך).";
-    drawAIPrefs(r.info); fillModels(r.models, r.info); drawSummary();
-  } else { $("#aiState").textContent = r.error || "המפתח לא עבד."; }
-});
-$("#aiModelAsk").addEventListener("change", () => saveAIPrefs());
-$("#aiModelExam").addEventListener("change", () => saveAIPrefs());
-$("#aiCap").addEventListener("change", () => saveAIPrefs({cap: $("#aiCap").value}));
-$("#aiForget").addEventListener("click", async () => {
-  const r = await api("/api/cmd", {action: "ai_forget"}); if (r.info) { app.ai = r.info; lastAI = ""; if (window.BZMAsk) BZMAsk.setAI(r.info); }
-  $("#aiState").className = "aistate"; $("#aiState").textContent = "המפתח הוסר מהמחשב."; drawAIPrefs(aiInfo()); drawSummary();
-});
 $("#pastPlay").addEventListener("click", () => { if (pastFile) playRecording(pastFile); });
 $("#pastFile").addEventListener("click", () => api("/api/cmd", {action: "open_folder", what: "file", f: pastFile}));
 $("#pastFind").addEventListener("input", () => filterLines("#pastLines", "#pastFind"));
@@ -1036,10 +1065,8 @@ $("#pastCopy").addEventListener("click", async () => {
   toast((await copyText(pastText())) ? "כל התמלול הועתק." : "לא הצלחתי להעתיק. אפשר לפתוח את הקובץ ולהעתיק משם.");
 });
 if (window.BZMAsk) BZMAsk.mount($("#pastAsk"), {
-  openSettings: openAISettings, builtIn: {task: "ask", payload: () => ({f: pastFile})},
+  example: "תסביר לי את ההרצאה הזו",
   context: q => (pastData ? pastText() : "") + ANSWER_HINT + "\nהשאלה שלי: " + q,
-  local: q => "יש תמלול של הרצאה שכבר הסתיימה, בתיקייה \"ההרצאות שלי\\" + (pastFile || "").replace("/", "\\") +
-    "\". לקרוא אותו לפני שאתה עונה.\n\nהשאלה שלי: " + q,
   toast});
 function filterLines(listSel, inputSel) {
   const q = $(inputSel).value.trim().toLowerCase();
@@ -1048,6 +1075,260 @@ function filterLines(listSel, inputSel) {
     const hit = !!q && !!x.x && x.x.toLowerCase().includes(q);
     li.hidden = !!q && !hit; li.classList.toggle("hit", hit);
   }
+}
+
+// ---------- a YouTube video, in YouTube's own player inside Hevanti ----------
+// The page tells the tool the player's time every second (and where the player is on the screen), so the
+// tool can give every line and slide the video's time and photograph only the player.
+let ytPlayer = null, ytVid = "", ytRev = -1, ytItems = [], ytEls = [], ytCur = -1, ytFollow = true, ytApiP = null;
+let ytSent = 0, ytTick = null, ytPollOn = false, ytShot = null, ytCovered = [], ytWaiting = true, ytStarted = false, ytInfo = {};
+function ytApi() {
+  if (window.YT && window.YT.Player) return Promise.resolve();
+  if (!ytApiP) ytApiP = new Promise((res, rej) => {
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { if (prev) { try { prev(); } catch (e) {} } res(); };
+    const sc = document.createElement("script"); sc.src = "https://www.youtube.com/iframe_api"; sc.async = true;
+    sc.onerror = () => { ytApiP = null; rej(new Error("load")); };
+    document.head.appendChild(sc);
+    setTimeout(() => { if (!(window.YT && window.YT.Player)) { ytApiP = null; rej(new Error("timeout")); } }, 25000);
+  });
+  return ytApiP;
+}
+function ytPos() { try { return ytPlayer && ytPlayer.getCurrentTime ? ytPlayer.getCurrentTime() || 0 : 0; } catch (e) { return 0; } }
+function ytDur() { try { return ytPlayer && ytPlayer.getDuration ? ytPlayer.getDuration() || 0 : 0; } catch (e) { return 0; } }
+function ytTitle() { try { return (ytPlayer && ytPlayer.getVideoData && ytPlayer.getVideoData().title) || ""; } catch (e) { return ""; } }
+function ytProblem(text, link) {
+  const m = $("#ytMsg"); m.hidden = false; m.replaceChildren(text);
+  if (link) { m.append(" "); const a = el("a", "", "לפתוח ביוטיוב"); a.href = link; a.target = "_blank"; a.rel = "noopener"; m.appendChild(a); }
+  $("#ytWait").hidden = true;
+}
+async function ytOpen() {
+  // the state may still show the session from before (the video was just started): ask again for a moment
+  for (let i = 0; i < 15 && !(app && app.session && app.session.yt); i++) {
+    try { const d = await api("/api/app?notes=" + notesSince); app = d; render(d); } catch (e) {}
+    if (app && app.session && app.session.yt) break;
+    await new Promise(r => setTimeout(r, 300));
+  }
+  if (view !== "yt") return;
+  const s = app && app.session;
+  if (!s || !s.yt) { location.hash = ""; return; }
+  ytInfo = s.yt;
+  $("#ytWhat").textContent = sessionName(s);
+  $("#ytMsg").hidden = true; $("#ytEnded").hidden = !s.done; $("#ytStop").hidden = s.done;
+  ytPollOn = true; ytPoll();
+  if (ytPlayer && ytVid === s.yt.id) { ytTickOn(); return; }
+  if (ytPlayer) { try { ytPlayer.destroy(); } catch (e) {} ytPlayer = null; }
+  ytVid = s.yt.id; ytRev = -1; ytItems = []; ytStarted = false; ytWaiting = true;
+  $("#ytLines").replaceChildren();
+  if (!$("#ytFrame")) { const d = el("div"); d.id = "ytFrame"; $(".ytscreen").prepend(d); }
+  $("#ytWait").hidden = false; $("#ytWait").textContent = "טוען את הנגן של יוטיוב...";
+  try { await ytApi(); } catch (e) { ytProblem("לא הצלחתי לטעון את הנגן של יוטיוב. לבדוק את החיבור לאינטרנט ולנסות שוב."); return; }
+  ytPlayer = new YT.Player("ytFrame", {
+    videoId: s.yt.id, width: "100%", height: "100%",
+    playerVars: {start: Math.max(0, Math.floor(s.yt.start || 0)), rel: 0, playsinline: 1, iv_load_policy: 3, hl: "he", origin: location.origin},
+    events: {
+      onReady: () => { ytTickOn(); ytHead(app && app.session); },
+      onStateChange: () => ytReport(true),
+      onError: e => ytError(e && e.data),
+    }});
+}
+function ytError(code) {
+  const link = ytInfo.url || ("https://www.youtube.com/watch?v=" + ytVid);
+  if (code === 101 || code === 150 || code === 153) ytProblem("בעל הסרטון לא מאפשר לנגן אותו מחוץ ליוטיוב. אפשר לפתוח אותו ביוטיוב, ולבחור במסך הבית \"הרצאה חיה\": הבנתי תתמלל אותו תוך כדי צפייה.", link);
+  else if (code === 100) ytProblem("הסרטון לא נמצא, או שהוא פרטי.", link);
+  else if (code === 2) ytProblem("הקישור לא תקין. להעתיק שוב את הקישור מיוטיוב.");
+  else ytProblem("הנגן של יוטיוב לא מצליח לנגן את הסרטון כאן (שגיאה " + code + ").", link);
+}
+// the tool is ready to transcribe -> play (until then the overlay says what is happening)
+function ytHead(s) {
+  if (!s || !s.yt) return;
+  $("#ytWhat").textContent = sessionName(s);
+  if (s.done) {
+    $("#ytStop").hidden = true; $("#ytEnded").hidden = false;
+    $("#ytEnded").textContent = "הסרטון נשמר ב\"ההרצאות שלי\". אפשר להמשיך אותו מאוחר יותר עם \"המשך צפייה\".";
+    try { if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); } catch (e) {}
+    return;
+  }
+  if (!ytPlayer || !ytPlayer.playVideo || !$("#ytMsg").hidden) return;
+  if (!s.ready) { $("#ytWait").hidden = false; $("#ytWait").textContent = (app && app.progress) || "מכין את התמלול... (בפעם הראשונה יורד מודל התמלול, כמה דקות)"; return; }
+  if (ytWaiting) { ytWaiting = false; $("#ytWait").hidden = true; if (!ytStarted) { ytStarted = true; try { ytPlayer.playVideo(); } catch (e) {} } }
+}
+function ytReport(force) {
+  if (!ytPlayer || !ytPlayer.getPlayerState) return;
+  const now = Date.now(); if (!force && now - ytSent < 1000) return; ytSent = now;
+  let st = -1, rate = 1, fr = null;
+  try { st = ytPlayer.getPlayerState(); rate = ytPlayer.getPlaybackRate() || 1; fr = ytPlayer.getIframe().getBoundingClientRect(); } catch (e) { return; }
+  const full = !!document.fullscreenElement;
+  const body = {yt: true, pos: ytPos(), playing: st === 1, rate, duration: ytDur(), title: ytTitle(),
+    visible: document.visibilityState === "visible" && view === "yt", full,
+    view: fr ? {sx: window.screenX, sy: window.screenY, ow: window.outerWidth, oh: window.outerHeight, iw: window.innerWidth, ih: window.innerHeight,
+                dpr: window.devicePixelRatio || 1, x: fr.left, y: fr.top, w: fr.width, h: fr.height} : null};
+  fetch("/api/place", {method: "POST", keepalive: true, headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify(body)}).catch(() => {});
+}
+function ytTickOn() {
+  if (ytTick) return;
+  ytTick = setInterval(() => { ytReport(false); ytHighlight(false); }, 500);
+}
+function ytLeave() {
+  ytPollOn = false;
+  if (ytTick) { clearInterval(ytTick); ytTick = null; }
+  try { if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); } catch (e) {}
+  ytReport(true);
+}
+async function ytPoll() {
+  if (!ytPollOn) return;
+  let d = null;
+  try { d = await api("/api/live?since=" + ytRev); } catch (e) {}
+  if (d && d.yt) {
+    ytCovered = d.covered || [];
+    if (d.items) { ytItems = d.items; ytRev = d.rev; ytRender(); }
+    const D = ytDur(), got = ytCovered.reduce((n, c) => n + (c[1] - c[0]), 0);
+    $("#ytSub").textContent = d.ended ? "נשמר" : (d.playing ? "מתמלל את מה שמתנגן" : "בהשהיה") +
+      (D ? " · תומלל " + Math.min(100, Math.round(100 * got / D)) + "% מהסרטון" : "") +
+      (d.lag > 20 ? " · התמלול מאחר ב-" + Math.round(d.lag) + " שניות" : "");
+    ytDrawCover();
+  }
+  setTimeout(ytPoll, 1500);
+}
+function ytDrawCover() {
+  const bar = $("#ytCover"), D = ytDur();
+  bar.querySelectorAll("i").forEach(x => x.remove());
+  if (!D) return;
+  for (const [a, b] of ytCovered) {
+    const i = el("i"); i.style.left = (100 * a / D) + "%"; i.style.width = Math.max(0.3, 100 * (b - a) / D) + "%"; bar.insertBefore(i, $("#ytHead"));
+  }
+  $("#ytHead").style.left = `calc(${100 * ytPos() / D}% - 1px)`;
+}
+function ytRender() {
+  const box = $("#ytLines"), frag = document.createDocumentFragment();
+  ytEls = []; ytCur = -1;
+  for (const x of ytItems) {
+    const li = lineEl(x);
+    li.addEventListener("click", ev => { if (ev.target.tagName === "IMG") return; ytSeek(x.t); });
+    ytEls.push(li); frag.appendChild(li);
+  }
+  if (!ytItems.length) frag.appendChild(el("li", "note", "השורות יופיעו כאן תוך כדי שהסרטון מתנגן (חצי דקה בערך). כדאי שהסאונד של המחשב לא יהיה מושתק."));
+  box.replaceChildren(frag);
+  filterLines("#ytLines", "#ytFind");
+  ytHighlight(true);
+}
+function ytSeek(t) { try { ytPlayer.seekTo(t, true); ytPlayer.playVideo(); } catch (e) {} ytFollow = true; $("#ytFollow").hidden = true; setTimeout(() => ytReport(true), 200); }
+function ytHighlight(force) {
+  const pos = ytPos();
+  let i = -1;
+  for (let k = 0; k < ytItems.length; k++) { if (ytItems[k].t <= pos + 0.3) i = k; else break; }
+  if (i !== ytCur || force) {
+    if (ytEls[ytCur]) ytEls[ytCur].classList.remove("now");
+    ytCur = i;
+    const li = ytEls[ytCur];
+    if (li) { li.classList.add("now"); if (ytFollow && !li.hidden) { const b = $("#ytLines"); b.scrollTop = li.offsetTop - b.clientHeight / 2; } }
+  }
+  let s = null;
+  for (let k = i; k >= 0; k--) if (ytItems[k] && ytItems[k].img) { s = ytItems[k].img; break; }
+  ytShot = s; $("#ytShotCopy").hidden = !s;
+  const D = ytDur(); if (D) $("#ytHead").style.left = `calc(${100 * pos / D}% - 1px)`;
+}
+function ytStopFollowing() { if (ytFollow) { ytFollow = false; $("#ytFollow").hidden = false; } }
+$("#ytLines").addEventListener("wheel", ytStopFollowing, {passive: true});
+$("#ytLines").addEventListener("touchmove", ytStopFollowing, {passive: true});
+$("#ytFollow").addEventListener("click", () => { ytFollow = true; $("#ytFollow").hidden = true; ytHighlight(true); });
+$("#ytFind").addEventListener("input", () => filterLines("#ytLines", "#ytFind"));
+$("#ytStop").addEventListener("click", stopSession);
+$("#ytCover").addEventListener("click", e => { const r = $("#ytCover").getBoundingClientRect(), D = ytDur(); if (D) ytSeek(D * Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))); });
+$("#ytShotCopy").addEventListener("click", async () => { if (ytShot) toast((await copyImage(shotUrl(ytShot))) ? "השקופית הועתקה. להדביק בצ'אט (Ctrl+V)." : "לא הצלחתי להעתיק את התמונה."); });
+function ytContext(q) {
+  const pos = ytPos(), D = ytDur(), from = pos - 300;
+  let out = `אני צופה בסרטון ביוטיוב: "${ytTitle() || "סרטון"}" (${ytInfo.url || ""}). אני עכשיו ב-${hms(pos)}${D ? " מתוך " + hms(D) : ""}.\n` +
+            "זה התמלול האוטומטי של 5 הדקות שלפני המקום שלי (יכולות להיות בו טעויות תמלול):\n\n", n = 0;
+  for (const x of ytItems) {
+    if (x.t < from || x.t > pos + 0.5) continue;
+    n++; out += `[${x.c}] ` + (x.img ? "[כאן הופיעה שקופית חדשה]" : x.x) + "\n";
+  }
+  if (!n) out += "(החלק הזה עוד לא תומלל)\n";
+  return out + ANSWER_HINT + "\nהשאלה שלי: " + q;
+}
+if (window.BZMAsk) BZMAsk.mount($("#ytAsk"), {context: ytContext, toast, hasImage: () => !!ytShot, imageName: "השקופית", example: "מה הוא הסביר עכשיו?"});
+window.addEventListener("pagehide", () => { if (view === "yt") { try { ytPlayer.pauseVideo(); } catch (e) {} ytReport(true); } });
+
+// ---------- the floating window: a small window that stays on top of everything, next to the lecture ----------
+// (Document Picture-in-Picture, in Chrome and Edge. Its page is about:blank - addresses must be full.) It shows what was just said, the newest slide and the
+// question box, so asking does not mean leaving the lecture. It is refreshed by the floating window's own timer
+// (a hidden tab's timers are slowed down by the browser; the floating window's are not).
+let pipWin = null, pipList = null, pipShot = null, pipTitle = null, pipToastEl = null, pipKey = "";
+let pipSince = 0, pipItems = [], pipDraft = "", pipLiveShot = null, pipYtRev = -1;
+async function openFloat() {
+  if (!("documentPictureInPicture" in window)) { toast("הדפדפן הזה לא תומך בחלון צף. זה עובד ב-Chrome וב-Edge מעודכנים."); return; }
+  if (pipWin && !pipWin.closed) { try { pipWin.focus(); } catch (e) {} return; }
+  try { pipWin = await documentPictureInPicture.requestWindow({width: 400, height: 620}); }
+  catch (e) { toast("לא הצלחתי לפתוח חלון צף."); pipWin = null; return; }
+  const d = pipWin.document;
+  d.documentElement.lang = "he"; d.documentElement.dir = "rtl"; d.title = "הבנתי";
+  for (const st of document.querySelectorAll("style")) d.head.appendChild(st.cloneNode(true));
+  if (window.BZMAsk) BZMAsk.addCss(d);
+  d.body.className = "pipbody";
+  const head = d.createElement("div"); head.className = "phead";
+  pipTitle = d.createElement("span"); head.appendChild(pipTitle);
+  pipList = d.createElement("ol"); pipList.setAttribute("aria-label", "מה נאמר עכשיו");
+  pipShot = d.createElement("div"); pipShot.className = "pshot";
+  const card = d.createElement("div"); card.className = "card";
+  pipToastEl = d.createElement("div"); pipToastEl.className = "ptoast"; pipToastEl.setAttribute("role", "status");
+  d.body.append(head, pipList, pipShot, card, pipToastEl);
+  if (window.BZMAsk) BZMAsk.mount(card, {win: pipWin, title: "שאלה ל-AI", sub: "עם מה שנאמר עכשיו", placeholder: "מה לא ברור?",
+    context: q => (app && app.session && app.session.yt ? ytContext(q) : floatLiveContext(q)), toast: pipToast});
+  pipWin.addEventListener("pagehide", () => { pipWin = null; pipKey = ""; });
+  pipKey = ""; pipSince = 0; pipItems = []; pipYtRev = -1;
+  floatHead(app && app.session); floatLoop();
+}
+document.querySelectorAll("[data-float]").forEach(b => b.addEventListener("click", openFloat));
+function pipToast(t) {
+  if (!pipToastEl) return;
+  pipToastEl.textContent = t; pipToastEl.classList.add("on");
+  clearTimeout(pipToast.h); pipToast.h = setTimeout(() => { if (pipToastEl) pipToastEl.classList.remove("on"); }, Math.max(2800, t.length * 50));
+}
+function floatHead(s) { if (pipWin && pipTitle) pipTitle.textContent = s && !s.done ? sessionName(s) : "אין עכשיו הרצאה פעילה"; }
+function floatLiveContext(q) {
+  const now = Date.now() / 1000, from = now - 300;
+  let out = "אני בהרצאה חיה. זה התמלול האוטומטי של 5 הדקות האחרונות (יכולות להיות בו טעויות תמלול):\n\n", n = 0;
+  for (const x of pipItems) { if (x.t < from) continue; n++; out += `[${x.c}] ` + (x.img ? "[כאן הופיעה שקופית או כתיבה חדשה על הלוח]" : x.x) + "\n"; }
+  if (pipDraft) out += `(ממש עכשיו, עוד לא סופי: ${pipDraft})\n`;
+  if (!n && !pipDraft) out += "(עוד אין תמלול)\n";
+  return out + ANSWER_HINT + "\nהשאלה שלי: " + q;
+}
+async function floatLoop() {
+  if (!pipWin || pipWin.closed) { pipWin = null; return; }
+  const w = pipWin, isYt = !!(app && app.session && app.session.yt);
+  try {
+    if (isYt) {
+      const d = await fetch("/api/live?since=" + pipYtRev, {cache: "no-store", signal: AbortSignal.timeout(5000)}).then(r => r.json());
+      if (d.yt && d.items) { ytItems = d.items; pipYtRev = d.rev; if (d.rev !== ytRev && view === "yt") { ytRev = d.rev; ytRender(); } }
+    } else {
+      const d = await fetch("/api/live?since=" + pipSince, {cache: "no-store", signal: AbortSignal.timeout(5000)}).then(r => r.json());
+      if (!d.none && !d.yt) {
+        if (d.since === 0 && pipSince === 0) pipItems = [];
+        pipItems.push(...(d.items || [])); pipSince = d.total; pipDraft = d.draft || ""; pipLiveShot = d.shot;
+        if (pipItems.length > 400) pipItems = pipItems.slice(-400);
+      }
+    }
+  } catch (e) {}
+  floatDraw(isYt);
+  w.setTimeout(floatLoop, 1000);
+}
+function floatDraw(isYt) {
+  if (!pipWin || !pipList) return;
+  let rows, shot, draft = "";
+  if (isYt) { const pos = ytPos(); rows = ytItems.filter(x => !x.img && x.t <= pos + 0.5).slice(-14); shot = ytShot; }
+  else { rows = pipItems.filter(x => !x.img).slice(-14); shot = pipLiveShot; draft = pipDraft; }
+  const key = rows.map(x => x.t).join(",") + "|" + (shot || "") + "|" + draft;
+  if (key === pipKey) return;
+  pipKey = key;
+  const d = pipWin.document, mk = (tag, cls, text) => { const e = d.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const lis = rows.map(x => { const li = mk("li"); const sp = mk("span", "", x.x); sp.dir = "auto"; li.append(mk("span", "ts", x.c), sp); return li; });
+  if (draft) { const li = mk("li", "draft"); li.append(mk("span", "ts", "עכשיו"), mk("span", "", draft)); lis.push(li); }
+  if (!lis.length) lis.push(mk("li", "draft", isYt ? "השורות יופיעו כאן כשהסרטון מתנגן." : "השורות יופיעו כאן תוך חצי דקה."));
+  pipList.replaceChildren(...lis);
+  pipList.scrollTop = pipList.scrollHeight;
+  pipShot.replaceChildren();
+  if (shot) { const im = mk("img"); im.src = location.origin + shotUrl(shot); im.alt = "השקופית האחרונה"; pipShot.appendChild(im); }
 }
 
 route();

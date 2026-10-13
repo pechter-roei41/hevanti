@@ -87,7 +87,7 @@ video{width:100%;max-height:calc(100vh - 230px);display:block;background:#000}
 </head>
 <body>
 <header>
-  <a class="home" href="/" title="למסך הבית של האפליקציה">→ מסך הבית</a>
+  <a class="home" href="/" title="למסך הבית של האפליקציה">→ למסך הבית</a>
   <div class="brand"><svg width="26" height="26" viewBox="0 0 120 120" aria-hidden="true"><path d="M20 14H100A14 14 0 0 1 114 28V76A14 14 0 0 1 100 90H96L99 110L74 90H20A14 14 0 0 1 6 76V28A14 14 0 0 1 20 14Z" fill="var(--accent)"></path><path d="M35 52L51 68L85 34" fill="none" stroke="var(--mark)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"></path></svg>הבנתי</div>
   <div id="title">טוען…</div>
   <div id="chip" class="chip" aria-live="polite">מתחבר…</div>
@@ -148,7 +148,7 @@ async function poll() {
     fails++;
     if (fails >= 3 && !closedMsg) {
       closedMsg = true;
-      msg("הכלי נסגר. הסרטון ימשיך רק עד איפה שהוא כבר נטען, ו-Claude לא יודע איפה אתה. " +
+      msg("הכלי נסגר. הסרטון ימשיך רק עד איפה שהוא כבר נטען, וה-AI המחובר לא יודע איפה אתה. " +
           "כדי להמשיך: להפעיל שוב את Hevanti ולפתוח את ההקלטה מהספרייה.");
       $("#chip").textContent = "הכלי סגור"; $("#chip").className = "chip err";
     }
@@ -355,11 +355,6 @@ function contextText(q) {
   return out + "\nלענות בעברית (מונחים מקצועיים אפשר באנגלית). מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.\n" +
     "\nהשאלה שלי: " + (q || "");
 }
-function localText(q) {
-  return `אני צופה בהקלטה "${st.title}" בנגן של הבנתי, ואני עכשיו ב-${hms(v.currentTime)}. לפני שאתה עונה: ` +
-    "לקרוא את now_watching.txt בתיקייה \"ההרצאות שלי\" (שם כתוב בדיוק איפה אני, מה נאמר סביב המקום הזה ומה השקופית), " +
-    "ואם צריך גם את קובץ התמלול שכתוב שם.\n\nהשאלה שלי: " + (q || "");
-}
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); return true; }
   catch (e) {
@@ -370,11 +365,9 @@ async function copyText(text) {
 }
 let askBox = null;
 if (window.BZMAsk) {
-  askBox = BZMAsk.mount($("#askBox"), {context: contextText, local: localText, toast: t => toast(t, 4200),
-    hasImage: () => !!shotNow, imageName: "השקופית", imageLabel: "לצרף את השקופית שעל המסך",
-    openSettings: () => toast("את מפתח OpenAI מחברים במסך הבית: \"הבנתי עונה\" למטה.", 5000),
-    builtIn: {task: "ask", payload: () => ({context: contextText("")}), image: () => (shotNow ? "rec:" + shotNow : null)}});
-  fetch("/api/app", {cache: "no-store"}).then(r => r.json()).then(d => BZMAsk.setAI(d.ai)).catch(() => {});
+  askBox = BZMAsk.mount($("#askBox"), {context: contextText, toast: t => toast(t, 4200),
+    hasImage: () => !!shotNow, imageName: "השקופית", example: "מה הוא הסביר בדקה הזו?"});
+  fetch("/api/app", {cache: "no-store"}).then(r => r.json()).then(d => BZMAsk.setConnected(d.connect)).catch(() => {});
 }
 $("#copyImg").addEventListener("click", async () => {
   if (!shotNow) return;
