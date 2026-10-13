@@ -1,56 +1,48 @@
-<div dir="rtl">
+# Hevanti (הבנתי)
 
-# הבנתי
+**Everything the lecturer said, and an answer to everything you didn't understand.** A free, open-source lecture companion for students on Windows.
 
-**כל מה שהמרצה אמר, ותשובה על כל מה שלא הבנת.** כלי חינמי בקוד פתוח לסטודנטים, ל-Windows.
+Hevanti writes down everything said in the lecture, in Hebrew or English, and saves a picture of every slide and board. You listen instead of copying, and you can ask an AI exactly about the moment you missed.
 
-הבנתי כותבת בשבילך כל מה שנאמר בהרצאה, בעברית או באנגלית, ושומרת תמונה של כל שקופית ושל הלוח. ככה אפשר להקשיב במקום להעתיק, ולשאול AI בדיוק על הרגע שלא הבנת.
+- **Live lecture:** Zoom, a broadcast, or anything playing on your computer. Transcription runs on your computer.
+- **Recorded lecture:** a file or a link (Drive, Dropbox, OneDrive, a Zoom recording). A player synced with the transcript.
+- **YouTube video:** plays in YouTube's official player inside Hevanti (no download), and is transcribed while you watch, with the video's timestamps.
+- **Courses:** a folder per course, a glossary that improves transcription, and search across everything that was said.
+- **Exam prep:** a practice exam, a summary, flashcards and a formula sheet from all the lectures of a course.
+- **Connect AI:** one button connects Claude or ChatGPT on Windows to Hevanti through a small MCP server. Then you ask them directly in their own window, for example "What is he saying now?", and they read the last minutes and the slide themselves.
+- **Floating window:** a small window that stays on top of the lecture, showing what is being said now, the slide, and a question box.
+- **Without a connection:** ChatGPT, Gemini or Claude with one click; the question is copied together with its context.
 
-- **הרצאה חיה:** זום, שידור או כל מה שמתנגן במחשב. התמלול רץ במחשב שלך.
-- **הרצאה מוקלטת:** קובץ או קישור (דרייב, דרופבוקס, וואןדרייב, הקלטת זום). נגן שמסונכרן עם התמלול.
-- **סרטון ביוטיוב:** מתנגן בנגן הרשמי של יוטיוב בתוך הבנתי (בלי הורדה), ומתומלל תוך כדי צפייה עם הזמן של הסרטון.
-- **קורסים:** תיקייה לכל קורס, מילון מונחים שמשפר את התמלול, חיפוש בכל מה שנאמר.
-- **הכנה למבחן:** מבחן תרגול, סיכום, כרטיסיות חזרה ודף נוסחאות מכל הרצאות הקורס.
-- **חיבור AI:** כפתור אחד מחבר את Claude למחשב או את ChatGPT ל-Windows להבנתי (שרת MCP קטן), ואז שואלים אותם ישר בחלון שלהם: "מה הוא אמר עכשיו?" - הם קוראים לבד את הדקות האחרונות ואת השקופית.
-- **חלון צף:** חלון קטן שנשאר מעל ההרצאה, עם מה שנאמר עכשיו, השקופית ותיבת שאלה.
-- **בלי חיבור:** ChatGPT, Gemini או Claude בלחיצה, השאלה מועתקת עם ההקשר.
+## Download and install
 
-## הורדה והתקנה
+1. Download `Hevanti.zip` from the [latest release](https://github.com/pechter-roei41/hevanti/releases/latest) and extract it.
+2. Install [Python 3.14](https://www.python.org/downloads/windows/) (tick **Add python.exe to PATH**).
+3. Double-click `Install`, then double-click `Hevanti`.
 
-1. להוריד את `Hevanti.zip` מ-[הגרסה האחרונה](https://github.com/pechter-roei41/hevanti/releases/latest) ולחלץ.
-2. להתקין [Python 3.14](https://www.python.org/downloads/windows/) (לסמן **Add python.exe to PATH**).
-3. לחיצה כפולה על `Install`, ואחר כך על `Hevanti`.
+Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD)
 
-המדריך המלא: [המדריך של הבנתי](https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD)
+## Privacy
 
-## פרטיות
+- Transcripts and screenshots stay on your computer. The app only listens on `127.0.0.1`.
+- There is no Hevanti server. The connector (`hevanti_mcp.py`) only reads files from the "ההרצאות שלי" (My Lectures) folder, and only when your AI asks for them. What your AI reads is sent to its provider like any other conversation with it.
 
-- התמלול והצילומים נשארים במחשב שלך. האפליקציה פתוחה רק במחשב שלך (`127.0.0.1`).
-- אין שרת של הבנתי. המחבר (`hevanti_mcp.py`) רק קורא קבצים מ"ההרצאות שלי", ורק כשה-AI שלך מבקש. מה שה-AI קורא עובר לחברה שלו כמו כל שיחה איתו.
+## How it is built
 
-## איך זה בנוי
-
-| קובץ | מה יש בו |
+| File | What it does |
 |---|---|
-| `System/Program/live_transcribe.py` | הכל בצד המחשב: תמלול ([faster-whisper](https://github.com/SYSTRAN/faster-whisper), מודל העברית של [ivrit.ai](https://huggingface.co/ivrit-ai)), צילומי מסך, השרת המקומי, הקורסים, יוטיוב וחיבור ה-AI |
-| `System/Program/app.html` | האפליקציה (נפתחת בדפדפן) |
-| `System/Program/player.html` | הנגן של הרצאה מוקלטת |
-| `System/Program/ask.js` | תיבת "שאלה ל-AI" |
-| `System/Program/hevanti_mcp.py` | המחבר ל-AI (שרת MCP, ספרייה סטנדרטית בלבד): `now`, `transcript`, `slide`, `search`, `lectures` |
-| `tools/build_zip.py` | בונה את `Hevanti.zip` |
+| `System/Program/live_transcribe.py` | Everything on the computer side: transcription ([faster-whisper](https://github.com/SYSTRAN/faster-whisper) with the Hebrew model from [ivrit.ai](https://huggingface.co/ivrit-ai)), screenshots, the local server, courses, YouTube and the AI connection |
+| `System/Program/app.html` | The app (opens in the browser) |
+| `System/Program/player.html` | The player for recorded lectures |
+| `System/Program/ask.js` | The "ask AI" box |
+| `System/Program/hevanti_mcp.py` | The AI connector (MCP server, standard library only): `now`, `transcript`, `slide`, `search`, `lectures` |
+| `tools/build_zip.py` | Builds `Hevanti.zip` |
 
-גרסה חדשה: תגית כמו `v2.0-20261014` (אותו מספר, בנייה חדשה) או `v2.1`. GitHub Actions בונה את ה-ZIP ומצרף אותו ל-Release, והאפליקציה מודיעה לסטודנטים שיש עדכון.
+New version: push a tag such as `v2.0-20261014` (same number, new build) or `v2.1`. GitHub Actions builds the ZIP and attaches it to a release, and the app tells students that an update is available.
 
-## תרומה ובעיות
+## Contributing and issues
 
-מצאת באג? [לפתוח Issue](https://github.com/pechter-roei41/hevanti/issues) עם צילום מסך ו-`System\error_log.txt`. Pull requests מתקבלים בשמחה.
+Found a bug? [Open an issue](https://github.com/pechter-roei41/hevanti/issues) with a screenshot and `System\error_log.txt`. Pull requests are welcome.
 
-## רישיון
+## License
 
-[MIT](LICENSE) © 2026 רועי פכטר. מודלים וספריות של צד שלישי מורדים מהמקור שלהם ובכפוף לרישיונות שלהם. הרצאות ושקופיות שייכות למי שיצר אותן: לשימוש אישי ללמידה, לפי מדיניות המוסד.
-
-</div>
-
----
-
-**Hevanti** is a free, open-source lecture companion for students on Windows: live and recorded lecture transcription (Hebrew and English, runs locally with faster-whisper and the ivrit.ai Hebrew model), automatic slide capture, per-course glossaries, full-text search, exam prep, YouTube videos played in the official embedded player and transcribed while watching (with video timestamps), a floating always-on-top window, and a one-click MCP connector so Claude for desktop or ChatGPT (Codex) can read the live lecture, the current slide and all transcripts directly. MIT licensed.
+[MIT](LICENSE) © 2026 Roei Pechter. Third-party models and libraries are downloaded from their own sources and are subject to their own licenses. Lectures and slides belong to whoever created them: use them for personal study, according to your institution's policy.
