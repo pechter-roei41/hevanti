@@ -1,0 +1,55 @@
+MIT License
+
+Copyright (c) 2026 Roei Pechter (רועי פכטר)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+================================================================================
+בעברית, בקצרה (הנוסח המחייב הוא האנגלי למעלה)
+================================================================================
+"הבנתי" (Hevanti) היא תוכנה חינמית בקוד פתוח, ברישיון MIT.
+  - מותר להשתמש, להעתיק, לשנות, להפיץ ואפילו למכור - בתנאי שהודעת הזכויות
+    (Copyright (c) 2026 Roei Pechter) והרישיון הזה נשארים בכל עותק.
+  - ניתנת כמו שהיא (AS IS), בלי שום אחריות: לדיוק התמלול, לתקינות או להתאמה
+    למטרה מסוימת. התמלול אוטומטי ועלול לכלול טעויות, וגם AI טועה.
+
+רכיבים של צד שלישי
+-------------------
+הבנתי לא כוללת ולא מפיצה ספריות או מודלים של צד שלישי. הם מורדים בהתקנה
+ישירות מהמקורות הרשמיים שלהם, וכפופים לרישיונות שלהם, למשל:
+  - faster-whisper (SYSTRAN) - MIT
+  - מודל העברית ivrit-ai/whisper-large-v3-turbo-ct2 (ivrit.ai) - Apache 2.0
+  - מודל Whisper large-v3-turbo (OpenAI) - MIT
+  - yt-dlp (להורדה מאתרי וידאו כמו הקלטות זום) - Unlicense
+  - numpy, mss, Pillow, PyAudioWPatch, CTranslate2 ועוד - לפי הרישיונות שלהם
+  - ספריות NVIDIA (cuBLAS, cuDNN) - לפי תנאי השימוש של NVIDIA
+"הבנתי עונה" שולחת שאלות ל-OpenAI עם מפתח ה-API של המשתמש, לפי תנאי השימוש
+של OpenAI ועל חשבון המשתמש.
+
+אחריות המשתמש
+-------------
+כמעט כל תוכן שמתנגן במחשב (הרצאות, שקופיות, סרטונים, קורסים מקוונים, הקלטות
+Zoom ועוד) מוגן בזכויות יוצרים של מי שיצר אותו. המשתמש אחראי באופן בלעדי לכך
+שהשימוש שלו בכלי, ובתמלולים ובצילומי המסך שהוא יוצר, עומד בחוק, במדיניות
+המוסד או המרצה, ובתנאי השימוש של כל אתר או שירות. אין להפיץ, לפרסם או למכור
+תמלולים וצילומי מסך בלי אישור מבעלי הזכויות. הכלי לא מספק, לא מאחסן ולא מפיץ
+שום תוכן.
+
+שאלות ותמיכה: https://github.com/pechter-roei41/hevanti | pechter.roei@gmail.com

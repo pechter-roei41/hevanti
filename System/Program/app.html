@@ -1,0 +1,1057 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>הבנתי · האפליקציה</title>
+<!-- Hevanti (הבנתי) - the app (the page the tool opens on this computer) - (c) 2026 Roei Pechter. MIT License, see LICENSE.txt -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 120 120%27%3E%3Cpath d=%27M20 14H100A14 14 0 0 1 114 28V76A14 14 0 0 1 100 90H96L99 110L74 90H20A14 14 0 0 1 6 76V28A14 14 0 0 1 20 14Z%27 fill=%27%231F7A55%27/%3E%3Cpath d=%27M35 52L51 68L85 34%27 fill=%27none%27 stroke=%27%23F7D44C%27 stroke-width=%2712%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Secular+One&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* הבנתי - green-notebook look: board green, highlighter yellow, paper. Home = course + three ways to start +
+   the library by course (with search in everything); live = transcript beside the newest screenshot;
+   transcript = a past lecture; course = exam prep + glossary + its lectures. Same palette as the player. */
+:root{
+  --bg:#F6F3E9; --surface:#FFFFFF; --sunk:#ECE7D8; --fg:#17261F; --muted:#56625B; --line:#DDD7C4;
+  --accent:#1F7A55; --accent-ink:#FFFFFF; --accent-soft:#DCEBDF; --mark:#F7D44C; --rec:#C2412D; --ok:#1F7A55; --ok-soft:#DCEBDF;
+  --warn-bg:#FBF0DA; --warn-fg:#6B5020; --now:#FBEFB5; --now-ink:#17261F;
+  --f-body:"Assistant","Segoe UI","Arial Hebrew",Arial,system-ui,sans-serif; --f-display:"Secular One","Assistant","Segoe UI",sans-serif;
+  --f-mono:Consolas,"Cascadia Mono",ui-monospace,monospace;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#121C17; --surface:#1A2620; --sunk:#22302A; --fg:#E8EFE9; --muted:#9FB0A6; --line:#2E3D35;
+  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#1F3A2E; --mark:#E8C547; --rec:#FF7A63; --ok:#5BC79A; --ok-soft:#1F3A2E;
+  --warn-bg:#3A3122; --warn-fg:#EBD08E; --now:#3D3816; --now-ink:#FFF6CF; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:17px;line-height:1.6;min-height:100vh}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+
+header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.bar{max-width:1240px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--f-display);font-weight:400;font-size:24px;margin-inline-end:auto;cursor:pointer;background:none;border:0;padding:0}
+.brand small{font-family:var(--f-body);font-weight:600;font-size:13px;color:var(--muted);background:var(--sunk);border-radius:999px;padding:1px 9px}
+.brand .dot{width:11px;height:11px;border-radius:50%;background:var(--accent)}
+.pill{font-size:14px;padding:3px 12px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.pill.live{background:color-mix(in srgb,var(--rec) 16%,transparent);color:var(--rec);font-weight:600}
+.pill.live::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--rec);margin-inline-end:7px;vertical-align:1px}
+@media (prefers-reduced-motion:no-preference){.pill.live::before{animation:pulse 1.4s ease-in-out infinite}}
+@keyframes pulse{50%{opacity:.25}}
+.btn{border:0;border-radius:12px;padding:9px 18px;font-weight:700;cursor:pointer;background:var(--accent);color:var(--accent-ink);white-space:nowrap}
+.btn:hover{filter:brightness(1.07)}
+.btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);padding:7px 15px}
+.btn.quiet{background:var(--sunk);color:var(--fg)}
+.btn.danger{background:transparent;color:var(--rec);border:1.5px solid var(--rec);padding:7px 15px}
+.btn.danger:hover{background:var(--rec);color:#fff}
+.btn.small{font-size:14px;padding:5px 13px}
+.btn[disabled]{opacity:.5;pointer-events:none}
+
+main{max-width:1240px;margin:0 auto;padding:22px 16px 80px}
+h1{font-family:var(--f-display);font-weight:400;font-size:clamp(28px,4.5vw,38px);line-height:1.2;margin:0 0 6px;text-wrap:balance}
+h2{font-size:21px;margin:0;text-wrap:balance}
+.lead{color:var(--muted);margin:0 0 18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
+
+/* home */
+.starts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:22px}
+.start{all:unset;box-sizing:border-box;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:grid;gap:6px;align-content:start;min-height:132px;transition:border-color .15s}
+.start:hover{border-color:var(--accent)}
+.start:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.start .ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.start b{font-size:18px}
+.start span{color:var(--muted);font-size:15px}
+.start.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+@media (max-width:760px){.starts{grid-template-columns:minmax(0,1fr)}.start{min-height:0}}
+.running{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-inline-start:4px solid var(--rec);border-radius:var(--r);padding:12px 16px;margin-bottom:18px}
+.running .what{margin-inline-end:auto;min-width:0}
+.running .what small{display:block;color:var(--muted)}
+.recbox{display:grid;gap:14px;margin-bottom:24px}
+.drop{border:2px dashed var(--line);border-radius:var(--r);padding:22px;text-align:center;color:var(--muted);background:var(--surface)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--fg)}
+.drop b{color:var(--fg)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row input[type=url],.row input[type=text],.row input[type=search],.row input[type=password]{flex:1;min-width:0;padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:7px 16px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.chosen{font-weight:600;word-break:break-all}
+.meter{height:8px;border-radius:4px;background:var(--sunk);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent);width:0}
+.msg{background:var(--warn-bg);color:var(--warn-fg);border-radius:var(--r);padding:12px 16px;white-space:pre-wrap}
+.progress{color:var(--muted);font-size:15px;min-height:1.6em}
+
+.libhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0 10px}
+.libhead h2{margin-inline-end:auto}
+.libhead input{padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg);min-width:0;width:min(280px,100%)}
+.lib{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.lib .ctag{font-size:13px;color:var(--accent);font-weight:700}
+.lib li{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:center}
+.lib .k{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--sunk);color:var(--muted)}
+.lib .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lib .m{grid-column:2;color:var(--muted);font-size:14px}
+.lib .acts{grid-row:1 / span 2;grid-column:3;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.tag{font-size:12px;font-weight:600;border-radius:999px;padding:0 8px;margin-inline-start:6px;background:var(--sunk);color:var(--muted)}
+.tag.run{background:color-mix(in srgb,var(--rec) 16%,transparent);color:var(--rec)}
+.tag.part{background:var(--warn-bg);color:var(--warn-fg)}
+.empty{color:var(--muted);padding:14px 2px}
+@media (max-width:560px){.lib li{grid-template-columns:auto minmax(0,1fr)}.lib .acts{grid-row:auto;grid-column:1 / -1;justify-content:flex-start}}
+/* course picker, course tabs, search hits, course page */
+.coursebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+.coursebar select{padding:8px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);min-width:0;max-width:100%;font-weight:600}
+.coursebar .hint{color:var(--muted);font-size:15px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.tabs button{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 13px;cursor:pointer;font-size:15px;font-weight:600}
+.tabs button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.tabs button.add{border-style:dashed;color:var(--accent)}
+.cbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--accent-soft);border-radius:var(--r);padding:10px 14px;margin:0 0 10px}
+.cbar span{margin-inline-end:auto}
+.hits{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.hits > li{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px}
+.hits .ht{font-weight:700}
+.hits ol{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:2px}
+.hits ol button{all:unset;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:3px 6px;border-radius:8px}
+.hits ol button:hover,.hits ol button:focus-visible{background:var(--sunk)}
+mark{background:var(--mark);color:#17261F;border-radius:3px;padding:0 1px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;margin-bottom:22px}
+@media (max-width:900px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.card h2{margin-bottom:6px}
+.card .sub{color:var(--muted);font-size:15px;margin:0 0 10px}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.presets button{border:1.5px solid var(--line);background:var(--bg);border-radius:10px;padding:5px 12px;cursor:pointer;font-size:15px;font-weight:600}
+.presets button:hover{border-color:var(--accent)}
+textarea.gloss{width:100%;min-height:220px;resize:vertical;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);line-height:1.55}
+select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);min-width:0;max-width:100%}
+.modal select,.modal input[type=text]{width:100%;padding:9px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg)}
+.menu{display:grid;gap:8px}
+.sumtext{line-height:1.7;margin-top:8px}
+.sumtext:empty{display:none}
+.sumtext p{margin:0 0 6px}
+.sumtext ul{margin:0 0 6px;padding-inline-start:20px}
+.aistate{font-size:15px;color:var(--muted)}
+.aistate.ok{color:var(--ok);font-weight:700}
+.foot{margin-top:26px;color:var(--muted);font-size:14px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+
+/* live + transcript */
+.livebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.livebar .what{margin-inline-end:auto}
+.livebar .what b{font-size:20px}
+.livebar .what small{display:block;color:var(--muted)}
+.clock{font-family:var(--f-mono);direction:ltr;unicode-bidi:isolate}
+.split{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.split{grid-template-columns:minmax(0,1fr)}}
+.tbox{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
+.tbox .tools{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid var(--line)}
+.tbox .tools input{flex:1;min-width:0;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg)}
+.lines{list-style:none;margin:0;padding:8px 6px;overflow-y:auto;height:calc(100vh - 330px);min-height:300px}
+.lines li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:5px 8px;border-radius:8px;align-items:start}
+.lines li.shot img{max-width:min(100%,260px);border-radius:6px;border:1px solid var(--line);display:block;cursor:zoom-in}
+.lines li.note,.lines li.gap{color:var(--muted);font-style:italic;font-size:14px}
+.lines li.draft{color:var(--muted);font-style:italic}
+.lines li.draft .ts{color:var(--muted)}
+.lines li.hit{background:var(--now);color:var(--now-ink)}
+.ts{font-family:var(--f-mono);font-size:13px;color:var(--accent);direction:ltr;unicode-bidi:isolate;padding-top:3px;white-space:nowrap}
+.side{display:grid;gap:12px}
+.shotbox img{width:100%;border-radius:8px;border:1px solid var(--line);display:block;cursor:zoom-in}
+.shotbox .none{color:var(--muted);font-size:15px;padding:24px 8px;text-align:center;background:var(--sunk);border-radius:8px}
+.stat{display:grid;gap:4px;font-size:15px}
+.stat .k{color:var(--muted)}
+.ended{background:var(--ok-soft);color:var(--ok);border-radius:var(--r);padding:12px 16px;font-weight:600;margin-bottom:14px}
+
+/* overlays */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:16px;z-index:20}
+.modal .card{max-width:520px;width:100%;display:grid;gap:12px;box-shadow:0 18px 48px rgba(0,0,0,.25)}
+.modal h3{margin:0;font-size:19px}
+.big{position:fixed;inset:0;background:rgba(0,0,0,.85);display:grid;place-items:center;padding:20px;z-index:30;cursor:zoom-out}
+.big img{max-width:100%;max-height:100%;border-radius:8px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:14px;font-weight:600;max-width:min(92vw,520px);text-align:center;z-index:40;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+.log{margin-top:24px}
+.log summary{cursor:pointer;color:var(--muted);font-size:14px}
+.log ol{list-style:none;margin:8px 0 0;padding:0;font-size:14px;display:grid;gap:3px;max-height:260px;overflow:auto}
+.log li.warn{color:var(--warn-fg);background:var(--warn-bg);border-radius:6px;padding:0 6px}
+.gone{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;padding:16px;z-index:50;text-align:center}
+@media (prefers-reduced-motion:reduce){.toast,.start{transition:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <button class="brand" id="brand" type="button" title="למסך הבית של האפליקציה"><svg class="logo" width="30" height="30" viewBox="0 0 120 120" aria-hidden="true"><path d="M20 14H100A14 14 0 0 1 114 28V76A14 14 0 0 1 100 90H96L99 110L74 90H20A14 14 0 0 1 6 76V28A14 14 0 0 1 20 14Z" fill="var(--accent)"></path><path d="M35 52L51 68L85 34" fill="none" stroke="var(--mark)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"></path></svg>הבנתי <small>האפליקציה</small></button>
+    <span class="pill" id="statePill" aria-live="polite">מוכן</span>
+    <span class="pill" id="devPill" hidden></span>
+    <button class="btn quiet small" id="quitBtn" type="button">סגירת האפליקציה</button>
+  </div>
+</header>
+
+<main>
+  <!-- HOME -->
+  <section id="vHome" aria-label="מסך הבית">
+    <h1>מה עושים עכשיו?</h1>
+    <p class="lead">הכל קורה במחשב שלך: כל הרצאה נשמרת בתיקייה "ההרצאות שלי", בתיקייה של הקורס.</p>
+    <div class="coursebar">
+      <label for="courseSel"><b>הקורס:</b></label>
+      <select id="courseSel"></select>
+      <button class="btn ghost small" id="courseOpen" type="button">הכנה למבחן ומילון מונחים</button>
+    </div>
+
+    <div class="running" id="runBanner" hidden>
+      <div class="what"><b id="runWhat"></b><small id="runSub"></small></div>
+      <button class="btn small" id="runBack" type="button">חזרה</button>
+      <button class="btn ghost small" id="runStop" type="button">עצירה</button>
+    </div>
+    <div class="cbar" id="updBar" hidden><span id="updText"></span><a class="btn small" id="updGo" href="#" target="_blank" rel="noopener">להורדה</a></div>
+    <div class="msg" id="homeErr" hidden></div>
+
+    <div class="starts">
+      <button class="start" type="button" data-start="he">
+        <span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 11v2"/></svg></span>
+        <b>הרצאה חיה בעברית</b><span>זום או שידור בדפדפן: כל מה שמתנגן במחשב נכתב תוך כדי, עם צילומי מסך.</span>
+      </button>
+      <button class="start" type="button" data-start="en">
+        <span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 11v2"/></svg></span>
+        <b>הרצאה חיה באנגלית</b><span>אותו דבר, להרצאה באנגלית.</span>
+      </button>
+      <button class="start" type="button" id="recTile">
+        <span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="m17 10 4-2v8l-4-2z"/></svg></span>
+        <b>הרצאה מוקלטת</b><span>קובץ או קישור. מתומלל מראש, ונפתח בנגן שיודע איפה אתם.</span>
+      </button>
+    </div>
+
+    <div class="card recbox" id="recBox" hidden>
+      <div class="drop" id="drop"><b>לגרור לכאן קובץ הקלטה</b> (סרטון או שמע)<br>או <button class="btn ghost small" id="pickBtn" type="button">בחירת קובץ...</button></div>
+      <div class="row"><input type="url" id="linkIn" placeholder="או להדביק קישור: Google Drive, Dropbox, OneDrive, זום..." aria-label="קישור להקלטה"></div>
+      <div class="meter" id="upMeter" hidden><i id="upBar"></i></div>
+      <div id="chosenRow" class="row" hidden>נבחר: <span class="chosen" id="chosen"></span></div>
+      <div class="row">
+        <span>שפת ההרצאה:</span>
+        <div class="seg" role="group" aria-label="שפת ההרצאה"><button type="button" data-lang="he" aria-pressed="true">עברית</button><button type="button" data-lang="en" aria-pressed="false">אנגלית</button></div>
+        <button class="btn" id="recGo" type="button" disabled>פתיחה בנגן</button>
+      </div>
+    </div>
+
+    <div class="card" id="startCard" hidden>
+      <h2 id="startTitle">מתכונן...</h2>
+      <p class="progress" id="startProg"></p>
+    </div>
+
+    <div class="libhead"><h2>ההרצאות שלי</h2><input type="search" id="libFind" placeholder="חיפוש בכל מה שנאמר" aria-label="חיפוש בכל ההרצאות"></div>
+    <div class="tabs" id="libTabs" role="group" aria-label="קורסים"></div>
+    <div class="cbar" id="libCbar" hidden><span id="libCbarText"></span><button class="btn small" id="libCbarGo" type="button">לדף הקורס</button></div>
+    <ol class="lib" id="lib"><li class="empty">טוען...</li></ol>
+    <ol class="hits" id="hits" hidden></ol>
+
+    <div class="foot">
+      <button class="btn quiet small" type="button" data-open="lib">פתיחת "ההרצאות שלי" בתיקייה</button>
+      <button class="btn ghost small" id="aiSetBtn" type="button" hidden>הבנתי עונה: הגדרה</button>
+      <a href="https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD" target="_blank" rel="noopener">המדריך (הסבר מלא ועדכונים, באינטרנט)</a>
+      <span id="ver"></span>
+    </div>
+  </section>
+
+  <!-- LIVE -->
+  <section id="vLive" aria-label="הרצאה חיה" hidden>
+    <div class="livebar">
+      <div class="what"><b id="liveWhat">הרצאה חיה</b><small id="liveSub">טוען...</small></div>
+      <button class="btn ghost" id="liveStop" type="button">עצירה</button>
+    </div>
+    <div class="ended" id="liveEnded" hidden></div>
+    <div class="split">
+      <div class="tbox">
+        <div class="tools"><input type="search" id="liveFind" placeholder="חיפוש בתמלול" aria-label="חיפוש בתמלול"><button class="btn ghost small" id="liveFollow" type="button" hidden>לסוף</button></div>
+        <ol class="lines" id="liveLines"></ol>
+      </div>
+      <div class="side">
+        <div class="card" id="liveAsk"></div>
+        <div class="card shotbox"><div class="row" style="justify-content:space-between;margin-bottom:8px"><b>צילום המסך האחרון</b><button class="btn ghost small" id="shotCopy" type="button" hidden>העתקת צילום המסך</button></div><div id="shotSlot"><div class="none">עוד אין צילום מסך.</div></div></div>
+        <div class="card stat" id="liveStat"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAST LECTURE -->
+  <section id="vPast" aria-label="תמלול" hidden>
+    <div class="livebar">
+      <button class="btn ghost back" id="pastBack" type="button">→ חזרה</button>
+      <div class="what"><b id="pastTitle"></b><small id="pastSub"></small></div>
+      <button class="btn" id="pastPlay" type="button" hidden>צפייה בנגן</button>
+      <button class="btn ghost" id="pastCopy" type="button">העתקת כל התמלול</button>
+      <button class="btn quiet" id="pastFile" type="button">פתיחת הקובץ</button>
+      <button class="btn quiet" id="pastMore" type="button" aria-label="עוד פעולות להרצאה">העברה / שם / מחיקה</button>
+    </div>
+    <div class="card" id="pastSum" hidden style="margin-bottom:14px">
+      <div class="row" style="justify-content:space-between"><h2>סיכום</h2>
+        <div class="row"><button class="btn quiet small" id="sumCopy" type="button" hidden>העתקה</button><button class="btn small" id="sumGo" type="button">סיכום אוטומטי</button></div></div>
+      <div id="sumText" class="sumtext"></div>
+    </div>
+    <div class="card" id="pastAsk" style="margin-bottom:14px"></div>
+    <div class="tbox">
+      <div class="tools"><input type="search" id="pastFind" placeholder="חיפוש בתמלול" aria-label="חיפוש בתמלול"></div>
+      <ol class="lines" id="pastLines"></ol>
+    </div>
+  </section>
+
+  <!-- COURSE -->
+  <section id="vCourse" aria-label="קורס" hidden>
+    <div class="livebar">
+      <button class="btn ghost back" id="cBack" type="button">→ למסך הבית</button>
+      <div class="what"><b id="cTitle"></b><small id="cSub"></small></div>
+      <button class="btn ghost" id="cExport" type="button">קובץ אחד של כל הקורס</button>
+      <button class="btn quiet" id="cFolder" type="button">פתיחת התיקייה</button>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h2>הכנה למבחן</h2>
+        <p class="sub">כל ההרצאות של הקורס נשלחות ל-AI ביחד עם המשימה. אפשר לבחור משימה מוכנה או לכתוב משלך.</p>
+        <div class="presets" id="presets">
+          <button type="button" data-preset="exam">מבחן תרגול</button>
+          <button type="button" data-preset="summary">סיכום כל הקורס</button>
+          <button type="button" data-preset="cards">כרטיסיות חזרה</button>
+          <button type="button" data-preset="hard">הנושאים הכי קשים</button>
+          <button type="button" data-preset="formulas">דף נוסחאות</button>
+        </div>
+        <div id="cAsk"></div>
+        <p class="sub" id="cSize" style="margin-top:8px"></p>
+      </div>
+      <div class="card">
+        <h2>מילון מונחים</h2>
+        <p class="sub">מונח בכל שורה. התמלול משתמש בהם כדי לכתוב נכון מונחים, שמות ומילים באנגלית, מההרצאה הבאה. הכי חשובים למעלה (נכנסים בערך 25-30 הראשונים).</p>
+        <label for="glossIn" class="sub" style="display:block;margin:0 0 4px">המונחים של הקורס</label>
+        <textarea class="gloss" id="glossIn" dir="auto" spellcheck="false"></textarea>
+        <div class="row" style="margin-top:10px">
+          <label for="tmplSel" class="sub" style="margin:0">להוסיף מונחים מתחום:</label>
+          <select class="small" id="tmplSel"></select>
+          <button class="btn ghost small" id="tmplAdd" type="button">הוספה</button>
+          <button class="btn" id="glossSave" type="button" style="margin-inline-start:auto">שמירה</button>
+        </div>
+      </div>
+    </div>
+    <div class="libhead"><h2>ההרצאות בקורס</h2></div>
+    <ol class="lib" id="cLib"></ol>
+  </section>
+
+  <details class="log" id="logBox"><summary>הודעות מהכלי</summary><ol id="log"></ol></details>
+</main>
+
+<div class="modal" id="ask" hidden role="dialog" aria-modal="true" aria-labelledby="askT"><div class="card">
+  <h3 id="askT">שאלה</h3>
+  <div class="row"><input id="askIn" type="text" aria-label="תשובה"></div>
+  <div class="row"><button class="btn" id="askOk" type="button">אישור</button><button class="btn quiet" id="askNo" type="button">ביטול</button></div>
+</div></div>
+<div class="modal" id="confirm" hidden role="dialog" aria-modal="true" aria-labelledby="confT"><div class="card">
+  <h3 id="confT"></h3><p id="confP" style="margin:0;color:var(--muted)"></p>
+  <div class="row"><button class="btn" id="confOk" type="button">כן</button><button class="btn quiet" id="confNo" type="button">ביטול</button></div>
+</div></div>
+<div class="modal" id="offer" hidden role="dialog" aria-modal="true" aria-labelledby="offT"><div class="card">
+  <h3 id="offT">הקלטה חדשה</h3><p class="chosen" id="offName" style="margin:0"></p>
+  <p style="margin:0">באיזו שפה ההרצאה?</p>
+  <div class="row"><button class="btn" type="button" data-offer="he">עברית</button><button class="btn" type="button" data-offer="en">אנגלית</button><button class="btn quiet" type="button" data-offer="">ביטול</button></div>
+</div></div>
+<div class="modal" id="aiSet" hidden role="dialog" aria-modal="true" aria-labelledby="aiT"><div class="card">
+  <h3 id="aiT">הבנתי עונה: מפתח OpenAI</h3>
+  <p style="margin:0">התשובות מופיעות בתוך האפליקציה, בלי להעתיק. זה עובד עם מפתח API של OpenAI שלך: השאלות יוצאות ישירות מהמחשב שלך ל-OpenAI, ו-OpenAI מחייבת את החשבון שלך לפי שימוש (בדרך כלל סנטים לשאלה). המפתח נשמר מוצפן במחשב הזה בלבד. <a href="https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD#ai" target="_blank" rel="noopener">איך משיגים מפתח</a></p>
+  <label for="aiKey">המפתח (מתחיל ב-sk-)</label>
+  <input type="password" id="aiKey" placeholder="sk-..." maxlength="400" dir="ltr" autocomplete="off" spellcheck="false">
+  <p class="aistate" id="aiState"></p>
+  <div id="aiPrefs" hidden style="display:grid;gap:8px">
+    <label for="aiModelAsk">מודל לשאלות ולסיכומים</label>
+    <select id="aiModelAsk"></select>
+    <label for="aiModelExam">מודל להכנה למבחן (כל הקורס)</label>
+    <select id="aiModelExam"></select>
+    <label for="aiCap">תקרה חודשית בדולרים (רשות: כשמגיעים אליה, הבנתי עונה מפסיקה עד החודש הבא)</label>
+    <input type="number" id="aiCap" min="0" step="0.5" placeholder="בלי תקרה" dir="ltr" style="max-width:12em">
+    <p class="aistate" id="aiMeter" style="margin:0"></p>
+  </div>
+  <div class="row"><button class="btn" id="aiSave" type="button">שמירה ובדיקה</button><button class="btn quiet small" id="aiForget" type="button">הסרת המפתח</button><button class="btn quiet" id="aiClose" type="button" style="margin-inline-start:auto">סגירה</button></div>
+</div></div>
+<div class="modal" id="newCourse" hidden role="dialog" aria-modal="true" aria-labelledby="ncT"><div class="card">
+  <h3 id="ncT">קורס חדש</h3>
+  <label for="ncName">שם הקורס</label>
+  <input type="text" id="ncName" placeholder="למשל: דינמיקה" maxlength="80">
+  <label for="ncTmpl">תחום (ממלא מילון מונחים התחלתי, אפשר לשנות אחר כך)</label>
+  <select id="ncTmpl"></select>
+  <div class="row"><button class="btn" id="ncOk" type="button">יצירה</button><button class="btn quiet" id="ncNo" type="button">ביטול</button></div>
+</div></div>
+<div class="modal" id="lecMenu" hidden role="dialog" aria-modal="true" aria-labelledby="lmT"><div class="card">
+  <h3 id="lmT"></h3>
+  <label for="lmCourse">להעביר לקורס</label>
+  <div class="row"><select id="lmCourse"></select><button class="btn ghost small" id="lmMove" type="button">העברה</button></div>
+  <label for="lmName">שם ההרצאה</label>
+  <div class="row"><input type="text" id="lmName" maxlength="80"><button class="btn ghost small" id="lmRename" type="button">שמירת השם</button></div>
+  <div class="row"><button class="btn quiet small" id="lmFolder" type="button">פתיחת התיקייה שלה</button><button class="btn danger small" id="lmDelete" type="button">מחיקת ההרצאה</button><button class="btn quiet" id="lmClose" type="button" style="margin-inline-start:auto">סגירה</button></div>
+</div></div>
+<div class="big" id="big" hidden><img alt=""></div>
+<div class="toast" id="toast" role="status"></div>
+<div class="gone" id="gone" hidden><div><h1>האפליקציה סגורה</h1><p class="lead">כדי לפתוח אותה שוב: לחיצה כפולה על Hevanti בתיקייה של הבנתי.<br>אפשר לסגור את הלשונית הזו.</p></div></div>
+
+<script src="/ask.js"></script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const api = (p, body) => fetch(p, body === undefined ? {cache: "no-store"} :
+  {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify(body)}).then(r => r.json());
+let app = null, notesSince = 0, libRev = -1, libItems = [], fails = 0, lastQ = null, lastOffer = null;
+let wantPlayer = null, recSource = "", recLang = "he", view = "home", pastFile = null, shownErr = "";
+const NO_COURSE = "ללא קורס";
+let courses = [], curCourse = "", libCourse = "", templates = [], templatesData = {}, searchSeq = 0, lastAI = "";
+function aiInfo() { return (app && app.ai) || {}; }
+function usd(x) { x = Number(x || 0); return "$" + (x < 0.01 && x > 0 ? x.toFixed(4) : x.toFixed(2)); }
+function aiMeterText(i) {
+  return "החודש: " + usd(i.month_usd) + " (" + Number(i.month_tokens || 0).toLocaleString("he-IL") + " טוקנים)" +
+    (i.unpriced ? ". חלק מהמודלים בלי מחיר ידוע, אז הסכום חלקי - המחיר המדויק באתר של OpenAI (Usage)." : ".") +
+    (i.cap ? " תקרה: " + usd(i.cap) + "." : "");
+}
+function fillModels(models, i) {
+  for (const [sel, cur] of [["#aiModelAsk", i.model_ask], ["#aiModelExam", i.model_exam]]) {
+    const el = $(sel); el.replaceChildren();
+    for (const m of models) { const o = document.createElement("option"); o.value = m.id; o.textContent = "\u2066" + m.id + "\u2069 · " + m.price; el.appendChild(o); }
+    if (cur && !models.some(m => m.id === cur)) { const o = document.createElement("option"); o.value = cur; o.textContent = cur; el.prepend(o); }
+    el.value = cur || (models[0] && models[0].id) || "";
+  }
+}
+function drawAIPrefs(i) {
+  $("#aiPrefs").hidden = !i.on; $("#aiForget").hidden = !i.on;
+  $("#aiCap").value = i.cap || ""; $("#aiMeter").textContent = aiMeterText(i);
+}
+async function openAISettings() {
+  const i = aiInfo();
+  $("#aiKey").value = ""; $("#aiState").className = "aistate";
+  $("#aiState").textContent = i.on ? "מחובר עם המפתח " + i.key + ". אפשר להדביק מפתח אחר כדי להחליף." : "עוד לא חובר מפתח.";
+  drawAIPrefs(i); $("#aiSet").hidden = false; $("#aiKey").focus();
+  if (i.on) {
+    fillModels([], i);
+    const r = await api("/api/cmd", {action: "ai_models"}).catch(() => ({ok: false}));
+    if (r.ok) fillModels(r.models, aiInfo()); else if (r.error) $("#aiState").textContent = r.error;
+  }
+}
+async function saveAIPrefs(extra) {
+  const r = await api("/api/cmd", Object.assign({action: "ai_prefs", model_ask: $("#aiModelAsk").value, model_exam: $("#aiModelExam").value}, extra || {}));
+  if (r.ok) { app.ai = r.info; drawAIPrefs(r.info); toast("נשמר."); } else toast(r.error || "לא נשמר.");
+}
+
+function toast(t) { const e = $("#toast"); e.textContent = t; e.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => e.classList.remove("on"), Math.max(2800, t.length * 55)); }
+function hms(t) { t = Math.max(0, Math.floor(t || 0)); return [t / 3600 | 0, (t % 3600) / 60 | 0, t % 60].map(x => String(x).padStart(2, "0")).join(":"); }
+function langName(l) { return l === "en" ? "אנגלית" : "עברית"; }
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function big(src) { $("#big img").src = src; $("#big").hidden = false; }
+$("#big").addEventListener("click", () => { $("#big").hidden = true; });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { $("#big").hidden = true; } });
+function confirmBox(title, text, okLabel) {
+  return new Promise(res => {
+    $("#confT").textContent = title; $("#confP").textContent = text || ""; $("#confirm").hidden = false;
+    $("#confOk").textContent = okLabel || "כן"; $("#confOk").className = okLabel ? "btn danger" : "btn";
+    const done = v => { $("#confirm").hidden = true; $("#confOk").onclick = $("#confNo").onclick = null; res(v); };
+    $("#confOk").onclick = () => done(true); $("#confNo").onclick = () => done(false); $("#confOk").focus();
+  });
+}
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); return true; }
+  catch (e) { const ta = el("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand("copy"); } catch (e2) {} ta.remove(); return ok; }
+}
+async function copyImage(src) {
+  try {
+    const im = new Image(); im.src = src; await im.decode();
+    const c = el("canvas"); c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext("2d").drawImage(im, 0, 0);
+    const blob = await new Promise(r => c.toBlob(r, "image/png"));
+    await navigator.clipboard.write([new ClipboardItem({"image/png": blob})]); return true;
+  } catch (e) { return false; }
+}
+const shotUrl = rel => "/shot?p=" + encodeURIComponent(rel);
+
+// ---------- views ----------
+function show(v) {
+  view = v;
+  // (the sections are not called "home"/"live": a #live link would scroll the page to them)
+  for (const id of ["home", "live", "past", "course"]) $("#v" + id[0].toUpperCase() + id.slice(1)).hidden = id !== v;
+  window.scrollTo(0, 0);
+}
+let backTo = "";  // where "חזרה" on a lecture goes: the course page it was opened from, or home
+function route() {
+  const raw = location.hash.slice(1), h = decodeURIComponent(raw);
+  if (h === "live") { show("live"); liveSince = 0; liveItems = []; $("#liveLines").replaceChildren(); pollLive(); return; }
+  if (raw.startsWith("t=")) { if (view !== "past") backTo = view === "course" && courseName ? "c=" + encodeURIComponent(courseName) : "";
+    $("#pastBack").textContent = backTo ? "→ חזרה לקורס" : "→ למסך הבית"; const [f, at] = raw.slice(2).split("&at="); openPast(decodeURIComponent(f), at != null ? +at : null); return; }
+  if (raw.startsWith("c=")) { openCourse(decodeURIComponent(raw.slice(2))); return; }
+  show("home");
+  if (h === "rec") openRec();
+  loadLib(true);
+}
+window.addEventListener("hashchange", route);
+$("#brand").addEventListener("click", () => { location.hash = ""; });
+$("#cBack").addEventListener("click", () => { location.hash = ""; });
+// from a lecture: back to where it was opened from (its course page or home)
+$("#pastBack").addEventListener("click", () => { location.hash = backTo; });
+
+// ---------- the app state ----------
+async function poll() {
+  try {
+    const d = await api("/api/app?notes=" + notesSince);
+    fails = 0; $("#gone").hidden = true;
+    app = d; render(d);
+  } catch (e) {
+    if (++fails >= 4) $("#gone").hidden = false;
+  }
+  setTimeout(poll, 1000);
+}
+function sessionName(s) {
+  if (!s) return "";
+  const c = s.course && s.course !== NO_COURSE ? " · " + s.course : "";
+  return (s.kind === "live" ? "הרצאה חיה ב" + langName(s.lang) : "הקלטה: " + (s.title || "")) + c;
+}
+function render(d) {
+  $("#ver").textContent = "גרסה " + d.version + " (" + d.date + ")";
+  if (!curCourse && d.course) { curCourse = d.course; drawCourseSel(); }
+  const up = d.update;
+  $("#updBar").hidden = !up;
+  if (up) { $("#updText").textContent = "יש גרסה חדשה: " + up.version + (up.date ? " (" + up.date + ")" : "") + (up.notes ? ". " + up.notes : "");
+    $("#updGo").href = up.url || "https://github.com/pechter-roei41/hevanti/releases"; }
+  const ai = d.ai || {}, aiKey = JSON.stringify(ai);
+  if (aiKey !== lastAI) { lastAI = aiKey; if (window.BZMAsk) BZMAsk.setAI(ai); $("#aiSetBtn").hidden = false;
+    $("#aiSetBtn").textContent = ai.on ? "הבנתי עונה: מחובר (" + usd(ai.month_usd) + " החודש)" : "הבנתי עונה: חיבור מפתח OpenAI"; drawSummary(); }
+  const s = d.session, active = s && !s.done;
+  const pill = $("#statePill");
+  if (active && s.kind === "live") { pill.className = "pill live"; pill.textContent = s.ready ? (s.stopping ? "עוצר..." : "מקליט") : "מתחיל..."; }
+  else if (active) { pill.className = "pill"; pill.textContent = s.ready ? "הקלטה פתוחה" : "מכין הקלטה..."; }
+  else { pill.className = "pill"; pill.textContent = "מוכן"; }
+  const dp = $("#devPill"); dp.hidden = !d.device; dp.textContent = d.device === "GPU" ? "כרטיס מסך" : "מעבד";
+  // what is running (home)
+  const rb = $("#runBanner");
+  rb.hidden = !active;
+  if (active) {
+    $("#runWhat").textContent = s.kind === "live" ? "פועל עכשיו: " + sessionName(s) : "פתוח עכשיו בנגן: " + (s.title || "הקלטה");
+    $("#runSub").textContent = s.ready ? "התחיל בשעה " + new Date(s.started * 1000).toLocaleTimeString("he-IL", {hour: "2-digit", minute: "2-digit"}) : (d.progress || "מתכונן...");
+    $("#runBack").textContent = s.kind === "live" ? "לתמלול" : "לנגן";
+  }
+  // starting card
+  const sc = $("#startCard");
+  sc.hidden = !(active && !s.ready);
+  if (!sc.hidden) { $("#startTitle").textContent = sessionName(s); $("#startProg").textContent = d.progress || "מתכונן..."; }
+  // errors
+  const err = s && s.error ? s.error : "";
+  $("#homeErr").hidden = !err; $("#homeErr").textContent = err;
+  if (err && err !== shownErr) { shownErr = err; if (view !== "home") location.hash = ""; }
+  // the recording we asked for is open -> the player (only that session: the one before may still be listed)
+  if (wantPlayer && s && s.started >= wantPlayer) {
+    if (d.rec_open) { wantPlayer = null; location.href = "/player"; return; }
+    if (s.done) wantPlayer = null;
+  }
+  // notes
+  for (const n of d.notes || []) {
+    notesSince = Math.max(notesSince, n.id);
+    const li = el("li", n.level, n.clock + "  " + n.text); $("#log").prepend(li);
+    if (n.level === "warn") toast(n.text.split("\n")[0]);
+  }
+  // a question (passcode for a link)
+  if (d.question && (!lastQ || lastQ !== d.question.id)) {
+    lastQ = d.question.id; $("#askT").textContent = d.question.text; $("#askIn").type = d.question.secret ? "password" : "text";
+    $("#askIn").value = ""; $("#ask").hidden = false; $("#askIn").focus();
+  } else if (!d.question && !$("#ask").hidden) { $("#ask").hidden = true; lastQ = null; }
+  // a recording that arrived from outside (dragged onto Hevanti)
+  if (d.pending && lastOffer !== d.pending.source) { lastOffer = d.pending.source; $("#offName").textContent = d.pending.name; $("#offer").hidden = false; }
+  if (!d.pending) { $("#offer").hidden = true; lastOffer = null; }
+  if (d.lib_rev !== libRev && view === "home") loadLib();
+  if (view === "live") renderLiveHead(s);
+}
+function answer(v) { if (!app || !app.question) return; api("/api/cmd", {action: "answer", id: app.question.id, value: v}); $("#ask").hidden = true; }
+$("#askOk").addEventListener("click", () => answer($("#askIn").value));
+$("#askNo").addEventListener("click", () => answer(""));
+$("#askIn").addEventListener("keydown", e => { if (e.key === "Enter") answer($("#askIn").value); });
+document.querySelectorAll("[data-offer]").forEach(b => b.addEventListener("click", async () => {
+  const lang = b.dataset.offer, src = app && app.pending ? app.pending.source : "";
+  await api("/api/cmd", {action: "dismiss_pending"});
+  $("#offer").hidden = true;
+  if (lang && src) startRecording(src, lang);
+}));
+
+// ---------- starting ----------
+async function okToReplace() {
+  const s = app && app.session;
+  if (!s || s.done) return true;
+  return confirmBox("לעצור את מה שפועל עכשיו?", sessionName(s) + " ייעצר. מה שכבר תומלל נשמר.");
+}
+document.querySelectorAll("[data-start]").forEach(b => b.addEventListener("click", async () => {
+  if (!(await okToReplace())) return;
+  await api("/api/cmd", {action: "start_live", lang: b.dataset.start, course: curCourse || NO_COURSE});
+  location.hash = "live";
+}));
+function openRec() { $("#recBox").hidden = false; $("#recTile").classList.add("on"); $("#linkIn").focus(); }
+$("#recTile").addEventListener("click", () => { if ($("#recBox").hidden) openRec(); else { $("#recBox").hidden = true; $("#recTile").classList.remove("on"); } });
+function choose(src, label) { recSource = src; $("#chosen").textContent = label || src; $("#chosenRow").hidden = !src; $("#recGo").disabled = !src; }
+$("#linkIn").addEventListener("input", () => { const v = $("#linkIn").value.trim(); choose(v, v); if (!v) $("#chosenRow").hidden = true; });
+document.querySelectorAll(".seg [data-lang]").forEach(b => b.addEventListener("click", () => {
+  recLang = b.dataset.lang; document.querySelectorAll(".seg [data-lang]").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+}));
+$("#pickBtn").addEventListener("click", async () => {
+  toast("נפתח חלון בחירת קובץ...");
+  const r = await api("/api/pick", {});
+  if (r.path) { $("#linkIn").value = ""; choose(r.path, r.path.split(/[\\/]/).pop()); }
+});
+const drop = $("#drop");
+["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => { const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) upload(f); });
+document.addEventListener("dragover", e => e.preventDefault());
+document.addEventListener("drop", e => { if (!drop.contains(e.target)) { e.preventDefault(); const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f && view === "home") { openRec(); upload(f); } } });
+function upload(file) {
+  $("#upMeter").hidden = false; $("#upBar").style.width = "0"; choose("", ""); toast("מעתיק את הקובץ לכלי...");
+  const x = new XMLHttpRequest();
+  x.open("POST", "/api/upload?name=" + encodeURIComponent(file.name));
+  x.setRequestHeader("X-BZM", "1");
+  x.upload.onprogress = e => { if (e.lengthComputable) $("#upBar").style.width = (100 * e.loaded / e.total) + "%"; };
+  x.onload = () => { $("#upMeter").hidden = true; try { const r = JSON.parse(x.responseText); if (r.path) choose(r.path, file.name); else toast(r.error || "ההעתקה נכשלה"); } catch (e) { toast("ההעתקה נכשלה"); } };
+  x.onerror = () => { $("#upMeter").hidden = true; toast("ההעתקה נכשלה. לנסות שוב, או ללחוץ על בחירת קובץ."); };
+  x.send(file);
+}
+async function startRecording(src, lang) {
+  if (!(await okToReplace())) return;
+  wantPlayer = Date.now() / 1000 - 2; shownErr = "";
+  await api("/api/cmd", {action: "start_recording", source: src, lang, course: curCourse || NO_COURSE});
+  $("#recBox").hidden = true; $("#recTile").classList.remove("on"); $("#linkIn").value = ""; choose("", "");
+}
+$("#recGo").addEventListener("click", () => { if (recSource) startRecording(recSource, recLang); });
+$("#linkIn").addEventListener("keydown", e => { if (e.key === "Enter" && recSource) startRecording(recSource, recLang); });
+$("#runBack").addEventListener("click", () => { const s = app && app.session; if (!s) return; if (s.kind === "live") location.hash = "live"; else location.href = "/player"; });
+$("#runStop").addEventListener("click", stopSession);
+async function stopSession() {
+  const s = app && app.session; if (!s || s.done) return;
+  if (!(await confirmBox("לעצור?", sessionName(s) + " ייעצר. מה שכבר תומלל נשמר."))) return;
+  api("/api/cmd", {action: "stop"});
+}
+$("#quitBtn").addEventListener("click", async () => {
+  const s = app && app.session, running = s && !s.done;
+  if (!(await confirmBox("לסגור את האפליקציה?", running ? sessionName(s) + " ייעצר, ומה שכבר תומלל נשמר." : "אפשר לפתוח אותה שוב מ-Hevanti."))) return;
+  await api("/api/cmd", {action: "quit"}); $("#gone").hidden = false;
+});
+document.querySelectorAll("[data-open]").forEach(b => b.addEventListener("click", () => api("/api/cmd", {action: "open_folder", what: b.dataset.open})));
+
+// ---------- the library ----------
+async function loadLib(force) {
+  if (!app && !force) return;
+  try {
+    const d = await api("/api/library"); libItems = d.items || []; courses = d.courses || [];
+    libRev = app ? app.lib_rev : -1;
+    if (libCourse && !courses.some(c => c.name === libCourse)) libCourse = "";
+    drawCourseSel(); drawTabs(); drawLib();
+    if (view === "course" && courseName) drawCourseLib();
+  } catch (e) {}
+}
+function courseList() {
+  const names = courses.map(c => c.name);
+  if (!names.includes(NO_COURSE)) names.push(NO_COURSE);
+  if (curCourse && !names.includes(curCourse)) names.unshift(curCourse);
+  return names;
+}
+function drawCourseSel() {
+  const sel = $("#courseSel"), names = courseList();
+  if (!curCourse) curCourse = (courses.find(c => c.name !== NO_COURSE) || {}).name || NO_COURSE;
+  sel.replaceChildren(...names.map(n => { const o = el("option", "", n); o.value = n; return o; }));
+  const add = el("option", "", "+ קורס חדש..."); add.value = "__new"; sel.appendChild(add);
+  sel.value = curCourse;
+  $("#courseOpen").hidden = !courses.some(c => c.name === curCourse);
+}
+$("#courseSel").addEventListener("change", () => {
+  const v = $("#courseSel").value;
+  if (v === "__new") { $("#courseSel").value = curCourse; newCourse(name => { curCourse = name; loadLib(true); }); return; }
+  curCourse = v; drawCourseSel(); api("/api/cmd", {action: "set_course", course: v});
+});
+$("#courseOpen").addEventListener("click", () => { location.hash = "c=" + encodeURIComponent(curCourse); });
+function drawTabs() {
+  const box = $("#libTabs"); box.replaceChildren();
+  const show_ = courses.length > 1 || (courses.length === 1 && courses[0].name !== NO_COURSE);
+  box.hidden = !show_;
+  const tab = (label, value) => {
+    const b = el("button", "", label); b.type = "button"; b.setAttribute("aria-pressed", String(libCourse === value));
+    b.onclick = () => { libCourse = value; drawTabs(); drawLib(); runSearch(); }; return b;
+  };
+  box.appendChild(tab("הכל (" + libItems.length + ")", ""));
+  for (const c of courses) box.appendChild(tab(c.name + " (" + c.lectures + ")", c.name));
+  const add = el("button", "add", "+ קורס"); add.type = "button"; add.onclick = () => newCourse(n => { libCourse = n; loadLib(true); });
+  box.appendChild(add);
+  const c = courses.find(x => x.name === libCourse);
+  $("#libCbar").hidden = !c || c.name === NO_COURSE;
+  if (c) $("#libCbarText").textContent = c.name + " · " + c.lectures + " הרצאות · מילון: " + c.terms + " מונחים";
+}
+$("#libCbarGo").addEventListener("click", () => { if (libCourse) location.hash = "c=" + encodeURIComponent(libCourse); });
+function lecItem(e, withCourse) {
+  const li = el("li");
+  const k = el("span", "k"); k.innerHTML = e.kind === "rec"
+    ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="m17 10 4-2v8l-4-2z"/></svg>'
+    : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 11v2"/></svg>';
+  k.setAttribute("aria-hidden", "true");
+  const t = el("div", "t", e.title);
+  if (e.running) t.appendChild(el("span", "tag run", "פועל עכשיו"));
+  else if (!e.complete) t.appendChild(el("span", "tag part", e.kind !== "rec" ? "לא הסתיים כרגיל" :
+    (e.progress != null ? "תומלל " + e.progress + "%" : "השקופיות לא הושלמו")));
+  const bits = [e.when, langName(e.lang)];
+  if (e.length) bits.push("אורך " + e.length);
+  bits.push(e.lines + " שורות"); if (e.shots) bits.push(e.shots + " צילומים");
+  const m = el("div", "m");
+  if (withCourse) { m.appendChild(el("span", "ctag", e.course)); m.append(" · "); }
+  m.append(bits.join(" · "));
+  const acts = el("div", "acts");
+  if (e.kind === "rec" && e.has_media) {
+    const p = el("button", "btn small", "צפייה"); p.type = "button"; p.onclick = () => playRecording(e.f); acts.appendChild(p);
+  }
+  const o = el("button", "btn ghost small", "תמלול"); o.type = "button"; o.onclick = () => { location.hash = "t=" + encodeURIComponent(e.f); }; acts.appendChild(o);
+  const more = el("button", "btn quiet small", "⋯"); more.type = "button"; more.setAttribute("aria-label", "העברה לקורס, שינוי שם או מחיקה: " + e.title);
+  more.onclick = () => lectureMenu(e); acts.appendChild(more);
+  li.append(k, t, acts, m);
+  return li;
+}
+function drawLib() {
+  const q = $("#libFind").value.trim(), list = $("#lib");
+  if (q.length >= 2) return;  // the search results show instead
+  list.hidden = false; $("#hits").hidden = true;
+  const items = libItems.filter(e => !libCourse || e.course === libCourse);
+  list.replaceChildren();
+  if (!items.length) { list.appendChild(el("li", "empty", libItems.length ? "עוד אין הרצאות בקורס הזה." : "עוד אין הרצאות. אחרי ההרצאה הראשונה היא תופיע כאן.")); return; }
+  const many = courses.length > 1 && !libCourse;
+  for (const e of items) list.appendChild(lecItem(e, many));
+}
+function markText(text, words) {
+  const span = el("span"); span.dir = "auto";
+  const low = text.toLowerCase(); let i = 0;
+  const ranges = [];
+  for (const w of words) { let at = low.indexOf(w); while (at >= 0) { ranges.push([at, at + w.length]); at = low.indexOf(w, at + w.length); } }
+  ranges.sort((a, b) => a[0] - b[0]);
+  for (const [a, b] of ranges) { if (a < i) continue; span.append(text.slice(i, a)); span.appendChild(el("mark", "", text.slice(a, b))); i = b; }
+  span.append(text.slice(i)); return span;
+}
+async function runSearch() {
+  const q = $("#libFind").value.trim(), seq = ++searchSeq;
+  if (q.length < 2) { $("#hits").hidden = true; $("#lib").hidden = false; drawLib(); return; }
+  let d; try { d = await api("/api/search?q=" + encodeURIComponent(q) + "&c=" + encodeURIComponent(libCourse)); } catch (e) { return; }
+  if (seq !== searchSeq) return;
+  const box = $("#hits"), words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  $("#lib").hidden = true; box.hidden = false; box.replaceChildren();
+  if (!d.hits.length) { box.appendChild(el("li", "empty", "לא נמצא. אפשר לנסות מילה אחרת, או חלק ממילה.")); return; }
+  const groups = new Map();
+  for (const h of d.hits) { if (!groups.has(h.f)) groups.set(h.f, []); groups.get(h.f).push(h); }
+  for (const [f, hs] of groups) {
+    const li = el("li"); const head = el("div", "ht", hs[0].title);
+    head.append(" "); head.appendChild(el("span", "ctag", "· " + hs[0].course + " · " + hs.length + " מקומות"));
+    const ol = el("ol");
+    for (const h of hs.slice(0, 12)) {
+      const it = el("li"), b = el("button"); b.type = "button";
+      b.append(el("span", "ts", h.c), markText(h.x, words));
+      b.onclick = () => { location.hash = "t=" + encodeURIComponent(f) + "&at=" + h.t; };
+      it.appendChild(b); ol.appendChild(it);
+    }
+    if (hs.length > 12) ol.appendChild(el("li", "m", "ועוד " + (hs.length - 12) + "..."));
+    li.append(head, ol); box.appendChild(li);
+  }
+  if (d.more) box.appendChild(el("li", "empty", "יש עוד תוצאות. כדאי לחפש מילים מדויקות יותר."));
+}
+let searchT = null;
+$("#libFind").addEventListener("input", () => { clearTimeout(searchT); searchT = setTimeout(runSearch, 250); });
+async function playRecording(f) {
+  if (!(await okToReplace())) return;
+  wantPlayer = Date.now() / 1000 - 2; shownErr = "";
+  const r = await api("/api/cmd", {action: "open_recording", f});
+  if (!r.ok) { wantPlayer = null; toast("קובץ ההקלטה כבר לא נמצא במחשב. אפשר לקרוא את התמלול."); location.hash = "t=" + encodeURIComponent(f); }
+}
+
+// ---------- courses: new, lecture menu, course page ----------
+function fillTemplates(sel, first) {
+  sel.replaceChildren(el("option", "", first));
+  sel.firstChild.value = "";
+  for (const t of templates) { const o = el("option", "", t); o.value = t; sel.appendChild(o); }
+}
+async function loadTemplates() {
+  if (templates.length) return;
+  try { const d = await api("/api/templates"); templatesData = d.templates || {}; templates = Object.keys(templatesData).filter(Boolean); } catch (e) {}
+}
+async function newCourse(done) {
+  await loadTemplates();
+  fillTemplates($("#ncTmpl"), "בלי, אמלא לבד");
+  $("#ncName").value = ""; $("#newCourse").hidden = false; $("#ncName").focus();
+  const close = () => { $("#newCourse").hidden = true; $("#ncOk").onclick = $("#ncNo").onclick = null; };
+  $("#ncNo").onclick = close;
+  $("#ncOk").onclick = async () => {
+    const r = await api("/api/cmd", {action: "new_course", name: $("#ncName").value, template: $("#ncTmpl").value});
+    if (!r.ok) { toast(r.error || "לא הצלחתי"); return; }
+    close(); toast("הקורס \"" + r.course + "\" נוצר."); if (done) done(r.course);
+  };
+}
+$("#ncName").addEventListener("keydown", e => { if (e.key === "Enter") $("#ncOk").click(); });
+function lectureMenu(e) {
+  $("#lmT").textContent = e.title;
+  const sel = $("#lmCourse"), names = courseList();
+  sel.replaceChildren(...names.map(n => { const o = el("option", "", n); o.value = n; return o; }));
+  sel.value = e.course; $("#lmName").value = e.name || e.title; $("#lecMenu").hidden = false;
+  const after = r => {
+    if (!r.ok) { toast(r.error || "לא הצלחתי"); return; }
+    $("#lecMenu").hidden = true; loadLib(true);
+    if (view === "past" && pastFile === e.f) location.hash = "t=" + encodeURIComponent(r.f);
+  };
+  $("#lmMove").onclick = async () => { const r = await api("/api/cmd", {action: "move_lecture", f: e.f, course: sel.value}); if (r.ok) toast("הועבר ל" + sel.value + "."); after(r); };
+  $("#lmRename").onclick = async () => { const r = await api("/api/cmd", {action: "rename_lecture", f: e.f, name: $("#lmName").value}); if (r.ok) toast("השם נשמר."); after(r); };
+  $("#lmFolder").onclick = () => api("/api/cmd", {action: "open_folder", what: "folder", f: e.f});
+  $("#lmDelete").onclick = async () => {
+    $("#lecMenu").hidden = true;
+    if (!(await confirmBox("למחוק את \"" + e.title + "\"?", "התמלול, השקופיות והסיכום שלה יימחקו. אפשר לשחזר מסל המחזור של Windows.", "מחיקה"))) { $("#lecMenu").hidden = false; return; }
+    const r = await api("/api/cmd", {action: "delete_lecture", f: e.f});
+    if (!r.ok) { toast(r.error || "לא הצלחתי"); return; }
+    toast(r.where === "bin" ? "ההרצאה נמחקה. אפשר לשחזר אותה מסל המחזור." : "ההרצאה נמחקה (עותק נשמר ב-Hevanti\\deleted).");
+    await loadLib(true);
+    if (view === "past" && pastFile === e.f) location.hash = backTo;
+    else if (view === "course") openCourse(courseName);
+  };
+  $("#lmClose").onclick = () => { $("#lecMenu").hidden = true; };
+}
+const PRESETS = {
+  exam: "תכין לי מבחן תרגול בסגנון מבחן אמיתי על כל החומר: 8 שאלות מגוונות, מהקלה לקשה. קודם רק השאלות. אחרי שאענה, תבדוק ותסביר כל פתרון צעד אחר צעד.",
+  summary: "תסכם את כל הקורס לפי נושאים: לכל נושא ההגדרות, הנוסחאות (עם יחידות) והרעיון המרכזי, ובסוף איך הנושאים קשורים זה לזה.",
+  cards: "תכין 30 כרטיסיות חזרה (שאלה בצד אחד, תשובה קצרה בצד השני) על המושגים והנוסחאות הכי חשובים בקורס.",
+  hard: "מה הנושאים הכי קשים והכי חשובים למבחן בקורס הזה? תסביר כל אחד בפשטות, עם דוגמה מלאה.",
+  formulas: "תכין דף נוסחאות מסודר לקורס: כל נוסחה, מה כל סימן אומר, יחידות, ומתי משתמשים בה.",
+};
+let courseName = "", courseTextCache = "", courseAsk = null;
+async function openCourse(name) {
+  show("course"); courseName = name; courseTextCache = "";
+  $("#cTitle").textContent = name; $("#cSub").textContent = "טוען..."; $("#glossIn").value = ""; $("#cSize").textContent = "";
+  await loadTemplates(); fillTemplates($("#tmplSel"), "בחירת תחום...");
+  let d; try { d = await api("/api/course?c=" + encodeURIComponent(name)); } catch (e) { d = {none: true}; }
+  if (d.none) { $("#cSub").textContent = "הקורס לא נמצא."; return; }
+  $("#glossIn").value = d.glossary || "";
+  drawCourseLib();
+  try {
+    const t = await api("/api/course_text?c=" + encodeURIComponent(name));
+    if (courseName !== name) return;
+    courseTextCache = t.text;
+    const k = Math.round(t.chars / 1000);
+    $("#cSize").textContent = t.lectures ? (t.lectures + " הרצאות, " + (k < 1 ? "פחות מאלף תווים." : "בערך " + k + " אלף תווים.") +
+      (t.chars > 150000 ? " זה ארוך: הכי טוב Gemini, או \"קובץ אחד של כל הקורס\" ולהעלות אותו לצ'אט." : "")) : "עוד אין הרצאות בקורס.";
+  } catch (e) {}
+}
+function drawCourseLib() {
+  const items = libItems.filter(e => e.course === courseName), list = $("#cLib");
+  $("#cSub").textContent = items.length + " הרצאות · התיקייה: ההרצאות שלי\\" + courseName;
+  list.replaceChildren(...(items.length ? items.map(e => lecItem(e, false)) : [el("li", "empty", "עוד אין הרצאות בקורס הזה. בוחרים אותו במסך הבית לפני שמתחילים הרצאה.")]));
+}
+document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => {
+  if (courseAsk) { courseAsk.textarea.value = PRESETS[b.dataset.preset]; courseAsk.focus(); }
+}));
+if (window.BZMAsk) courseAsk = BZMAsk.mount($("#cAsk"), {
+  title: "שליחה ל-AI", sub: "עם כל ההרצאות של הקורס", placeholder: "המשימה: לבחור למעלה, או לכתוב כאן",
+  openSettings: openAISettings, mineLabel: "הבנתי מכינה",
+  builtIn: {task: "exam", defaultQuestion: "תכין לי מבחן תרגול על כל החומר, עם פתרונות מלאים.", payload: () => ({course: courseName})},
+  context: q => (courseTextCache || "") + "\n\nהמשימה: " + q + "\nלענות בעברית (מונחים מקצועיים אפשר באנגלית). מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.",
+  local: q => "בתיקייה \"ההרצאות שלי\\" + courseName + "\" יש את כל ההרצאות של הקורס (קובץ txt בכל תיקיית הרצאה) ומילון מונחים. לקרוא את כולן, ואז: " + q,
+  toast});
+$("#tmplAdd").addEventListener("click", () => {
+  const words = templatesData[$("#tmplSel").value] || []; if (!words.length) return;
+  const have = $("#glossIn").value.split(/\n+/).map(x => x.trim()).filter(Boolean);
+  const add = words.filter(w => !have.includes(w));
+  $("#glossIn").value = have.concat(add).join("\n");
+  toast(add.length ? "נוספו " + add.length + " מונחים. אפשר למחוק או להוסיף, ואז \"שמירה\"." : "כל המונחים האלה כבר ברשימה.");
+});
+$("#glossSave").addEventListener("click", async () => {
+  const r = await api("/api/cmd", {action: "save_glossary", course: courseName, text: $("#glossIn").value});
+  toast(r.ok ? "נשמר: " + r.terms + " מונחים. מההרצאה הבאה התמלול ישתמש בהם." : (r.error || "לא הצלחתי לשמור."));
+  if (r.ok) loadLib(true);
+});
+$("#cExport").addEventListener("click", async () => {
+  const r = await api("/api/cmd", {action: "export_course", course: courseName});
+  toast(r.ok ? "נשמר הקובץ \"" + courseName + " - כל ההרצאות.txt\" (" + r.lectures + " הרצאות). אפשר להעלות אותו לצ'אט." : (r.error || "לא הצלחתי."));
+});
+$("#cFolder").addEventListener("click", () => api("/api/cmd", {action: "open_folder", what: "course", f: courseName}));
+
+// ---------- a live lecture ----------
+let liveSince = 0, liveItems = [], liveFollow = true, liveLast = null;
+function renderLiveHead(s) {
+  if (!s || s.kind !== "live") return;
+  $("#liveWhat").textContent = sessionName(s);
+  $("#liveStop").hidden = s.done;
+  if (s.error) { $("#liveSub").textContent = "נעצר בגלל שגיאה"; }
+}
+function lineEl(x) {
+  const li = el("li", x.img ? "shot" : (x.note ? "note" : (x.gap ? "gap" : "")));
+  li.appendChild(el("span", "ts", x.c));
+  if (x.img) { const im = el("img"); im.loading = "lazy"; im.src = shotUrl(x.img); im.alt = "צילום מסך מ-" + x.c; im.onclick = () => big(im.src); li.appendChild(im); }
+  else { const sp = el("span", "", x.x || x.note || x.gap); sp.dir = "auto"; li.appendChild(sp); }
+  li._x = x; return li;
+}
+async function pollLive() {
+  if (view !== "live") return;
+  let d;
+  try { d = await api("/api/live?since=" + liveSince); } catch (e) { setTimeout(pollLive, 1500); return; }
+  if (d.none) {
+    $("#liveSub").textContent = (app && app.session && app.session.kind === "live" && !app.session.ready) ? (app.progress || "טוען...") : "אין הרצאה חיה פועלת.";
+    setTimeout(pollLive, 1000); return;
+  }
+  liveLast = d;
+  const box = $("#liveLines"), atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
+  const draftEl = box.querySelector("li.draft"); if (draftEl) draftEl.remove();
+  for (const x of d.items) { liveItems.push(x); box.appendChild(lineEl(x)); }
+  liveSince = d.total;
+  if (d.draft) { const li = el("li", "draft"); li.appendChild(el("span", "ts", "עכשיו")); const sp = el("span", "", "טיוטה: " + d.draft); sp.dir = "auto"; li.appendChild(sp); box.appendChild(li); }
+  else if (d.pending >= 3 && !d.ended) { const li = el("li", "draft"); li.appendChild(el("span", "ts", "עכשיו")); li.appendChild(el("span", "", "מה שנאמר ב-" + Math.round(d.pending) + " השניות האחרונות עוד בתמלול...")); box.appendChild(li); }
+  const ph = $("#livePh"); if (ph) ph.remove();
+  if (!box.children.length && !d.ended) { const li = el("li", "note", "השורות הראשונות יופיעו אחרי חצי דקה בערך. כדאי לוודא שההרצאה מתנגנת ושהסאונד לא מושתק."); li.id = "livePh"; box.appendChild(li); }
+  if (liveFollow && (atEnd || d.items.length)) box.scrollTop = box.scrollHeight;
+  filterLines("#liveLines", "#liveFind");
+  // side
+  const info = d.info || {};
+  const started = info.started_ts ? new Date(info.started_ts * 1000) : null;
+  const el_ = started ? hms((Date.now() - started.getTime()) / 1000) : "";
+  $("#liveSub").innerHTML = "";
+  $("#liveSub").append(d.ended ? "ההרצאה נשמרה" : (info.stopping ? "עוצר ושומר את השניות האחרונות..." : "מקליט את הסאונד של המחשב ומצלם את המסך הראשי"),
+    started ? " · התחיל בשעה " + info.started + " · " : "", el("span", "clock", el_));
+  if (d.shot) {
+    const slot = $("#shotSlot"), src = shotUrl(d.shot);
+    if (!slot.querySelector("img") || slot.querySelector("img").dataset.src !== src) {
+      const im = el("img"); im.src = src; im.dataset.src = src; im.alt = "צילום המסך האחרון"; im.onclick = () => big(src); slot.replaceChildren(im);
+    }
+    if ($("#shotCopy").hidden && liveAskBox) liveAskBox.refresh();
+    $("#shotCopy").hidden = false;
+  }
+  const st = $("#liveStat"); st.replaceChildren();
+  const add = (k, v) => { const r = el("div"); r.append(el("span", "k", k + ": "), el("span", "", v)); st.appendChild(r); };
+  add("עובד על", info.gpu ? "כרטיס המסך" : "המעבד");
+  if (info.device) add("שומע מ", info.device);
+  if (d.lag > 15) add("איחור", Math.round(d.lag) + " שניות" + (d.fast ? " (מצב מהיר)" : ""));
+  if (info.transcript) add("נשמר ב", info.transcript);
+  $("#liveEnded").hidden = !d.ended;
+  if (d.ended) { $("#liveEnded").textContent = "ההרצאה נשמרה ב-" + (info.transcript || "ההרצאות שלי") + ". אפשר לחזור למסך הבית, ולפתוח אותה מ\"ההרצאות שלי\"."; $("#liveStop").hidden = true; }
+  setTimeout(pollLive, d.ended ? 4000 : 1000);
+}
+$("#liveLines").addEventListener("scroll", () => {
+  const b = $("#liveLines"), atEnd = b.scrollTop + b.clientHeight >= b.scrollHeight - 30;
+  liveFollow = atEnd; $("#liveFollow").hidden = atEnd;
+});
+$("#liveFollow").addEventListener("click", () => { const b = $("#liveLines"); b.scrollTop = b.scrollHeight; liveFollow = true; $("#liveFollow").hidden = true; });
+$("#liveStop").addEventListener("click", stopSession);
+$("#liveFind").addEventListener("input", () => filterLines("#liveLines", "#liveFind"));
+const ANSWER_HINT = "\nלענות בעברית (מונחים מקצועיים אפשר באנגלית). מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.\n";
+function liveBody() {
+  const now = Date.now() / 1000, from = now - 300;
+  const lang = app && app.session ? langName(app.session.lang) : "עברית";
+  const c = app && app.session && app.session.course && app.session.course !== NO_COURSE ? ", בקורס " + app.session.course : "";
+  let out = `הרצאה חיה (ב${lang}${c}). התמלול של 5 הדקות האחרונות:\n`, n = 0;
+  for (const x of liveItems) { if (x.t < from) continue; n++; out += `[${x.c}] ` + (x.img ? "[כאן הופיעה שקופית או כתיבה חדשה על הלוח]" : x.x) + "\n"; }
+  if (liveLast && liveLast.draft) out += `(ממש עכשיו, עוד לא סופי: ${liveLast.draft})\n`;
+  if (!n && !(liveLast && liveLast.draft)) out += "(עוד אין תמלול)\n";
+  return out;
+}
+function liveContext(q) {
+  const now = Date.now() / 1000, from = now - 300;
+  const lang = app && app.session ? langName(app.session.lang) : "עברית";
+  let out = `אני בהרצאה חיה (ב${lang}). זה התמלול האוטומטי של 5 הדקות האחרונות (יכולות להיות בו טעויות תמלול):\n\n`, n = 0;
+  for (const x of liveItems) { if (x.t < from) continue; n++; out += `[${x.c}] ` + (x.img ? "[כאן הופיעה שקופית או כתיבה חדשה על הלוח]" : x.x) + "\n"; }
+  if (liveLast && liveLast.draft) out += `(ממש עכשיו, עוד לא סופי: ${liveLast.draft})\n`;
+  if (!n && !(liveLast && liveLast.draft)) out += "(עוד אין תמלול)\n";
+  return out + ANSWER_HINT + "\nהשאלה שלי: " + q;
+}
+function liveLocal(q) {
+  return "אני בהרצאה חיה, והיא מתומללת בהבנתי. לפני שאתה עונה: לקרוא את now_watching.txt בתיקייה \"ההרצאות שלי\" " +
+    "(שם כתוב מה נאמר בדקות האחרונות ומה הצילום האחרון של המסך), ואם צריך גם את קובץ התמלול שכתוב שם.\n\nהשאלה שלי: " + q;
+}
+let liveAskBox = null;
+if (window.BZMAsk) liveAskBox = BZMAsk.mount($("#liveAsk"), {context: liveContext, local: liveLocal, toast, hasImage: () => !!$("#shotSlot img"),
+  openSettings: openAISettings,
+  builtIn: {task: "ask", payload: () => ({context: liveBody()}), image: () => (liveLast && liveLast.shot) || null}});
+$("#shotCopy").addEventListener("click", async () => {
+  const im = $("#shotSlot img"); if (!im) return;
+  toast((await copyImage(im.src)) ? "צילום המסך הועתק. להדביק בצ'אט (Ctrl+V)." : "לא הצלחתי להעתיק את התמונה.");
+});
+
+// ---------- a past lecture ----------
+let pastData = null;
+async function openPast(f, at) {
+  show("past"); pastFile = f; $("#pastTitle").textContent = "טוען..."; $("#pastLines").replaceChildren();
+  let d; try { d = await api("/api/transcript?f=" + encodeURIComponent(f)); } catch (e) { d = {none: true}; }
+  if (d.none) { $("#pastTitle").textContent = "התמלול לא נמצא"; return; }
+  pastData = d; const e = d.entry; pastSummary = d.summary || ""; drawSummary();
+  $("#pastTitle").textContent = e.title;
+  $("#pastSub").textContent = [e.course, e.when, langName(e.lang), e.length ? "אורך " + e.length : "", e.lines + " שורות"].filter(Boolean).join(" · ");
+  $("#pastPlay").hidden = !(e.kind === "rec" && e.has_media);
+  const box = $("#pastLines"), frag = document.createDocumentFragment();
+  for (const x of d.lines) frag.appendChild(lineEl(x));
+  if (!d.lines.length) frag.appendChild(el("li", "note", "אין שורות בתמלול הזה."));
+  box.replaceChildren(frag); box.scrollTop = 0;
+  if (at != null) {
+    const li = [...box.children].find(x => x._x && x._x.t >= at - 0.5);
+    if (li) { li.classList.add("hit"); li.scrollIntoView({block: "center"}); }
+  }
+}
+$("#pastMore").addEventListener("click", () => { if (pastData) lectureMenu(pastData.entry); });
+let pastSummary = "";
+function drawSummary() {
+  const box = $("#pastSum"); if (!box) return;
+  const ai = aiInfo();
+  box.hidden = !pastSummary && !ai.available;
+  if (window.BZMAsk) BZMAsk.render($("#sumText"), pastSummary); else $("#sumText").textContent = pastSummary;
+  $("#sumCopy").hidden = !pastSummary;
+  $("#sumGo").hidden = !ai.available;
+  $("#sumGo").textContent = pastSummary ? "סיכום מחדש" : "סיכום אוטומטי";
+}
+$("#sumGo").addEventListener("click", async () => {
+  if (!aiInfo().on) { openAISettings(); return; }
+  const f = pastFile; $("#sumGo").disabled = true; $("#sumText").textContent = "מסכם את ההרצאה... (חצי דקה בערך)";
+  let r; try { r = await api("/api/ai", {task: "summary", f, question: "תסכם את ההרצאה."}); } catch (e) { r = {ok: false}; }
+  $("#sumGo").disabled = false;
+  if (pastFile !== f) return;
+  if (r.ok) { pastSummary = r.answer; drawSummary(); toast("הסיכום נשמר בתיקייה של ההרצאה (סיכום.txt)."); }
+  else { $("#sumText").textContent = ""; drawSummary(); toast(r.error || "לא הצלחתי לסכם."); if (r.need_key) openAISettings(); }
+});
+$("#sumCopy").addEventListener("click", async () => { toast((await copyText(pastSummary)) ? "הסיכום הועתק." : "לא הצלחתי להעתיק."); });
+$("#aiSetBtn").addEventListener("click", openAISettings);
+$("#aiClose").addEventListener("click", () => { $("#aiSet").hidden = true; });
+$("#aiKey").addEventListener("keydown", e => { if (e.key === "Enter") $("#aiSave").click(); });
+$("#aiSave").addEventListener("click", async () => {
+  const key = $("#aiKey").value.trim();
+  if (!key) { if (aiInfo().on) { await saveAIPrefs({cap: $("#aiCap").value}); return; } $("#aiState").textContent = "צריך להדביק את המפתח."; $("#aiKey").focus(); return; }
+  $("#aiState").className = "aistate"; $("#aiState").textContent = "בודק מול OpenAI...";
+  const r = await api("/api/cmd", {action: "ai_key", key}).catch(() => ({ok: false}));
+  if (r.ok) {
+    $("#aiKey").value = ""; app.ai = r.info; lastAI = ""; if (window.BZMAsk) BZMAsk.setAI(r.info);
+    $("#aiState").className = "aistate ok";
+    $("#aiState").textContent = "מחובר. אפשר לבחור למטה מודלים (ברירת המחדל: הזול בחשבון שלך).";
+    drawAIPrefs(r.info); fillModels(r.models, r.info); drawSummary();
+  } else { $("#aiState").textContent = r.error || "המפתח לא עבד."; }
+});
+$("#aiModelAsk").addEventListener("change", () => saveAIPrefs());
+$("#aiModelExam").addEventListener("change", () => saveAIPrefs());
+$("#aiCap").addEventListener("change", () => saveAIPrefs({cap: $("#aiCap").value}));
+$("#aiForget").addEventListener("click", async () => {
+  const r = await api("/api/cmd", {action: "ai_forget"}); if (r.info) { app.ai = r.info; lastAI = ""; if (window.BZMAsk) BZMAsk.setAI(r.info); }
+  $("#aiState").className = "aistate"; $("#aiState").textContent = "המפתח הוסר מהמחשב."; drawAIPrefs(aiInfo()); drawSummary();
+});
+$("#pastPlay").addEventListener("click", () => { if (pastFile) playRecording(pastFile); });
+$("#pastFile").addEventListener("click", () => api("/api/cmd", {action: "open_folder", what: "file", f: pastFile}));
+$("#pastFind").addEventListener("input", () => filterLines("#pastLines", "#pastFind"));
+function pastText() {
+  const e = pastData.entry;
+  let out = `זה תמלול אוטומטי של הרצאה (${e.title}, ב${langName(e.lang)}). יכולות להיות בו טעויות תמלול.\n\n`;
+  for (const x of pastData.lines) if (x.x) out += `[${x.c}] ${x.x}\n`;
+  return out;
+}
+$("#pastCopy").addEventListener("click", async () => {
+  if (!pastData) return;
+  toast((await copyText(pastText())) ? "כל התמלול הועתק." : "לא הצלחתי להעתיק. אפשר לפתוח את הקובץ ולהעתיק משם.");
+});
+if (window.BZMAsk) BZMAsk.mount($("#pastAsk"), {
+  openSettings: openAISettings, builtIn: {task: "ask", payload: () => ({f: pastFile})},
+  context: q => (pastData ? pastText() : "") + ANSWER_HINT + "\nהשאלה שלי: " + q,
+  local: q => "יש תמלול של הרצאה שכבר הסתיימה, בתיקייה \"ההרצאות שלי\\" + (pastFile || "").replace("/", "\\") +
+    "\". לקרוא אותו לפני שאתה עונה.\n\nהשאלה שלי: " + q,
+  toast});
+function filterLines(listSel, inputSel) {
+  const q = $(inputSel).value.trim().toLowerCase();
+  for (const li of $(listSel).children) {
+    const x = li._x; if (!x) continue;
+    const hit = !!q && !!x.x && x.x.toLowerCase().includes(q);
+    li.hidden = !!q && !hit; li.classList.toggle("hit", hit);
+  }
+}
+
+route();
+poll();
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+# A tag like v2.0-20261014 (or v2.1) -> a GitHub release with Hevanti.zip attached.
+# The app checks the latest release to tell students that a newer version is out.
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  zip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check the Python compiles
+        run: python -m py_compile System/Program/live_transcribe.py
+      - name: Build Hevanti.zip
+        run: python tools/build_zip.py Hevanti.zip
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" Hevanti.zip --title "הבנתי $GITHUB_REF_NAME" --generate-notes
