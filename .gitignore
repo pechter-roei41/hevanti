@@ -1,0 +1,8 @@
+# lectures and local files - never in the repo
+ההרצאות שלי/
+transcripts/
+screenshots/
+System/error_log.txt
+__pycache__/
+*.pyc
+Hevanti.zip

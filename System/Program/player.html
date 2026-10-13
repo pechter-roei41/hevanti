@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>הבנתי · הנגן</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Secular+One&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- Hevanti (הבנתי) - the recording player - (c) 2026 Roei Pechter. MIT License, see LICENSE.txt -->
+<style>
+:root{
+  --bg:#F6F3E9; --surface:#FFFFFF; --sunk:#ECE7D8; --fg:#17261F; --muted:#56625B; --line:#DDD7C4;
+  --accent:#1F7A55; --accent-ink:#FFFFFF; --accent-soft:#DCEBDF; --mark:#F7D44C; --ready:#1F7A55; --notready:#D6D0BE;
+  --now:#FBEFB5; --now-ink:#17261F; --warn-bg:#FBF0DA; --warn-fg:#6B5020;
+  --f-body:"Assistant","Segoe UI","Arial Hebrew",Arial,system-ui,sans-serif; --f-display:"Secular One","Assistant",sans-serif;
+  --f-mono:Consolas,"Cascadia Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#121C17; --surface:#1A2620; --sunk:#22302A; --fg:#E8EFE9; --muted:#9FB0A6; --line:#2E3D35;
+  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#1F3A2E; --mark:#E8C547; --ready:#5BC79A; --notready:#33443B;
+  --now:#3D3816; --now-ink:#FFF6CF; --warn-bg:#3A3122; --warn-fg:#EBD08E; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:17px;line-height:1.6;display:flex;flex-direction:column}
+button{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.brand{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-size:22px;white-space:nowrap}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+.home{font-weight:700;font-size:15px;color:var(--accent);text-decoration:none;border:1.5px solid var(--accent);border-radius:10px;padding:4px 12px;white-space:nowrap}
+.home:hover{background:var(--accent-soft)}
+#title{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 200px}
+.chip{font-size:14px;padding:3px 12px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.chip.ok{background:color-mix(in srgb,var(--ready) 18%,transparent);color:var(--ready)}
+.chip.err{background:var(--warn-bg);color:var(--warn-fg)}
+.wrap{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.7fr) minmax(320px,1fr);gap:16px;padding:16px;max-width:1700px;width:100%;margin:0 auto}
+.player{min-width:0;display:flex;flex-direction:column;gap:10px}
+.screen{position:relative;background:#000;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+video{width:100%;max-height:calc(100vh - 230px);display:block;background:#000}
+.screen.audio video{height:54px;max-height:none;background:var(--sunk)}
+.screen.audio{flex-direction:column;background:var(--sunk)}
+#slide{display:none;width:100%;max-height:calc(100vh - 300px);object-fit:contain;background:#000}
+.screen.audio #slide.on{display:block}
+.bar[hidden],.legend span[hidden]{display:none}
+.bar{position:relative;height:10px;border-radius:5px;background:var(--notready);cursor:pointer;direction:ltr}
+.bar i{position:absolute;top:0;bottom:0;background:var(--ready);border-radius:5px}
+.bar b{position:absolute;top:-3px;width:3px;height:16px;background:var(--fg);border-radius:2px}
+.legend{font-size:13px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+.legend span.k::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:5px;vertical-align:-1px;background:var(--ready)}
+.legend span.k.no::before{background:var(--notready)}
+.ask{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#askBox{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+
+.btn{border:0;border-radius:12px;padding:8px 16px;font-weight:600;cursor:pointer;background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);padding:6px 14px}
+.btn:hover{filter:brightness(1.08)}
+.btn[hidden]{display:none}
+.hint{font-size:14px;color:var(--muted)}
+.msg{background:var(--warn-bg);color:var(--warn-fg);border-radius:10px;padding:10px 14px;font-weight:500}
+.msg[hidden]{display:none}
+.transcript{min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.tools{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid var(--line)}
+.tools input{flex:1;min-width:0;font:inherit;font-size:15px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+#lines{list-style:none;margin:0;padding:8px 6px 40vh;overflow-y:auto;flex:1;min-height:0;position:relative}
+#lines li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:5px 8px;border-radius:8px;cursor:pointer;align-items:start}
+#lines li:hover{background:var(--sunk)}
+#lines li.now{background:var(--now);color:var(--now-ink)}
+.ts{font-family:var(--f-mono);font-size:13px;color:var(--accent);direction:ltr;unicode-bidi:isolate;padding-top:3px;white-space:nowrap}
+#lines li.gap{cursor:default;color:var(--muted);font-style:italic}
+#lines li.gap:hover{background:none}
+#lines li.shot img{max-width:min(100%,260px);border-radius:6px;border:1px solid var(--line);display:block}
+#lines li[hidden]{display:none}
+.empty{color:var(--muted);padding:16px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:14px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center}
+#toast.on{opacity:1}
+#big{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;padding:20px;z-index:9;cursor:zoom-out}
+#big.on{display:flex}
+#big img{max-width:100%;max-height:100%;border-radius:8px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:900px){
+  .wrap{grid-template-columns:minmax(0,1fr);display:flex;flex-direction:column}
+  .transcript{height:70vh;flex:none}
+  video{max-height:45vh}
+  #lines{padding-bottom:20vh}
+}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="/" title="למסך הבית של האפליקציה">→ מסך הבית</a>
+  <div class="brand"><svg width="26" height="26" viewBox="0 0 120 120" aria-hidden="true"><path d="M20 14H100A14 14 0 0 1 114 28V76A14 14 0 0 1 100 90H96L99 110L74 90H20A14 14 0 0 1 6 76V28A14 14 0 0 1 20 14Z" fill="var(--accent)"></path><path d="M35 52L51 68L85 34" fill="none" stroke="var(--mark)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"></path></svg>הבנתי</div>
+  <div id="title">טוען…</div>
+  <div id="chip" class="chip" aria-live="polite">מתחבר…</div>
+</header>
+<div class="wrap">
+  <section class="player" aria-label="נגן">
+    <div class="screen" id="screen">
+      <video id="v" src="/media" controls preload="metadata" dir="ltr"></video>
+      <img id="slide" alt="השקופית שעל המסך עכשיו">
+    </div>
+    <div class="bar" id="bar" title="ירוק = כבר תומלל. לחיצה קופצת לשם." dir="ltr"><b id="head"></b></div>
+    <div class="legend"><span class="k" id="k1">תומלל</span><span class="k no" id="k2">עוד בתמלול</span><span id="saved"></span></div>
+    <div id="askBox"></div>
+    <div class="ask">
+      <button class="btn ghost" id="copyImg" type="button" hidden>העתקת השקופית</button>
+    </div>
+    <div class="msg" id="msg" hidden></div>
+  </section>
+  <section class="transcript" aria-label="תמלול">
+    <div class="tools">
+      <input id="find" type="search" placeholder="חיפוש בתמלול" aria-label="חיפוש בתמלול">
+      <button class="btn ghost" id="follow" type="button" hidden>חזרה למקום שלי</button>
+    </div>
+    <ol id="lines"><li class="empty">התמלול יופיע כאן.</li></ol>
+  </section>
+</div>
+<div id="toast" role="status"></div>
+<div id="big"><img alt=""></div>
+<script src="/ask.js"></script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const v = $("#v"), list = $("#lines"), bar = $("#bar"), head = $("#head");
+let st = {rev: 0, duration: 0, title: "", lang: "he", complete: false, slides_done: false, ready: []};
+let items = [], times = [], els = [], cur = -1, follow = true, lastSent = 0, fails = 0, resumed = false, shotNow = null;
+
+function hms(t) {
+  t = Math.max(0, Math.floor(t || 0));
+  return [Math.floor(t / 3600), Math.floor(t % 3600 / 60), t % 60].map(x => String(x).padStart(2, "0")).join(":");
+}
+function toast(text, ms) {
+  const el = $("#toast"); el.textContent = text; el.classList.add("on");
+  clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("on"), ms || 2600);
+}
+function msg(text) { const el = $("#msg"); el.hidden = !text; el.textContent = text || ""; }
+function dur() { return st.duration || v.duration || 0; }
+
+// ---------- what the tool has ready ----------
+async function poll() {
+  try {
+    const r = await fetch("/api/state?rev=" + st.rev, {cache: "no-store"});
+    const d = await r.json();
+    if (d.none) { location.href = "/"; return; }  // no recording open any more
+    fails = 0;
+    if (closedMsg) { msg(""); closedMsg = false; }
+    apply(d);
+  } catch (e) {
+    fails++;
+    if (fails >= 3 && !closedMsg) {
+      closedMsg = true;
+      msg("הכלי נסגר. הסרטון ימשיך רק עד איפה שהוא כבר נטען, ו-Claude לא יודע איפה אתה. " +
+          "כדי להמשיך: להפעיל שוב את Hevanti ולפתוח את ההקלטה מהספרייה.");
+      $("#chip").textContent = "הכלי סגור"; $("#chip").className = "chip err";
+    }
+  }
+  setTimeout(poll, st.complete && st.slides_done ? 10000 : 2000);
+}
+let closedMsg = false;
+
+function apply(d) {
+  const first = !st.title;
+  Object.assign(st, d);
+  if (first) {
+    document.title = st.title + " · הבנתי";
+    $("#title").textContent = st.title;
+    $("#saved").textContent = "התמלול נשמר ב-" + st.transcript;
+    if (!st.plays_video && st.has_video) $("#screen").classList.add("audio");
+  }
+  chip();
+  drawBar();
+  if (d.lines) render(d.lines);
+  if (!resumed && st.resume != null && v.readyState >= 1) resume();
+}
+
+function chip() {
+  const c = $("#chip");
+  let text = "", cls = "chip";
+  if (st.phase === "error") { text = st.note || "התמלול נעצר בגלל שגיאה"; cls += " err"; }
+  else if (st.complete) {
+    text = st.slides_done ? "התמלול מוכן ✓" : "התמלול מוכן · שומר שקופיות…";
+    if (st.slides_done) cls += " ok";
+  }
+  else if (st.phase === "work") text = "מתמלל… " + st.progress + "%" + (st.slides_done ? "" : " · שומר שקופיות");
+  else text = st.note || "מתכונן…";
+  c.textContent = text; c.className = cls;
+}
+
+function drawBar() {
+  const D = dur();
+  const all = st.complete;
+  bar.hidden = all; $("#k1").hidden = all; $("#k2").hidden = all;
+  bar.querySelectorAll("i").forEach(x => x.remove());
+  if (!D) return;
+  for (const [s, e] of st.ready || []) {
+    const i = document.createElement("i");
+    i.style.left = (100 * s / D) + "%"; i.style.width = Math.max(0.3, 100 * (e - s) / D) + "%";
+    bar.insertBefore(i, head);
+  }
+  moveHead();
+}
+function moveHead() { const D = dur(); head.style.left = D ? `calc(${100 * v.currentTime / D}% - 1px)` : "0"; }
+bar.addEventListener("click", e => {
+  const r = bar.getBoundingClientRect(), D = dur();
+  if (D) { v.currentTime = D * Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)); follow = true; }
+});
+
+// ---------- the transcript ----------
+function render(lines) {
+  const keepT = follow ? null : firstVisibleTime();
+  items = lines; times = lines.map(x => x.t); els = []; cur = -1;
+  const frag = document.createDocumentFragment();
+  if (!lines.length) {
+    const li = document.createElement("li"); li.className = "empty";
+    li.textContent = st.phase === "work" ? "מתמלל… השורות הראשונות יופיעו כאן בעוד רגע." : "התמלול יופיע כאן.";
+    frag.appendChild(li);
+  }
+  lines.forEach((x, i) => {
+    const li = document.createElement("li");
+    const ts = document.createElement("span"); ts.className = "ts"; ts.textContent = hms(x.t);
+    li.appendChild(ts);
+    if (x.img) {
+      li.className = "shot";
+      const im = document.createElement("img"); im.loading = "lazy"; im.src = "/shots/" + encodeURIComponent(x.img);
+      im.alt = "שקופית מ-" + hms(x.t); im.addEventListener("click", ev => { ev.stopPropagation(); big(im.src); });
+      li.appendChild(im);
+    } else if (x.gap != null) {
+      li.className = "gap";
+      const sp = document.createElement("span"); sp.textContent = "עוד בתמלול… (עד " + hms(x.gap) + ")";
+      li.appendChild(sp);
+    } else {
+      const sp = document.createElement("span"); sp.className = "tx"; sp.dir = "auto"; sp.textContent = x.x;
+      li.appendChild(sp);
+    }
+    if (x.gap == null) li.addEventListener("click", () => seek(x.t));
+    els.push(li); frag.appendChild(li);
+  });
+  list.replaceChildren(frag);
+  filter();
+  highlight(true);
+  if (keepT != null) { const i = indexAt(keepT); if (els[i]) list.scrollTop = els[i].offsetTop - 8; }
+}
+function center(el, now) { // scroll the transcript (only it - not the page) so el is in the middle
+  const top = el.offsetTop - list.clientHeight / 2 + el.offsetHeight / 2;
+  list.scrollTo({top: Math.max(0, top), behavior: now ? "auto" : "smooth"});
+}
+function firstVisibleTime() {
+  const top = list.getBoundingClientRect().top;
+  for (const li of els) if (li.getBoundingClientRect().bottom > top) return times[els.indexOf(li)];
+  return null;
+}
+function indexAt(t) { // last line at or before t
+  let lo = 0, hi = times.length - 1, ans = -1;
+  while (lo <= hi) { const m = (lo + hi) >> 1; if (times[m] <= t + 0.3) { ans = m; lo = m + 1; } else hi = m - 1; }
+  return ans;
+}
+function highlight(force) {
+  moveHead();
+  let i = indexAt(v.currentTime);
+  while (i > 0 && items[i] && items[i].gap != null && items[i].t > v.currentTime) i--;
+  if (i !== cur || force) {
+    if (els[cur]) els[cur].classList.remove("now");
+    cur = i;
+    if (els[cur]) {
+      els[cur].classList.add("now");
+      if (follow && !els[cur].hidden) center(els[cur], force);
+    }
+  }
+  slideNow();
+}
+function slideNow() {
+  let s = null;
+  for (let i = Math.min(cur, items.length - 1); i >= 0; i--) if (items[i] && items[i].img) { s = items[i].img; break; }
+  shotNow = s;
+  $("#copyImg").hidden = !s;
+  if (askBox) askBox.refresh();
+  const im = $("#slide");
+  if (!st.plays_video && st.has_video) {
+    if (s) { const src = "/shots/" + encodeURIComponent(s); if (!im.src.endsWith(src)) im.src = src; im.classList.add("on"); }
+    else im.classList.remove("on");
+  }
+}
+function seek(t) { v.currentTime = t; follow = true; $("#follow").hidden = true; if (v.paused) v.play().catch(() => {}); }
+
+function stopFollowing() { if (follow) { follow = false; $("#follow").hidden = false; } }
+list.addEventListener("wheel", stopFollowing, {passive: true});
+list.addEventListener("touchmove", stopFollowing, {passive: true});
+list.addEventListener("mousedown", e => { if (e.target === list) stopFollowing(); });
+list.addEventListener("keydown", e => { if (["PageUp", "PageDown", "ArrowUp", "ArrowDown", "Home", "End"].includes(e.key)) stopFollowing(); });
+$("#follow").addEventListener("click", () => { follow = true; $("#follow").hidden = true; highlight(true); });
+
+function filter() {
+  const q = $("#find").value.trim().toLowerCase();
+  els.forEach((li, i) => {
+    const x = items[i];
+    li.hidden = !!q && !(x.x && x.x.toLowerCase().includes(q));
+  });
+}
+$("#find").addEventListener("input", () => { filter(); if (!$("#find").value) highlight(true); });
+
+function big(src) { $("#big img").src = src; $("#big").classList.add("on"); }
+$("#big").addEventListener("click", () => $("#big").classList.remove("on"));
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") $("#big").classList.remove("on");
+  if (e.target.closest("input, button, video")) return;
+  if (e.key === " ") { e.preventDefault(); v.paused ? v.play().catch(() => {}) : v.pause(); }
+  if (e.key === "ArrowLeft") v.currentTime = Math.max(0, v.currentTime - 5);
+  if (e.key === "ArrowRight") v.currentTime = v.currentTime + 5;
+});
+
+// ---------- where you are -> the tool (now_watching.txt) ----------
+function report(force) {
+  const now = Date.now();
+  if (!force && now - lastSent < 1000) return;
+  lastSent = now;
+  fetch("/api/place", {method: "POST", keepalive: true,
+    body: JSON.stringify({pos: v.currentTime, paused: v.paused, ended: v.ended})}).catch(() => {});
+}
+v.addEventListener("timeupdate", () => { report(false); highlight(false); });
+["play", "pause", "seeked", "ended"].forEach(ev => v.addEventListener(ev, () => { report(true); highlight(ev === "seeked"); }));
+setInterval(() => report(true), 5000);
+window.addEventListener("pagehide", () => {
+  navigator.sendBeacon("/api/place", JSON.stringify({closed: true, pos: v.currentTime, paused: true}));
+});
+v.addEventListener("loadedmetadata", () => { drawBar(); if (!resumed && st.resume != null) resume(); });
+v.addEventListener("error", () => {
+  const code = v.error ? v.error.code : 0;
+  msg("הדפדפן לא מצליח לנגן את הקובץ הזה (סוג קובץ שהדפדפן לא מכיר). התמלול והשקופיות כאן בכל זאת. " +
+      "אפשר לצפות בנגן אחר, ולכתוב בשאלה איפה אתה (למשל: אני ב-34:10).");
+  fetch("/api/place", {method: "POST", body: JSON.stringify({error: "media " + code})}).catch(() => {});
+});
+function resume() {
+  resumed = true;
+  const t = st.resume, D = dur();
+  if (t > 15 && (!D || t < D - 10) && v.currentTime < 1) { v.currentTime = t; toast("ממשיכים מאיפה שעצרת: " + hms(t)); }
+}
+
+// ---------- copy for any AI chat ----------
+function contextText(q) {
+  const t = v.currentTime, from = t - 300;
+  const lang = st.lang === "en" ? "באנגלית" : "בעברית";
+  let out = `אני צופה בהקלטה של הרצאה ${lang}: "${st.title}". אני עכשיו ב-${hms(t)} מתוך ${hms(dur())}.\n` +
+            "זה התמלול האוטומטי של 5 הדקות האחרונות (יכולות להיות בו טעויות תמלול):\n\n";
+  let n = 0;
+  for (const x of items) {
+    if (x.gap != null) {
+      if (x.t <= t + 0.5 && x.gap >= from) { n++; out += `[${hms(Math.max(x.t, from))}] (החלק הזה עוד לא תומלל)\n`; }
+      continue;
+    }
+    if (x.t < from || x.t > t + 0.5) continue;
+    n++;
+    if (x.img) out += `[${hms(x.t)}] [כאן הופיעה שקופית חדשה]\n`;
+    else out += `[${hms(x.t)}] ${x.x}\n`;
+  }
+  if (!n) out += "(עוד אין תמלול לקטע הזה)\n";
+  return out + "\nלענות בעברית (מונחים מקצועיים אפשר באנגלית). מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.\n" +
+    "\nהשאלה שלי: " + (q || "");
+}
+function localText(q) {
+  return `אני צופה בהקלטה "${st.title}" בנגן של הבנתי, ואני עכשיו ב-${hms(v.currentTime)}. לפני שאתה עונה: ` +
+    "לקרוא את now_watching.txt בתיקייה \"ההרצאות שלי\" (שם כתוב בדיוק איפה אני, מה נאמר סביב המקום הזה ומה השקופית), " +
+    "ואם צריך גם את קובץ התמלול שכתוב שם.\n\nהשאלה שלי: " + (q || "");
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch (e) {
+    const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand("copy"); } catch (e2) {}
+    ta.remove(); return ok;
+  }
+}
+let askBox = null;
+if (window.BZMAsk) {
+  askBox = BZMAsk.mount($("#askBox"), {context: contextText, local: localText, toast: t => toast(t, 4200),
+    hasImage: () => !!shotNow, imageName: "השקופית", imageLabel: "לצרף את השקופית שעל המסך",
+    openSettings: () => toast("את מפתח OpenAI מחברים במסך הבית: \"הבנתי עונה\" למטה.", 5000),
+    builtIn: {task: "ask", payload: () => ({context: contextText("")}), image: () => (shotNow ? "rec:" + shotNow : null)}});
+  fetch("/api/app", {cache: "no-store"}).then(r => r.json()).then(d => BZMAsk.setAI(d.ai)).catch(() => {});
+}
+$("#copyImg").addEventListener("click", async () => {
+  if (!shotNow) return;
+  try {
+    const im = new Image(); im.src = "/shots/" + encodeURIComponent(shotNow); await im.decode();
+    const c = document.createElement("canvas"); c.width = im.naturalWidth; c.height = im.naturalHeight;
+    c.getContext("2d").drawImage(im, 0, 0);
+    const blob = await new Promise(r => c.toBlob(r, "image/png"));
+    await navigator.clipboard.write([new ClipboardItem({"image/png": blob})]);
+    toast("השקופית הועתקה. להדביק בצ'אט (Ctrl+V).");
+  } catch (e) { toast("לא הצלחתי להעתיק את התמונה. אפשר ללחוץ עליה בתמלול ולשמור אותה."); }
+});
+
+poll();
+</script>
+</body>
+</html>
