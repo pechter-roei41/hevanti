@@ -37,7 +37,7 @@ except Exception:  # lets "uninstall" run even if the install never finished
     np = None
 
 VERSION = "2.0"
-VERSION_DATE = "13.10.2026"  # same version number, newer build: the date tells them apart
+VERSION_DATE = "14.10.2026"  # same version number, newer build: the date tells them apart
 PRODUCT = "הבנתי"
 GUIDE_URL = "https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD"
 
@@ -851,6 +851,102 @@ def changed_fraction(a, b, thresh=25):
     return float(np.mean(np.abs(a - b) > thresh))
 
 
+# --- the AI's window and Hevanti's own windows are not the lecture ---
+# With the recommended screen (the lecture on two thirds, the AI on a third) or the floating window, an answer
+# being written would look like a "new slide", and the chat would end up in the saved pictures. So the windows of
+# the AI apps/sites and of Hevanti that are in view are painted over (grey) before comparing and saving.
+MASK_TITLE = re.compile(r"\bClaude\b|ChatGPT|Gemini|הבנתי", re.I)
+MASK_EXE = {"claude.exe", "chatgpt.exe"}
+
+
+def pick_mask_rects(wins):
+    """wins: [(title, exe, (left, top, right, bottom))], the top window first. The AI/Hevanti windows that are in
+    view - not one whose middle is hidden behind another window that is above it (the lecture in front)."""
+    above, out = [], []
+    for title, exe, rc in wins:
+        l, t, r, b = rc
+        if r - l < 40 or b - t < 40:
+            continue
+        if str(exe or "").lower() in MASK_EXE or MASK_TITLE.search(str(title or "")):
+            cx, cy = (l + r) // 2, (t + b) // 2
+            if not any(a[0] <= cx < a[2] and a[1] <= cy < a[3] for a in above):
+                out.append(rc)
+        else:
+            above.append(rc)
+    return out
+
+
+def _visible_windows():
+    """Windows only: the visible top-level windows with a title, the top one first: (title, exe, rect)."""
+    import ctypes
+    from ctypes import wintypes
+    user32, dwm, k32 = ctypes.WinDLL("user32"), ctypes.WinDLL("dwmapi"), ctypes.WinDLL("kernel32")
+    HWND = wintypes.HWND
+    for f, args in ((user32.IsWindowVisible, [HWND]), (user32.IsIconic, [HWND]), (user32.GetWindowTextLengthW, [HWND]),
+                    (user32.GetWindowTextW, [HWND, wintypes.LPWSTR, ctypes.c_int]),
+                    (user32.GetWindowRect, [HWND, ctypes.POINTER(wintypes.RECT)]),
+                    (user32.GetWindowThreadProcessId, [HWND, ctypes.POINTER(wintypes.DWORD)]),
+                    (dwm.DwmGetWindowAttribute, [HWND, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD]),
+                    (k32.OpenProcess, [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]),
+                    (k32.QueryFullProcessImageNameW, [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD)]),
+                    (k32.CloseHandle, [wintypes.HANDLE])):
+        f.argtypes = args
+    k32.OpenProcess.restype = wintypes.HANDLE
+    out = []
+
+    def exe_of(hwnd):
+        pid = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        h = k32.OpenProcess(0x1000, False, pid.value)  # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return ""
+        try:
+            buf, n = ctypes.create_unicode_buffer(520), wintypes.DWORD(520)
+            return os.path.basename(buf.value) if k32.QueryFullProcessImageNameW(h, 0, buf, ctypes.byref(n)) else ""
+        finally:
+            k32.CloseHandle(h)
+
+    def each(hwnd, _):
+        try:
+            if not user32.IsWindowVisible(hwnd) or user32.IsIconic(hwnd):
+                return True
+            cloaked = ctypes.c_int(0)   # DWMWA_CLOAKED: "visible" but not on the screen (other desktops, suspended apps)
+            if dwm.DwmGetWindowAttribute(hwnd, 14, ctypes.byref(cloaked), ctypes.sizeof(cloaked)) == 0 and cloaked.value:
+                return True
+            n = user32.GetWindowTextLengthW(hwnd)
+            if n <= 0:
+                return True
+            buf = ctypes.create_unicode_buffer(n + 1)
+            user32.GetWindowTextW(hwnd, buf, n + 1)
+            rc = wintypes.RECT()   # DWMWA_EXTENDED_FRAME_BOUNDS: the window as seen, in screen pixels
+            if dwm.DwmGetWindowAttribute(hwnd, 9, ctypes.byref(rc), ctypes.sizeof(rc)) != 0:
+                user32.GetWindowRect(hwnd, ctypes.byref(rc))
+            out.append((buf.value, exe_of(hwnd), (rc.left, rc.top, rc.right, rc.bottom)))
+        except Exception:
+            pass
+        return True
+
+    user32.EnumWindows(ctypes.WINFUNCTYPE(wintypes.BOOL, HWND, wintypes.LPARAM)(each), 0)
+    return out
+
+
+def mask_windows(arr, area, wins=None):
+    """Grey out, in place, the AI/Hevanti windows that are in view inside the grabbed area (BGRA array)."""
+    if wins is None:
+        if os.name != "nt":
+            return False
+        wins = _visible_windows()
+    h, w = arr.shape[:2]
+    done = False
+    for l, t, r, b in pick_mask_rects(wins):
+        x0, y0 = max(0, l - area["left"]), max(0, t - area["top"])
+        x1, y1 = min(w, r - area["left"]), min(h, b - area["top"])
+        if x1 > x0 and y1 > y0:
+            arr[y0:y1, x0:x1, :3] = 128
+            done = True
+    return done
+
+
 class ScreenWatcher(threading.Thread):
     """Saves into the lecture's "שקופיות" folder. The transcript says "שקופיות/<file>" (the lecture folder can
     move to another course); on_shot gets the path inside "ההרצאות שלי" (what the app and Claude use)."""
@@ -865,6 +961,7 @@ class ScreenWatcher(threading.Thread):
         self.on_shot = on_shot
         self.stop_evt = threading.Event()
         self.count = 0
+        self.mask_ok = True   # paint over the AI's and Hevanti's own windows (see mask_windows)
 
     def run(self):
         try:
@@ -897,13 +994,22 @@ class ScreenWatcher(threading.Thread):
                             area = mon if r == "screen" else r
                         shot = sct.grab(area)
                         arr = np.frombuffer(shot.bgra, dtype=np.uint8).reshape(shot.height, shot.width, 4)
+                        pixels = None   # the picture to save when windows were painted over
+                        if self.region_fn is None and self.mask_ok:
+                            try:
+                                arr = arr.copy()
+                                if mask_windows(arr, area if isinstance(area, dict) else mon):
+                                    pixels = arr
+                            except Exception:
+                                self.mask_ok = False   # not on this computer: compare the whole screen as before
+                                save_error("mask windows")
                         small = arr[::16, ::16, :3].astype(np.int16).mean(axis=2)
                         now = time.time()
                         frac = changed_fraction(small, prev)
                         gap = now - last_save
                         if (frac >= SCREEN_BIG_FRAC and gap >= SCREEN_BIG_GAP_S) or \
                            (frac >= SCREEN_SMALL_FRAC and gap >= SCREEN_SMALL_GAP_S):
-                            self._save(shot, Image, mss.tools, now)
+                            self._save(shot, Image, mss.tools, now, pixels)
                             prev, last_save = small, now
                     except Exception as e:
                         log(f"צילום מסך נכשל פעם אחת ({e.__class__.__name__})")
@@ -911,15 +1017,17 @@ class ScreenWatcher(threading.Thread):
         except Exception as e:
             log(f"צילום מסך הופסק ({e.__class__.__name__}) - התמלול ממשיך כרגיל")
 
-    def _save(self, shot, Image, mss_tools, now):
+    def _save(self, shot, Image, mss_tools, now, pixels=None):
         name = datetime.datetime.fromtimestamp(now).strftime("%Y%m%d-%H-%M-%S" if self.region_fn else "%H-%M-%S")
+        bgra = shot.bgra if pixels is None else pixels.tobytes()
         if Image is not None:
             name += ".jpg"
-            img = Image.frombytes("RGB", shot.size, shot.bgra, "raw", "BGRX")
+            img = Image.frombytes("RGB", shot.size, bgra, "raw", "BGRX")
             img.save(os.path.join(self.session_dir, name), "JPEG", quality=80)
         else:
             name += ".png"
-            mss_tools.to_png(shot.rgb, shot.size, output=os.path.join(self.session_dir, name))
+            rgb = shot.rgb if pixels is None else pixels[:, :, 2::-1].tobytes()
+            mss_tools.to_png(rgb, shot.size, output=os.path.join(self.session_dir, name))
         self.count += 1
         rel = f"{self.lecture_rel}/{SLIDES_NAME}/{name}"
         if self.region_fn is not None:  # YouTube: the line gets the video's time (on_shot knows it)
@@ -1677,33 +1785,55 @@ def free_folder(parent, name):
 GLOSSARY_HEAD = ("# מילון המונחים של הקורס: מילה או מונח בכל שורה.\n"
                  "# התמלול משתמש בהם כדי לכתוב נכון מונחים מקצועיים, שמות ומילים באנגלית.\n"
                  "# הכי חשובים למעלה: נכנסים רק בערך 25-30 המונחים הראשונים. שורה שמתחילה ב-# לא נקראת.\n")
-GLOSSARY_TEMPLATES = {
-    "": [],
-    "הנדסת מכונות": ["מומנט התמד", "מומנט", "תנע זוויתי", "מהירות זוויתית", "גוף קשיח", "מאמץ", "עיבור",
-                      "מעגל מוהר", "טנזור", "מודול יאנג", "כפיפה", "פיתול", "דיאגרמת גוף חופשי", "אנטרופיה",
-                      "אנתלפיה", "מחזור קרנו", "מספר ריינולדס", "צמיגות", "משוואת ברנולי", "רכיבים וקטוריים"],
-    "הנדסת חשמל": ["מתח", "זרם", "התנגדות", "קבל", "סליל", "עכבה", "פאזור", "טרנזיסטור", "מגבר שרת", "op-amp",
-                    "טרנספורם לפלס", "טרנספורם פורייה", "פונקציית תמסורת", "תדר תהודה", "חוק קירכהוף",
-                    "חוק גאוס", "שטף", "שדה חשמלי", "שדה מגנטי", "MOSFET"],
-    "מדעי המחשב": ["אלגוריתם", "סיבוכיות", "O גדול", "רקורסיה", "מחסנית", "תור", "עץ בינארי", "ערימה", "גרף",
-                    "BFS", "DFS", "תכנון דינמי", "מיון מיזוג", "טבלת גיבוב", "מצביע", "מחלקה", "ירושה", "NP-שלם",
-                    "אוטומט", "שפה רגולרית"],
-    "מתמטיקה": ["אינטגרל", "נגזרת חלקית", "גבול", "רציפות", "טור טיילור", "התכנסות", "מטריצה", "דטרמיננטה",
-                 "ערך עצמי", "וקטור עצמי", "מרחב וקטורי", "בסיס", "העתקה לינארית", "משוואה דיפרנציאלית",
-                 "פונקציה אנליטית", "קושי-רימן", "שארית", "גרדיאנט", "דיברגנץ", "רוטור"],
-    "כלכלה ומנהל": ["היצע", "ביקוש", "גמישות", "עלות שולית", "תועלת", "שיווי משקל", "תוצר מקומי גולמי", "אינפלציה",
-                     "ריבית", "מדיניות מוניטרית", "עלות אלטרנטיבית", "מונופול", "אוליגופול", "תורת המשחקים",
-                     "שיווי משקל נאש", "ערך נוכחי", "מאזן", "תזרים מזומנים", "רגרסיה", "סטיית תקן"],
-    "רפואה ומדעי החיים": ["תא", "חלבון", "אנזים", "DNA", "RNA", "גן", "מוטציה", "הומאוסטזיס", "מטבוליזם",
-                           "נוירון", "סינפסה", "הורמון", "אנטיגן", "נוגדן", "פרמקוקינטיקה", "אנטומיה",
-                           "פיזיולוגיה", "פתולוגיה", "אבחנה מבדלת", "אפידמיולוגיה"],
-    "משפטים": ["פסק דין", "תקדים", "חקיקה", "חוק יסוד", "סמכות", "תביעה", "נתבע", "תובע", "ראיות", "נטל ההוכחה",
-                "רשלנות", "חוזה", "הפרה", "תום לב", "עוולה", "בג\"ץ", "ערעור", "פרשנות תכליתית", "מידתיות",
-                "זכות קניין"],
-    "פסיכולוגיה ומדעי החברה": ["קוגניציה", "התניה", "חיזוק", "זיכרון עבודה", "קשב", "תפיסה", "התפתחות", "אישיות",
-                                "הפרעה", "מחקר מתאמי", "ניסוי", "משתנה תלוי", "משתנה בלתי תלוי", "מובהקות",
-                                "סטיית תקן", "התפלגות נורמלית", "תוחלת", "שונות", "מדגם", "השערת אפס"],
-}
+# Suggested terms PER COURSE (not per degree): course_terms.json, matched by the course's name - "סטטיקה של גוף
+# קשיח" gets the statics list. The student adds each term with one click ("+"); nothing is added by itself.
+TERMS_FILE = os.path.join(SCRIPT_DIR, "course_terms.json")
+_TERMS_DB = None
+
+
+def _course_key(text):
+    """Compare course names without case, spaces, quotes or punctuation ("מד\"ר" = "מד ר" = "מדר")."""
+    return re.sub(r"[\s\"'`\u05f3\u05f4.,:;()\[\]{}\-\u2013\u2014_/\\+&]+", "", str(text or "").lower())
+
+
+def course_terms_db():
+    global _TERMS_DB
+    if _TERMS_DB is None:
+        try:
+            with open(TERMS_FILE, encoding="utf-8") as f:
+                _TERMS_DB = [c for c in json.load(f).get("courses", []) if isinstance(c, dict)]
+        except (OSError, ValueError):
+            _TERMS_DB = []
+    return _TERMS_DB
+
+
+def suggest_terms(name):
+    """{"courses": [the lists that fit this course name], "terms": [...]} - the best match, and a second list only
+    when another part of the name fits it too ("סטטיקה וחוזק חומרים")."""
+    key = _course_key(name)
+    found = []
+    for c in course_terms_db():
+        if any(_course_key(x) and _course_key(x) in key for x in c.get("exclude", [])):
+            continue
+        hits = [k for k in map(_course_key, c.get("match", [])) if len(k) >= 3 and k in key]
+        if hits:
+            kw = max(hits, key=len)
+            found.append((len(kw), kw, c))
+    found.sort(key=lambda x: -x[0])
+    picked = []
+    for n, kw, c in found:
+        if not picked or n == found[0][0] or all(kw not in k and k not in kw for _, k, _c in picked):
+            picked.append((n, kw, c))
+        if len(picked) == 2:
+            break
+    terms, seen = [], set()
+    for _, _, c in picked:
+        for t in c.get("terms", []):
+            t = " ".join(str(t).split())[:60]
+            if t and t.lower() not in seen:
+                seen.add(t.lower())
+                terms.append(t)
+    return {"courses": [c.get("name", "") for _, _, c in picked], "terms": terms}
 
 
 def glossary_path(course):
@@ -1737,14 +1867,16 @@ def write_glossary(course, text):
     return words
 
 
-def create_course(name, template=""):
+def create_course(name, terms=None):
+    """A new course folder, with the terms the student chose from the suggestions (or an empty glossary)."""
     name = clean_name(name)
     if not name:
         return None
     d = course_dir(name)
     os.makedirs(d, exist_ok=True)
     if not os.path.exists(glossary_path(name)):
-        write_glossary(name, "\n".join(GLOSSARY_TEMPLATES.get(template, [])))
+        terms = [str(t) for t in terms if isinstance(t, str)] if isinstance(terms, list) else []
+        write_glossary(name, "\n".join(terms))
     return name
 
 
@@ -3313,7 +3445,7 @@ class App:
             save_settings(course=course)
             return {"ok": True}
         if a == "new_course":
-            name = create_course(d.get("name"), str(d.get("template") or ""))
+            name = create_course(d.get("name"), d.get("terms"))
             if not name:
                 return {"ok": False, "error": "צריך לכתוב שם לקורס."}
             save_settings(course=name)
@@ -3998,8 +4130,8 @@ def _app_handler():
                     if not c or not os.path.isdir(course_dir(c)):
                         return self._json({"none": True}, 404)
                     return self._json({"name": c, "glossary": glossary_text(c)})
-                if p == "/api/templates":
-                    return self._json({"templates": {k: v for k, v in GLOSSARY_TEMPLATES.items() if k}})
+                if p == "/api/suggest":
+                    return self._json(suggest_terms(q.get("c", [""])[0][:120]))
                 if p == "/api/course_text":
                     c = clean_name(q.get("c", [""])[0])
                     if not c or not os.path.isdir(course_dir(c)):

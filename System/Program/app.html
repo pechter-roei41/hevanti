@@ -124,6 +124,17 @@ mark{background:var(--mark);color:#17261F;border-radius:3px;padding:0 1px}
 .presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .presets button{border:1.5px solid var(--line);background:var(--bg);border-radius:10px;padding:5px 12px;cursor:pointer;font-size:15px;font-weight:600}
 .presets button:hover{border-color:var(--accent)}
+/* suggested terms for a course: "+" adds one to the glossary */
+.sug{display:grid;gap:8px;margin:0 0 12px}
+.sug .shead{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.sug .shead small{color:var(--muted);font-size:14px}
+.sug .shead .btn{margin-inline-start:auto}
+.sug p{margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;max-height:200px;overflow-y:auto;padding:2px}
+.chips button{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:999px;padding:2px 11px;font-size:14px;font-weight:600;cursor:pointer;line-height:1.5}
+.chips button:hover{background:var(--accent-soft)}
+.chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+#newCourse .card{max-height:92vh;overflow-y:auto}
 textarea.gloss{width:100%;min-height:220px;resize:vertical;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);line-height:1.55}
 select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);min-width:0;max-width:100%}
 .modal select,.modal input[type=text]{width:100%;padding:9px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg)}
@@ -232,7 +243,9 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 .hbar-prog{height:4px;border-radius:2px;background:var(--sunk);overflow:hidden}
 .hbar-prog i{display:block;height:100%;width:0;background:var(--accent)}
 /* the drawn screen */
-.h-win{position:absolute;background:var(--surface);border:1px solid var(--line);border-radius:1.1cqw;box-shadow:0 1cqw 3cqw rgba(0,0,0,.18);overflow:hidden;display:flex;flex-direction:column;transition:opacity .45s,transform .45s}
+.h-win{position:absolute;background:var(--surface);border:1px solid var(--line);border-radius:1.1cqw;box-shadow:0 1cqw 3cqw rgba(0,0,0,.18);overflow:hidden;display:flex;flex-direction:column;transition:opacity .45s,transform .45s,left .7s,top .7s,width .7s,height .7s}
+.h-split{position:absolute;z-index:7;background:var(--fg);color:var(--bg);border-radius:99cqw;padding:.2cqw 1.3cqw;font-weight:700;font-size:1.4cqw;transition:opacity .4s}
+.h-split.off{opacity:0}
 .h-win.off{opacity:0;transform:translateY(2cqw) scale(.97)}
 .h-win.min{opacity:0;transform:translateY(8cqw) scale(.6)}
 .h-tb{flex:none;height:3.1cqw;display:flex;align-items:center;gap:.8cqw;padding:0 1.2cqw;background:var(--bg);border-bottom:1px solid var(--line);font-weight:700;font-size:1.25cqw;white-space:nowrap}
@@ -342,7 +355,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
     <div class="cbar" id="updBar" hidden><span id="updText"></span><a class="btn small" id="updGo" href="#" target="_blank" rel="noopener">להורדה</a></div>
     <div class="msg" id="homeErr" hidden></div>
 
-    <div class="connbar" id="howBar" hidden><span><b>פעם ראשונה בהבנתי?</b> הדגמה של דקה מראה את הדרך הכי נוחה להשתמש בה: קורס, הרצאה חיה, חלון צף ושאלה ל-AI.</span><button class="btn small" type="button" data-how>לצפייה בהדגמה</button><button class="btn quiet small" id="howNo" type="button">לא עכשיו</button></div>
+    <div class="connbar" id="howBar" hidden><span><b>פעם ראשונה בהבנתי?</b> הדגמה של דקה מראה את הדרך הכי נוחה להשתמש בה: קורס, הרצאה חיה, ההרצאה בשני שליש מהמסך וה-AI בשליש.</span><button class="btn small" type="button" data-how>לצפייה בהדגמה</button><button class="btn quiet small" id="howNo" type="button">לא עכשיו</button></div>
     <div class="connbar" id="connBar" hidden><span><b>טיפ:</b> מחברים פעם אחת את Claude או ChatGPT למחשב להבנתי, ואז שואלים אותם ישר בחלון שלהם, בלי להעתיק - הם רואים מה נאמר ואת השקופית.</span><button class="btn small" type="button" data-conn-open>חיבור AI</button></div>
 
     <div class="starts">
@@ -487,12 +500,10 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
       <div class="card">
         <h2>מילון מונחים</h2>
         <p class="sub">מונח בכל שורה. התמלול משתמש בהם כדי לכתוב נכון מונחים, שמות ומילים באנגלית, מההרצאה הבאה. הכי חשובים למעלה (נכנסים בערך 25-30 הראשונים).</p>
+        <div class="sug" id="cSug" hidden></div>
         <label for="glossIn" class="sub" style="display:block;margin:0 0 4px">המונחים של הקורס</label>
         <textarea class="gloss" id="glossIn" dir="auto" spellcheck="false"></textarea>
         <div class="row" style="margin-top:10px">
-          <label for="tmplSel" class="sub" style="margin:0">להוסיף מונחים מתחום:</label>
-          <select class="small" id="tmplSel"></select>
-          <button class="btn ghost small" id="tmplAdd" type="button">הוספה</button>
           <button class="btn" id="glossSave" type="button" style="margin-inline-start:auto">שמירה</button>
         </div>
       </div>
@@ -505,7 +516,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
   <section id="vHow" aria-label="איך משתמשים" hidden>
     <div class="livebar">
       <button class="btn ghost back" type="button" data-home>→ למסך הבית</button>
-      <div class="what"><b>איך משתמשים בהבנתי</b><small>הדרך המומלצת, בשישה צעדים קצרים (בערך דקה)</small></div>
+      <div class="what"><b>איך משתמשים בהבנתי</b><small>הדרך המומלצת: ההרצאה בשני שליש מהמסך, ה-AI בשליש. שישה צעדים קצרים, בערך דקה.</small></div>
     </div>
     <div class="howgrid">
       <div class="hstage" id="hStage" aria-hidden="true"></div>
@@ -546,9 +557,8 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 <div class="modal" id="newCourse" hidden role="dialog" aria-modal="true" aria-labelledby="ncT"><div class="card">
   <h3 id="ncT">קורס חדש</h3>
   <label for="ncName">שם הקורס</label>
-  <input type="text" id="ncName" placeholder="למשל: דינמיקה" maxlength="80">
-  <label for="ncTmpl">תחום (ממלא מילון מונחים התחלתי, אפשר לשנות אחר כך)</label>
-  <select id="ncTmpl"></select>
+  <input type="text" id="ncName" placeholder="למשל: סטטיקה של גוף קשיח" maxlength="80">
+  <div class="sug" id="ncSug" hidden></div>
   <div class="row"><button class="btn" id="ncOk" type="button">יצירה</button><button class="btn quiet" id="ncNo" type="button">ביטול</button></div>
 </div></div>
 <div class="modal" id="lecMenu" hidden role="dialog" aria-modal="true" aria-labelledby="lmT"><div class="card">
@@ -572,7 +582,7 @@ const api = (p, body) => fetch(p, body === undefined ? {cache: "no-store"} :
 let app = null, notesSince = 0, libRev = -1, libItems = [], fails = 0, lastQ = null, lastOffer = null;
 let wantPlayer = null, recSource = "", recLang = "he", view = "home", pastFile = null, shownErr = "";
 const NO_COURSE = "ללא קורס";
-let courses = [], curCourse = "", libCourse = "", templates = [], templatesData = {}, searchSeq = 0;
+let courses = [], curCourse = "", libCourse = "", searchSeq = 0;
 // ---------- connecting an AI app (Claude, ChatGPT, Gemini - the same card for each) ----------
 const CONN = [
   {id: "claude", name: "Claude", where: "Claude למחשב (Windows)", ask: "שואלים בחלון של Claude למחשב."},
@@ -959,25 +969,71 @@ async function playRecording(f) {
 }
 
 // ---------- courses: new, lecture menu, course page ----------
-function fillTemplates(sel, first) {
-  sel.replaceChildren(el("option", "", first));
-  sel.firstChild.value = "";
-  for (const t of templates) { const o = el("option", "", t); o.value = t; sel.appendChild(o); }
+// suggested terms PER COURSE (from course_terms.json, matched by the course name): "+" adds a term to the glossary
+async function fetchSuggest(name) {
+  try { return await api("/api/suggest?c=" + encodeURIComponent(name)); } catch (e) { return {courses: [], terms: []}; }
 }
-async function loadTemplates() {
-  if (templates.length) return;
-  try { const d = await api("/api/templates"); templatesData = d.templates || {}; templates = Object.keys(templatesData).filter(Boolean); } catch (e) {}
+// opts: name; has(term) - already in the glossary; pick - the new-course dialog (choose, saved on "יצירה");
+//       chosen - a Set (pick); onAdd(list) - the course page (adds and saves at once)
+function drawSuggest(box, s, opts) {
+  box.replaceChildren();
+  if (!s.courses || !s.courses.length) {
+    box.hidden = opts.name.trim().length < 3;
+    if (!box.hidden) box.appendChild(el("p", "sub", "אין לי עדיין רשימת מונחים מומלצים לקורס בשם הזה. אפשר לכתוב מונחים " + (opts.pick ? "בדף הקורס." : "כאן, מונח בכל שורה.")));
+    return;
+  }
+  const left = s.terms.filter(t => !opts.has(t));
+  box.hidden = false;
+  const head = el("div", "shead");
+  head.append(el("b", "", "מונחים מומלצים (" + s.courses.join(", ") + ")"),
+    el("small", "", opts.pick ? "לחיצה על + מוסיפה למילון של הקורס" : "לחיצה על + מוסיפה למילון ושומרת"));
+  if (!left.length) { head.append(el("small", "", "· כולם כבר במילון ✓")); box.appendChild(head); return; }
+  const all = el("button", "btn ghost small", opts.pick ? "כולם" : "הוספת כולם"); all.type = "button";
+  head.appendChild(all); box.appendChild(head);
+  const chips = el("div", "chips"); chips.setAttribute("role", "group"); chips.setAttribute("aria-label", "מונחים מומלצים");
+  const btns = left.map(t => {
+    const b = el("button"); b.type = "button"; b.dir = "auto";
+    const on = () => opts.pick && opts.chosen.has(t);
+    const label = () => { b.textContent = (on() ? "✓ " : "+ ") + t; b.setAttribute("aria-pressed", on() ? "true" : "false"); };
+    label();
+    b.addEventListener("click", () => {
+      if (opts.pick) { if (opts.chosen.has(t)) opts.chosen.delete(t); else opts.chosen.add(t); label(); drawAll(); }
+      else opts.onAdd([t]);
+    });
+    b.label_ = label;
+    return b;
+  });
+  const drawAll = () => { if (opts.pick) all.textContent = left.every(t => opts.chosen.has(t)) ? "ניקוי" : "כולם"; };
+  all.addEventListener("click", () => {
+    if (!opts.pick) { opts.onAdd(left); return; }
+    const clear = left.every(t => opts.chosen.has(t));
+    for (const t of left) { if (clear) opts.chosen.delete(t); else opts.chosen.add(t); }
+    btns.forEach(b => b.label_()); drawAll();
+  });
+  drawAll();
+  chips.append(...btns); box.appendChild(chips);
 }
 async function newCourse(done) {
-  await loadTemplates();
-  fillTemplates($("#ncTmpl"), "בלי, אמלא לבד");
-  $("#ncName").value = ""; $("#newCourse").hidden = false; $("#ncName").focus();
-  const close = () => { $("#newCourse").hidden = true; $("#ncOk").onclick = $("#ncNo").onclick = null; };
+  const chosen = new Set(); let sug = {courses: [], terms: []}, seq = 0, timer = 0;
+  $("#ncName").value = ""; $("#ncSug").hidden = true; $("#ncSug").replaceChildren();
+  $("#newCourse").hidden = false; $("#ncName").focus();
+  const look = async () => {
+    const name = $("#ncName").value, my = ++seq;
+    const s = name.trim().length >= 3 ? await fetchSuggest(name) : {courses: [], terms: []};
+    if (my !== seq) return;
+    if ((s.courses || []).join("|") !== (sug.courses || []).join("|")) chosen.clear();
+    sug = s;
+    drawSuggest($("#ncSug"), s, {name, pick: true, chosen, has: () => false});
+  };
+  $("#ncName").oninput = () => { clearTimeout(timer); timer = setTimeout(look, 250); };
+  const close = () => { $("#newCourse").hidden = true; $("#ncOk").onclick = $("#ncNo").onclick = $("#ncName").oninput = null; clearTimeout(timer); };
   $("#ncNo").onclick = close;
   $("#ncOk").onclick = async () => {
-    const r = await api("/api/cmd", {action: "new_course", name: $("#ncName").value, template: $("#ncTmpl").value});
+    const terms = (sug.terms || []).filter(t => chosen.has(t));
+    const r = await api("/api/cmd", {action: "new_course", name: $("#ncName").value, terms});
     if (!r.ok) { toast(r.error || "לא הצלחתי"); return; }
-    close(); toast("הקורס \"" + r.course + "\" נוצר."); if (done) done(r.course);
+    close(); toast("הקורס \"" + r.course + "\" נוצר" + (terms.length ? " עם " + terms.length + " מונחים במילון." : ". אפשר להוסיף מונחים בדף הקורס."));
+    if (done) done(r.course);
   };
 }
 $("#ncName").addEventListener("keydown", e => { if (e.key === "Enter") $("#ncOk").click(); });
@@ -1017,11 +1073,12 @@ let courseName = "", courseTextCache = "", courseAsk = null;
 async function openCourse(name) {
   show("course"); courseName = name; courseTextCache = "";
   $("#cTitle").textContent = name; $("#cSub").textContent = "טוען..."; $("#glossIn").value = ""; $("#cSize").textContent = "";
-  await loadTemplates(); fillTemplates($("#tmplSel"), "בחירת תחום...");
+  $("#cSug").hidden = true; $("#cSug").replaceChildren();
   let d; try { d = await api("/api/course?c=" + encodeURIComponent(name)); } catch (e) { d = {none: true}; }
   if (d.none) { $("#cSub").textContent = "הקורס לא נמצא."; return; }
   $("#glossIn").value = d.glossary || "";
   drawCourseLib();
+  drawCourseSuggest();
   try {
     const t = await api("/api/course_text?c=" + encodeURIComponent(name));
     if (courseName !== name) return;
@@ -1044,17 +1101,28 @@ if (window.BZMAsk) courseAsk = BZMAsk.mount($("#cAsk"), {
   example: "תכין לי מבחן תרגול מכל ההרצאות בקורס " + "הזה",
   context: q => (courseTextCache || "") + "\n\nהמשימה: " + q + "\nלענות בעברית (מונחים מקצועיים אפשר באנגלית). מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.",
   toast});
-$("#tmplAdd").addEventListener("click", () => {
-  const words = templatesData[$("#tmplSel").value] || []; if (!words.length) return;
-  const have = $("#glossIn").value.split(/\n+/).map(x => x.trim()).filter(Boolean);
-  const add = words.filter(w => !have.includes(w));
+// the course page: suggested terms that are not in the glossary yet - "+" adds and saves at once
+const glossTerms = () => $("#glossIn").value.split(/\n+/).map(x => x.trim()).filter(Boolean);
+async function drawCourseSuggest() {
+  const name = courseName, s = await fetchSuggest(name);
+  if (name !== courseName) return;
+  const have = new Set(glossTerms().map(x => x.toLowerCase()));
+  drawSuggest($("#cSug"), s, {name, has: t => have.has(t.toLowerCase()), onAdd: addGlossTerms});
+}
+async function addGlossTerms(list) {
+  const have = glossTerms(), low = new Set(have.map(x => x.toLowerCase()));
+  const add = list.filter(t => !low.has(t.toLowerCase()));
+  if (!add.length) return;
   $("#glossIn").value = have.concat(add).join("\n");
-  toast(add.length ? "נוספו " + add.length + " מונחים. אפשר למחוק או להוסיף, ואז \"שמירה\"." : "כל המונחים האלה כבר ברשימה.");
-});
+  const r = await api("/api/cmd", {action: "save_glossary", course: courseName, text: $("#glossIn").value});
+  toast(r.ok ? (add.length === 1 ? "\"" + add[0] + "\" נוסף למילון." : "נוספו " + add.length + " מונחים למילון.") + " מההרצאה הבאה התמלול ישתמש בהם." : (r.error || "לא הצלחתי לשמור."));
+  if (r.ok) loadLib(true);
+  drawCourseSuggest();
+}
 $("#glossSave").addEventListener("click", async () => {
   const r = await api("/api/cmd", {action: "save_glossary", course: courseName, text: $("#glossIn").value});
   toast(r.ok ? "נשמר: " + r.terms + " מונחים. מההרצאה הבאה התמלול ישתמש בהם." : (r.error || "לא הצלחתי לשמור."));
-  if (r.ok) loadLib(true);
+  if (r.ok) { loadLib(true); drawCourseSuggest(); }
 });
 $("#cExport").addEventListener("click", async () => {
   const r = await api("/api/cmd", {action: "export_course", course: courseName});
@@ -1475,9 +1543,9 @@ const HOW = (() => {
   const STEPS = [
     {title: "בוחרים קורס", text: "לפני ההרצאה בוחרים במסך הבית את הקורס. ההרצאה תישמר בתיקייה שלו, והתמלול ישתמש במילון המונחים של הקורס, כך שמונחים מקצועיים נכתבים נכון."},
     {title: "מתחילים הרצאה חיה", text: "פותחים את הזום או את השידור, ולוחצים \"הרצאה חיה\". כל מה שנאמר נכתב תוך כדי, וכל שקופית חדשה או כתיבה על הלוח נשמרת כתמונה."},
-    {title: "פותחים חלון צף", text: "לוחצים \"חלון צף\". חלון קטן נשאר מעל ההרצאה: למעלה שאלה ל-AI, מתחת מה שנאמר עכשיו והשקופית האחרונה. ההרצאה עצמה נשארת על כל המסך."},
-    {title: "שואלים את ה-AI", text: "לא הבנת משהו? כותבים בחלון הצף ולוחצים על ה-AI שלך. השאלה מועתקת יחד עם 5 הדקות האחרונות, ונפתחת האפליקציה (או האתר בחלון קטן). שם Ctrl+V ושליחה."},
-    {title: "עם חיבור AI: בלי להדביק", text: "חיברת את Claude (\"חיבור AI\" במסך הבית)? אז פשוט שואלים אותו \"מה הוא אמר עכשיו?\", והוא קורא בעצמו את מה שנאמר ואת השקופית."},
+    {title: "מסדרים את המסך: שני שליש ושליש", text: "מצמידים את ההרצאה לצד אחד (מקש Windows + חץ) ואת אפליקציית ה-AI לצד השני, וגוררים את הקו ביניהם: שני שליש להרצאה, שליש ל-AI. ככה ההרצאה לא מוסתרת, והתשובה נשארת מול העיניים. בזום יוצאים ממסך מלא."},
+    {title: "AI מחובר: שואלים ישר", text: "חיברת את Claude (\"חיבור AI\" במסך הבית)? שואלים אותו בשליש שלו \"מה הוא אמר עכשיו?\", והוא קורא בעצמו את מה שנאמר ואת השקופית. בלי להעתיק ובלי להדביק."},
+    {title: "בלי חיבור: חלון צף ו-Ctrl+V", text: "בלי חיבור, או במסך קטן: פותחים \"חלון צף\" בפינת ההרצאה, כותבים מה לא ברור ולוחצים על ה-AI. השאלה מועתקת עם 5 הדקות האחרונות, וה-AI נפתח בשליש של המסך. שם Ctrl+V ושליחה."},
     {title: "אחרי ההרצאה", text: "בדף הקורס מכינים מכל ההרצאות מבחן תרגול, סיכום, כרטיסיות חזרה או דף נוסחאות, ושולחים ל-AI באותה דרך."},
   ];
   const LINES = [
@@ -1495,9 +1563,9 @@ const HOW = (() => {
     <text x="100" y="98" text-anchor="middle" font-size="9" fill="#56625B">L</text>
     <text x="100" y="114" text-anchor="middle" font-size="12" fill="#1d2a33" direction="ltr">I = ⅓ m L²</text></svg>`;
   const ANSWER = "מומנט התמד (Moment of Inertia) מודד כמה קשה לשנות את מהירות הסיבוב של גוף. " +
-    "מחברים כל מסה כפול המרחק שלה מהציר בריבוע: \u2066I = ∫ r² dm\u2069, ביחידות \u2066kg·m²\u2069.\nלמוט באורך L שמסתובב סביב הקצה: \u2066I = ⅓·m·L²\u2069.";
-  const NOW_ANSWER = "המרצה הגדיר עכשיו את מומנט ההתמד, \u2066I = ∫ r² dm\u2069 (ביחידות \u2066kg·m²\u2069), ועבר לדוגמה של מוט שמסתובב סביב הקצה. " +
-    "על השקופית: \u2066I = ⅓·m·L²\u2069.";
+    "מחברים כל מסה כפול המרחק שלה מהציר בריבוע: \u2066I\u00a0=\u00a0∫\u00a0r²\u00a0dm\u2069, ביחידות \u2066kg·m²\u2069.\nלמוט באורך L שמסתובב סביב הקצה: \u2066I\u00a0=\u00a0⅓·m·L²\u2069.";
+  const NOW_ANSWER = "המרצה הגדיר עכשיו את מומנט ההתמד, \u2066I\u00a0=\u00a0∫\u00a0r²\u00a0dm\u2069 (ביחידות \u2066kg·m²\u2069), ועבר לדוגמה של מוט שמסתובב סביב הקצה. " +
+    "על השקופית: \u2066I\u00a0=\u00a0⅓·m·L²\u2069.";
   const EXAM_Q = "שאלה 1: מוט אחיד באורך \u20662 m\u2069 ובמסה \u20663 kg\u2069 מסתובב סביב הקצה שלו. מהו מומנט ההתמד שלו?";
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
   let i = 0, playing = !still, timers = [], stage = null, cursor = null, built = false, endAt = 0, startAt = 0, progT = 0;
@@ -1581,8 +1649,9 @@ const HOW = (() => {
     show(li, t); if (isNew) at(t + 1600, () => li.classList.remove("new"));
     return li;
   }
-  function zoomWin() {
-    const z = win("Zoom · דינמיקה - הרצאה 6", [2, 3, 96, 94], "h-zoom");
+  const LEFT = [1.5, 3, 32, 94], RIGHT = [34.5, 3, 64, 94];   // the recommended screen: AI on a third, the lecture on two thirds
+  function zoomWin(box) {
+    const z = win("Zoom · דינמיקה - הרצאה 6", box || [2, 3, 96, 94], "h-zoom");
     const main = mk("div", "h-shot", null, z.body); main.innerHTML = SLIDE;
     const side = mk("div", "", null, z.body); side.style.display = "grid"; side.style.gap = "1cqw"; side.style.alignContent = "start";
     mk("div", "h-face", "המרצה", side); mk("div", "h-face", "את/ה", side);
@@ -1601,13 +1670,13 @@ const HOW = (() => {
     const toast = mk("div", "h-toast off", null, f);
     return {f, ta, btn, ol, toast};
   }
-  function claudeWin(box, connected) {
-    const c = win("Claude", box || [3, 5, 50, 90], "off");
+  function claudeWin(box, connected, name, color) {
+    const c = win(name || "Claude", box || [3, 5, 50, 90], "off");
     c.style.zIndex = "6";
-    c.querySelector(".h-logo").style.background = "#D97757";
+    c.querySelector(".h-logo").style.background = color || "#D97757";
     if (connected) { const ch = mk("span", "h-chip", "מחובר להבנתי ✓", c.tb); ch.style.fontSize = "1cqw"; }
     const chat = mk("div", "h-chat", null, c.body);
-    const inp = mk("div", "h-input", null, c.body); const tx = mk("span", "h-tx", null, inp); tx.dataset.ph = "לשאול את Claude...";
+    const inp = mk("div", "h-input", null, c.body); const tx = mk("span", "h-tx", null, inp); tx.dataset.ph = "לשאול את " + (name || "Claude") + "...";
     const send = mk("span", "h-send", null, inp);
     return {c, chat, tx, send};
   }
@@ -1640,43 +1709,22 @@ const HOW = (() => {
       at(2600, () => cursor && (cursor.style.opacity = "0"));
       return 9000;
     },
-    function float() {
-      zoomWin();
-      const h = homeWin("דינמיקה", [8, 8, 84, 84]); h.w.style.zIndex = "4";
-      const L = liveBody(h.w, "דינמיקה"); for (let k = 0; k < 4; k++) addLine(L.ol, k, 0, false); L.shot.classList.remove("off");
-      const F = floatWin(); F.f.classList.add("off");
-      for (let k = 0; k < 3; k++) addLine(F.ol, k + 1, 0, false);
-      point(L.fl, 500); click(L.fl, 1400);
-      hide(h.w, 1700, "min"); show(F.f, 2300);
-      at(2400, () => cursor && (cursor.style.opacity = "0"));
-      addLine(F.ol, 4, 3600, true);
-      return 8500;
-    },
-    function ask() {
-      zoomWin();
-      const F = floatWin(); for (let k = 0; k < 4; k++) addLine(F.ol, k + 1 > 4 ? 4 : k + 1, 0, false);
-      const C = claudeWin([3, 8, 52, 86]);
-      const q = "לא הבנתי, מה זה מומנט התמד?";
-      point(F.ta, 400); at(1000, () => F.ta.classList.add("focus"));
-      let t = type(F.ta, q, 1200, 55);
-      point(F.btn.Claude, t + 300); click(F.btn.Claude, t + 1050);
-      at(t + 1150, () => { F.ta.classList.remove("focus"); F.ta.textContent = ""; F.toast.textContent = "הועתק ונפתחה האפליקציה של Claude. להדביק (Ctrl+V)"; F.toast.classList.remove("off"); });
-      show(C.c, t + 1600);
-      const key = mk("div", "h-key off", "Ctrl + V", stage); key.style.left = "22%"; key.style.top = "70%";
-      point(C.tx, t + 1900);
-      show(key, t + 2600); hide(key, t + 3300); hide(F.toast, t + 3300);
-      const me = mk("div", "h-msg me off", null, C.chat);
-      mk("span", "h-ctx", "אני בהרצאה חיה. זה התמלול של 5 הדקות האחרונות: [10:41:05] אז בואו נגדיר את מומנט ההתמד... [10:41:31] והיחידות הן קילוגרם כפול מטר בריבוע", me);
-      me.append("השאלה שלי: " + q);
-      show(me, t + 3000);
-      at(t + 3500, () => cursor && (cursor.style.opacity = "0"));
-      const ai = mk("div", "h-msg ai off", null, C.chat); show(ai, t + 4000);
-      const end = type(ai, ANSWER, t + 4100, 16);
-      return end + 3500;
+    function arrange() {
+      const z = zoomWin();
+      const C = claudeWin(LEFT, true);
+      const k1 = mk("div", "h-key off", "⊞ Windows + →", stage); k1.style.left = "44%"; k1.style.top = "44%";
+      show(k1, 500); hide(k1, 1700);
+      at(1300, () => Object.assign(z.style, {left: RIGHT[0] + "%", top: RIGHT[1] + "%", width: RIGHT[2] + "%", height: RIGHT[3] + "%"}));
+      const k2 = mk("div", "h-key off", "⊞ Windows + ←", stage); k2.style.left = "7%"; k2.style.top = "44%";
+      show(k2, 2300); show(C.c, 2600); hide(k2, 3500);
+      const l1 = mk("div", "h-split off", "שליש: ה-AI", stage); l1.style.left = "10%"; l1.style.top = "42%";
+      const l2 = mk("div", "h-split off", "שני שליש: ההרצאה", stage); l2.style.left = "57%"; l2.style.top = "88%";
+      show(l1, 4000); show(l2, 4000);
+      return 8000;
     },
     function connected() {
-      zoomWin();
-      const C = claudeWin([3, 5, 52, 90], true); C.c.classList.remove("off");
+      zoomWin(RIGHT);
+      const C = claudeWin(LEFT, true); C.c.classList.remove("off");
       const q = "מה הוא אמר עכשיו?";
       point(C.tx, 400);
       let t = type(C.tx, q, 1000, 60);
@@ -1689,6 +1737,28 @@ const HOW = (() => {
       show(tool, t + 1800);
       const ai = mk("div", "h-msg ai off", null, C.chat); show(ai, t + 2900);
       const end = type(ai, NOW_ANSWER, t + 3000, 18);
+      return end + 3500;
+    },
+    function noconn() {
+      zoomWin(RIGHT);
+      const F = floatWin([71, 33, 26.5, 63]); for (let k = 1; k <= 4; k++) addLine(F.ol, k, 0, false);
+      const G = claudeWin(LEFT, false, "ChatGPT", "#10a37f");
+      const q = "לא הבנתי, מה זה מומנט התמד?";
+      point(F.ta, 400); at(1000, () => F.ta.classList.add("focus"));
+      let t = type(F.ta, q, 1200, 55);
+      point(F.btn.ChatGPT, t + 300); click(F.btn.ChatGPT, t + 1050);
+      at(t + 1150, () => { F.ta.classList.remove("focus"); F.ta.textContent = ""; F.toast.textContent = "הועתק ונפתח ChatGPT בשליש המסך. להדביק (Ctrl+V)"; F.toast.classList.remove("off"); });
+      show(G.c, t + 1600);
+      const key = mk("div", "h-key off", "Ctrl + V", stage); key.style.left = "9%"; key.style.top = "70%";
+      point(G.tx, t + 1900);
+      show(key, t + 2600); hide(key, t + 3300); hide(F.toast, t + 3300);
+      const me = mk("div", "h-msg me off", null, G.chat);
+      mk("span", "h-ctx", "אני בהרצאה חיה. זה התמלול של 5 הדקות האחרונות: [10:41:05] אז בואו נגדיר את מומנט ההתמד... [10:41:31] והיחידות הן קילוגרם כפול מטר בריבוע", me);
+      me.append("השאלה שלי: " + q);
+      show(me, t + 3000);
+      at(t + 3500, () => cursor && (cursor.style.opacity = "0"));
+      const ai = mk("div", "h-msg ai off", null, G.chat); show(ai, t + 4000);
+      const end = type(ai, ANSWER, t + 4100, 16);
       return end + 3500;
     },
     function after() {

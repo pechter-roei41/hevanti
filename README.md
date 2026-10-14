@@ -7,11 +7,13 @@ Hevanti writes down everything said in the lecture, in Hebrew or English, and sa
 - **Live lecture:** Zoom, a broadcast, or anything playing on your computer. Transcription runs on your computer.
 - **Recorded lecture:** a file or a link (Drive, Dropbox, OneDrive, a Zoom recording). A player synced with the transcript.
 - **YouTube video:** plays in YouTube's official player inside Hevanti (no download), and is transcribed while you watch, with the video's timestamps.
-- **Courses:** a folder per course, a glossary that improves transcription, and search across everything that was said.
+- **Courses:** a folder per course, a glossary that improves transcription, and search across everything that was said. Type a course name (for example "סטטיקה של גוף קשיח", rigid-body statics) and Hevanti suggests terms for that course; one click on **+** adds a term to the glossary. Suggestions are per course, not per degree: 55 common courses so far, in [`course_terms.json`](System/Program/course_terms.json).
 - **Exam prep:** a practice exam, a summary, flashcards and a formula sheet from all the lectures of a course.
-- **Connect AI:** one button connects Claude or ChatGPT on Windows to Hevanti through a small MCP server. Then you ask them directly in their own window, for example "What is he saying now?", and they read the last minutes and the slide themselves.
-- **Floating window:** a small window that stays on top of the lecture, showing what is being said now, the slide, and a question box.
-- **Without a connection:** ChatGPT, Gemini or Claude with one click; the question is copied together with its context.
+- **Recommended layout:** the lecture on two thirds of the screen, the AI on one third. Hevanti greys out the AI's window and its own windows in its screenshots, so an answer being written is never saved as a "new slide" and your chat stays out of the pictures.
+- **Connect AI:** one button connects Claude or ChatGPT on Windows to Hevanti through a small MCP server. Then you ask them directly in their own window, for example "What is he saying now?", and they read the last minutes and the slide themselves. The AI sees every course, including courses with no lectures yet.
+- **Floating window:** a small window that stays on top of the lecture: a question box at the top, then what is being said now, then the latest slide.
+- **Without a connection:** ChatGPT, Gemini or Claude with one click. The question is copied together with the last five minutes, and the AI's desktop app opens if it is installed (found in the Windows Start menu); otherwise its website opens on a third of the screen. Another click brings the same window back, so the conversation goes on.
+- **How to use:** a one-minute animated walkthrough inside the app (the "איך משתמשים?" button), drawn with the app's own parts rather than a video file.
 
 ## Download and install
 
@@ -35,13 +37,14 @@ Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsx
 | `System/Program/player.html` | The player for recorded lectures |
 | `System/Program/ask.js` | The "ask AI" box |
 | `System/Program/hevanti_mcp.py` | The AI connector (MCP server, standard library only): `now`, `transcript`, `slide`, `search`, `lectures` |
+| `System/Program/course_terms.json` | Suggested glossary terms per course, matched by the course name. Corrections and new courses are welcome |
 | `tools/build_zip.py` | Builds `Hevanti.zip` |
 
 New version: push a tag such as `v2.0-20261014` (same number, new build) or `v2.1`. GitHub Actions builds the ZIP and attaches it to a release, and the app tells students that an update is available.
 
 ## Contributing and issues
 
-Found a bug? [Open an issue](https://github.com/pechter-roei41/hevanti/issues) with a screenshot and `System\error_log.txt`. Pull requests are welcome.
+Found a bug? [Open an issue](https://github.com/pechter-roei41/hevanti/issues) with a screenshot and `System\error_log.txt`. Pull requests are welcome, and a good first one is adding your course to `course_terms.json`: its name, the words its name may contain (`match`), and 20-30 terms, most important first.
 
 ## License
 
