@@ -4,12 +4,14 @@ chcp 65001 >nul
 set PYTHONIOENCODING=utf-8
 cd /d "%~dp0"
 set "PY="
+rem Hevanti's own Python (System\python), or one that is installed
+if exist "%~dp0System\python\python.exe" set "PY="%~dp0System\python\python.exe""
 for %%V in (3.12 3.13 3.14 3.11 3.10) do (
   if not defined PY ( py -%%V -c "import sys" >nul 2>&1 && set "PY=py -%%V" )
 )
 if not defined PY ( python -c "import sys" >nul 2>&1 && set "PY=python" )
 if not defined PY (
-  echo Python not found. Install Python 3.14 from https://www.python.org/downloads/windows/ ^(check "Add python.exe to PATH"^) and run Install, then this file again.
+  echo Hevanti is not installed yet: double-click Install first, then this file again.
   pause
   exit /b 1
 )

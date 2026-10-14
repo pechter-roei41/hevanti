@@ -4,8 +4,9 @@ chcp 65001 >nul
 cd /d "%~dp0"
 echo Installing NVIDIA GPU libraries (about 1GB). Only useful with an NVIDIA graphics card.
 set "PY="
-rem installed with Hevanti-Setup: its own Python
-if exist "%~dp0..\python\python.exe" set "PY="%~dp0..\python\python.exe""
+rem Hevanti's own Python (System\python), or the one of Hevanti-Setup
+if exist "%~dp0python\python.exe" set "PY="%~dp0python\python.exe""
+if not defined PY if exist "%~dp0..\python\python.exe" set "PY="%~dp0..\python\python.exe""
 for %%V in (3.12 3.13 3.14 3.11 3.10) do (
   if not defined PY ( py -%%V -c "import sys" >nul 2>&1 && set "PY=py -%%V" )
 )

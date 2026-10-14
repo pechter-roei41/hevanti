@@ -178,6 +178,9 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .lines li.hit{background:var(--now);color:var(--now-ink)}
 .ts{font-family:var(--f-mono);font-size:13px;color:var(--accent);direction:ltr;unicode-bidi:isolate;padding-top:3px;white-space:nowrap}
 .side{display:grid;gap:12px}
+li.shot details.ocr{grid-column:2;font-size:14px;color:var(--muted)}
+li.shot details.ocr summary{cursor:pointer}
+li.shot details.ocr p{white-space:pre-wrap;margin:4px 0 0;color:var(--fg)}
 .shotbox img{width:100%;border-radius:8px;border:1px solid var(--line);display:block;cursor:zoom-in}
 .shotbox .none{color:var(--muted);font-size:15px;padding:24px 8px;text-align:center;background:var(--sunk);border-radius:8px}
 .stat{display:grid;gap:4px;font-size:15px}
@@ -499,7 +502,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
       </div>
       <div class="card">
         <h2>מילון מונחים</h2>
-        <p class="sub">מונח בכל שורה. התמלול משתמש בהם כדי לכתוב נכון מונחים, שמות ומילים באנגלית, מההרצאה הבאה. הכי חשובים למעלה (נכנסים בערך 25-30 הראשונים).</p>
+        <p class="sub">מונח בכל שורה. התמלול משתמש בהם כדי לכתוב נכון מונחים, שמות ומילים באנגלית, מההרצאה הבאה. כדאי להוסיף גם את <b>שם המרצה והמתרגלים</b> ושמות שחוזרים בקורס (חוקרים, משפטים). הכי חשובים למעלה: נכנסים בערך 30-40 הראשונים, ואחריהם גם מילים שנקראו מהשקופית שעל המסך.</p>
         <div class="sug" id="cSug" hidden></div>
         <label for="glossIn" class="sub" style="display:block;margin:0 0 4px">המונחים של הקורס</label>
         <textarea class="gloss" id="glossIn" dir="auto" spellcheck="false"></textarea>
@@ -587,7 +590,7 @@ let courses = [], curCourse = "", libCourse = "", searchSeq = 0;
 const CONN = [
   {id: "claude", name: "Claude", where: "Claude למחשב (Windows)", ask: "שואלים בחלון של Claude למחשב."},
   {id: "chatgpt", name: "ChatGPT", where: "ChatGPT ל-Windows, במצב Codex", ask: "שואלים בחלון של ChatGPT, במצב Codex."},
-  {id: "gemini", name: "Gemini", where: "Gemini ל-Windows", ask: "ב-Windows עוד לא אפשרי (רק ב-Mac)."},
+  {id: "gemini", name: "Gemini", where: "Gemini CLI (Gemini בחלון פקודות)", ask: "בחלון פקודות כותבים gemini ושואלים שם."},
 ];
 let lastConn = "";
 function connInfo() { return (app && app.connect) || {}; }
@@ -595,7 +598,7 @@ function drawConns(info) {
   const box = $("#conns"); box.replaceChildren();
   for (const c of CONN) {
     const on = !!info[c.id], card = el("div", "conncard");
-    const st = el("span", "st" + (on ? " on" : ""), on ? "מחובר ✓" : (c.id === "gemini" ? "עוד לא זמין ב-Windows" : "לא מחובר"));
+    const st = el("span", "st" + (on ? " on" : ""), on ? "מחובר ✓" : "לא מחובר");
     const b = el("button", on ? "btn ghost small" : "btn small", on ? "ניתוק" : "חיבור"); b.type = "button";
     b.onclick = () => setConn(c, !on);
     card.append(el("b", "", c.name), st, el("p", "", c.where + ". " + c.ask), b);
@@ -1156,7 +1159,10 @@ function renderLiveHead(s) {
 function lineEl(x) {
   const li = el("li", x.img ? "shot" : (x.note ? "note" : (x.gap ? "gap" : "")));
   li.appendChild(el("span", "ts", x.c));
-  if (x.img) { const im = el("img"); im.loading = "lazy"; im.src = shotUrl(x.img); im.alt = "צילום מסך מ-" + x.c; im.onclick = () => big(im.src); li.appendChild(im); }
+  if (x.img) {
+    const im = el("img"); im.loading = "lazy"; im.src = shotUrl(x.img); im.alt = "צילום מסך מ-" + x.c; im.onclick = () => big(im.src); li.appendChild(im);
+    if (x.ocr) { const dt = el("details", "ocr"); dt.appendChild(el("summary", "", "הטקסט מהשקופית")); const pre = el("p", "", x.ocr); pre.dir = "auto"; dt.appendChild(pre); li.appendChild(dt); }
+  }
   else { const sp = el("span", "", x.x || x.note || x.gap); sp.dir = "auto"; li.appendChild(sp); }
   li._x = x; return li;
 }
@@ -1212,11 +1218,34 @@ $("#liveFollow").addEventListener("click", () => { const b = $("#liveLines"); b.
 $("#liveStop").addEventListener("click", stopSession);
 $("#liveFind").addEventListener("input", () => filterLines("#liveLines", "#liveFind"));
 const ANSWER_HINT = "\nלענות בעברית (מונחים מקצועיים אפשר באנגלית). מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.\n";
-function liveContext(q) {
+// the text read from a slide (OCR, when Tesseract is installed) - copied with the question, so an AI without a
+// connection also knows what was on the slide
+const slideTextCache = {};
+async function slideTextOf(rel) {
+  if (!rel) return "";
+  if (slideTextCache[rel]) return slideTextCache[rel];
+  try { const d = await api("/api/slide_text?p=" + encodeURIComponent(rel)); if (d.text) slideTextCache[rel] = d.text; return d.text || ""; }
+  catch (e) { return ""; }
+}
+// lines for the copied minutes: items in [from, to]; the newest 3 slides with their text
+async function minutesText(items, from, to, slidePlaceholder) {
+  const pick = items.filter(x => x.t >= from && x.t <= to);
+  const shots = pick.filter(x => x.img).slice(-3);
+  const texts = await Promise.all(shots.map(x => slideTextOf(x.img)));
+  const byImg = new Map(shots.map((x, i) => [x, texts[i]]));
+  let out = "";
+  for (const x of pick) {
+    const tx = x.img ? byImg.get(x) : null;
+    out += `[${x.c}] ` + (x.img ? (tx ? "[על השקופית כתוב: " + tx.replace(/\n+/g, " | ").slice(0, 700) + "]" : slidePlaceholder) : x.x) + "\n";
+  }
+  return {out, n: pick.length};
+}
+async function liveContext(q) {
   const now = Date.now() / 1000, from = now - 300;
   const lang = app && app.session ? langName(app.session.lang) : "עברית";
-  let out = `אני בהרצאה חיה (ב${lang}). זה התמלול האוטומטי של 5 הדקות האחרונות (יכולות להיות בו טעויות תמלול):\n\n`, n = 0;
-  for (const x of liveItems) { if (x.t < from) continue; n++; out += `[${x.c}] ` + (x.img ? "[כאן הופיעה שקופית או כתיבה חדשה על הלוח]" : x.x) + "\n"; }
+  let out = `אני בהרצאה חיה (ב${lang}). זה התמלול האוטומטי של 5 הדקות האחרונות (יכולות להיות בו טעויות תמלול):\n\n`;
+  const m = await minutesText(liveItems, from, Infinity, "[כאן הופיעה שקופית או כתיבה חדשה על הלוח]");
+  let n = m.n; out += m.out;
   if (liveLast && liveLast.draft) out += `(ממש עכשיו, עוד לא סופי: ${liveLast.draft})\n`;
   if (!n && !(liveLast && liveLast.draft)) out += "(עוד אין תמלול)\n";
   return out + ANSWER_HINT + "\nהשאלה שלי: " + q;
@@ -1262,7 +1291,10 @@ $("#pastFind").addEventListener("input", () => filterLines("#pastLines", "#pastF
 function pastText() {
   const e = pastData.entry;
   let out = `זה תמלול אוטומטי של הרצאה (${e.title}, ב${langName(e.lang)}). יכולות להיות בו טעויות תמלול.\n\n`;
-  for (const x of pastData.lines) if (x.x) out += `[${x.c}] ${x.x}\n`;
+  for (const x of pastData.lines) {
+    if (x.x) out += `[${x.c}] ${x.x}\n`;
+    else if (x.ocr) out += `[${x.c}] [על השקופית כתוב: ${x.ocr.replace(/\n+/g, " | ").slice(0, 700)}]\n`;
+  }
   return out;
 }
 $("#pastCopy").addEventListener("click", async () => {
@@ -1277,7 +1309,7 @@ function filterLines(listSel, inputSel) {
   const q = $(inputSel).value.trim().toLowerCase();
   for (const li of $(listSel).children) {
     const x = li._x; if (!x) continue;
-    const hit = !!q && !!x.x && x.x.toLowerCase().includes(q);
+    const hit = !!q && !!(x.x || x.ocr) && (x.x || x.ocr).toLowerCase().includes(q);
     li.hidden = !!q && !hit; li.classList.toggle("hit", hit);
   }
 }
@@ -1441,14 +1473,12 @@ $("#ytFind").addEventListener("input", () => filterLines("#ytLines", "#ytFind"))
 $("#ytStop").addEventListener("click", stopSession);
 $("#ytCover").addEventListener("click", e => { const r = $("#ytCover").getBoundingClientRect(), D = ytDur(); if (D) ytSeek(D * Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))); });
 $("#ytShotCopy").addEventListener("click", async () => { if (ytShot) toast((await copyImage(shotUrl(ytShot))) ? "השקופית הועתקה. להדביק בצ'אט (Ctrl+V)." : "לא הצלחתי להעתיק את התמונה."); });
-function ytContext(q) {
+async function ytContext(q) {
   const pos = ytPos(), D = ytDur(), from = pos - 300;
   let out = `אני צופה בסרטון ביוטיוב: "${ytTitle() || "סרטון"}" (${ytInfo.url || ""}). אני עכשיו ב-${hms(pos)}${D ? " מתוך " + hms(D) : ""}.\n` +
-            "זה התמלול האוטומטי של 5 הדקות שלפני המקום שלי (יכולות להיות בו טעויות תמלול):\n\n", n = 0;
-  for (const x of ytItems) {
-    if (x.t < from || x.t > pos + 0.5) continue;
-    n++; out += `[${x.c}] ` + (x.img ? "[כאן הופיעה שקופית חדשה]" : x.x) + "\n";
-  }
+            "זה התמלול האוטומטי של 5 הדקות שלפני המקום שלי (יכולות להיות בו טעויות תמלול):\n\n";
+  const m = await minutesText(ytItems, from, pos + 0.5, "[כאן הופיעה שקופית חדשה]");
+  let n = m.n; out += m.out;
   if (!n) out += "(החלק הזה עוד לא תומלל)\n";
   return out + ANSWER_HINT + "\nהשאלה שלי: " + q;
 }
@@ -1491,10 +1521,11 @@ function pipToast(t) {
   clearTimeout(pipToast.h); pipToast.h = setTimeout(() => { if (pipToastEl) pipToastEl.classList.remove("on"); }, Math.max(2800, t.length * 50));
 }
 function floatHead(s) { if (pipWin && pipTitle) pipTitle.textContent = s && !s.done ? sessionName(s) : "אין עכשיו הרצאה פעילה"; }
-function floatLiveContext(q) {
+async function floatLiveContext(q) {
   const now = Date.now() / 1000, from = now - 300;
-  let out = "אני בהרצאה חיה. זה התמלול האוטומטי של 5 הדקות האחרונות (יכולות להיות בו טעויות תמלול):\n\n", n = 0;
-  for (const x of pipItems) { if (x.t < from) continue; n++; out += `[${x.c}] ` + (x.img ? "[כאן הופיעה שקופית או כתיבה חדשה על הלוח]" : x.x) + "\n"; }
+  let out = "אני בהרצאה חיה. זה התמלול האוטומטי של 5 הדקות האחרונות (יכולות להיות בו טעויות תמלול):\n\n";
+  const m = await minutesText(pipItems, from, Infinity, "[כאן הופיעה שקופית או כתיבה חדשה על הלוח]");
+  let n = m.n; out += m.out;
   if (pipDraft) out += `(ממש עכשיו, עוד לא סופי: ${pipDraft})\n`;
   if (!n && !pipDraft) out += "(עוד אין תמלול)\n";
   return out + ANSWER_HINT + "\nהשאלה שלי: " + q;
@@ -1712,10 +1743,11 @@ const HOW = (() => {
     function arrange() {
       const z = zoomWin();
       const C = claudeWin(LEFT, true);
-      const k1 = mk("div", "h-key off", "⊞ Windows + →", stage); k1.style.left = "44%"; k1.style.top = "44%";
+      const mac = !!(app && app.mac);
+      const k1 = mk("div", "h-key off", mac ? "fn ⌃ + →" : "⊞ Windows + →", stage); k1.style.left = "44%"; k1.style.top = "44%";
       show(k1, 500); hide(k1, 1700);
       at(1300, () => Object.assign(z.style, {left: RIGHT[0] + "%", top: RIGHT[1] + "%", width: RIGHT[2] + "%", height: RIGHT[3] + "%"}));
-      const k2 = mk("div", "h-key off", "⊞ Windows + ←", stage); k2.style.left = "7%"; k2.style.top = "44%";
+      const k2 = mk("div", "h-key off", mac ? "fn ⌃ + ←" : "⊞ Windows + ←", stage); k2.style.left = "7%"; k2.style.top = "44%";
       show(k2, 2300); show(C.c, 2600); hide(k2, 3500);
       const l1 = mk("div", "h-split off", "שליש: ה-AI", stage); l1.style.left = "10%"; l1.style.top = "42%";
       const l2 = mk("div", "h-split off", "שני שליש: ההרצאה", stage); l2.style.left = "57%"; l2.style.top = "88%";
@@ -1849,7 +1881,8 @@ const HOW = (() => {
         drawCtl();
       });
     }
-    $("#hPlay").hidden = still;   // with "reduce motion" nothing plays: the arrows and the list move between the steps
+    $("#hPlay").hidden = still;
+    if (app && app.mac) STEPS[2].text = "מצמידים את ההרצאה לצד אחד (fn+Control+חץ, או גוררים את החלון לקצה המסך) ואת אפליקציית ה-AI לצד השני, וגוררים את הקו ביניהם: שני שליש להרצאה, שליש ל-AI. ככה ההרצאה לא מוסתרת, והתשובה נשארת מול העיניים. בזום יוצאים ממסך מלא.";   // with "reduce motion" nothing plays: the arrows and the list move between the steps
     playing = !still; go(0);
   }
   function stop() { clear(); if (stage) stage.replaceChildren(); cursor = null; }
