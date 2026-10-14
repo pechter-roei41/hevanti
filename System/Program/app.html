@@ -187,13 +187,13 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 #ytLines li:hover{background:var(--sunk)}
 #ytLines li.now{background:var(--now);color:var(--now-ink)}
 /* the floating window (picture-in-picture) */
-body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-template-rows:auto minmax(0,1fr) auto auto;height:100vh;box-sizing:border-box}
+body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-template-rows:auto auto minmax(0,1fr) auto;height:100vh;box-sizing:border-box}
 .pipbody .phead{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px}
 .pipbody .phead span{margin-inline-end:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pipbody ol{list-style:none;margin:0;padding:4px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;min-height:0}
 .pipbody ol li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;padding:3px 6px;font-size:14px;line-height:1.5}
 .pipbody ol li.draft{color:var(--muted);font-style:italic}
-.pipbody .pshot img{width:100%;max-height:120px;object-fit:contain;border-radius:6px;border:1px solid var(--line);background:#000;display:block}
+.pipbody .pshot img{width:100%;max-height:170px;object-fit:contain;border-radius:6px;border:1px solid var(--line);background:#000;display:block}
 .pipbody .card{padding:10px 12px}
 .pipbody .ptoast{position:fixed;bottom:8px;left:8px;right:8px;background:var(--fg);color:var(--bg);padding:8px 12px;border-radius:10px;font-weight:600;font-size:14px;text-align:center;opacity:0;transition:opacity .2s;pointer-events:none}
 .pipbody .ptoast.on{opacity:1}
@@ -1275,7 +1275,7 @@ let pipSince = 0, pipItems = [], pipDraft = "", pipLiveShot = null, pipYtRev = -
 async function openFloat() {
   if (!("documentPictureInPicture" in window)) { toast("הדפדפן הזה לא תומך בחלון צף. זה עובד ב-Chrome וב-Edge מעודכנים."); return; }
   if (pipWin && !pipWin.closed) { try { pipWin.focus(); } catch (e) {} return; }
-  try { pipWin = await documentPictureInPicture.requestWindow({width: 400, height: 620}); }
+  try { pipWin = await documentPictureInPicture.requestWindow({width: 400, height: 680}); }
   catch (e) { toast("לא הצלחתי לפתוח חלון צף."); pipWin = null; return; }
   const d = pipWin.document;
   d.documentElement.lang = "he"; d.documentElement.dir = "rtl"; d.title = "הבנתי";
@@ -1288,7 +1288,7 @@ async function openFloat() {
   pipShot = d.createElement("div"); pipShot.className = "pshot";
   const card = d.createElement("div"); card.className = "card";
   pipToastEl = d.createElement("div"); pipToastEl.className = "ptoast"; pipToastEl.setAttribute("role", "status");
-  d.body.append(head, pipList, pipShot, card, pipToastEl);
+  d.body.append(head, card, pipList, pipShot, pipToastEl);   // the question on top, then what is said, then the slide
   if (window.BZMAsk) BZMAsk.mount(card, {win: pipWin, title: "שאלה ל-AI", sub: "עם מה שנאמר עכשיו", placeholder: "מה לא ברור?",
     context: q => (app && app.session && app.session.yt ? ytContext(q) : floatLiveContext(q)), toast: pipToast});
   pipWin.addEventListener("pagehide", () => { pipWin = null; pipKey = ""; });
