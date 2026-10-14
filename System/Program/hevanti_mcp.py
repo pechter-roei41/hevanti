@@ -19,6 +19,7 @@ VERSION = "2.0"
 NOW_NAME = "now_watching.txt"
 SLIDES = "שקופיות"
 GLOSSARY = "מילון מונחים.txt"
+OCR_NAME = ".ocr.json"     # the text Hevanti read from each slide (when Tesseract is installed)
 MAX_TEXT = 90_000          # characters of transcript in one answer
 PROTOCOLS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
 
@@ -62,7 +63,8 @@ TOOLS = [
          "at": {"type": "string", "description": "time in the lecture, like '23:40' or '1:05:10'"}},
          "additionalProperties": False}},
     {"name": "search",
-     "description": "Find where words were said, in all lectures (or one course). Returns lecture, time and line.",
+     "description": "Find where words were said - or written on a slide - in all lectures (or one course). "
+                    "Returns lecture, time and line.",
      "inputSchema": {"type": "object", "properties": {
          "query": {"type": "string"}, "course": {"type": "string"}},
          "required": ["query"], "additionalProperties": False}},
@@ -200,6 +202,21 @@ def text(t):
     return {"type": "text", "text": t}
 
 
+def ocr_of(path):
+    """The text read from this slide picture, or ""."""
+    try:
+        with open(os.path.join(os.path.dirname(path), OCR_NAME), encoding="utf-8") as f:
+            d = json.load(f)
+        return str(d.get(os.path.basename(path), "")) if isinstance(d, dict) else ""
+    except (OSError, ValueError):
+        return ""
+
+
+def slide_path(lecture_dir, root, rel):
+    rel = rel.replace("\\", "/")
+    return os.path.join(lecture_dir, *rel.split("/")) if rel.startswith(SLIDES + "/") else os.path.join(root, *rel.split("/"))
+
+
 class Server:
     def __init__(self, lib):
         self.lib = lib
@@ -218,6 +235,9 @@ class Server:
                 img = image_content(p)
                 if img:
                     out += [text("השקופית שעל המסך:"), img]
+                words = ocr_of(p)
+                if words:
+                    out.append(text("הטקסט שנקרא מהשקופית (אוטומטי, יכולות להיות טעויות):\n" + words))
         return out
 
     def tool_transcript(self, args):
@@ -229,8 +249,13 @@ class Server:
         a, b = args.get("from_min"), args.get("to_min")
         a = float(a) * 60 if isinstance(a, (int, float)) else None
         b = float(b) * 60 if isinstance(b, (int, float)) else None
-        rows = [f"[{hms(t)}] " + (f"[שקופית: {SHOT.match(x).group(1)}]" if SHOT.match(x) else x)
-                for t, x in lines if (a is None or t >= a) and (b is None or t <= b)]
+        def row(t, x):
+            m = SHOT.match(x)
+            if not m:
+                return f"[{hms(t)}] {x}"
+            words = ocr_of(slide_path(d, self.lib.root, m.group(1)))
+            return f"[{hms(t)}] [שקופית: {m.group(1)}]" + (" כתוב עליה: " + words.replace("\n", " | ")[:500] if words else "")
+        rows = [row(t, x) for t, x in lines if (a is None or t >= a) and (b is None or t <= b)]
         head = f"הרצאה: {c}/{n} | {len(lines)} שורות" + (f" | מ-{hms(a)}" if a is not None else "") + \
                (f" עד {hms(b)}" if b is not None else "")
         body = "\n".join(rows)
@@ -255,7 +280,9 @@ class Server:
                 p = os.path.join(self.lib.root, *m.group(1).replace("\\", "/").split("/"))
                 img = image_content(p) if self.lib.inside(p) else None
                 if img:
-                    return [text("השקופית שעל המסך עכשיו: " + m.group(1)), img]
+                    words = ocr_of(p)
+                    return [text("השקופית שעל המסך עכשיו: " + m.group(1)), img] + \
+                        ([text("הטקסט שנקרא מהשקופית (אוטומטי):\n" + words)] if words else [])
         it = self.lib.find(args.get("lecture"))
         if not it:
             return [text("לא מצאתי הרצאה כזו.")]
@@ -273,7 +300,9 @@ class Server:
         img = image_content(p) if self.lib.inside(p) else None
         if not img:
             return [text("קובץ השקופית לא נמצא.")]
-        return [text(f"השקופית מ-{hms(best[0])} ({it[0]}/{it[1]}):"), img]
+        words = ocr_of(p)
+        return [text(f"השקופית מ-{hms(best[0])} ({it[0]}/{it[1]}):"), img] + \
+            ([text("הטקסט שנקרא מהשקופית (אוטומטי):\n" + words)] if words else [])
 
     def tool_search(self, args):
         words = [w for w in str(args.get("query") or "").lower().split() if w]
@@ -285,8 +314,14 @@ class Server:
             if course and course not in c.lower():
                 continue
             for t, x in read_lines(path):
-                if all(w in x.lower() for w in words):
-                    hits.append(f"{c}/{n} [{hms(t)}] {x}")
+                m = SHOT.match(x)
+                body = ocr_of(slide_path(d, self.lib.root, m.group(1))) if m else x
+                if body and all(w in body.lower() for w in words):
+                    if m:
+                        ln = next((l for l in body.splitlines() if any(w in l.lower() for w in words)), body)
+                        hits.append(f"{c}/{n} [{hms(t)}] [בשקופית {m.group(1)}] {ln[:300]}")
+                    else:
+                        hits.append(f"{c}/{n} [{hms(t)}] {x}")
                     if len(hits) >= 60:
                         break
             if len(hits) >= 60:

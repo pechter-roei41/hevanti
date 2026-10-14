@@ -335,12 +335,19 @@ function resume() {
 }
 
 // ---------- copy for any AI chat ----------
-function contextText(q) {
+const slideTexts = {};
+async function slideTextOf(name) {   // the text read from the slide (OCR), when there is one
+  if (slideTexts[name]) return slideTexts[name];
+  try { const d = await fetch("/api/slide_text?n=" + encodeURIComponent(name), {cache: "no-store"}).then(r => r.json()); if (d.text) slideTexts[name] = d.text; return d.text || ""; }
+  catch (e) { return ""; }
+}
+async function contextText(q) {
   const t = v.currentTime, from = t - 300;
   const lang = st.lang === "en" ? "באנגלית" : "בעברית";
   let out = `אני צופה בהקלטה של הרצאה ${lang}: "${st.title}". אני עכשיו ב-${hms(t)} מתוך ${hms(dur())}.\n` +
             "זה התמלול האוטומטי של 5 הדקות האחרונות (יכולות להיות בו טעויות תמלול):\n\n";
   let n = 0;
+  const shotsInRange = items.filter(x => x.img && x.t >= from && x.t <= t + 0.5).slice(-3);   // their text is read
   for (const x of items) {
     if (x.gap != null) {
       if (x.t <= t + 0.5 && x.gap >= from) { n++; out += `[${hms(Math.max(x.t, from))}] (החלק הזה עוד לא תומלל)\n`; }
@@ -348,7 +355,10 @@ function contextText(q) {
     }
     if (x.t < from || x.t > t + 0.5) continue;
     n++;
-    if (x.img) out += `[${hms(x.t)}] [כאן הופיעה שקופית חדשה]\n`;
+    if (x.img) {
+      const tx = shotsInRange.includes(x) ? await slideTextOf(x.img) : "";
+      out += `[${hms(x.t)}] ` + (tx ? "[על השקופית כתוב: " + tx.replace(/\n+/g, " | ").slice(0, 700) + "]" : "[כאן הופיעה שקופית חדשה]") + "\n";
+    }
     else out += `[${hms(x.t)}] ${x.x}\n`;
   }
   if (!n) out += "(עוד אין תמלול לקטע הזה)\n";

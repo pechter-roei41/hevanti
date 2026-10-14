@@ -7,3 +7,5 @@ __pycache__/
 *.pyc
 Hevanti.zip
 /Hevanti/
+System/python/
+System/venv-mac/

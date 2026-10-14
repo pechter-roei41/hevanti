@@ -55,6 +55,7 @@ def _tool_root(d):
 
 
 HERE = _tool_root(SCRIPT_DIR)
+IS_MAC = sys.platform == "darwin"   # the Mac version: Hevanti.command, the sound through BlackHole
 SYSTEM_DIR = os.path.dirname(SCRIPT_DIR) if os.path.basename(os.path.dirname(SCRIPT_DIR)).lower() == "system" else HERE
 ERROR_LOG = os.path.join(SYSTEM_DIR, "error_log.txt")
 LIB_NAME = "ההרצאות שלי"
@@ -84,6 +85,8 @@ STATE_NAME = ".state.json"               # a recording's progress and your place
 OUT_DIR = os.path.join(HERE, "transcripts")  # the 1.x layout - moved into LIB_DIR on the first start
 # ASCII-only path for the model (CTranslate2 can fail on non-English Windows paths)
 MODEL_DIR = os.path.join(os.environ.get("PUBLIC", r"C:\Users\Public"), "whisper_models")
+if IS_MAC:
+    MODEL_DIR = os.path.join(os.path.expanduser("~"), "Library", "Application Support", "Hevanti", "whisper_models")
 # Language: "he" or "en" - chosen on the page for each lecture
 LANG, MODELS = "he", []
 TARGET_SR = 16000
@@ -107,26 +110,71 @@ PROMPTS = {
     "en": "University lecture.",
 }
 PROMPT = PROMPTS["he"]
-TERMS = ""        # the course's glossary, for the model (see set_terms)
-TERMS_MAX = 300   # Whisper keeps only the end of a long prompt: the glossary must leave room for the last words said
+# The course's words reach the model as "hotwords" (faster-whisper 1.0.2+): a part of the prompt of their own
+# (up to ~223 tokens, the first ones kept), so they are not pushed out by the last words said, which fill the
+# rest. The course name comes first, then the glossary in its order, and after the first 20 terms the words
+# read from the newest slides (names, terms in English) - see set_slide_words.
+TERMS = ""        # an old faster-whisper without hotwords: a short glossary inside the prompt instead
+TERMS_MAX = 300   # (Whisper keeps only the END of a long prompt: the glossary must leave room for the last words said)
+HOT_TERMS = []    # the course name + its glossary, most important first
+SLIDE_WORDS = []  # words on the newest slides of this lecture (OCR), newest first
+HOT_OK = False    # set when the model loads: this faster-whisper has hotwords (also in the batched pipeline?)
+HOT_OK_BATCH = False
+HOT_MAX = 700     # characters - the model keeps the first ~223 tokens of them anyway
+HOT_SLIDE_AT = 20  # slide words come after this many glossary terms
 
 
-def set_terms(words):
-    """The words of the course's glossary go into every prompt, so the model writes them correctly."""
-    global TERMS
+def set_terms(words, course=""):
+    """A new lecture: the course name and its glossary, so the model writes them correctly."""
+    global TERMS, HOT_TERMS, SLIDE_WORDS
+    clean, seen = [], set()
+    first = [course] if course and course != NO_COURSE else []
+    for w in first + list(words or []):
+        w = " ".join(str(w).split())[:60]
+        if w and w.lower() not in seen:
+            seen.add(w.lower())
+            clean.append(w)
+    HOT_TERMS, SLIDE_WORDS = clean, []
     out, size = [], 0
-    for w in words or []:
-        w = " ".join(str(w).split())
-        if not w or size + len(w) + 2 > TERMS_MAX:
+    for w in clean:
+        if size + len(w) + 2 > TERMS_MAX:
             continue
         out.append(w)
         size += len(w) + 2
     TERMS = ", ".join(out)
 
 
-def prompt_now():
-    if not TERMS:
-        return PROMPT
+def set_slide_words(words):
+    """Words read from the slide now on the screen (newest first, at most 15 used)."""
+    global SLIDE_WORDS
+    have = {w.lower() for w in HOT_TERMS}
+    new = [w for w in words if w and w.lower() not in have]
+    SLIDE_WORDS = list(dict.fromkeys(new + SLIDE_WORDS))[:40]
+
+
+def hotwords_now():
+    have = {w.lower() for w in HOT_TERMS}
+    items = HOT_TERMS[:HOT_SLIDE_AT] + [w for w in SLIDE_WORDS if w.lower() not in have][:15] + HOT_TERMS[HOT_SLIDE_AT:]
+    out, size = [], 0
+    for w in items:
+        if size + len(w) + 2 > HOT_MAX:
+            break
+        out.append(w)
+        size += len(w) + 2
+    return ", ".join(out)
+
+
+def hot_kw(batched=False):
+    """{"hotwords": ...} for model.transcribe, when this faster-whisper has them."""
+    if not (HOT_OK_BATCH if batched else HOT_OK):
+        return {}
+    h = hotwords_now()
+    return {"hotwords": h} if h else {}
+
+
+def prompt_now(batched=False):
+    if (HOT_OK_BATCH if batched else HOT_OK) or not TERMS:
+        return PROMPT   # the glossary goes in as hotwords
     return PROMPT + (" מונחים בקורס: " if LANG == "he" else " Terms: ") + TERMS + "."
 
 
@@ -153,6 +201,7 @@ SCREEN_BIG_FRAC = 0.15   # >=15% of the screen changed = new slide / page
 SCREEN_BIG_GAP_S = 5     #   ...save at most every 5 s
 SCREEN_SMALL_FRAC = 0.03 # >=3% changed = new writing, small change
 SCREEN_SMALL_GAP_S = 30  #   ...save at most every 30 s (avoids saving every frame of a video)
+YT_SETTLE_S = 1.2        # a video: wait this long after a change before saving (a seek is reported by then)
 # ------------------------------------------
 
 try:
@@ -749,8 +798,16 @@ def model_path(name):
 def load_model(stub_av=True):
     if stub_av:
         _stub_av()
+    global HOT_OK, HOT_OK_BATCH
     has_cuda_libs = _add_nvidia_dlls() > 0
     from faster_whisper import WhisperModel
+    try:
+        import inspect
+        HOT_OK = "hotwords" in inspect.signature(WhisperModel.transcribe).parameters
+        from faster_whisper import BatchedInferencePipeline
+        HOT_OK_BATCH = "hotwords" in inspect.signature(BatchedInferencePipeline.transcribe).parameters
+    except Exception:
+        HOT_OK = HOT_OK_BATCH = False
     os.makedirs(MODEL_DIR, exist_ok=True)
     test = np.zeros(TARGET_SR, dtype=np.float32)
     for name in MODELS:
@@ -792,7 +849,7 @@ def transcribe(model, beam, audio16, prev_text):
     try:
         segs, _ = model.transcribe(audio16, language=LANG, beam_size=beam,
                                    vad_filter=USE_VAD, condition_on_previous_text=False,
-                                   initial_prompt=prompt)
+                                   initial_prompt=prompt, **hot_kw())
         return " ".join(s.text.strip() for s in segs).strip()
     except Exception as e:
         if not USE_VAD:
@@ -813,11 +870,11 @@ def transcribe_batch(model, beam, audio16, prev_text):
     if _PIPE is None:
         from faster_whisper import BatchedInferencePipeline
         _PIPE = BatchedInferencePipeline(model)
-    prompt = prompt_now() + " " + prev_text[-150:]
+    prompt = prompt_now(batched=True) + " " + prev_text[-150:]
     while True:
         try:
             segs, _ = _PIPE.transcribe(audio16, language=LANG, beam_size=beam, batch_size=_BATCH_SIZE,
-                                       vad_filter=True, initial_prompt=prompt)
+                                       vad_filter=True, initial_prompt=prompt, **hot_kw(batched=True))
             return [(float(s.start), s.text.strip()) for s in segs]
         except Exception as e:
             if "memory" in str(e).lower() and _BATCH_SIZE > 2:
@@ -856,7 +913,7 @@ def changed_fraction(a, b, thresh=25):
 # being written would look like a "new slide", and the chat would end up in the saved pictures. So the windows of
 # the AI apps/sites and of Hevanti that are in view are painted over (grey) before comparing and saving.
 MASK_TITLE = re.compile(r"\bClaude\b|ChatGPT|Gemini|הבנתי", re.I)
-MASK_EXE = {"claude.exe", "chatgpt.exe"}
+MASK_EXE = {"claude", "chatgpt"}    # the program (Windows: claude.exe; Mac: the app's name)
 
 
 def pick_mask_rects(wins):
@@ -867,7 +924,8 @@ def pick_mask_rects(wins):
         l, t, r, b = rc
         if r - l < 40 or b - t < 40:
             continue
-        if str(exe or "").lower() in MASK_EXE or MASK_TITLE.search(str(title or "")):
+        prog = os.path.splitext(os.path.basename(str(exe or "")))[0].lower()
+        if prog in MASK_EXE or MASK_TITLE.search(str(title or "")):
             cx, cy = (l + r) // 2, (t + b) // 2
             if not any(a[0] <= cx < a[2] and a[1] <= cy < a[3] for a in above):
                 out.append(rc)
@@ -930,21 +988,230 @@ def _visible_windows():
     return out
 
 
+def _visible_windows_mac():
+    """Mac: the windows on the screen, the front one first: (title, app, rect in points). Needs pyobjc (Quartz);
+    the titles need the "Screen Recording" permission, which the screenshots need anyway."""
+    import Quartz
+    infos = Quartz.CGWindowListCopyWindowInfo(
+        Quartz.kCGWindowListOptionOnScreenOnly | Quartz.kCGWindowListExcludeDesktopElements, Quartz.kCGNullWindowID)
+    out = []
+    for w in infos or []:
+        if int(w.get("kCGWindowLayer", 0)) != 0:
+            continue   # menus, the Dock, overlays
+        b = w.get("kCGWindowBounds") or {}
+        x, y = int(b.get("X", 0)), int(b.get("Y", 0))
+        out.append((str(w.get("kCGWindowName") or ""), str(w.get("kCGWindowOwnerName") or ""),
+                    (x, y, x + int(b.get("Width", 0)), y + int(b.get("Height", 0)))))
+    return out
+
+
 def mask_windows(arr, area, wins=None):
     """Grey out, in place, the AI/Hevanti windows that are in view inside the grabbed area (BGRA array)."""
     if wins is None:
-        if os.name != "nt":
+        if IS_MAC:
+            wins = _visible_windows_mac()
+        elif os.name == "nt":
+            wins = _visible_windows()
+        else:
             return False
-        wins = _visible_windows()
     h, w = arr.shape[:2]
+    sx, sy = w / max(1, area.get("width", w)), h / max(1, area.get("height", h))   # a Mac's Retina: 2 pixels a point
     done = False
     for l, t, r, b in pick_mask_rects(wins):
-        x0, y0 = max(0, l - area["left"]), max(0, t - area["top"])
-        x1, y1 = min(w, r - area["left"]), min(h, b - area["top"])
+        x0, y0 = max(0, int((l - area["left"]) * sx)), max(0, int((t - area["top"]) * sy))
+        x1, y1 = min(w, int((r - area["left"]) * sx)), min(h, int((b - area["top"]) * sy))
         if x1 > x0 and y1 > y0:
             arr[y0:y1, x0:x1, :3] = 128
             done = True
     return done
+
+
+# ---------- the text on the slides (OCR) ----------
+# Every saved slide is read in the background with Tesseract (free, offline; Hebrew + English) into a hidden
+# ".ocr.json" in the lecture's "שקופיות" folder: {"13-40-11.jpg": "the text"}. The text can be searched, goes into
+# exam prep and into what is copied for an AI, and the connector gives it to the AI. The words in English on the
+# slide now on the screen also help the transcription (hotwords). No Tesseract: everything works as before.
+# Tesseract: "install_ocr" (Windows) or "brew install tesseract tesseract-lang" (Mac).
+OCR_NAME = ".ocr.json"
+OCR_MAX = 4000    # characters kept per slide
+_OCR_LOCK = threading.Lock()
+_OCR = None
+_OCR_UI = set("""zoom mute unmute video stop start participants participant chat share screen sharing record recording
+leave end meeting reactions react apps security view gallery speaker more google chrome microsoft edge teams meet
+file edit home insert design slide slides page pages search settings window help tools new tab untitled powerpoint
+pdf http https www com org net exit full fullscreen raise hand captions breakout rooms whiteboard notes audio camera
+microphone copy paste undo redo zoomin zoomout presenter presenting youtube subscribe like playlist""".split())
+
+
+def tessdata_dir():
+    return os.path.join(LOCAL_DIR, "tessdata")   # Hevanti's own language files (Hebrew, English) - no admin needed
+
+
+def find_tesseract():
+    import shutil
+    cands = [os.environ.get("HEVANTI_TESSERACT", ""), shutil.which("tesseract") or ""]
+    if os.name == "nt":
+        for base in (os.environ.get("ProgramFiles", r"C:\Program Files"), os.environ.get("ProgramFiles(x86)", ""),
+                     os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs"), LOCAL_DIR):
+            if base:
+                cands.append(os.path.join(base, "Tesseract-OCR", "tesseract.exe"))
+    else:
+        cands += ["/opt/homebrew/bin/tesseract", "/usr/local/bin/tesseract", "/usr/bin/tesseract"]
+    return next((c for c in cands if c and os.path.isfile(c)), None)
+
+
+def _quiet_proc():
+    """A background helper: no window, low priority, one thread (the transcription comes first)."""
+    env = dict(os.environ, OMP_THREAD_LIMIT="1")
+    if os.name == "nt":
+        return {"creationflags": 0x08000000 | 0x00004000, "env": env}   # CREATE_NO_WINDOW | BELOW_NORMAL_PRIORITY
+    return {"env": env}
+
+
+def ocr_config(exe):
+    """(extra args, languages) - Hevanti's tessdata when it has Hebrew, else Tesseract's own. None: no Hebrew/English."""
+    import subprocess
+    for extra in ([["--tessdata-dir", tessdata_dir()]] if os.path.isdir(tessdata_dir()) else []) + [[]]:
+        try:
+            r = subprocess.run([exe, "--list-langs", *extra], capture_output=True, timeout=30, **_quiet_proc())
+        except (OSError, subprocess.SubprocessError):
+            continue
+        have = {ln.strip() for ln in r.stdout.decode("utf-8", "replace").splitlines()[1:]}
+        langs = [x for x in ("heb", "eng") if x in have]
+        if langs and (extra or "heb" in have or not os.path.isdir(tessdata_dir())):
+            return extra, "+".join(langs)
+    return None
+
+
+def clean_ocr(text):
+    out = []
+    text = re.sub("[\u200e\u200f\u202a-\u202e\u2066-\u2069]", "", str(text or ""))   # direction marks
+    for ln in text.splitlines():
+        ln = " ".join(ln.split())
+        if sum(ch.isalnum() for ch in ln) >= 2:
+            out.append(ln)
+    return "\n".join(out)[:OCR_MAX]
+
+
+def slide_terms(text):
+    """Words in English on a slide (terms, names), for the hotwords - not the screen's buttons."""
+    out = []
+    for m in re.finditer(r"[A-Za-z][A-Za-z'\-]{2,}(?:[ ][A-Za-z][A-Za-z'\-]{2,}){0,2}", str(text or "")):
+        words = [w for w in m.group(0).split() if w.lower() not in _OCR_UI]
+        if words:
+            out.append(" ".join(words))
+    return list(dict.fromkeys(out))[:15]
+
+
+def read_ocr(slides_dir):
+    try:
+        with open(os.path.join(slides_dir, OCR_NAME), encoding="utf-8") as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def slide_text(img_path):
+    return str(read_ocr(os.path.dirname(img_path)).get(os.path.basename(img_path), ""))
+
+
+def _write_ocr(img_path, text):
+    d = os.path.dirname(img_path)
+    with _OCR_LOCK:
+        data = read_ocr(d)
+        data[os.path.basename(img_path)] = text
+        path = os.path.join(d, OCR_NAME)
+        new = not os.path.exists(path)
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+        os.replace(tmp, path)
+        if new:
+            hide_file(path)
+
+
+class OcrWorker(threading.Thread):
+    """Reads the slides one after the other. Old slides (from before) wait while a lecture is running."""
+
+    def __init__(self):
+        super().__init__(daemon=True)
+        self.q, self.later = queue.Queue(), collections.deque()
+        self.exe, self.cfg, self.ready = None, None, None
+
+    def setup(self):
+        if self.ready is None:
+            self.exe = find_tesseract()
+            self.cfg = ocr_config(self.exe) if self.exe else None
+            self.ready = self.cfg is not None
+            if not self.ready:
+                log("טיפ: כדי שהבנתי תקרא את הטקסט בשקופיות (חיפוש בשקופיות, הכנה למבחן, מילים באנגלית לתמלול), "
+                    "להריץ פעם אחת את install_ocr בתיקייה System.")
+        return self.ready
+
+    def read(self, path):
+        import subprocess
+        extra, langs = self.cfg
+        r = subprocess.run([self.exe, path, "stdout", "-l", langs, "--psm", "3", *extra], capture_output=True,
+                           timeout=120, **_quiet_proc())
+        return clean_ocr(r.stdout.decode("utf-8", "replace")) if r.returncode == 0 else None
+
+    def busy(self):
+        s = APP.session if "APP" in globals() else None
+        return s is not None and not s.done
+
+    def run(self):
+        if not self.setup():
+            return
+        while True:
+            try:
+                path, cb = self.q.get(timeout=5)
+            except queue.Empty:
+                if not self.later or self.busy():
+                    continue
+                path, cb = self.later.popleft(), None
+            try:
+                if os.path.isfile(path) and os.path.basename(path) not in read_ocr(os.path.dirname(path)):
+                    text = self.read(path)
+                    if text is not None:
+                        _write_ocr(path, text)
+                        if cb and text:
+                            cb(text)
+            except Exception:
+                save_error("ocr")
+
+
+def ocr_worker():
+    global _OCR
+    if _OCR is None:
+        _OCR = OcrWorker()
+        _OCR.start()
+    return _OCR
+
+
+def ocr_add(path, words_to_model=True):
+    """A slide was just saved: read it soon; its words in English help the transcription of what follows."""
+    ocr_worker().q.put((path, (lambda t: set_slide_words(slide_terms(t))) if words_to_model else None))
+
+
+def ocr_backfill():
+    """Slides saved before Tesseract was there: read them when no lecture is running."""
+    w = ocr_worker()
+    time.sleep(20)
+    if not w.ready:
+        return
+    n = 0
+    for e in library():
+        sd = os.path.join(LIB_DIR, *e["f"].split("/"), SLIDES_NAME)
+        if not os.path.isdir(sd):
+            continue
+        done = read_ocr(sd)
+        for name in sorted(os.listdir(sd)):
+            if name.lower().endswith((".jpg", ".png")) and name not in done:
+                w.later.append(os.path.join(sd, name))
+                n += 1
+                if n >= 3000:
+                    return
 
 
 class ScreenWatcher(threading.Thread):
@@ -1009,6 +1276,18 @@ class ScreenWatcher(threading.Thread):
                         gap = now - last_save
                         if (frac >= SCREEN_BIG_FRAC and gap >= SCREEN_BIG_GAP_S) or \
                            (frac >= SCREEN_SMALL_FRAC and gap >= SCREEN_SMALL_GAP_S):
+                            if self.region_fn is not None:
+                                # a video: the change may be a jump to another part (seek) that the page reports
+                                # a moment later - look again then, and save only if this part still needs it
+                                self.stop_evt.wait(YT_SETTLE_S)
+                                r2 = self.region_fn()
+                                if r2 is None:
+                                    prev = small    # a part that already has its slides: not a new one
+                                    self.stop_evt.wait(SCREEN_CHECK_S)
+                                    continue
+                                shot = sct.grab(mon if r2 == "screen" else r2)
+                                arr = np.frombuffer(shot.bgra, dtype=np.uint8).reshape(shot.height, shot.width, 4)
+                                small, now = arr[::16, ::16, :3].astype(np.int16).mean(axis=2), time.time()
                             self._save(shot, Image, mss.tools, now, pixels)
                             prev, last_save = small, now
                     except Exception as e:
@@ -1029,6 +1308,7 @@ class ScreenWatcher(threading.Thread):
             rgb = shot.rgb if pixels is None else pixels[:, :, 2::-1].tobytes()
             mss_tools.to_png(rgb, shot.size, output=os.path.join(self.session_dir, name))
         self.count += 1
+        ocr_add(os.path.join(self.session_dir, name))
         rel = f"{self.lecture_rel}/{SLIDES_NAME}/{name}"
         if self.region_fn is not None:  # YouTube: the line gets the video's time (on_shot knows it)
             pos = self.on_shot(now, rel)
@@ -1467,16 +1747,25 @@ def read_yt_lecture(ldir):
             if not x.startswith("[צילום מסך"):
                 cov.add(t, t + 8)
     pos = float(st.get("pos") or 0) if isinstance(st, dict) else 0.0
-    return lines, shots, cov, pos, title
+    # the parts already watched for slides (the screen was checked there) - a state from before: what was
+    # transcribed and a few seconds around each slide
+    seen = Coverage(st.get("seen") if isinstance(st, dict) else None)
+    if not seen.spans:
+        for a, b in cov.spans:
+            seen.add(a, b)
+        for t, _rel in shots:
+            seen.add(t - 3, t + 3)
+    return lines, shots, cov, pos, title, seen
 
 
-def save_yt_state(ldir, cov, pos):
+def save_yt_state(ldir, cov, pos, seen=None):
     path = os.path.join(ldir, YT_STATE)
     try:
         if os.path.exists(path):
             os.chmod(path, 0o666)
         with open(path, "w", encoding="utf-8") as f:
-            json.dump({"covered": [[round(a, 1), round(b, 1)] for a, b in cov.spans], "pos": round(pos, 1)}, f)
+            json.dump({"covered": [[round(a, 1), round(b, 1)] for a, b in cov.spans], "pos": round(pos, 1),
+                       "seen": [[round(a, 1), round(b, 1)] for a, b in (seen.spans if seen else [])]}, f)
         hide_file(path)
     except OSError:
         pass
@@ -1582,6 +1871,8 @@ class AudioInput:
 
     def open(self):
         self.close()  # full PortAudio restart -> fresh device list
+        if IS_MAC:
+            return self._open_mac()
         import pyaudiowpatch as pyaudio
         p = pyaudio.PyAudio()
         try:
@@ -1616,14 +1907,41 @@ class AudioInput:
         self.p, self.stream, self.sr, self.ch, self.name = p, stream, sr, ch, out_name
         self.opened_at = time.time()
 
+    def _open_mac(self):
+        """Mac: the computer's sound cannot be recorded without a driver. It comes through BlackHole (free, open
+        source), with a "Multi-Output Device" that sends the sound both to the speakers and to BlackHole."""
+        import sounddevice as sd
+        want = (os.environ.get("HEVANTI_AUDIO_DEVICE") or "BlackHole").lower()
+        devs = sd.query_devices()
+        dev = next((i for i, d in enumerate(devs) if want in str(d["name"]).lower() and d["max_input_channels"] > 0), None)
+        if dev is None:
+            raise RuntimeError("BlackHole not found")
+        info = devs[dev]
+        sr, ch = int(info["default_samplerate"]), max(1, min(2, int(info["max_input_channels"])))
+        self.gen += 1
+        gen, q = self.gen, self.q
+
+        def cb(indata, frames, time_info, status):
+            q.put((gen, time.time(), bytes(indata)))
+
+        stream = sd.RawInputStream(samplerate=sr, channels=ch, dtype="int16", device=dev, blocksize=2048, callback=cb)
+        stream.start()
+        self.stream, self.sr, self.ch, self.name = stream, sr, ch, str(info["name"])
+        self.opened_at = time.time()
+
     def alive(self):
         try:
-            return self.stream is not None and self.stream.is_active()
+            if self.stream is None:
+                return False
+            return bool(self.stream.active) if IS_MAC else self.stream.is_active()
         except Exception:
             return False
 
     def close(self):
-        for fn in (lambda: self.stream.stop_stream(), lambda: self.stream.close(), lambda: self.p.terminate()):
+        s = self.stream
+        steps = ((lambda: s.stop(), lambda: s.close()) if IS_MAC else
+                 (lambda: s.stop_stream(), lambda: s.close(), lambda: self.p.terminate()))
+        for fn in steps:
             try:
                 fn()
             except Exception:
@@ -1638,6 +1956,8 @@ class AudioInput:
 # page tells the tool exactly where you are (at any playback speed), so now_watching.txt always says
 # which part of the lecture you are asking about. The part you are watching is transcribed first.
 LOCAL_DIR = os.path.join(os.environ.get("LOCALAPPDATA") or HERE, "Hevanti")
+if IS_MAC:
+    LOCAL_DIR = os.path.join(os.path.expanduser("~"), "Library", "Application Support", "Hevanti")
 OLD_LOCAL_DIR = os.path.join(os.environ.get("LOCALAPPDATA") or HERE, "BeZmanEmet")  # 1.x
 VIDEO_DIR = os.path.join(LOCAL_DIR, "videos")  # downloads: not in the tool folder, which is often synced to the cloud
 CACHE_DIR = os.path.join(OLD_LOCAL_DIR, "progress")  # 1.x: unfinished transcriptions (2.0 keeps them in the lecture folder)
@@ -1747,6 +2067,13 @@ def to_recycle_bin(path):
     a copy kept in %LOCALAPPDATA%\\Hevanti\\deleted. Returns "bin", "kept" or "" (failed)."""
     import shutil
     path = os.path.abspath(path)
+    if IS_MAC:
+        try:
+            trash = os.path.join(os.path.expanduser("~"), ".Trash")
+            shutil.move(path, os.path.join(trash, free_folder(trash, os.path.basename(path))))
+            return "bin"
+        except OSError:
+            save_error("trash")
     if os.name == "nt":
         try:
             import ctypes
@@ -1902,6 +2229,9 @@ def _mcp_entry():
 def claude_config_paths():
     """Claude for desktop's config: the usual installer, and the Microsoft Store (MSIX) copy."""
     import glob
+    if IS_MAC:
+        return [os.path.join(os.path.expanduser("~"), "Library", "Application Support", "Claude",
+                             "claude_desktop_config.json")]
     out = []
     appdata = os.environ.get("APPDATA")
     if appdata:
@@ -1911,6 +2241,47 @@ def claude_config_paths():
         out += glob.glob(os.path.join(local, "Packages", "Claude_*", "LocalCache", "Roaming", "Claude",
                                       "claude_desktop_config.json"))
     return out
+
+
+def gemini_config_path():
+    """Gemini CLI's user settings (Windows and Mac alike: ~/.gemini/settings.json)."""
+    home = os.environ.get("BZM_GEMINI_DIR") or os.path.join(os.path.expanduser("~"), ".gemini")
+    return os.path.join(home, "settings.json")
+
+
+def gemini_cli_found():
+    import shutil
+    return bool(shutil.which("gemini")) or os.path.isdir(os.path.dirname(gemini_config_path()))
+
+
+def gemini_connected():
+    d = _read_json(gemini_config_path()) or {}
+    return isinstance(d.get("mcpServers"), dict) and MCP_NAME in d["mcpServers"]
+
+
+def gemini_set(on):
+    """Gemini CLI reads its MCP servers from settings.json, like Claude for desktop (other settings are kept)."""
+    p = gemini_config_path()
+    d = _read_json(p)
+    if d is None:
+        return {"ok": False, "error": f"קובץ ההגדרות של Gemini CLI לא תקין, אז לא שיניתי אותו: {p}"}
+    servers = d.get("mcpServers") if isinstance(d.get("mcpServers"), dict) else {}
+    if on:
+        servers[MCP_NAME] = dict(_mcp_entry(), timeout=60000)
+    elif MCP_NAME in servers:
+        del servers[MCP_NAME]
+    else:
+        return {"ok": True}
+    d["mcpServers"] = servers
+    try:
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        if os.path.exists(p):
+            _backup_once(p)
+        _write_text(p, json.dumps(d, ensure_ascii=False, indent=2) + "\n")
+    except OSError:
+        save_error("gemini config")
+        return {"ok": False, "error": "לא הצלחתי לכתוב את ההגדרות של Gemini CLI."}
+    return {"ok": True}
 
 
 def codex_config_path():
@@ -2045,18 +2416,19 @@ def chatgpt_set(on):
 
 
 def connect_status():
-    return {"claude": claude_connected(), "chatgpt": chatgpt_connected(), "gemini": False,
-            "claude_found": claude_installed()}
+    return {"claude": claude_connected(), "chatgpt": chatgpt_connected(), "gemini": gemini_connected(),
+            "claude_found": claude_installed(), "gemini_found": gemini_cli_found()}
 
 
 CONNECT_NEXT = {
-    "claude": "מחובר. עכשיו לסגור את Claude למחשב לגמרי (גם מהאייקון ליד השעון) ולפתוח אותו שוב. "
+    "claude": "מחובר. עכשיו לסגור את Claude למחשב לגמרי (ב-Windows גם מהאייקון ליד השעון, ב-Mac: Cmd+Q) ולפתוח אותו שוב. "
               "מהפעם הבאה אפשר פשוט לשאול אותו \"מה המרצה אמר עכשיו?\" או \"מה כתוב בשקופית?\".",
     "chatgpt": "מחובר. עכשיו לסגור את ChatGPT למחשב ולפתוח אותו שוב, לעבור למצב Codex, ולשאול שם "
                "\"מה המרצה אמר עכשיו?\". (צריך את ChatGPT ל-Windows מ-chatgpt.com/download.)",
-    "gemini": "Gemini ל-Windows עוד לא יודע לקרוא מהמחשב (בינתיים זה קיים רק ב-Mac). כשגוגל תוסיף את זה, "
-              "הכפתור הזה יחבר אותו כמו את השניים האחרים. עד אז: הכפתור Gemini בתיבת השאלה מעתיק את השאלה "
-              "עם מה שנאמר ופותח את Gemini.",
+    "gemini": "מחובר ל-Gemini CLI (Gemini בחלון פקודות). לפתוח חלון פקודות (PowerShell או Terminal), לכתוב gemini, "
+              "ולשאול \"מה המרצה אמר עכשיו?\". בפעם הראשונה הוא שואל אם לאשר את הכלים של הבנתי - לבחור לאשר תמיד. "
+              "אין עדיין Gemini CLI? להתקין פעם אחת את Node.js (nodejs.org), ואז בחלון פקודות: "
+              "npm install -g @google/gemini-cli. (האפליקציה והאתר של Gemini עוד לא יודעים לקרוא מהמחשב.)",
 }
 
 
@@ -2064,13 +2436,11 @@ def connect_app(app, on=True):
     app = str(app or "")
     if app not in AI_APPS:
         return {"ok": False, "error": "לא מוכר."}
-    if app == "gemini":
-        return {"ok": False, "unsupported": True, "error": CONNECT_NEXT["gemini"], "status": connect_status()}
-    out = (claude_set if app == "claude" else chatgpt_set)(on)
+    out = {"claude": claude_set, "chatgpt": chatgpt_set, "gemini": gemini_set}[app](on)
     out["status"] = connect_status()
     if out.get("ok"):
         out["next"] = CONNECT_NEXT[app] if on else "החיבור הוסר. כדי שזה ייכנס לתוקף: לסגור ולפתוח שוב את " + \
-            ("Claude" if app == "claude" else "ChatGPT") + "."
+            {"claude": "Claude", "chatgpt": "ChatGPT", "gemini": "Gemini CLI"}[app] + "."
     return out
 
 
@@ -2087,6 +2457,15 @@ def find_ai_apps():
     fake = os.environ.get("BZM_FAKE_APPS")   # tests: "claude,gemini"
     if fake is not None:
         return {a: "fake!" + a for a in fake.split(",") if a in AI_APP_NAMES}
+    if IS_MAC:   # /Applications/Claude.app, ChatGPT.app, Gemini.app (also in ~/Applications)
+        out = {}
+        bases = ["/Applications", os.path.join(os.path.expanduser("~"), "Applications")]
+        apps = [os.path.join(b, f) for b in bases if os.path.isdir(b) for f in sorted(os.listdir(b)) if f.endswith(".app")]
+        for app, names in AI_APP_NAMES.items():
+            hit = next((x for x in apps if os.path.basename(x)[:-4].lower() in names), None)
+            if hit:
+                out[app] = "mac:" + hit
+        return out
     if os.name != "nt":
         return {}
     import subprocess
@@ -2145,6 +2524,9 @@ def open_ai_app(app):
         return True
     import subprocess
     try:
+        if aid.startswith("mac:"):
+            subprocess.Popen(["open", aid[4:]])
+            return True
         subprocess.Popen(["explorer.exe", "shell:AppsFolder\\" + aid], close_fds=True)
         return True
     except OSError:
@@ -2167,6 +2549,10 @@ def refresh_connections():
                 text = f.read()
             if _toml_str(MCP_SCRIPT) not in text or _toml_str(want["command"]) not in text or _toml_str(LIB_DIR) not in text:
                 chatgpt_set(True)
+        g = (_read_json(gemini_config_path()) or {}).get("mcpServers") or {}
+        cur = g.get(MCP_NAME) if isinstance(g, dict) else None
+        if isinstance(cur, dict) and (cur.get("command"), cur.get("args")) != (want["command"], want["args"]):
+            gemini_set(True)
     except Exception:
         save_error("refresh connections")
 
@@ -3133,10 +3519,11 @@ def block_segments(model, beam, piece, prompt, batched, batch_size):
             from faster_whisper import BatchedInferencePipeline
             _PIPE_REC = BatchedInferencePipeline(model)
         segs, _ = _PIPE_REC.transcribe(piece, language=LANG, beam_size=beam, batch_size=batch_size,
-                                       vad_filter=True, initial_prompt=prompt, without_timestamps=False)
+                                       vad_filter=True, initial_prompt=prompt, without_timestamps=False,
+                                       **hot_kw(batched=True))
     else:
         segs, _ = model.transcribe(piece, language=LANG, beam_size=beam, vad_filter=USE_VAD,
-                                   condition_on_previous_text=False, initial_prompt=prompt)
+                                   condition_on_previous_text=False, initial_prompt=prompt, **hot_kw())
     for sg in segs:
         text = sg.text.strip()
         if text:
@@ -3153,7 +3540,7 @@ def transcribe_worker(rec, model, beam, on_gpu, audio16):
             return
         s, e = rec.blocks[i]
         piece = audio16[int(s * TARGET_SR):int(e * TARGET_SR)]
-        prompt = (prompt_now() + " " + rec.text_before(i)[-150:]).strip()
+        prompt = (prompt_now(batched=batched) + " " + rec.text_before(i)[-150:]).strip()
         while True:
             try:
                 if len(piece) >= TARGET_SR // 2 and rms(piece) >= SILENCE_RMS:
@@ -3254,6 +3641,7 @@ class VideoSlides(threading.Thread):
                     fr.to_image().save(os.path.join(self.rec.shots_dir, name), "JPEG", quality=80)
                     ref, last_save = small, t
                     self.rec.add_shot(t, name)
+                    ocr_add(os.path.join(self.rec.shots_dir, name), words_to_model=False)
 
     def stop(self):
         self.stop_evt.set()
@@ -3352,7 +3740,7 @@ class App:
                     "notes": [n for n in self.notes if n["id"] > notes_since],
                     "lib_rev": self.lib_rev, "first_view": self.first_view,
                     "screens": SCREEN_ENABLED, "product": PRODUCT, "migrated": self.migrated,
-                    "course": load_settings().get("course") or "", "connect": self.connect_info(),
+                    "course": load_settings().get("course") or "", "connect": self.connect_info(), "mac": IS_MAC,
                     "ai_apps": ai_apps_status(), "update": self.update}
 
     def connect_info(self):
@@ -3672,7 +4060,7 @@ def display_name(src):
 
 
 def open_in_explorer(what, fname=None):
-    if os.name != "nt":
+    if os.name != "nt" and not IS_MAC:
         return
     paths = {"tool": DATA_DIR, "lib": LIB_DIR, "videos": VIDEO_DIR}
     p = paths.get(what, LIB_DIR)
@@ -3685,7 +4073,11 @@ def open_in_explorer(what, fname=None):
     try:
         if what != "file":
             os.makedirs(p, exist_ok=True)
-        os.startfile(p)
+        if IS_MAC:
+            import subprocess
+            subprocess.Popen(["open", p])
+        else:
+            os.startfile(p)
     except Exception:
         save_error("open folder")
 
@@ -3706,6 +4098,14 @@ def pick_file():
     """Windows' own "open file" window. Returns the chosen path, or ''."""
     if os.environ.get("BZM_FAKE_PICK") is not None:  # tests
         return os.environ["BZM_FAKE_PICK"]
+    if IS_MAC:
+        import subprocess
+        try:
+            r = subprocess.run(["osascript", "-e", 'POSIX path of (choose file with prompt "בחירת הקלטה")'],
+                               capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
+            return (r.stdout or "").strip()
+        except Exception:
+            return ""
     if os.name != "nt":
         return ""
     import base64
@@ -3844,10 +4244,14 @@ def transcript_view(fname):
     course = os.path.basename(os.path.dirname(d))
     entry = library_entry(d, course)
     st = os.stat(path)
-    key = (path, st.st_mtime, st.st_size)
+    try:
+        ocr_m = os.path.getmtime(os.path.join(d, SLIDES_NAME, OCR_NAME))
+    except OSError:
+        ocr_m = 0
+    key = (path, st.st_mtime, st.st_size, ocr_m)
     if key in _VIEW_CACHE:
         return {"entry": entry, "lines": _VIEW_CACHE[key]}
-    lines = []
+    lines, ocr = [], read_ocr(os.path.join(d, SLIDES_NAME)) if ocr_m else {}
     with open(path, encoding="utf-8", errors="replace") as f:
         for line in f:
             line = line.rstrip("\n")
@@ -3865,7 +4269,9 @@ def transcript_view(fname):
                 x, clock = m.group(4), hms(t)
             sm = SHOT_RE.match(x)
             if sm:  # "שקופיות/<file>" in the lecture folder -> the path the page asks for
-                lines.append({"t": t, "c": clock, "img": f"{entry['f']}/{SLIDES_NAME}/{os.path.basename(sm.group(1))}"})
+                name = os.path.basename(sm.group(1))
+                lines.append({"t": t, "c": clock, "img": f"{entry['f']}/{SLIDES_NAME}/{name}",
+                              **({"ocr": ocr[name]} if ocr.get(name) else {})})
             elif GAP_RE.match(x):
                 lines.append({"t": t, "c": clock, "gap": x.strip("()")})
             elif x.startswith("[") and x.endswith("]"):
@@ -3889,13 +4295,19 @@ def search(q, course="", limit=300):
             continue
         v = transcript_view(e["f"])
         for x in (v["lines"] if v else []):
-            low = (x.get("x") or "").lower()
+            low = (x.get("x") or x.get("ocr") or "").lower()
             if low and all(w in low for w in words):
                 if len(hits) >= limit:
                     more = True
                     break
+                if x.get("x"):
+                    shown = x["x"][:400]
+                else:   # a slide: the line of its text with the words
+                    ln = next((l for l in x["ocr"].splitlines() if any(w in l.lower() for w in words)), x["ocr"])
+                    shown = "[בשקופית] " + ln[:380]
                 hits.append({"f": e["f"], "course": e["course"], "title": e["title"], "kind": e["kind"],
-                             "has_media": e["has_media"], "t": x["t"], "c": x["c"], "x": x["x"][:400]})
+                             "has_media": e["has_media"], "t": x["t"], "c": x["c"], "x": shown,
+                             **({"slide": x["img"]} if x.get("img") else {})})
         if more:
             break
     return {"hits": hits, "more": more}
@@ -3909,12 +4321,14 @@ def course_text(course):
         v = transcript_view(e["f"])
         if not v:
             continue
-        body = [x["x"] for x in v["lines"] if x.get("x")]
+        body = [x["x"] if x.get("x") else "[טקסט בשקופית: " + x["ocr"][:1200].replace("\n", " | ") + "]"
+                for x in v["lines"] if x.get("x") or x.get("ocr")]
         if body:
             parts.append(f"=== {e['title']} ({e['when']}{', אורך ' + e['length'] if e['length'] else ''}) ===\n"
                          + "\n".join(body))
     terms = read_glossary(course)
-    head = f"קורס: {course}. {len(parts)} הרצאות, תמלול אוטומטי (יכולות להיות בו טעויות תמלול)."
+    head = (f"קורס: {course}. {len(parts)} הרצאות, תמלול אוטומטי (יכולות להיות בו טעויות תמלול). "
+            "[טקסט בשקופית: ...] = מה שהיה כתוב על השקופית או על הלוח באותו רגע (נקרא אוטומטית מהתמונה).")
     if terms:
         head += "\nמונחים בקורס: " + ", ".join(terms[:60])
     return head + "\n\n" + "\n\n".join(parts), len(parts)
@@ -4143,6 +4557,12 @@ def _app_handler():
                     if v:
                         v = dict(v, summary=lecture_summary(q.get("f", [""])[0]))
                     return self._json(v if v else {"none": True}, 200 if v else 404)
+                if p == "/api/slide_text":
+                    f = safe_shot(q.get("p", [""])[0]) if q.get("p") else None
+                    n = q.get("n", [""])[0]
+                    if not f and APP.rec is not None and re.fullmatch(r"[\w\-]+\.(jpg|png)", n or ""):
+                        f = os.path.join(APP.rec.shots_dir, n)
+                    return self._json({"text": slide_text(f) if f else ""})
                 if p == "/shot":
                     f = safe_shot(q.get("p", [""])[0])
                     if f:
@@ -4351,7 +4771,7 @@ def run_recording(sess, source, lang, course=""):
         sess.error = "לא הצלחתי לפתוח את הקובץ. אולי הוא לא קובץ סרטון או שמע, או שהוא פגום."
         return
     rec = Recording(media, duration, course)
-    set_terms(read_glossary(rec.course))
+    set_terms(read_glossary(rec.course), rec.course)
     resumed = rec.restore()
     sess.title, sess.transcript, sess.course = rec.stem, rec.out_path, rec.course
     log(f"הקלטה: {rec.stem} ({hms(rec.duration)})")
@@ -4478,6 +4898,15 @@ _INSTANCE = None  # keeps the "already running" marker alive while the tool runs
 def another_window_open():
     """True if the tool is already running (two copies = double work, slower)."""
     global _INSTANCE
+    if IS_MAC:
+        try:
+            import fcntl
+            os.makedirs(LOCAL_DIR, exist_ok=True)
+            _INSTANCE = open(os.path.join(LOCAL_DIR, ".running"), "w")
+            fcntl.flock(_INSTANCE, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return False
+        except OSError:
+            return True
     if os.name != "nt":
         return os.environ.get("BZM_FAKE_RUNNING") == "1"
     try:
@@ -4564,6 +4993,7 @@ def main():
         log(f"{APP.migrated} הרצאות מגרסה קודמת הועברו לתיקייה \"{LIB_NAME}\\{NO_COURSE}\". אפשר להעביר אותן לקורסים.")
     threading.Thread(target=check_update, daemon=True).start()
     threading.Thread(target=refresh_connections, daemon=True).start()
+    threading.Thread(target=ocr_backfill, daemon=True).start()
     with _AI_APPS_LOCK:
         _AI_APPS["busy"] = True
     threading.Thread(target=refresh_ai_apps, daemon=True).start()
@@ -4616,13 +5046,15 @@ def run_live(sess, lang, course=""):
     """A live lecture: whatever the computer plays is transcribed (and the screen photographed) until sess.stop."""
     set_language(lang)
     course = clean_name(course, NO_COURSE)
-    set_terms(read_glossary(course))
+    set_terms(read_glossary(course), course)
     log("טוען... (כמה שניות)")
     os.makedirs(course_dir(course), exist_ok=True)
     if SCREEN_ENABLED:
         _ensure_packages([("mss", "mss"), ("PIL", "pillow")])
     if os.name == "nt":
         _ensure_packages([("comtypes", "comtypes")], "למעבר בין אוזניות לרמקולים")
+    if IS_MAC:
+        _ensure_packages([("sounddevice", "sounddevice")], "להקלטת הקול של המחשב")
     model, beam, model_desc = get_model(lang, stub_av=True)
     on_gpu = model_desc.endswith("GPU")
     min_s, max_s = (GPU_MIN_CHUNK_S, GPU_MAX_CHUNK_S) if on_gpu else (MIN_CHUNK_S, MAX_CHUNK_S)
@@ -4637,7 +5069,11 @@ def run_live(sess, lang, course=""):
             if is_blocked(e) or isinstance(e, ImportError):
                 raise
             if not told:
-                log(f"לא נמצא התקן שמע פעיל ({e.__class__.__name__}). לחבר רמקולים או אוזניות - ממשיך לנסות...")
+                if IS_MAC:
+                    log("לא מצאתי את BlackHole - בלעדיו Mac לא נותן להקליט את הקול של המחשב. ההתקנה וההגדרה (פעם אחת) "
+                        "כתובות ב-README, בחלק \"Mac\". ממשיך לנסות...")
+                else:
+                    log(f"לא נמצא התקן שמע פעיל ({e.__class__.__name__}). לחבר רמקולים או אוזניות - ממשיך לנסות...")
                 told = True
             sess.stop.wait(5)
     if sess.stop.is_set():
@@ -4648,7 +5084,7 @@ def run_live(sess, lang, course=""):
 
     start = datetime.datetime.now()
     yt = getattr(sess, "yt", None)   # a YouTube video in Hevanti's player (else: a live lecture)
-    ldir, old = None, ([], [], Coverage(), 0.0, "")
+    ldir, old = None, ([], [], Coverage(), 0.0, "", Coverage())
     if yt:
         ldir = find_yt_lecture(course, yt["id"])  # started before: continue in the same lecture
         if ldir:
@@ -4658,7 +5094,7 @@ def run_live(sess, lang, course=""):
                            + (" באנגלית" if LANG == "en" and not yt else ""))
         ldir = os.path.join(course_dir(course), name)
     os.makedirs(ldir, exist_ok=True)
-    cover = old[2]
+    cover, seen = old[2], old[5]   # transcribed / watched for slides (video seconds)
     path = lecture_txt(ldir)
     lecture_rel = lib_rel(ldir)
     transcript_rel = lecture_rel + "/" + os.path.basename(path)
@@ -4709,12 +5145,24 @@ def run_live(sess, lang, course=""):
     threading.Thread(target=media_status_loop, daemon=True).start()
     watcher = None
     if SCREEN_ENABLED:
+        last_look = [None]
+
         def yt_area():
-            """Where to photograph the video - nothing while watching a part that already has its slides."""
-            pos = clock.now()[0]
-            if cover.covered(pos - 2, pos + 2) > 0.9 and now_file.shot_near(pos, 20):
+            """Where to photograph the video - nothing while it is paused (the player's controls appear when the
+            mouse is over it - not a new slide), nor in a part already watched for slides. Watching marks the part
+            since the last look as watched: a slide that changed in it was seen (and saved) then."""
+            pos, playing, _alive = clock.now()
+            if not playing:
+                last_look[0] = None
                 return None
-            return clock.capture_rect()
+            already = seen.covered(pos - 2, pos + 2) > 0.9 or \
+                (cover.covered(pos - 2, pos + 2) > 0.9 and now_file.shot_near(pos, 20))
+            before, last_look[0] = last_look[0], pos
+            if before is not None and 0 <= pos - before <= 8:
+                seen.add(before, pos)
+            else:
+                seen.add(pos - 0.5, pos + 0.5)
+            return None if already else clock.capture_rect()
         watcher = ScreenWatcher(ldir, lecture_rel, start.timestamp(), write_line, now_file.add_shot,
                                 region_fn=yt_area if yt else None)
         watcher.start()
@@ -4736,7 +5184,7 @@ def run_live(sess, lang, course=""):
                 APP.lib_rev += 1
             return
         if yt:
-            save_yt_state(ldir, cover, clock.now()[0])
+            save_yt_state(ldir, cover, clock.now()[0], seen)
             tidy_yt_transcript(path)
         else:
             write_line(f"# סוף: {datetime.datetime.now():%H:%M}")
@@ -4785,6 +5233,9 @@ def run_live(sess, lang, course=""):
             b = a + (dur or 6.0) * clock.rate_at(line_t)
             if cover.covered(a, b) > 0.5:
                 return  # watched again: already transcribed
+            e = clock.pos_at(line_t + (dur or 6.0))
+            if e is not None and abs(e[0] - b) > 1.5 and cover.covered(max(0.0, e[0] - 2), e[0]) > 0.5:
+                return  # a jump inside this piece, to a part already transcribed: its sound is mostly a repeat
             cover.add(a, b)
             state["prev_text"] = (state["prev_text"] + " " + text)[-400:]
             write_line(f"[{hms(a)}] {text}")
@@ -4792,7 +5243,7 @@ def run_live(sess, lang, course=""):
             now_file.add(a, text)
             if time.time() - saved_at[0] > 30:
                 saved_at[0] = time.time()
-                save_yt_state(ldir, cover, clock.now()[0])
+                save_yt_state(ldir, cover, clock.now()[0], seen)
             return
         state["prev_text"] = (state["prev_text"] + " " + text)[-400:]
         stamp = datetime.datetime.fromtimestamp(line_t).strftime("%H:%M:%S")
@@ -5084,7 +5535,8 @@ def uninstall():
         show("בוטל. לא נמחק כלום.")
         return
     for app_name, done in (("Claude", claude_set(False) if claude_connected() else None),
-                           ("ChatGPT", chatgpt_set(False) if chatgpt_connected() else None)):
+                           ("ChatGPT", chatgpt_set(False) if chatgpt_connected() else None),
+                           ("Gemini CLI", gemini_set(False) if gemini_connected() else None)):
         if done is not None:
             show(f"החיבור של הבנתי הוסר מ-{app_name}" + ("" if done.get("ok") else " (לא הצליח - לנתק ידנית בהגדרות שלו)"))
     if os.path.isdir(MODEL_DIR):

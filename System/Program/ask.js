@@ -7,7 +7,7 @@
 (function () {
   const AIS = [
     {id: "chatgpt", name: "ChatGPT", url: "https://chatgpt.com/", app: "ChatGPT למחשב"},
-    {id: "gemini", name: "Gemini", url: "https://gemini.google.com/app", app: "Gemini"},
+    {id: "gemini", name: "Gemini", url: "https://gemini.google.com/app", app: "Gemini CLI"},
     {id: "claude", name: "Claude", url: "https://claude.ai/new", app: "Claude למחשב"},
   ];
   const KEY = "bzm.ai";
@@ -111,7 +111,9 @@
     boxes.push(refresh);
     async function send(a) {
       const q = ta.value.trim();
-      const ok = await copyText(opts.context(q), opts.win);
+      let text = "";
+      try { text = await opts.context(q); } catch (e) { text = q; }   // (may read the slides' text first)
+      const ok = await copyText(text, opts.win);
       if (!ok) { opts.toast("לא הצלחתי להעתיק. לנסות שוב."); return; }
       setLast(a.id); refresh();
       // (not the "noopener" feature: with it window.open always returns null, and a blocked popup looks the same)
