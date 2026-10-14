@@ -186,4 +186,12 @@ table = "## Hevanti on a Mac\n\n" + "\n".join(rows) + "\n"
 open(os.path.join(OUT, "results.md"), "w", encoding="utf-8").write(table)
 if os.environ.get("GITHUB_STEP_SUMMARY"):
     open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8").write(table)
+    # the same, as a note on the run (readable through the API, also when the logs are not)
+    lines = [("PASS " if ok else "FAIL " if main else "WARN ") + f"{name}: {detail}" for name, ok, detail, main in results]
+    esc = lambda s: s.replace("%", "%25").replace("\r", "").replace("\n", "%0A")   # noqa: E731
+    print("::notice title=Hevanti on a Mac::" + esc("\n".join(lines)), flush=True)
+    lp = os.path.join(OUT, "hevanti_log.txt")
+    if os.path.isfile(lp):
+        tail = open(lp, encoding="utf-8", errors="replace").read().splitlines()[-40:]
+        print("::notice title=Hevanti window (last lines)::" + esc("\n".join(tail)), flush=True)
 sys.exit(1 if any(not ok and main for _, ok, _, main in results) else 0)
