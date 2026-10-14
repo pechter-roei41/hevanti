@@ -41,8 +41,7 @@ def screen():
         g = s.grab(mon)
     arr = np.array(g)
     Image.frombytes("RGB", g.size, g.rgb).save(os.path.join(out_dir, "screen.png"))
-    area = type("A", (), {"left": mon["left"], "top": mon["top"], "width": mon["width"], "height": mon["height"]})()
-    L.mask_windows(arr, area)   # the Mac branch: window list from Quartz, Retina scaling
+    L.mask_windows(arr, dict(mon))   # the Mac branch: window list from Quartz, Retina scaling
     return arr.std() > 1, f"{g.size[0]}x{g.size[1]}, contrast {arr.std():.1f} (0 = black: no permission)"
 
 
