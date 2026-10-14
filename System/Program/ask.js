@@ -28,6 +28,24 @@
 `;
   const AI = {connected: {}};
   const boxes = [];
+  const aiWins = {};   // the small window opened for each AI - reused, so the conversation there goes on
+  // Open the AI's site in a small window at the side of the screen (not a tab), so the lecture stays in view.
+  // If that window is still open, only bring it forward: navigating it would start a new chat.
+  function openAi(a, from) {
+    const old = aiWins[a.id];
+    if (old && !old.closed) { try { old.focus(); } catch (e) {} return {w: old, reused: true}; }
+    const S = (from || window).screen || window.screen;
+    const width = Math.min(520, S.availWidth || 520), height = Math.max(400, Math.min(860, (S.availHeight || 860) - 40));
+    const feats = `popup=yes,width=${width},height=${height},left=${S.availLeft || 0},top=${S.availTop || 0}`;
+    let w = null;
+    // from the main page first; a click inside the floating window may only allow its own window.open
+    for (const src of from && from !== window ? [window, from] : [window]) {
+      try { w = src.open(a.url, "hevanti-" + a.id, feats); } catch (e) { w = null; }
+      if (w) break;
+    }
+    if (w) { try { w.opener = null; } catch (e) {} aiWins[a.id] = w; }
+    return {w, reused: false};
+  }
   function getLast() { try { return localStorage.getItem(KEY) || ""; } catch (e) { return ""; } }
   function setLast(id) { try { localStorage.setItem(KEY, id); } catch (e) {} }
   async function copyText(t, win) {
@@ -66,7 +84,7 @@
     ta.placeholder = opts.placeholder || "מה לא ברור?";
     ta.setAttribute("aria-label", "השאלה");
     const row = mk("div", "ais"); row.setAttribute("role", "group"); row.setAttribute("aria-label", "לאן לשלוח");
-    const hint = mk("p", "hint", "הלחיצה מעתיקה את השאלה עם מה שנאמר ופותחת את האתר - שם Ctrl+V ושליחה.");
+    const hint = mk("p", "hint", "הלחיצה מעתיקה את השאלה עם מה שנאמר ופותחת את ה-AI בחלון קטן בצד - שם Ctrl+V ושליחה.");
     const buttons = {};
     function refresh() {
       const names = connectedNames();
@@ -87,15 +105,16 @@
       if (!ok) { opts.toast("לא הצלחתי להעתיק. לנסות שוב."); return; }
       setLast(a.id); refresh();
       // (not the "noopener" feature: with it window.open always returns null, and a blocked popup looks the same)
-      let w = null;
-      try { w = (opts.win || window).open(a.url, "_blank"); if (w) w.opener = null; } catch (e) { w = null; }
+      const {w, reused} = openAi(a, opts.win);
       const img = opts.hasImage && opts.hasImage() ? " צריך גם את המסך? \"העתקת " + (opts.imageName || "צילום המסך") + "\" ולהדביק שוב." : "";
-      opts.toast((w === null ? "הועתק. לפתוח את " + a.name + " ולהדביק (Ctrl+V)." : "הועתק ונפתח " + a.name + ". להדביק (Ctrl+V) ולשלוח.") + img);
+      opts.toast((w === null ? "הועתק. לפתוח את " + a.name + " ולהדביק (Ctrl+V)."
+        : reused ? "הועתק. להדביק (Ctrl+V) בחלון של " + a.name + " - השיחה שם ממשיכה."
+        : "הועתק ונפתח " + a.name + " בחלון קטן בצד. להדביק (Ctrl+V) ולשלוח.") + img);
       ta.value = "";
     }
     for (const a of AIS) {
       const bt = mk("button", "", a.name); bt.type = "button"; bt.dataset.ai = a.id;
-      bt.title = "מעתיק את השאלה עם ההקשר ופותח את " + a.name;
+      bt.title = "מעתיק את השאלה עם ההקשר ופותח את " + a.name + " בחלון קטן";
       bt.addEventListener("click", () => send(a));
       buttons[a.id] = bt; row.appendChild(bt);
     }
