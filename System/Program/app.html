@@ -211,6 +211,104 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 .log ol{list-style:none;margin:8px 0 0;padding:0;font-size:14px;display:grid;gap:3px;max-height:260px;overflow:auto}
 .log li.warn{color:var(--warn-fg);background:var(--warn-bg);border-radius:6px;padding:0 6px}
 .gone{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;padding:16px;z-index:50;text-align:center}
+/* "how to use" - an animated walkthrough drawn with the app's own parts (no video file) */
+.howgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,330px);gap:18px;align-items:start}
+@media (max-width:900px){.howgrid{grid-template-columns:minmax(0,1fr)}}
+.hstage{position:relative;aspect-ratio:16/10;border-radius:var(--r);overflow:hidden;background:var(--sunk);border:1px solid var(--line);container-type:inline-size;font-size:1.55cqw;line-height:1.45;user-select:none}
+.hstage *{box-sizing:border-box}
+.hcap{display:grid;gap:10px}
+.hcap .hnum{color:var(--accent);font-weight:700;font-size:14px}
+.hcap h2{font-family:var(--f-display);font-weight:400;font-size:24px}
+.hcap p{margin:0;min-height:6.4em}
+.hctl{display:flex;gap:8px;flex-wrap:wrap}
+.hsteps{list-style:none;margin:4px 0 0;padding:0;display:grid;gap:4px;counter-reset:hs}
+.hsteps button{all:unset;box-sizing:border-box;width:100%;cursor:pointer;display:flex;gap:10px;align-items:center;padding:5px 10px;border-radius:10px;color:var(--muted);font-size:15px}
+.hsteps button::before{counter-increment:hs;content:counter(hs);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--sunk);font-size:13px;font-weight:700;flex:none}
+.hsteps button:hover{background:var(--sunk)}
+.hsteps button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.hsteps button[aria-current="step"]{color:var(--fg);font-weight:700;background:var(--accent-soft)}
+.hsteps button[aria-current="step"]::before{background:var(--accent);color:var(--accent-ink)}
+.hsteps button.seen::before{background:var(--accent-soft);color:var(--accent)}
+.hbar-prog{height:4px;border-radius:2px;background:var(--sunk);overflow:hidden}
+.hbar-prog i{display:block;height:100%;width:0;background:var(--accent)}
+/* the drawn screen */
+.h-win{position:absolute;background:var(--surface);border:1px solid var(--line);border-radius:1.1cqw;box-shadow:0 1cqw 3cqw rgba(0,0,0,.18);overflow:hidden;display:flex;flex-direction:column;transition:opacity .45s,transform .45s}
+.h-win.off{opacity:0;transform:translateY(2cqw) scale(.97)}
+.h-win.min{opacity:0;transform:translateY(8cqw) scale(.6)}
+.h-tb{flex:none;height:3.1cqw;display:flex;align-items:center;gap:.8cqw;padding:0 1.2cqw;background:var(--bg);border-bottom:1px solid var(--line);font-weight:700;font-size:1.25cqw;white-space:nowrap}
+.h-tb .h-dots{margin-inline-start:auto;display:flex;gap:.5cqw}
+.h-tb .h-dots i{width:.9cqw;height:.9cqw;border-radius:50%;background:var(--line)}
+.h-tb .h-logo{width:1.4cqw;height:1.4cqw;border-radius:.4cqw;background:var(--accent)}
+.h-body{flex:1;min-height:0;padding:1.6cqw;display:flex;flex-direction:column;gap:1.1cqw;overflow:hidden}
+.h-h1{font-family:var(--f-display);font-size:2.5cqw;line-height:1.1}
+.h-row{display:flex;gap:.9cqw;align-items:center;flex-wrap:nowrap}
+.h-sel{position:relative;border:1px solid var(--line);border-radius:.9cqw;padding:.3cqw 1cqw;background:var(--surface);font-weight:600;min-width:12cqw;display:flex;justify-content:space-between;gap:1cqw;transition:box-shadow .2s}
+.h-menu{position:absolute;top:110%;inset-inline-start:0;min-width:100%;background:var(--surface);border:1px solid var(--line);border-radius:.9cqw;box-shadow:0 1cqw 2.4cqw rgba(0,0,0,.18);padding:.4cqw;z-index:3;transition:opacity .2s}
+.h-menu div{padding:.25cqw .8cqw;border-radius:.6cqw;white-space:nowrap}
+.h-menu div.hl{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.h-chip{display:inline-flex;align-items:center;gap:.5cqw;background:var(--accent-soft);color:var(--accent);border-radius:99cqw;padding:.15cqw 1cqw;font-weight:700;font-size:1.2cqw;transition:opacity .4s,transform .4s}
+.h-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1cqw}
+.h-tile{border:1px solid var(--line);border-radius:1.1cqw;padding:1.1cqw;display:grid;gap:.3cqw;background:var(--surface);transition:border-color .2s,box-shadow .2s}
+.h-tile b{font-size:1.45cqw}
+.h-tile span{color:var(--muted);font-size:1.1cqw}
+.h-tile .h-ic{width:2.6cqw;height:2.6cqw;border-radius:.7cqw;background:var(--accent-soft)}
+.h-sub{font-weight:700;font-size:1.5cqw}
+.h-lib{display:grid;gap:.6cqw}
+.h-lib div{border:1px solid var(--line);border-radius:.9cqw;padding:.6cqw 1cqw;display:flex;gap:1cqw;font-size:1.2cqw}
+.h-lib div small{color:var(--muted);margin-inline-start:auto}
+.h-btn{display:inline-flex;align-items:center;border-radius:.9cqw;padding:.35cqw 1.1cqw;font-weight:700;background:var(--accent);color:var(--accent-ink);white-space:nowrap;font-size:1.2cqw;transition:transform .12s,filter .12s}
+.h-btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+.h-btn.quiet{background:var(--sunk);color:var(--fg)}
+.h-press{transform:scale(.94);filter:brightness(1.12)}
+.h-hot{border-color:var(--accent)!important;box-shadow:0 0 0 .25cqw var(--accent-soft)}
+.h-pill{background:color-mix(in srgb,var(--rec) 16%,transparent);color:var(--rec);border-radius:99cqw;padding:0 .9cqw;font-size:1.1cqw;font-weight:700}
+.h-cols{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:1.2cqw}
+.h-lines{list-style:none;margin:0;padding:.6cqw;border:1px solid var(--line);border-radius:1cqw;background:var(--surface);display:flex;flex-direction:column;gap:.35cqw;overflow:hidden;justify-content:flex-end}
+.h-lines li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.8cqw;font-size:1.2cqw;transition:opacity .35s,transform .35s,background .6s;border-radius:.5cqw;padding:.1cqw .4cqw}
+.h-lines li .ts{font-family:var(--f-mono);color:var(--accent);font-size:1.05cqw;padding-top:.1cqw}
+.h-lines li.off{opacity:0;transform:translateY(1cqw)}
+.h-lines li.new{background:var(--now);color:var(--now-ink)}
+.h-shot{border:1px solid var(--line);border-radius:1cqw;background:#fff;color:#1d2a33;display:grid;place-items:center;overflow:hidden;transition:opacity .4s,transform .4s;position:relative}
+.h-shot.off{opacity:0;transform:scale(.96)}
+.h-shot svg{width:94%;height:94%;display:block}
+.h-shot .h-tag{position:absolute;top:.6cqw;inset-inline-start:.6cqw;background:var(--accent);color:#fff;border-radius:99cqw;padding:0 .8cqw;font-size:1cqw;font-weight:700}
+.h-zoom{background:#1b222b;color:#e9eef2;border-color:#2b3440}
+.h-zoom .h-tb{background:#232c37;border-color:#2b3440;color:#cfd8e0}
+.h-zoom .h-body{padding:1.2cqw;display:grid;grid-template-columns:minmax(0,1fr) 15cqw;gap:1.2cqw}
+.h-zoom .h-face{border-radius:1cqw;background:linear-gradient(160deg,#3a4a5a,#25303b);display:grid;place-items:end center;padding-bottom:1cqw;color:#cfd8e0;font-size:1.1cqw;height:11cqw}
+.h-ask{border:1px solid var(--line);border-radius:1cqw;padding:.9cqw;display:grid;gap:.6cqw;background:var(--surface)}
+.h-ask b{font-size:1.35cqw}
+.h-ta{border:1px solid var(--line);border-radius:.8cqw;background:var(--bg);padding:.5cqw .8cqw;min-height:3.6cqw;font-size:1.2cqw;color:var(--fg);transition:box-shadow .2s}
+.h-ta:empty::before{content:attr(data-ph);color:var(--muted)}
+.h-ta.focus{box-shadow:0 0 0 .25cqw var(--accent-soft);border-color:var(--accent)}
+.h-ais{display:flex;gap:.5cqw}
+.h-ais span{border:1.5px solid var(--accent);color:var(--accent);border-radius:.8cqw;padding:.1cqw .9cqw;font-weight:700;font-size:1.1cqw;transition:transform .12s}
+.h-ais span.last{background:var(--accent);color:var(--accent-ink)}
+.h-toast{position:absolute;left:4%;right:4%;bottom:3%;background:var(--fg);color:var(--bg);border-radius:.9cqw;padding:.6cqw 1cqw;font-weight:700;font-size:1.15cqw;text-align:center;transition:opacity .3s;z-index:4}
+.h-toast.off{opacity:0}
+.h-chat{flex:1;min-height:0;display:flex;flex-direction:column;gap:.9cqw;overflow:hidden;justify-content:flex-end}
+.h-msg{max-width:88%;border-radius:1.2cqw;padding:.7cqw 1.1cqw;font-size:1.2cqw;white-space:pre-wrap;transition:opacity .35s,transform .35s}
+.h-msg.me{align-self:flex-start;background:var(--sunk)}
+.h-msg.ai{align-self:flex-end;background:transparent;border:1px solid var(--line)}
+.h-msg.off{opacity:0;transform:translateY(1cqw)}
+.h-msg .h-ctx{color:var(--muted);font-size:1.05cqw;display:block;border-inline-start:.3cqw solid var(--line);padding-inline-start:.7cqw;margin-bottom:.4cqw}
+.h-tool{align-self:flex-end;display:flex;gap:.6cqw;align-items:center;color:var(--accent);font-size:1.1cqw;font-weight:700;border:1px dashed var(--accent);border-radius:99cqw;padding:.15cqw 1cqw;transition:opacity .35s}
+.h-tool.off{opacity:0}
+.h-input{flex:none;border:1px solid var(--line);border-radius:1cqw;padding:.6cqw 1cqw;display:flex;gap:1cqw;align-items:center;font-size:1.2cqw;min-height:3.4cqw}
+.h-input .h-tx{flex:1}
+.h-input .h-tx:empty::before{content:attr(data-ph);color:var(--muted)}
+.h-input .h-send{width:2.4cqw;height:2.4cqw;border-radius:50%;background:var(--accent);flex:none;transition:transform .12s}
+.h-key{position:absolute;z-index:6;background:var(--surface);border:1px solid var(--line);border-bottom-width:.35cqw;border-radius:.8cqw;padding:.4cqw 1.2cqw;font-weight:700;font-family:var(--f-mono);font-size:1.6cqw;box-shadow:0 1cqw 2cqw rgba(0,0,0,.18);transition:opacity .25s,transform .25s}
+.h-key.off{opacity:0;transform:scale(.8)}
+.h-presets{display:flex;gap:.6cqw;flex-wrap:wrap}
+.h-presets span{border:1px solid var(--line);border-radius:99cqw;padding:.15cqw 1cqw;font-size:1.15cqw;background:var(--surface);transition:border-color .2s,background .2s}
+.h-presets span.h-hot{background:var(--accent-soft)}
+.h-cursor{position:absolute;z-index:9;width:2.3cqw;height:auto;left:50%;top:60%;transition:left .85s cubic-bezier(.45,.05,.3,1),top .85s cubic-bezier(.45,.05,.3,1),transform .12s,opacity .3s;filter:drop-shadow(0 .2cqw .3cqw rgba(0,0,0,.35));pointer-events:none}
+.h-cursor.down{transform:scale(.85)}
+.h-ripple{position:absolute;z-index:8;width:4cqw;height:4cqw;margin:-2cqw 0 0 -2cqw;border-radius:50%;border:.3cqw solid var(--accent);animation:hrip .5s ease-out forwards;pointer-events:none}
+@keyframes hrip{from{transform:scale(.3);opacity:1}to{transform:scale(1.3);opacity:0}}
+.hstage.still *,.hstage.still *::before{transition:none!important;animation:none!important}
+@media (prefers-color-scheme: dark){.h-shot{background:#f4f1e8}}
 @media (prefers-reduced-motion:reduce){.toast,.start{transition:none}}
 </style>
 </head>
@@ -220,6 +318,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
     <button class="brand" id="brand" type="button" title="למסך הבית של האפליקציה"><svg class="logo" width="30" height="30" viewBox="0 0 120 120" aria-hidden="true"><path d="M20 14H100A14 14 0 0 1 114 28V76A14 14 0 0 1 100 90H96L99 110L74 90H20A14 14 0 0 1 6 76V28A14 14 0 0 1 20 14Z" fill="var(--accent)"></path><path d="M35 52L51 68L85 34" fill="none" stroke="var(--mark)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"></path></svg>הבנתי <small>האפליקציה</small></button>
     <span class="pill" id="statePill" aria-live="polite">מוכן</span>
     <span class="pill" id="devPill" hidden></span>
+    <button class="btn ghost small" type="button" data-how>איך משתמשים?</button>
     <button class="btn quiet small" id="quitBtn" type="button">סגירת האפליקציה</button>
   </div>
 </header>
@@ -243,6 +342,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
     <div class="cbar" id="updBar" hidden><span id="updText"></span><a class="btn small" id="updGo" href="#" target="_blank" rel="noopener">להורדה</a></div>
     <div class="msg" id="homeErr" hidden></div>
 
+    <div class="connbar" id="howBar" hidden><span><b>פעם ראשונה בהבנתי?</b> הדגמה של דקה מראה את הדרך הכי נוחה להשתמש בה: קורס, הרצאה חיה, חלון צף ושאלה ל-AI.</span><button class="btn small" type="button" data-how>לצפייה בהדגמה</button><button class="btn quiet small" id="howNo" type="button">לא עכשיו</button></div>
     <div class="connbar" id="connBar" hidden><span><b>טיפ:</b> מחברים פעם אחת את Claude או ChatGPT למחשב להבנתי, ואז שואלים אותם ישר בחלון שלהם, בלי להעתיק - הם רואים מה נאמר ואת השקופית.</span><button class="btn small" type="button" data-conn-open>חיבור AI</button></div>
 
     <div class="starts">
@@ -286,6 +386,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
     <div class="foot">
       <button class="btn quiet small" type="button" data-open="lib">פתיחת "ההרצאות שלי" בתיקייה</button>
       <button class="btn ghost small" id="connBtn" type="button" data-conn-open>חיבור AI</button>
+      <button class="btn quiet small" type="button" data-how>איך משתמשים (הדגמה)</button>
       <a href="https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD" target="_blank" rel="noopener">המדריך (הסבר מלא ועדכונים, באינטרנט)</a>
       <span id="ver"></span>
     </div>
@@ -400,6 +501,24 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
     <ol class="lib" id="cLib"></ol>
   </section>
 
+  <!-- HOW TO USE -->
+  <section id="vHow" aria-label="איך משתמשים" hidden>
+    <div class="livebar">
+      <button class="btn ghost back" type="button" data-home>→ למסך הבית</button>
+      <div class="what"><b>איך משתמשים בהבנתי</b><small>הדרך המומלצת, בשישה צעדים קצרים (בערך דקה)</small></div>
+    </div>
+    <div class="howgrid">
+      <div class="hstage" id="hStage" aria-hidden="true"></div>
+      <div class="card hcap">
+        <div class="hnum" id="hNum"></div>
+        <h2 id="hTitle"></h2>
+        <div class="hbar-prog"><i id="hProg"></i></div>
+        <p id="hText" aria-live="polite"></p>
+        <div class="hctl"><button class="btn quiet small" id="hPrev" type="button">→ הקודם</button><button class="btn small" id="hPlay" type="button">❚❚ עצירה</button><button class="btn quiet small" id="hNext" type="button">הבא ←</button></div>
+        <ol class="hsteps" id="hSteps" aria-label="השלבים"></ol>
+      </div>
+    </div>
+  </section>
   <details class="log" id="logBox"><summary>הודעות מהכלי</summary><ol id="log"></ol></details>
 </main>
 
@@ -524,8 +643,9 @@ function show(v) {
   const was = view;
   view = v;
   if (was === "yt" && v !== "yt") ytLeave();
+  if (was === "how" && v !== "how") HOW.stop();
   // (the sections are not called "home"/"live": a #live link would scroll the page to them)
-  for (const id of ["home", "live", "yt", "past", "course"]) $("#v" + id[0].toUpperCase() + id.slice(1)).hidden = id !== v;
+  for (const id of ["home", "live", "yt", "past", "course", "how"]) $("#v" + id[0].toUpperCase() + id.slice(1)).hidden = id !== v;
   window.scrollTo(0, 0);
 }
 let backTo = "";  // where "חזרה" on a lecture goes: the course page it was opened from, or home
@@ -533,6 +653,7 @@ function route() {
   const raw = location.hash.slice(1), h = decodeURIComponent(raw);
   if (h === "live") { show("live"); liveSince = 0; liveItems = []; $("#liveLines").replaceChildren(); pollLive(); return; }
   if (h === "yt") { show("yt"); ytOpen(); return; }
+  if (h === "how") { show("how"); HOW.open(); return; }
   if (raw.startsWith("t=")) { if (view !== "past") backTo = view === "course" && courseName ? "c=" + encodeURIComponent(courseName) : "";
     $("#pastBack").textContent = backTo ? "→ חזרה לקורס" : "→ למסך הבית"; const [f, at] = raw.slice(2).split("&at="); openPast(decodeURIComponent(f), at != null ? +at : null); return; }
   if (raw.startsWith("c=")) { openCourse(decodeURIComponent(raw.slice(2))); return; }
@@ -1346,6 +1467,327 @@ function floatDraw(isYt) {
   pipShot.replaceChildren();
   if (shot) { const im = mk("img"); im.src = location.origin + shotUrl(shot); im.alt = "השקופית האחרונה"; pipShot.appendChild(im); }
 }
+
+// ---------- "how to use": an animated walkthrough of the recommended way, drawn with the app's own parts ----------
+// No video file: each step is a small scene built here, so it stays light and is easy to change with the app.
+// With "reduce motion" each step shows its final picture, and nothing moves on by itself.
+const HOW = (() => {
+  const STEPS = [
+    {title: "בוחרים קורס", text: "לפני ההרצאה בוחרים במסך הבית את הקורס. ההרצאה תישמר בתיקייה שלו, והתמלול ישתמש במילון המונחים של הקורס, כך שמונחים מקצועיים נכתבים נכון."},
+    {title: "מתחילים הרצאה חיה", text: "פותחים את הזום או את השידור, ולוחצים \"הרצאה חיה\". כל מה שנאמר נכתב תוך כדי, וכל שקופית חדשה או כתיבה על הלוח נשמרת כתמונה."},
+    {title: "פותחים חלון צף", text: "לוחצים \"חלון צף\". חלון קטן נשאר מעל ההרצאה: למעלה שאלה ל-AI, מתחת מה שנאמר עכשיו והשקופית האחרונה. ההרצאה עצמה נשארת על כל המסך."},
+    {title: "שואלים את ה-AI", text: "לא הבנת משהו? כותבים בחלון הצף ולוחצים על ה-AI שלך. השאלה מועתקת יחד עם 5 הדקות האחרונות, ונפתחת האפליקציה (או האתר בחלון קטן). שם Ctrl+V ושליחה."},
+    {title: "עם חיבור AI: בלי להדביק", text: "חיברת את Claude (\"חיבור AI\" במסך הבית)? אז פשוט שואלים אותו \"מה הוא אמר עכשיו?\", והוא קורא בעצמו את מה שנאמר ואת השקופית."},
+    {title: "אחרי ההרצאה", text: "בדף הקורס מכינים מכל ההרצאות מבחן תרגול, סיכום, כרטיסיות חזרה או דף נוסחאות, ושולחים ל-AI באותה דרך."},
+  ];
+  const LINES = [
+    ["10:41:05", "אז בואו נגדיר את מומנט ההתמד של גוף קשיח"],
+    ["10:41:12", "סוכמים על כל אלמנטי המסה, כפול המרחק בריבוע מציר הסיבוב"],
+    ["10:41:20", "כלומר I שווה לאינטגרל של r בריבוע dm"],
+    ["10:41:31", "והיחידות הן קילוגרם כפול מטר בריבוע"],
+    ["10:41:38", "עכשיו נראה דוגמה: מוט שמסתובב סביב הקצה שלו"],
+  ];
+  const SLIDE = `<svg viewBox="0 0 200 120" aria-hidden="true" font-family="Assistant,Segoe UI,sans-serif">
+    <text x="100" y="20" text-anchor="middle" font-size="12" font-weight="700" fill="#1d2a33">מומנט התמד</text>
+    <text x="100" y="42" text-anchor="middle" font-size="13" fill="#1F7A55" direction="ltr">I = ∫ r² dm   [kg·m²]</text>
+    <line x1="40" y1="78" x2="160" y2="78" stroke="#1d2a33" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="40" cy="78" r="5" fill="#C2412D"/><path d="M28 66 a17 17 0 1 0 6 -6" fill="none" stroke="#C2412D" stroke-width="1.6"/>
+    <text x="100" y="98" text-anchor="middle" font-size="9" fill="#56625B">L</text>
+    <text x="100" y="114" text-anchor="middle" font-size="12" fill="#1d2a33" direction="ltr">I = ⅓ m L²</text></svg>`;
+  const ANSWER = "מומנט התמד (Moment of Inertia) מודד כמה קשה לשנות את מהירות הסיבוב של גוף. " +
+    "מחברים כל מסה כפול המרחק שלה מהציר בריבוע: \u2066I = ∫ r² dm\u2069, ביחידות \u2066kg·m²\u2069.\nלמוט באורך L שמסתובב סביב הקצה: \u2066I = ⅓·m·L²\u2069.";
+  const NOW_ANSWER = "המרצה הגדיר עכשיו את מומנט ההתמד, \u2066I = ∫ r² dm\u2069 (ביחידות \u2066kg·m²\u2069), ועבר לדוגמה של מוט שמסתובב סביב הקצה. " +
+    "על השקופית: \u2066I = ⅓·m·L²\u2069.";
+  const EXAM_Q = "שאלה 1: מוט אחיד באורך \u20662 m\u2069 ובמסה \u20663 kg\u2069 מסתובב סביב הקצה שלו. מהו מומנט ההתמד שלו?";
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let i = 0, playing = !still, timers = [], stage = null, cursor = null, built = false, endAt = 0, startAt = 0, progT = 0;
+
+  const at = (ms, fn) => { if (still) fn(); else timers.push(setTimeout(fn, ms)); };
+  function clear() { timers.forEach(clearTimeout); timers = []; cancelAnimationFrame(progT); }
+  function mk(tag, cls, text, parent) {
+    const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text;
+    if (parent) parent.appendChild(e); return e;
+  }
+  function win(title, box, cls) {
+    const w = mk("div", "h-win" + (cls ? " " + cls : ""), null, stage);
+    Object.assign(w.style, {left: box[0] + "%", top: box[1] + "%", width: box[2] + "%", height: box[3] + "%"});
+    const tb = mk("div", "h-tb", null, w);
+    if (!cls || !cls.includes("h-zoom")) mk("span", "h-logo", null, tb);
+    w.title_ = mk("span", "", title, tb);
+    const dots = mk("span", "h-dots", null, tb); mk("i", "", null, dots); mk("i", "", null, dots); mk("i", "", null, dots);
+    w.tb = tb; w.body = mk("div", "h-body", null, w);
+    return w;
+  }
+  function type(node, text, start, speed) {
+    if (still) { node.textContent = text; return start; }
+    const words = text.split(/(\s+)/); let out = "", t = start;
+    for (const w of words) { out += w; const s = out; t += Math.max(1, w.length) * (speed || 40); at(t, () => { node.textContent = s; }); }
+    return t;
+  }
+  // the cursor goes to the middle of an element, and "clicks" it
+  function point(el, t) {
+    at(t, () => {
+      if (!cursor || !el.isConnected) return;
+      const s = stage.getBoundingClientRect(), r = el.getBoundingClientRect();
+      cursor.style.opacity = "1";
+      cursor.style.left = ((r.left + r.width / 2 - s.left) / s.width * 100) + "%";
+      cursor.style.top = ((r.top + r.height / 2 - s.top) / s.height * 100) + "%";
+    });
+  }
+  function click(el, t) {
+    at(t, () => {
+      if (still || !cursor) return;
+      cursor.classList.add("down"); el.classList.add("h-press");
+      const rp = mk("div", "h-ripple", null, stage); rp.style.left = cursor.style.left; rp.style.top = cursor.style.top;
+      setTimeout(() => { cursor && cursor.classList.remove("down"); el.classList.remove("h-press"); rp.remove(); }, 380);
+    });
+  }
+  const show = (el, t) => at(t, () => el.classList.remove("off"));
+  const hide = (el, t, cls) => at(t, () => el.classList.add(cls || "off"));
+
+  // --- the pieces of the app, drawn small ---
+  function homeWin(course, box) {
+    const w = win("הבנתי", box || [5, 5, 90, 90]);
+    mk("div", "h-h1", "מה עושים עכשיו?", w.body);
+    const row = mk("div", "h-row", null, w.body);
+    mk("b", "", "הקורס:", row);
+    const sel = mk("div", "h-sel", null, row); const val = mk("span", "", course, sel); mk("span", "", "▾", sel);
+    const chip = mk("span", "h-chip", "מילון המונחים של הקורס: 42 מונחים ✓", row);
+    chip.style.opacity = course === "ללא קורס" ? "0" : "1";
+    const tiles = mk("div", "h-tiles", null, w.body), tl = [];
+    for (const [b, s] of [["הרצאה חיה בעברית", "זום או שידור: נכתב תוך כדי"], ["הרצאה חיה באנגלית", "אותו דבר, באנגלית"], ["הרצאה מוקלטת", "קובץ, קישור או יוטיוב"]]) {
+      const t = mk("div", "h-tile", null, tiles); mk("span", "h-ic", null, t); mk("b", "", b, t); mk("span", "", s, t); tl.push(t);
+    }
+    mk("div", "h-sub", "ההרצאות שלי", w.body);
+    const lib = mk("div", "h-lib", null, w.body);
+    for (const [a, b] of [["דינמיקה · הרצאה 5 - קינטיקה של גוף קשיח", "אתמול"], ["מד\"ר · משוואות מסדר שני", "לפני 3 ימים"]]) {
+      const r = mk("div", "", null, lib); mk("span", "", a, r); mk("small", "", b, r);
+    }
+    return {w, sel, val, chip, tiles: tl};
+  }
+  function liveBody(w, course) {
+    w.body.replaceChildren();
+    const bar = mk("div", "h-row", null, w.body);
+    mk("span", "h-btn ghost", "→ למסך הבית", bar);
+    const what = mk("b", "", "הרצאה חיה · " + course, bar); what.style.marginInlineEnd = "auto";
+    const fl = mk("span", "h-btn", "חלון צף", bar); mk("span", "h-btn ghost", "עצירה", bar);
+    const cols = mk("div", "h-cols", null, w.body);
+    const ol = mk("ol", "h-lines", null, cols);
+    const shot = mk("div", "h-shot off", null, cols); shot.innerHTML = SLIDE; mk("span", "h-tag", "שקופית חדשה נשמרה", shot);
+    return {fl, ol, shot};
+  }
+  function addLine(ol, k, t, isNew) {
+    const li = mk("li", "off" + (isNew ? " new" : ""), null, ol); mk("span", "ts", LINES[k][0], li); mk("span", "", LINES[k][1], li);
+    show(li, t); if (isNew) at(t + 1600, () => li.classList.remove("new"));
+    return li;
+  }
+  function zoomWin() {
+    const z = win("Zoom · דינמיקה - הרצאה 6", [2, 3, 96, 94], "h-zoom");
+    const main = mk("div", "h-shot", null, z.body); main.innerHTML = SLIDE;
+    const side = mk("div", "", null, z.body); side.style.display = "grid"; side.style.gap = "1cqw"; side.style.alignContent = "start";
+    mk("div", "h-face", "המרצה", side); mk("div", "h-face", "את/ה", side);
+    return z;
+  }
+  function floatWin(box) {
+    const f = win("הבנתי · הרצאה חיה", box || [66, 30, 31, 66]);
+    f.style.zIndex = "5";
+    const ask = mk("div", "h-ask", null, f.body);
+    const hd = mk("div", "h-row", null, ask); mk("b", "", "שאלה ל-AI", hd);
+    const ta = mk("div", "h-ta", null, ask); ta.dataset.ph = "מה לא ברור?";
+    const ais = mk("div", "h-ais", null, ask), btn = {};
+    for (const n of ["ChatGPT", "Gemini", "Claude"]) btn[n] = mk("span", n === "Claude" ? "last" : "", n, ais);
+    const ol = mk("ol", "h-lines", null, f.body); ol.style.flex = "1";
+    const sh = mk("div", "h-shot", null, f.body); sh.innerHTML = SLIDE; sh.style.height = "9cqw"; sh.style.flex = "none";
+    const toast = mk("div", "h-toast off", null, f);
+    return {f, ta, btn, ol, toast};
+  }
+  function claudeWin(box, connected) {
+    const c = win("Claude", box || [3, 5, 50, 90], "off");
+    c.style.zIndex = "6";
+    c.querySelector(".h-logo").style.background = "#D97757";
+    if (connected) { const ch = mk("span", "h-chip", "מחובר להבנתי ✓", c.tb); ch.style.fontSize = "1cqw"; }
+    const chat = mk("div", "h-chat", null, c.body);
+    const inp = mk("div", "h-input", null, c.body); const tx = mk("span", "h-tx", null, inp); tx.dataset.ph = "לשאול את Claude...";
+    const send = mk("span", "h-send", null, inp);
+    return {c, chat, tx, send};
+  }
+
+  // --- the scenes: each builds its picture and returns how long it plays (ms) ---
+  const SCENES = [
+    function course() {
+      const h = homeWin("ללא קורס");
+      const menu = mk("div", "h-menu", null, h.sel); menu.style.opacity = "0";
+      const opts = ["ללא קורס", "דינמיקה", "מד\"ר", "חוזק חומרים"].map(n => mk("div", n === "ללא קורס" ? "hl" : "", n, menu));
+      point(h.sel, 500); click(h.sel, 1450);
+      at(1550, () => { menu.style.opacity = "1"; h.sel.classList.add("h-hot"); });
+      point(opts[1], 2100);
+      at(2500, () => { opts[0].className = ""; opts[1].className = "hl"; });
+      click(opts[1], 3000);
+      at(3150, () => { menu.style.opacity = "0"; h.val.textContent = "דינמיקה"; h.sel.classList.remove("h-hot"); });
+      at(3700, () => { h.chip.style.opacity = "1"; h.chip.classList.add("h-hot"); });
+      return 8000;
+    },
+    function live() {
+      const h = homeWin("דינמיקה");
+      point(h.tiles[0], 500); at(1100, () => h.tiles[0].classList.add("h-hot")); click(h.tiles[0], 1500);
+      let L = null;
+      at(1800, () => {
+        h.w.title_.textContent = "הבנתי"; mk("span", "h-pill", "● מקליט", h.w.tb).style.marginInlineStart = "1cqw";
+        L = liveBody(h.w, "דינמיקה");
+        if (still) { for (let k = 0; k < 4; k++) addLine(L.ol, k, 0, false); L.shot.classList.remove("off"); return; }
+        addLine(L.ol, 0, 400, true); addLine(L.ol, 1, 1700, true); show(L.shot, 2600); addLine(L.ol, 2, 3200, true); addLine(L.ol, 3, 4700, true);
+      });
+      at(2600, () => cursor && (cursor.style.opacity = "0"));
+      return 9000;
+    },
+    function float() {
+      zoomWin();
+      const h = homeWin("דינמיקה", [8, 8, 84, 84]); h.w.style.zIndex = "4";
+      const L = liveBody(h.w, "דינמיקה"); for (let k = 0; k < 4; k++) addLine(L.ol, k, 0, false); L.shot.classList.remove("off");
+      const F = floatWin(); F.f.classList.add("off");
+      for (let k = 0; k < 3; k++) addLine(F.ol, k + 1, 0, false);
+      point(L.fl, 500); click(L.fl, 1400);
+      hide(h.w, 1700, "min"); show(F.f, 2300);
+      at(2400, () => cursor && (cursor.style.opacity = "0"));
+      addLine(F.ol, 4, 3600, true);
+      return 8500;
+    },
+    function ask() {
+      zoomWin();
+      const F = floatWin(); for (let k = 0; k < 4; k++) addLine(F.ol, k + 1 > 4 ? 4 : k + 1, 0, false);
+      const C = claudeWin([3, 8, 52, 86]);
+      const q = "לא הבנתי, מה זה מומנט התמד?";
+      point(F.ta, 400); at(1000, () => F.ta.classList.add("focus"));
+      let t = type(F.ta, q, 1200, 55);
+      point(F.btn.Claude, t + 300); click(F.btn.Claude, t + 1050);
+      at(t + 1150, () => { F.ta.classList.remove("focus"); F.ta.textContent = ""; F.toast.textContent = "הועתק ונפתחה האפליקציה של Claude. להדביק (Ctrl+V)"; F.toast.classList.remove("off"); });
+      show(C.c, t + 1600);
+      const key = mk("div", "h-key off", "Ctrl + V", stage); key.style.left = "22%"; key.style.top = "70%";
+      point(C.tx, t + 1900);
+      show(key, t + 2600); hide(key, t + 3300); hide(F.toast, t + 3300);
+      const me = mk("div", "h-msg me off", null, C.chat);
+      mk("span", "h-ctx", "אני בהרצאה חיה. זה התמלול של 5 הדקות האחרונות: [10:41:05] אז בואו נגדיר את מומנט ההתמד... [10:41:31] והיחידות הן קילוגרם כפול מטר בריבוע", me);
+      me.append("השאלה שלי: " + q);
+      show(me, t + 3000);
+      at(t + 3500, () => cursor && (cursor.style.opacity = "0"));
+      const ai = mk("div", "h-msg ai off", null, C.chat); show(ai, t + 4000);
+      const end = type(ai, ANSWER, t + 4100, 16);
+      return end + 3500;
+    },
+    function connected() {
+      zoomWin();
+      const C = claudeWin([3, 5, 52, 90], true); C.c.classList.remove("off");
+      const q = "מה הוא אמר עכשיו?";
+      point(C.tx, 400);
+      let t = type(C.tx, q, 1000, 60);
+      point(C.send, t + 200); click(C.send, t + 900);
+      const me = mk("div", "h-msg me off", q, C.chat);
+      at(t + 1000, () => { C.tx.textContent = ""; });
+      show(me, t + 1000);
+      at(t + 1300, () => cursor && (cursor.style.opacity = "0"));
+      const tool = mk("div", "h-tool off", null, C.chat); mk("span", "", "קורא מהבנתי: הדקות האחרונות + השקופית", tool);
+      show(tool, t + 1800);
+      const ai = mk("div", "h-msg ai off", null, C.chat); show(ai, t + 2900);
+      const end = type(ai, NOW_ANSWER, t + 3000, 18);
+      return end + 3500;
+    },
+    function after() {
+      const w = win("הבנתי", [5, 5, 90, 90]);
+      const top = mk("div", "h-row", null, w.body);
+      mk("span", "h-btn ghost", "→ למסך הבית", top);
+      const tt = mk("div", "", null, top); tt.style.marginInlineEnd = "auto";
+      mk("div", "h-h1", "דינמיקה", tt); const sm = mk("small", "", "6 הרצאות · מילון: 42 מונחים", tt); sm.style.color = "var(--muted)";
+      mk("span", "h-btn quiet", "קובץ אחד של כל הקורס", top);
+      mk("div", "h-sub", "הכנה למבחן", w.body);
+      const pr = mk("div", "h-presets", null, w.body), p = {};
+      for (const n of ["מבחן תרגול", "סיכום כל הקורס", "כרטיסיות חזרה", "הנושאים הכי קשים", "דף נוסחאות"]) p[n] = mk("span", "", n, pr);
+      const ask = mk("div", "h-ask", null, w.body);
+      const ta = mk("div", "h-ta", null, ask); ta.dataset.ph = "המשימה: לבחור למעלה, או לכתוב כאן";
+      const ais = mk("div", "h-ais", null, ask), btn = {};
+      for (const n of ["ChatGPT", "Gemini", "Claude"]) btn[n] = mk("span", n === "Claude" ? "last" : "", n, ais);
+      const lib = mk("div", "h-lib", null, w.body);
+      for (const [a, b] of [["הרצאה 6 - מומנט התמד", "היום"], ["הרצאה 5 - קינטיקה של גוף קשיח", "אתמול"]]) { const r = mk("div", "", null, lib); mk("span", "", a, r); mk("small", "", b, r); }
+      point(p["מבחן תרגול"], 500); click(p["מבחן תרגול"], 1300);
+      at(1400, () => p["מבחן תרגול"].classList.add("h-hot"));
+      const t = type(ta, "תכין לי מבחן תרגול בסגנון מבחן אמיתי על כל החומר: 8 שאלות מגוונות, מהקלה לקשה.", 1500, 22);
+      point(btn.Claude, t + 200); click(btn.Claude, t + 900);
+      const C = claudeWin([3, 10, 50, 84]);
+      show(C.c, t + 1300);
+      at(t + 1500, () => cursor && (cursor.style.opacity = "0"));
+      const ai = mk("div", "h-msg ai off", null, C.chat); show(ai, t + 2300);
+      const end = type(ai, EXAM_Q, t + 2400, 22);
+      return end + 3500;
+    },
+  ];
+
+  // --- playing ---
+  function drawSteps() {
+    const ol = $("#hSteps");
+    ol.replaceChildren(...STEPS.map((s, k) => {
+      const li = mk("li"); const b = mk("button", k < i ? "seen" : "", s.title, li); b.type = "button";
+      if (k === i) b.setAttribute("aria-current", "step");
+      b.addEventListener("click", () => go(k, true)); return li;
+    }));
+  }
+  function drawCtl() {
+    $("#hPlay").textContent = i === STEPS.length - 1 && !playing && endAt && Date.now() >= endAt ? "↺ מההתחלה" : playing ? "❚❚ עצירה" : "▶ הפעלה";
+    $("#hPrev").disabled = i === 0; $("#hNext").disabled = i === STEPS.length - 1;
+  }
+  function prog() {
+    const bar = $("#hProg");
+    if (still || !endAt) { bar.style.width = "100%"; return; }
+    const f = Math.min(1, (Date.now() - startAt) / (endAt - startAt));
+    bar.style.width = (f * 100) + "%";
+    if (f < 1) progT = requestAnimationFrame(prog);
+  }
+  function go(k, user) {
+    clear();
+    i = Math.max(0, Math.min(STEPS.length - 1, k));
+    if (!stage) return;
+    stage.classList.toggle("still", still);
+    stage.replaceChildren();
+    cursor = still ? null : mk("div", "h-cursor", null, stage);
+    if (cursor) cursor.innerHTML = '<svg viewBox="0 0 24 24"><path d="M3 2l7 19 2.6-7.4L20 11z" fill="#fff" stroke="#17261F" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+    if (cursor) { cursor.style.left = "55%"; cursor.style.top = "75%"; cursor.style.opacity = "0"; }
+    $("#hNum").textContent = "שלב " + (i + 1) + " מתוך " + STEPS.length;
+    $("#hTitle").textContent = STEPS[i].title;
+    $("#hText").textContent = STEPS[i].text;
+    drawSteps();
+    const dur = SCENES[i]();
+    startAt = Date.now(); endAt = startAt + dur;
+    if (!still) {
+      timers.push(setTimeout(() => {
+        if (playing && i < STEPS.length - 1) go(i + 1);
+        else { playing = false; drawCtl(); }
+      }, dur));
+    }
+    if (user && still) playing = false;
+    drawCtl(); prog();
+    try { localStorage.setItem("bzm.how", "1"); } catch (e) {}
+    $("#howBar").hidden = true;
+  }
+  function open() {
+    stage = $("#hStage");
+    if (!built) {
+      built = true;
+      $("#hPrev").addEventListener("click", () => go(i - 1, true));
+      $("#hNext").addEventListener("click", () => go(i + 1, true));
+      $("#hPlay").addEventListener("click", () => {
+        if (!playing && i === STEPS.length - 1 && Date.now() >= endAt) { playing = !still; go(0, true); return; }
+        playing = !playing;
+        if (playing && Date.now() >= endAt) go(i + 1 < STEPS.length ? i + 1 : 0, true);
+        drawCtl();
+      });
+    }
+    $("#hPlay").hidden = still;   // with "reduce motion" nothing plays: the arrows and the list move between the steps
+    playing = !still; go(0);
+  }
+  function stop() { clear(); if (stage) stage.replaceChildren(); cursor = null; }
+  return {open, stop, steps: STEPS.length};
+})();
+document.querySelectorAll("[data-how]").forEach(b => b.addEventListener("click", () => { location.hash = "how"; }));
+$("#howNo").addEventListener("click", () => { $("#howBar").hidden = true; try { localStorage.setItem("bzm.how", "1"); } catch (e) {} });
+try { $("#howBar").hidden = !!localStorage.getItem("bzm.how"); } catch (e) { $("#howBar").hidden = true; }
 
 route();
 poll();
