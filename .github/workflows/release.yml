@@ -5,6 +5,11 @@ name: release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:          # or by hand: Actions > release > Run workflow, with the version tag
+    inputs:
+      tag:
+        description: "Version tag, like v2.0-20261014"
+        required: true
 permissions:
   contents: write
 jobs:
@@ -29,4 +34,10 @@ jobs:
       - name: Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" Hevanti.zip Hevanti-Mac.zip --title "Hevanti $GITHUB_REF_NAME" --generate-notes
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" Hevanti.zip Hevanti-Mac.zip --clobber
+          else
+            gh release create "$TAG" Hevanti.zip Hevanti-Mac.zip --target "$GITHUB_SHA" --title "Hevanti $TAG" --generate-notes
+          fi
