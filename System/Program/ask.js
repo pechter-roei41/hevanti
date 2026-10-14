@@ -38,13 +38,14 @@
   function setApps(info) { AI.apps = info || {}; }
   const boxes = [];
   const aiWins = {};   // the small window opened for each AI - reused, so the conversation there goes on
-  // Open the AI's site in a small window at the side of the screen (not a tab), so the lecture stays in view.
+  // Open the AI's site in a window on a third of the screen (not a tab), so the lecture stays in view.
   // If that window is still open, only bring it forward: navigating it would start a new chat.
   function openAi(a, from) {
     const old = aiWins[a.id];
     if (old && !old.closed) { try { old.focus(); } catch (e) {} return {w: old, reused: true}; }
     const S = (from || window).screen || window.screen;
-    const width = Math.min(520, S.availWidth || 520), height = Math.max(400, Math.min(860, (S.availHeight || 860) - 40));
+    // a third of the screen, full height, at the side: the lecture keeps the other two thirds
+    const width = Math.max(420, Math.round((S.availWidth || 1440) / 3)), height = Math.max(400, (S.availHeight || 860) - 8);
     const feats = `popup=yes,width=${width},height=${height},left=${S.availLeft || 0},top=${S.availTop || 0}`;
     let w = null;
     // from the main page first; a click inside the floating window may only allow its own window.open
@@ -93,7 +94,7 @@
     ta.placeholder = opts.placeholder || "מה לא ברור?";
     ta.setAttribute("aria-label", "השאלה");
     const row = mk("div", "ais"); row.setAttribute("role", "group"); row.setAttribute("aria-label", "לאן לשלוח");
-    const hint = mk("p", "hint", "הלחיצה מעתיקה את השאלה עם מה שנאמר ופותחת את האפליקציה (אם היא מותקנת) או את האתר בחלון קטן בצד - שם Ctrl+V ושליחה.");
+    const hint = mk("p", "hint", "הלחיצה מעתיקה את השאלה עם מה שנאמר ופותחת את האפליקציה (אם היא מותקנת) או את האתר בשליש המסך - שם Ctrl+V ושליחה.");
     const buttons = {};
     function refresh() {
       const names = connectedNames();
@@ -125,7 +126,7 @@
       const {w, reused} = openAi(a, opts.win);
       opts.toast((w === null ? "הועתק. לפתוח את " + a.name + " ולהדביק (Ctrl+V)."
         : reused ? "הועתק. להדביק (Ctrl+V) בחלון של " + a.name + " - השיחה שם ממשיכה."
-        : "הועתק ונפתח " + a.name + " בחלון קטן בצד. להדביק (Ctrl+V) ולשלוח.") + img);
+        : "הועתק ונפתח " + a.name + " בשליש המסך. להדביק (Ctrl+V) ולשלוח.") + img);
       ta.value = "";
     }
     for (const a of AIS) {
