@@ -1942,6 +1942,84 @@ def connect_app(app, on=True):
     return out
 
 
+# --- the AI apps installed on this computer: the "ChatGPT / Gemini / Claude" buttons open the app when there is one ---
+# Found by their name in the Start menu (Get-StartApps): this covers Store apps, installed programs and web apps that
+# were installed from the browser alike, and each is opened the way the Start menu opens it.
+AI_APP_NAMES = {"claude": ("claude",), "chatgpt": ("chatgpt",), "gemini": ("gemini", "google gemini")}
+_AI_APPS = {"ids": {}, "at": 0.0, "busy": False}
+_AI_APPS_LOCK = threading.Lock()
+
+
+def find_ai_apps():
+    """{"claude": "<AppID>", ...} for the AI apps in the Start menu."""
+    fake = os.environ.get("BZM_FAKE_APPS")   # tests: "claude,gemini"
+    if fake is not None:
+        return {a: "fake!" + a for a in fake.split(",") if a in AI_APP_NAMES}
+    if os.name != "nt":
+        return {}
+    import subprocess
+    try:
+        r = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command",
+                            "[Console]::OutputEncoding = [Text.Encoding]::UTF8; "
+                            "Get-StartApps | Select-Object Name, AppID | ConvertTo-Json -Compress"],
+                           capture_output=True, timeout=30, creationflags=0x08000000)  # CREATE_NO_WINDOW
+        items = json.loads(r.stdout.decode("utf-8", "replace").strip() or "[]")
+    except Exception:
+        return {}
+    if isinstance(items, dict):
+        items = [items]
+    out = {}
+    for app, names in AI_APP_NAMES.items():
+        for it in items if isinstance(items, list) else []:
+            if isinstance(it, dict) and str(it.get("Name") or "").strip().lower() in names and it.get("AppID"):
+                out[app] = str(it["AppID"])
+                break
+    return out
+
+
+def refresh_ai_apps():
+    try:
+        ids = find_ai_apps()
+    except Exception:
+        ids = {}
+    with _AI_APPS_LOCK:
+        _AI_APPS.update(ids=ids, at=time.time(), busy=False)
+
+
+def ai_apps_status():
+    """{"claude": True, ...} - looked up again in the background every 10 minutes (an app may be installed meanwhile)."""
+    with _AI_APPS_LOCK:
+        stale = not _AI_APPS["busy"] and time.time() - _AI_APPS["at"] > 600
+        if stale:
+            _AI_APPS["busy"] = True
+        ids = dict(_AI_APPS["ids"])
+    if stale:
+        threading.Thread(target=refresh_ai_apps, daemon=True).start()
+    return {a: a in ids for a in AI_APP_NAMES}
+
+
+def open_ai_app(app):
+    """Open the installed app of this AI. False when it is not installed (the page then opens the website)."""
+    with _AI_APPS_LOCK:
+        aid = _AI_APPS["ids"].get(str(app or ""))
+    if not aid:
+        return False
+    if aid.startswith("fake!"):
+        try:
+            with open(os.path.join(LOCAL_DIR, "opened_apps.txt"), "a", encoding="utf-8") as f:
+                f.write(aid[5:] + "\n")
+        except OSError:
+            pass
+        return True
+    import subprocess
+    try:
+        subprocess.Popen(["explorer.exe", "shell:AppsFolder\\" + aid], close_fds=True)
+        return True
+    except OSError:
+        save_error("open ai app")
+        return False
+
+
 def refresh_connections():
     """The Hevanti folder moved (or Python changed) since connecting: point the connections at the new place."""
     want = _mcp_entry()
@@ -3143,7 +3221,7 @@ class App:
                     "lib_rev": self.lib_rev, "first_view": self.first_view,
                     "screens": SCREEN_ENABLED, "product": PRODUCT, "migrated": self.migrated,
                     "course": load_settings().get("course") or "", "connect": self.connect_info(),
-                    "update": self.update}
+                    "ai_apps": ai_apps_status(), "update": self.update}
 
     def connect_info(self):
         """Which AI apps are connected (reading two small config files - at most every few seconds)."""
@@ -3253,6 +3331,8 @@ class App:
             return self.change_lecture(a, d)
         if a == "delete_course":
             return self.delete_course(clean_name(d.get("course"), NO_COURSE))
+        if a == "open_ai_app":
+            return {"ok": open_ai_app(d.get("app"))}
         if a in ("connect", "disconnect"):
             out = connect_app(d.get("app"), a == "connect")
             self._connect_at = 0.0
@@ -4352,6 +4432,9 @@ def main():
         log(f"{APP.migrated} הרצאות מגרסה קודמת הועברו לתיקייה \"{LIB_NAME}\\{NO_COURSE}\". אפשר להעביר אותן לקורסים.")
     threading.Thread(target=check_update, daemon=True).start()
     threading.Thread(target=refresh_connections, daemon=True).start()
+    with _AI_APPS_LOCK:
+        _AI_APPS["busy"] = True
+    threading.Thread(target=refresh_ai_apps, daemon=True).start()
     last = clean_name(load_settings().get("course"), NO_COURSE)
     if act["kind"] == "live":
         APP.start("live", act["lang"], run_live, act["lang"], last, course=last)

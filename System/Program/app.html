@@ -552,7 +552,7 @@ async function poll() {
   try {
     const d = await api("/api/app?notes=" + notesSince);
     fails = 0; $("#gone").hidden = true;
-    app = d; render(d);
+    app = d; render(d); if (window.BZMAsk) BZMAsk.setApps(d.ai_apps);
   } catch (e) {
     if (++fails >= 4) $("#gone").hidden = false;
   }
@@ -1121,7 +1121,7 @@ function ytProblem(text, link) {
 async function ytOpen() {
   // the state may still show the session from before (the video was just started): ask again for a moment
   for (let i = 0; i < 15 && !(app && app.session && app.session.yt); i++) {
-    try { const d = await api("/api/app?notes=" + notesSince); app = d; render(d); } catch (e) {}
+    try { const d = await api("/api/app?notes=" + notesSince); app = d; render(d); if (window.BZMAsk) BZMAsk.setApps(d.ai_apps); } catch (e) {}
     if (app && app.session && app.session.yt) break;
     await new Promise(r => setTimeout(r, 300));
   }

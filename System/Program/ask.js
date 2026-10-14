@@ -26,7 +26,16 @@
 .askp .conn{background:var(--accent-soft);color:var(--fg);border-radius:10px;padding:7px 11px;font-size:14px;line-height:1.5;margin:0}
 .askp .conn b{color:var(--accent)}
 `;
-  const AI = {connected: {}};
+  const AI = {connected: {}, apps: {}};   // apps: the AI apps installed on this computer (from Hevanti)
+  // Ask Hevanti (the local server) to open the installed app - the browser itself cannot start programs
+  async function openApp(a) {
+    try {
+      const r = await fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
+        body: JSON.stringify({action: "open_ai_app", app: a.id}), signal: AbortSignal.timeout(4000)}).then(r => r.json());
+      return !!r.ok;
+    } catch (e) { return false; }
+  }
+  function setApps(info) { AI.apps = info || {}; }
   const boxes = [];
   const aiWins = {};   // the small window opened for each AI - reused, so the conversation there goes on
   // Open the AI's site in a small window at the side of the screen (not a tab), so the lecture stays in view.
@@ -84,7 +93,7 @@
     ta.placeholder = opts.placeholder || "מה לא ברור?";
     ta.setAttribute("aria-label", "השאלה");
     const row = mk("div", "ais"); row.setAttribute("role", "group"); row.setAttribute("aria-label", "לאן לשלוח");
-    const hint = mk("p", "hint", "הלחיצה מעתיקה את השאלה עם מה שנאמר ופותחת את ה-AI בחלון קטן בצד - שם Ctrl+V ושליחה.");
+    const hint = mk("p", "hint", "הלחיצה מעתיקה את השאלה עם מה שנאמר ופותחת את האפליקציה (אם היא מותקנת) או את האתר בחלון קטן בצד - שם Ctrl+V ושליחה.");
     const buttons = {};
     function refresh() {
       const names = connectedNames();
@@ -105,8 +114,15 @@
       if (!ok) { opts.toast("לא הצלחתי להעתיק. לנסות שוב."); return; }
       setLast(a.id); refresh();
       // (not the "noopener" feature: with it window.open always returns null, and a blocked popup looks the same)
-      const {w, reused} = openAi(a, opts.win);
       const img = opts.hasImage && opts.hasImage() ? " צריך גם את המסך? \"העתקת " + (opts.imageName || "צילום המסך") + "\" ולהדביק שוב." : "";
+      // the app when it is installed, otherwise the website in a small window
+      if (AI.apps[a.id] && await openApp(a)) {
+        opts.toast("הועתק ונפתחה האפליקציה של " + a.name + ". להדביק (Ctrl+V) ולשלוח." +
+          (AI.connected[a.id] ? " היא מחוברת להבנתי, אז אפשר גם פשוט לשאול שם." : "") + img);
+        ta.value = "";
+        return;
+      }
+      const {w, reused} = openAi(a, opts.win);
       opts.toast((w === null ? "הועתק. לפתוח את " + a.name + " ולהדביק (Ctrl+V)."
         : reused ? "הועתק. להדביק (Ctrl+V) בחלון של " + a.name + " - השיחה שם ממשיכה."
         : "הועתק ונפתח " + a.name + " בחלון קטן בצד. להדביק (Ctrl+V) ולשלוח.") + img);
@@ -114,7 +130,7 @@
     }
     for (const a of AIS) {
       const bt = mk("button", "", a.name); bt.type = "button"; bt.dataset.ai = a.id;
-      bt.title = "מעתיק את השאלה עם ההקשר ופותח את " + a.name + " בחלון קטן";
+      bt.title = "מעתיק את השאלה עם ההקשר ופותח את " + a.name + " (האפליקציה אם היא מותקנת, אחרת האתר)";
       bt.addEventListener("click", () => send(a));
       buttons[a.id] = bt; row.appendChild(bt);
     }
@@ -125,5 +141,5 @@
     box.append(head, conn, ta, row, hint);
     return {focus: () => ta.focus(), textarea: ta, refresh};
   }
-  window.BZMAsk = {mount, AIS, copyText, setConnected, addCss};
+  window.BZMAsk = {mount, AIS, copyText, setConnected, setApps, addCss};
 })();
