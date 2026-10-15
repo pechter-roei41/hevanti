@@ -716,10 +716,11 @@ function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.
 function big(src) { $("#big img").src = src; $("#big").hidden = false; }
 $("#big").addEventListener("click", () => { $("#big").hidden = true; });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { $("#big").hidden = true; } });
-function confirmBox(title, text, okLabel) {
+function confirmBox(title, text, okLabel, noLabel) {
   return new Promise(res => {
     $("#confT").textContent = title; $("#confP").textContent = text || ""; $("#confirm").hidden = false;
     $("#confOk").textContent = okLabel || "כן"; $("#confOk").className = okLabel ? "btn danger" : "btn";
+    $("#confNo").textContent = noLabel || "ביטול";
     const done = v => { $("#confirm").hidden = true; $("#confOk").onclick = $("#confNo").onclick = null; res(v); };
     $("#confOk").onclick = () => done(true); $("#confNo").onclick = () => done(false); $("#confOk").focus();
   });
@@ -913,8 +914,21 @@ $("#recGo").addEventListener("click", () => { if (recSource) startRecording(recS
 $("#linkIn").addEventListener("keydown", e => { if (e.key === "Enter" && recSource) startRecording(recSource, recLang); });
 $("#runBack").addEventListener("click", () => { const s = app && app.session; if (!s) return; if (s.yt) location.hash = "yt"; else if (s.kind === "live") location.hash = "live"; else location.href = "/player"; });
 $("#runStop").addEventListener("click", stopSession);
+const QUICK_STOP_S = 10;   // stopped this soon after starting: offer to delete it right away
 async function stopSession() {
   const s = app && app.session; if (!s || s.done) return;
+  if (s.kind === "live" && !s.ready) {   // still loading: nothing recorded yet - cancel at once, no question
+    await api("/api/cmd", {action: "stop", discard: true});
+    toast("בוטל. לא נשמר כלום."); location.hash = ""; return;
+  }
+  const secs = s.ready_at ? Date.now() / 1000 - s.ready_at : 1e9;
+  if (s.kind === "live" && secs <= QUICK_STOP_S) {
+    const del = await confirmBox("עצרת מיד אחרי שהתחלת", "עברו רק " + Math.max(1, Math.round(secs)) +
+      " שניות, אז כמעט אין בה כלום. למחוק אותה?", "עצירה ומחיקה", "לעצור ולשמור");
+    await api("/api/cmd", {action: "stop", discard: del});
+    if (del) { toast("ההרצאה נעצרה ונמחקה."); location.hash = ""; }
+    return;
+  }
   if (!(await confirmBox("לעצור?", sessionName(s) + " ייעצר. מה שכבר תומלל נשמר."))) return;
   api("/api/cmd", {action: "stop"});
 }

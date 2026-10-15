@@ -4316,11 +4316,14 @@ class Session:
         self.started = time.time()
         self.transcript = None
         self.yt = None         # a YouTube video in Hevanti's player: {"id", "url", "start"}
+        self.ready_at = None   # when it started transcribing (a stop within QUICK_STOP_S offers to delete it)
+        self.discard = False   # stopped right after starting, and the student chose to delete it
 
     def info(self):
         return {"kind": self.kind, "lang": self.lang, "title": self.title, "course": self.course, "ready": self.ready,
                 "done": self.done, "stopping": self.stop.is_set() and not self.done, "error": self.error,
-                "started": self.started, "transcript": self.transcript, "yt": self.yt}
+                "started": self.started, "transcript": self.transcript, "yt": self.yt,
+                "ready_at": self.ready_at, "discard": self.discard}
 
 
 NOTE_WARN = ("אזהרה", "שגיאה", "נכשל", "לא הצלחתי", "חסם", "לא נמצא", "לא מגיע", "שים לב", "נקטעה", "נעצר")
@@ -4431,11 +4434,19 @@ class App:
                 if self.question is not None:
                     self.question = None
 
-    def stop_session(self, wait=0):
+    def stop_session(self, wait=0, discard=False):
         with self.lock:
             s = self.session
         if s is not None and not s.done:
+            s.discard = bool(discard)
             s.stop.set()
+            if s.kind == "live" and not s.ready:
+                # still loading (the model, packages): nothing was recorded yet - done now for the page, instead of
+                # "stopping..." until the loading ends. run_live sees the stop when the loading ends and saves nothing.
+                s.done = True
+                with self.lock:
+                    self.lib_rev += 1
+                return
             if wait and s.thread is not None:
                 s.thread.join(wait)
 
@@ -4524,7 +4535,7 @@ class App:
             open_in_explorer("course", course)
             return {"ok": True, "file": lib_rel(out), "lectures": n}
         if a == "stop":
-            self.stop_session()
+            self.stop_session(discard=bool(d.get("discard")))
             return {"ok": True}
         if a == "answer":
             with self.lock:
@@ -5714,7 +5725,12 @@ def run_live(sess, lang, course=""):
         _ensure_packages([("comtypes", "comtypes")], "למעבר בין אוזניות לרמקולים")
     if IS_MAC:
         _ensure_packages([("sounddevice", "sounddevice")], "להקלטת הקול של המחשב")
+    if sess.stop.is_set():
+        return   # stopped while loading: no lecture folder
     model, beam, model_desc = get_model(lang, stub_av=True)
+    if sess.stop.is_set():
+        log("ההרצאה בוטלה לפני שהתחילה - לא נשמר כלום.")
+        return
     on_gpu = model_desc.endswith("GPU")
     min_s, max_s = (GPU_MIN_CHUNK_S, GPU_MAX_CHUNK_S) if on_gpu else (MIN_CHUNK_S, MAX_CHUNK_S)
     q = queue.Queue()
@@ -5834,6 +5850,15 @@ def run_live(sess, lang, course=""):
         if ended[0]:
             return
         ended[0] = True
+        if sess.discard and not (yt and old[0]):
+            # stopped right after starting, and the student chose to delete it (a video watched before is kept)
+            import shutil
+            now_file.finish(transcript_rel)
+            shutil.rmtree(ldir, ignore_errors=True)
+            log("ההרצאה נמחקה (נעצרה מיד אחרי שהתחילה).")
+            with APP.lock:
+                APP.lib_rev += 1
+            return
         if yt and not old[0] and not now_file.all:
             # nothing was played (e.g. the owner doesn't allow playing the video outside YouTube): no empty lecture
             import shutil
@@ -5854,6 +5879,7 @@ def run_live(sess, lang, course=""):
             "מה שמתנגן בו מתומלל, ושקופיות נשמרות מהחלק של הנגן במסך.")
     else:
         log(f"מוכן לתמלול {'באנגלית' if LANG == 'en' else 'בעברית'}{' (על כרטיס המסך)' if on_gpu else ''}. תפעיל את ההרצאה.")
+    sess.ready_at = time.time()
     sess.ready = True
 
     blocks, n, t0 = [], 0, None
@@ -6042,6 +6068,8 @@ def run_live(sess, lang, course=""):
     warned_silent = False
     def finish_tail():
         """Don't lose the last seconds: the piece that was in the middle, what was heard, what still waits."""
+        if sess.discard:
+            return   # it is being deleted: nothing to finish
         log("עוצר... (מתמלל את השניות האחרונות)")
         now_file.info["stopping"] = True
         try:
@@ -6158,7 +6186,10 @@ def run_live(sess, lang, course=""):
             log(f"צילומי מסך שנשמרו: {watcher.count}")
         closing()
         now_file.ended = True
-        log(f"נשמר: {path}")
+        if not os.path.isdir(ldir):
+            sess.transcript = None
+        else:
+            log(f"נשמר: {path}")
 
 
 # ---------- uninstall (uninstall.bat) ----------
