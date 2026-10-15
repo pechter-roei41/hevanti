@@ -154,6 +154,22 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .conncard .st.on{color:var(--ok)}
 .conncard p{margin:0;font-size:15px;color:var(--muted);line-height:1.5}
 .conncard .btn{justify-self:start}
+.cloud{border:1.5px dashed var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:8px}
+.cloud b{font-size:17px}
+.cloud p{margin:0;font-size:15px;color:var(--muted);line-height:1.5}
+.cloud .row{gap:8px;flex-wrap:wrap}
+.aic{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.aic{grid-template-columns:minmax(0,1fr)}}
+.aiw{border:1.5px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:9px;align-content:start;background:var(--bg);min-width:0}
+.aiw .t{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.aiw .t b{font-size:19px}
+.aiw .st{font-size:13px;font-weight:700;color:var(--muted)}
+.aiw .st.on{color:var(--ok)}
+.aiw .way{font-size:15px;line-height:1.55;margin:0}
+.aiw .way small{display:block;color:var(--muted);font-size:14px}
+.aiw .link{display:flex;gap:6px}
+.aiw .link input{flex:1;min-width:0;font:inherit;font-size:14px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:6px 10px;direction:ltr}
+.aiw .btns{display:flex;gap:6px;flex-wrap:wrap}
 .connbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--accent-soft);border-radius:var(--r);padding:10px 14px;margin:0 0 18px}
 .connbar span{margin-inline-end:auto}
 .foot{margin-top:26px;color:var(--muted);font-size:14px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
@@ -511,6 +527,11 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
         </div>
       </div>
     </div>
+    <div class="card" style="margin-top:14px">
+      <h2>ה-AI של הקורס</h2>
+      <p class="sub">לכל AI פרויקט אחד לקורס הזה. מגדירים פעם אחת, ומאז שואלים שם ישר ("מה הוא אמר עכשיו?", "תכין מבחן תרגול") בלי להעתיק: הוא קורא בעצמו רק את ההרצאות של הקורס הזה. כל כפתור "פתיחה" פותח אותו בשליש המסך, וההרצאה נשארת בשני השלישים.</p>
+      <div class="aic" id="cAi"></div>
+    </div>
     <div class="libhead"><h2>ההרצאות בקורס</h2></div>
     <ol class="lib" id="cLib"></ol>
   </section>
@@ -555,6 +576,13 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
   <p style="margin:0">מחברים פעם אחת, ואז שואלים את ה-AI ישר בחלון שלו, ליד ההרצאה: "מה הוא אמר עכשיו?", "מה כתוב בשקופית?". הוא קורא לבד מה נאמר בדקות האחרונות, איפה אתם בהקלטה ואת השקופית שעל המסך. צריך את האפליקציה שלו למחשב ואת החשבון שלכם בה. הבנתי לא שולחת שום דבר בעצמה.</p>
   <div class="conns" id="conns"></div>
   <p class="cstate" id="connMsg" role="status"></p>
+  <div class="cloud" id="cloudBox">
+    <b>סנכרון לענן: ChatGPT ו-Gemini באתר, בטלפון ובפרויקטים</b>
+    <p>אתרים ואפליקציות שלא קוראים מהמחשב (פרויקט ב-ChatGPT, Gem או Gemini Notebook) קוראים את הקורס מ-Google Drive. כשהסנכרון פועל, הבנתי שומרת בתיקייה "הבנתי" ב-Drive, לכל קורס: "עכשיו.txt" (מה שקורה עכשיו, מתעדכן כל כמה שניות) ו"כל ההרצאות.txt". <b>זה מעלה את התמלולים לחשבון ה-Google שלך</b>, ולכן זה כבוי עד שמפעילים. צריך את Google Drive למחשב (או OneDrive).</p>
+    <p class="cstate" id="cloudState"></p>
+    <div class="row" id="cloudBtns"></div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:15px"><input type="checkbox" id="placeAi"> לפתוח את ה-AI בשליש השמאלי של המסך (ההרצאה בשני השלישים)</label>
+  </div>
   <div class="row"><a href="https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD#ai" target="_blank" rel="noopener" style="margin-inline-end:auto">הסבר מלא במדריך</a><button class="btn quiet" id="connClose" type="button">סגירה</button></div>
 </div></div>
 <div class="modal" id="newCourse" hidden role="dialog" aria-modal="true" aria-labelledby="ncT"><div class="card">
@@ -590,7 +618,7 @@ let courses = [], curCourse = "", libCourse = "", searchSeq = 0;
 const CONN = [
   {id: "claude", name: "Claude", where: "Claude למחשב (Windows)", ask: "שואלים בחלון של Claude למחשב."},
   {id: "chatgpt", name: "ChatGPT", where: "ChatGPT ל-Windows, במצב Codex", ask: "שואלים בחלון של ChatGPT, במצב Codex."},
-  {id: "gemini", name: "Gemini", where: "Gemini CLI (Gemini בחלון פקודות)", ask: "בחלון פקודות כותבים gemini ושואלים שם."},
+  {id: "gemini", name: "Gemini", where: "Antigravity CLI (Gemini בחלון פקודות, agy)", ask: "בדף הקורס: \"פתיחת Gemini בקורס\", ושואלים שם."},
 ];
 let lastConn = "";
 function connInfo() { return (app && app.connect) || {}; }
@@ -605,7 +633,28 @@ function drawConns(info) {
     box.appendChild(card);
   }
 }
-function openConn() { $("#connMsg").textContent = ""; $("#connMsg").className = "cstate"; drawConns(connInfo()); $("#conn").hidden = false; }
+function openConn() { $("#connMsg").textContent = ""; $("#connMsg").className = "cstate"; drawConns(connInfo()); drawCloud(); $("#conn").hidden = false; }
+// "sync to the cloud": each course's "now" file and all its lectures into Google Drive, for ChatGPT/Gemini projects
+async function drawCloud() {
+  let d; try { d = await api("/api/mirror"); } catch (e) { return; }
+  $("#placeAi").checked = d.place_ai !== false;
+  const st = $("#cloudState"), btns = $("#cloudBtns"); btns.replaceChildren();
+  st.className = "cstate" + (d.mirror ? " ok" : "");
+  st.textContent = d.mirror ? "פועל: " + d.mirror + "\\הבנתי" : (d.found.length ? "כבוי." : "כבוי. לא מצאתי במחשב את Google Drive למחשב (google.com/drive/download) או OneDrive.");
+  for (const f of d.found) {
+    if (f.path === d.mirror) continue;
+    const b = el("button", "btn small", "הפעלה ב-" + f.label + " (" + f.path + ")"); b.type = "button";
+    b.onclick = () => setCloud(f.path); btns.appendChild(b);
+  }
+  if (d.mirror) { const b = el("button", "btn ghost small", "כיבוי הסנכרון"); b.type = "button"; b.onclick = () => setCloud(""); btns.appendChild(b); }
+}
+async function setCloud(path) {
+  let r; try { r = await api("/api/cmd", {action: "set_mirror", path}); } catch (e) { r = {ok: false}; }
+  toast(r.ok ? (path ? "הסנכרון לענן פועל. בתיקייה \"הבנתי\" ב-Drive יש עכשיו תיקייה לכל קורס." : "הסנכרון לענן כבוי. הקבצים שכבר ב-Drive נשארו שם.") : (r.error || "לא הצלחתי."));
+  drawCloud();
+  if (view === "course" && courseName) openCourse(courseName);
+}
+$("#placeAi").addEventListener("change", e => api("/api/cmd", {action: "place_ai", on: e.target.checked}));
 async function setConn(c, on) {
   $("#connMsg").className = "cstate"; $("#connMsg").textContent = on ? "מחבר..." : "מנתק...";
   let r; try { r = await api("/api/cmd", {action: on ? "connect" : "disconnect", app: c.id}); } catch (e) { r = {ok: false, error: "האפליקציה לא ענתה."}; }
@@ -620,6 +669,12 @@ function drawConnState(info) {
   if (window.BZMAsk) BZMAsk.setConnected(info);
 }
 document.querySelectorAll("[data-conn-open]").forEach(b => b.addEventListener("click", openConn));
+// the course the AI buttons belong to right now: the course page, a past lecture's course, or the running session
+if (window.BZMAsk) BZMAsk.setCourseFn(() => {
+  if (view === "course" && courseName) return courseName;
+  if (view === "past" && typeof pastFile === "string" && pastFile.includes("/")) return pastFile.split("/")[0];
+  const s = app && app.session; return (s && !s.done && s.course) || "";
+});
 $("#connClose").addEventListener("click", () => { $("#conn").hidden = true; });
 
 function toast(t) { const e = $("#toast"); e.textContent = t; e.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => e.classList.remove("on"), Math.max(2800, t.length * 55)); }
@@ -1080,6 +1135,7 @@ async function openCourse(name) {
   let d; try { d = await api("/api/course?c=" + encodeURIComponent(name)); } catch (e) { d = {none: true}; }
   if (d.none) { $("#cSub").textContent = "הקורס לא נמצא."; return; }
   $("#glossIn").value = d.glossary || "";
+  drawCourseAi(d.ai);
   drawCourseLib();
   drawCourseSuggest();
   try {
@@ -1090,6 +1146,60 @@ async function openCourse(name) {
     $("#cSize").textContent = t.lectures ? (t.lectures + " הרצאות, " + (k < 1 ? "פחות מאלף תווים." : "בערך " + k + " אלף תווים.") +
       (t.chars > 150000 ? " זה ארוך: הכי טוב Gemini, או \"קובץ אחד של כל הקורס\" ולהעלות אותו לצ'אט." : "")) : "עוד אין הרצאות בקורס.";
   } catch (e) {}
+}
+// ---------- the AI of this course: one project per AI, set up once, then asked directly ----------
+const AI_WAYS = {
+  claude: {name: "Claude", ph: "https://claude.ai/project/...", ways: [
+    ["פרויקט ב-Claude למחשב", "ב-Claude למחשב: פרויקט חדש בשם הקורס, ובהוראות הפרויקט להדביק את ההוראות. מאז כל שיחה בפרויקט קוראת רק את הקורס הזה."]]},
+  chatgpt: {name: "ChatGPT", ph: "https://chatgpt.com/g/g-p-.../project", ways: [
+    ["Codex ב-ChatGPT למחשב (הכי מעודכן)", "במצב Codex לפתוח את תיקיית הקורס כפרויקט. בתיקייה כבר יש הוראות (AGENTS.md): אין מה להדביק."],
+    ["פרויקט ב-ChatGPT (גם באתר ובטלפון)", "עם \"סנכרון לענן\": לחבר את Google Drive בפרויקט ולהדביק את ההוראות בהוראות הפרויקט."]]},
+  gemini: {name: "Gemini", ph: "https://gemini.google.com/gem/...", ways: [
+    ["Gemini בחלון פקודות, agy (הכי מעודכן)", "\"פתיחת Gemini בקורס\" פותח אותו בשליש המסך, כבר בתוך הקורס."],
+    ["Gem או Gemini Notebook", "עם \"סנכרון לענן\": ב-Gem לחבר את Google Drive ולהדביק את ההוראות. ב-Gemini Notebook להוסיף את \"כל ההרצאות.txt\" מ-Drive (מתעדכן לבד) - טוב למבחן."]]},
+};
+function drawCourseAi(ai) {
+  const box = $("#cAi"); box.replaceChildren();
+  if (!ai) return;
+  const conn = connInfo();
+  for (const id of ["claude", "chatgpt", "gemini"]) {
+    const w = AI_WAYS[id], card = el("div", "aiw"), t = el("div", "t");
+    const live = !!conn[id], cloud = id !== "claude" && ai.mirror;
+    t.append(el("b", "", w.name), el("span", "st" + (live || cloud ? " on" : ""),
+      live ? (id === "chatgpt" ? "Codex מחובר ✓" : id === "gemini" ? "agy מחובר ✓" : "מחובר ✓") + (cloud ? " · ענן ✓" : "")
+           : cloud ? "דרך הענן ✓" : "לא מחובר"));
+    card.appendChild(t);
+    for (const [h, x] of w.ways) { const p = el("p", "way"); p.append(el("b", "", h)); p.append(el("small", "", x)); card.appendChild(p); }
+    const btns = el("div", "btns");
+    const add = (label, cls, fn) => { const b = el("button", "btn small " + cls, label); b.type = "button"; b.onclick = fn; btns.appendChild(b); };
+    if (id === "gemini") add("פתיחת Gemini בקורס", "", async () => {
+      const r = await api("/api/cmd", {action: "open_course_terminal", course: courseName});
+      toast(!r.ok ? (r.error || "לא הצלחתי.") : r.tool ? "נפתח חלון פקודות בתוך הקורס. אפשר לשאול: \"מה הוא אמר עכשיו?\"" + (conn.gemini ? "" : " (קודם \"חיבור AI\" ← Gemini)")
+        : "נפתח חלון פקודות בתוך הקורס, אבל Antigravity CLI עוד לא מותקן - בחלון כתוב איך מתקינים.");
+    });
+    if (id === "chatgpt") add("העתקת נתיב התיקייה", "ghost", async () => { if (await copyText(ai.folder)) toast("הנתיב הועתק. ב-Codex: פתיחת תיקייה כפרויקט, ולהדביק אותו."); });
+    add("העתקת ההוראות", "ghost", async () => {
+      if (!(await copyText(ai.instructions[id]))) { toast("לא הצלחתי להעתיק."); return; }
+      toast("ההוראות הועתקו. להדביק אותן פעם אחת בהוראות של הפרויקט של הקורס ב-" + w.name + "." +
+        (id !== "claude" && !ai.mirror ? " בשביל פרויקט באתר צריך גם \"סנכרון לענן\" (בחיבור AI)." : ""));
+    });
+    add("פתיחה בשליש", "ghost", () => { if (window.BZMAsk) BZMAsk.openFor(id, ai.links[id] || ""); });
+    if (!live) add("חיבור", "quiet", openConn);
+    if (id !== "claude" && !ai.mirror) add("סנכרון לענן", "quiet", openConn);
+    card.appendChild(btns);
+    const lk = el("div", "link"), inp = el("input"); inp.type = "url"; inp.placeholder = w.ph; inp.value = ai.links[id] || "";
+    inp.setAttribute("aria-label", "הקישור לפרויקט של הקורס ב-" + w.name);
+    const sv = el("button", "btn quiet small", "שמירה"); sv.type = "button";
+    sv.onclick = async () => {
+      const r = await api("/api/cmd", {action: "course_ai_link", course: courseName, app: id, url: inp.value});
+      if (r.ok) { ai.links = r.links; toast(inp.value.trim() ? "נשמר. הכפתור " + w.name + " בקורס הזה פותח עכשיו את הפרויקט שלו." : "הקישור הוסר."); }
+      else toast(r.error || "לא הצלחתי לשמור.");
+    };
+    const lab = el("small", "", "הקישור לפרויקט (לא חובה): הכפתורים של " + w.name + " בקורס הזה יפתחו אותו.");
+    lab.style.color = "var(--muted)"; lab.style.fontSize = "13px";
+    lk.append(inp, sv); card.append(lab, lk);
+    box.appendChild(card);
+  }
 }
 function drawCourseLib() {
   const items = libItems.filter(e => e.course === courseName), list = $("#cLib");

@@ -1,4 +1,6 @@
 // Hevanti (הבנתי) - the "ask the AI" box, shared by the app, the floating window and the player - (c) 2026 Roei Pechter. MIT License, see LICENSE.txt
+// A course may have a project of its own in each AI (its link is saved on the course page): the buttons then open
+// THAT project, on a third of the screen - where the AI already reads the course by itself.
 // Three buttons, the same for every AI: a click copies the question together with what was said in the lecture
 // and opens that AI's site in a new tab - there one pastes (Ctrl+V) and sends. No account or key passes through
 // Hevanti. An AI app that is connected to Hevanti ("חיבור AI" on the home screen) needs no copying at all:
@@ -7,7 +9,7 @@
 (function () {
   const AIS = [
     {id: "chatgpt", name: "ChatGPT", url: "https://chatgpt.com/", app: "ChatGPT למחשב"},
-    {id: "gemini", name: "Gemini", url: "https://gemini.google.com/app", app: "Gemini CLI"},
+    {id: "gemini", name: "Gemini", url: "https://gemini.google.com/app", app: "Gemini (agy)"},
     {id: "claude", name: "Claude", url: "https://claude.ai/new", app: "Claude למחשב"},
   ];
   const KEY = "bzm.ai";
@@ -26,7 +28,18 @@
 .askp .conn{background:var(--accent-soft);color:var(--fg);border-radius:10px;padding:7px 11px;font-size:14px;line-height:1.5;margin:0}
 .askp .conn b{color:var(--accent)}
 `;
-  const AI = {connected: {}, apps: {}};   // apps: the AI apps installed on this computer (from Hevanti)
+  const AI = {connected: {}, apps: {}, courseFn: null};   // apps: the AI apps installed on this computer (from Hevanti)
+  // the project links of the course the page is about now: {claude: "https://claude.ai/project/...", ...}
+  async function courseLinks() {
+    const c = AI.courseFn && AI.courseFn();
+    if (!c) return {};
+    try {
+      const r = await fetch("/api/course?c=" + encodeURIComponent(c), {cache: "no-store", signal: AbortSignal.timeout(3000)});
+      if (!r.ok) return {};
+      const d = await r.json();
+      return (d.ai && d.ai.links) || {};
+    } catch (e) { return {}; }
+  }
   // Ask Hevanti (the local server) to open the installed app - the browser itself cannot start programs
   async function openApp(a) {
     try {
@@ -37,12 +50,18 @@
   }
   function setApps(info) { AI.apps = info || {}; }
   const boxes = [];
-  const aiWins = {};   // the small window opened for each AI - reused, so the conversation there goes on
+  const aiWins = {}, aiUrls = {};   // the small window opened for each AI - reused, so the conversation there goes on
   // Open the AI's site in a window on a third of the screen (not a tab), so the lecture stays in view.
-  // If that window is still open, only bring it forward: navigating it would start a new chat.
-  function openAi(a, from) {
+  // If that window is still open, only bring it forward: navigating it would start a new chat - unless another
+  // course's project is wanted now.
+  function openAi(a, from, url) {
+    url = url || a.url;
     const old = aiWins[a.id];
-    if (old && !old.closed) { try { old.focus(); } catch (e) {} return {w: old, reused: true}; }
+    if (old && !old.closed) {
+      if (aiUrls[a.id] !== url) { try { old.location.href = url; aiUrls[a.id] = url; } catch (e) {} }
+      try { old.focus(); } catch (e) {}
+      return {w: old, reused: aiUrls[a.id] === url && url === a.url};
+    }
     const S = (from || window).screen || window.screen;
     // a third of the screen, full height, at the side: the lecture keeps the other two thirds
     const width = Math.max(420, Math.round((S.availWidth || 1440) / 3)), height = Math.max(400, (S.availHeight || 860) - 8);
@@ -50,10 +69,10 @@
     let w = null;
     // from the main page first; a click inside the floating window may only allow its own window.open
     for (const src of from && from !== window ? [window, from] : [window]) {
-      try { w = src.open(a.url, "hevanti-" + a.id, feats); } catch (e) { w = null; }
+      try { w = src.open(url, "hevanti-" + a.id, feats); } catch (e) { w = null; }
       if (w) break;
     }
-    if (w) { try { w.opener = null; } catch (e) {} aiWins[a.id] = w; }
+    if (w) { try { w.opener = null; } catch (e) {} aiWins[a.id] = w; aiUrls[a.id] = url; }
     return {w, reused: false};
   }
   function getLast() { try { return localStorage.getItem(KEY) || ""; } catch (e) { return ""; } }
@@ -118,10 +137,19 @@
       setLast(a.id); refresh();
       // (not the "noopener" feature: with it window.open always returns null, and a blocked popup looks the same)
       const img = opts.hasImage && opts.hasImage() ? " צריך גם את המסך? \"העתקת " + (opts.imageName || "צילום המסך") + "\" ולהדביק שוב." : "";
-      // the app when it is installed, otherwise the website in a small window
-      if (AI.apps[a.id] && await openApp(a)) {
+      // the course's own project when it has one; else the app when it is installed, otherwise the website
+      const link = (await courseLinks())[a.id] || "";
+      const appFirst = AI.apps[a.id] && (!link || (a.id === "claude" && AI.connected.claude));
+      if (link && !appFirst) {
+        const {w} = openAi(a, opts.win, link);
+        opts.toast(w === null ? "הועתק. לפתוח את הפרויקט של הקורס ב-" + a.name + " ולהדביק (Ctrl+V)."
+          : "נפתח הפרויקט של הקורס ב-" + a.name + " בשליש המסך. השאלה הועתקה (Ctrl+V), או פשוט לשאול שם.");
+        ta.value = "";
+        return;
+      }
+      if (appFirst && await openApp(a)) {
         opts.toast("הועתק ונפתחה האפליקציה של " + a.name + ". להדביק (Ctrl+V) ולשלוח." +
-          (AI.connected[a.id] ? " היא מחוברת להבנתי, אז אפשר גם פשוט לשאול שם." : "") + img);
+          (AI.connected[a.id] ? " היא מחוברת להבנתי, אז אפשר גם פשוט לשאול שם" + (link ? ", בפרויקט של הקורס." : ".") : "") + img);
         ta.value = "";
         return;
       }
@@ -144,5 +172,13 @@
     box.append(head, conn, ta, row, hint);
     return {focus: () => ta.focus(), textarea: ta, refresh};
   }
-  window.BZMAsk = {mount, AIS, copyText, setConnected, setApps, addCss};
+  // open an AI for the course page's "פתיחה בשליש": the course's project link, the connected app, or the site
+  async function openFor(id, link) {
+    const a = AIS.find(x => x.id === id);
+    if (!a) return;
+    if (AI.apps[id] && (!link || (id === "claude" && AI.connected.claude)) && await openApp(a)) return;
+    openAi(a, window, link || a.url);
+  }
+  function setCourseFn(fn) { AI.courseFn = fn; }
+  window.BZMAsk = {mount, AIS, copyText, setConnected, setApps, addCss, openFor, setCourseFn};
 })();

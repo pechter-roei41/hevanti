@@ -1,4 +1,7 @@
-# A tag like v2.0-20261014 (or v2.1) -> a GitHub release with Hevanti.zip (Windows) and Hevanti-Mac.zip attached.
+# A tag like v2.0-20261014 (or v2.1) -> a GitHub release with Hevanti-Setup.exe (Windows installer: no admin, nothing
+# else to install), Hevanti.zip (Windows, the same app as a folder) and Hevanti-Mac.zip attached.
+# Code signing: when the SignPath Foundation approves the project and the SIGNPATH_API_TOKEN secret is set (plus the
+# SIGNPATH_ORGANIZATION_ID variable), Hevanti-Setup.exe is signed by SignPath - then Windows no longer warns.
 # The Windows ZIP has its own Python inside (the official "embeddable" Python from python.org), so students do
 # not install Python. The app checks the latest release to tell students that a newer version is out.
 name: release
@@ -41,3 +44,66 @@ jobs:
           else
             gh release create "$TAG" Hevanti.zip Hevanti-Mac.zip --target "$GITHUB_SHA" --title "Hevanti $TAG" --generate-notes
           fi
+
+  setup:
+    runs-on: windows-latest
+    needs: zip
+    env:
+      PYTHONUTF8: "1"
+      SIGNPATH_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install pillow
+      - name: The folder to install (app + Hevanti's own Python + icon)
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -UseBasicParsing https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip -OutFile embed.zip
+          Invoke-WebRequest -UseBasicParsing https://bootstrap.pypa.io/get-pip.py -OutFile get-pip.py
+          python tools/build_setup_dir.py embed.zip get-pip.py build/app
+      - name: The packages, already inside (no Install step for students)
+        shell: pwsh
+        run: |
+          $py = "build/app/python/python.exe"
+          & $py build/app/python/get-pip.py --no-warn-script-location
+          & $py -m pip install "faster-whisper>=1.1" pyaudiowpatch numpy mss pillow comtypes --no-warn-script-location
+          & $py -c "import faster_whisper, pyaudiowpatch, numpy, mss, PIL, comtypes; print('packages OK')"
+          & $py -m py_compile build/app/System/Program/live_transcribe.py build/app/System/Program/hevanti_mcp.py
+          Remove-Item build/app/python/get-pip.py
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) { choco install innosetup -y --no-progress | Out-Null }
+          $iscc = (Get-Command iscc -ErrorAction SilentlyContinue).Source
+          if (-not $iscc) { $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
+          $ver = (Select-String -Path System/Program/live_transcribe.py -Pattern '^VERSION = "(.+)"').Matches[0].Groups[1].Value
+          & $iscc "/DAppVersion=$ver" "/DSrc=..\build\app" installer\hevanti.iss
+          if (-not (Test-Path dist/Hevanti-Setup.exe)) { throw "no setup" }
+      - uses: actions/upload-artifact@v4
+        id: unsigned
+        with:
+          name: Hevanti-Setup-unsigned
+          path: dist/Hevanti-Setup.exe
+      - name: Sign (SignPath Foundation)
+        id: sign
+        if: ${{ env.SIGNPATH_TOKEN != '' }}
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: hevanti
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: setup
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: dist-signed
+      - name: Attach to the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          $f = if (Test-Path dist-signed/Hevanti-Setup.exe) { "dist-signed/Hevanti-Setup.exe" } else { "dist/Hevanti-Setup.exe" }
+          gh release upload "$env:TAG" $f --clobber

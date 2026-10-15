@@ -12,14 +12,16 @@ Hevanti writes down everything said in the lecture, in Hebrew or English, and sa
 - **Reading the slides (OCR):** every saved slide is read with [Tesseract](https://github.com/tesseract-ocr/tesseract) (Hebrew and English, offline). Search covers the slides too, their text goes into exam prep and into what is copied for an AI, and a connected AI gets it with the picture.
 - **Exam prep:** a practice exam, a summary, flashcards and a formula sheet from all the lectures of a course (with the slides' text).
 - **Recommended layout:** the lecture on two thirds of the screen, the AI on one third. Hevanti greys out the AI's window and its own windows in its screenshots, so an answer being written is never saved as a "new slide" and your chat stays out of the pictures.
-- **Connect AI:** one button connects Claude for desktop, ChatGPT (Codex) or Gemini CLI to Hevanti through a small MCP server. Then you ask them directly in their own window, for example "What is he saying now?", and they read the last minutes and the slide themselves. The AI sees every course, including courses with no lectures yet.
+- **Connect AI:** one button connects Claude for desktop, ChatGPT (Codex) or Gemini (Antigravity CLI, `agy`) to Hevanti through a small MCP server. Then you ask them directly in their own window, for example "What is he saying now?", and they read the last minutes and the slide themselves. The AI sees every course, including courses with no lectures yet.
+- **The AI of each course:** one project per course in each AI, set up once on the course page. Every connector tool takes a `course`, so the AI in a course's project reads only that course. Each course folder holds `AGENTS.md` / `GEMINI.md` / `CLAUDE.md`, so Codex or `agy` opened in the folder knows the course by itself; Claude projects get their instructions with one "copy" click. A saved project link makes the course's AI buttons open that project, and the AI's window moves to the left third of the screen, beside the lecture.
+- **Sync to the cloud (optional, off by default):** for AIs that cannot read your computer (a ChatGPT project, a Gem, Gemini Notebook), each course's "now" file (every ~12 seconds) and all its transcripts are copied into your own Google Drive or OneDrive folder, where those AIs read them through their Drive connection.
 - **Floating window:** a small window that stays on top of the lecture: a question box at the top, then what is being said now, then the latest slide.
 - **Without a connection:** ChatGPT, Gemini or Claude with one click. The question is copied together with the last five minutes, and the AI's desktop app opens if it is installed (found in the Windows Start menu); otherwise its website opens on a third of the screen. Another click brings the same window back, so the conversation goes on.
 - **How to use:** a one-minute animated walkthrough inside the app (the "איך משתמשים?" button), drawn with the app's own parts rather than a video file.
 
 ## Download and install
 
-**Windows:** download `Hevanti.zip` from the [latest release](https://github.com/pechter-roei41/hevanti/releases/latest), extract it, double-click `Install`, then `Hevanti`. No Python to install: the ZIP comes with the official embeddable Python, and `Install` only adds the packages (and, if you agree, Tesseract for reading slides).
+**Windows:** download `Hevanti-Setup.exe` from the [latest release](https://github.com/pechter-roei41/hevanti/releases/latest) and run it. It installs for your user only (no administrator), with its own Python and every package inside; your lectures are kept in `Documents\הבנתי`. The same app as a folder: `Hevanti.zip` - extract it, double-click `Install`, then `Hevanti`.
 
 **Mac (beta, not yet tested on a real Mac):** download `Hevanti-Mac.zip`, right-click `Install.command` > Open (once), then open `Hevanti.command`. `Install.command` gets its own Python with [uv](https://docs.astral.sh/uv/) (no admin password). A Mac cannot record its own sound without a virtual audio device, so Hevanti listens through [BlackHole](https://existential.audio/blackhole/) (free); the one-time setup is in `README.txt`.
 
@@ -29,6 +31,8 @@ Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsx
 
 - Transcripts and screenshots stay on your computer. The app only listens on `127.0.0.1`.
 - There is no Hevanti server. The connector (`hevanti_mcp.py`) only reads files from the "ההרצאות שלי" (My Lectures) folder, and only when your AI asks for them. What your AI reads is sent to its provider like any other conversation with it.
+- "Sync to the cloud" is off until you turn it on; then your transcripts are copied to your own Google Drive / OneDrive.
+- Lectures belong to their lecturers and institutions. Some institutions forbid recording online lectures: see [what is allowed](docs/what-is-allowed.md) (Hebrew). Full policy: [CODE_SIGNING.md](CODE_SIGNING.md#privacy).
 
 ## How it is built
 
@@ -43,10 +47,13 @@ Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsx
 | `Install.bat`, `System/get_python.ps1`, `System/install_ocr.*` | Windows setup: the packages into Hevanti's own Python, and Tesseract with the Hebrew and English language files |
 | `Install.command`, `Hevanti.command` | Mac setup and start |
 | `tools/build_zip.py` | Builds `Hevanti.zip` (with the embeddable Python) and `Hevanti-Mac.zip` |
+| `installer/hevanti.iss`, `tools/build_setup_dir.py` | `Hevanti-Setup.exe` (Inno Setup): per-user, its own Python with the packages inside |
+| `tools/test_*.py` | Tests run on every push on Windows and Linux (`.github/workflows/tests.yml`); the Mac is tested on a real GitHub Mac (`mac-test.yml`) |
+| `DECISIONS.md` | What was decided and why (Hebrew) |
 
 New version: push a tag such as `v2.0-20261014` (same number, new build) or `v2.1`. GitHub Actions builds both ZIPs and attaches them to a release, and the app tells students that an update is available.
 
-Code signing: the scripts are not signed yet, so Windows shows "Windows protected your PC" once. The plan is a signed installer through the free [SignPath Foundation](https://signpath.org/) program for open-source projects.
+Code signing: `Hevanti-Setup.exe` is set up to be signed through the free [SignPath Foundation](https://signpath.org/) program for open-source projects ([policy](CODE_SIGNING.md)); until the project is approved Windows shows "Windows protected your PC" once.
 
 ## Contributing and issues
 

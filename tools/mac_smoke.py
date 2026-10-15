@@ -154,10 +154,27 @@ else:
         f"{int(time.time() - t0)}s: {text[:250] or info}")
     if text:
         words = ("מומנט", "ניוטון", "גלגלת") if voice else ("inertia", "Newton")
+        # the first words ("שלום לכולם") arrive before the rest of the sentence: wait for the course words
+        t1 = time.time()
+        while time.time() - t1 < 90 and not any(w.lower() in text.lower() for w in words):
+            time.sleep(3)
+            try:
+                st = get("/api/live?since=0")
+                text = " ".join(i.get("x", "") for i in st.get("items", []) if i.get("x")) or text
+            except Exception:
+                pass
         hit = [w for w in words if w.lower() in text.lower()]
         rec("live: course words heard right", len(hit) >= 2, hit, main=False)
-        out = mcp([("now", {})])
-        rec("connector: 'now' sees the live lecture", any(w.lower() in out.get("now", "").lower() for w in words),
+        out, seen = {}, False
+        for _ in range(10):   # now_watching.txt is rewritten every few seconds
+            out = mcp([("now", {})])
+            seen = any(w.lower() in out.get("now", "").lower() for w in hit or words)
+            if seen:
+                break
+            time.sleep(3)
+        rec("connector: 'now' sees the live lecture", seen, (out.get("now") or str(out))[:250])
+        out = mcp([("now", {"course": COURSE})])
+        rec("connector: 'now' in the course's project, no warning", "שימו לב" not in out.get("now", ""),
             (out.get("now") or str(out))[:250])
     cmd(action="stop")
     time.sleep(5)
