@@ -48,6 +48,7 @@ check("new course", name == C and os.path.isdir(cd))
 for n in L.AI_FILE_NAMES:
     p = os.path.join(cd, n)
     check(f"{n} written", os.path.isfile(p) and f'course="{C}"' in read(p) and read(p).startswith(L.AI_FILE_MARK))
+    check(f"{n}: the three ready-made requests", all(x in read(p) for x in ("מבחן דמה", "סכם הרצאה", "מצא את הרגע", "`moment`")))
 
 # the student's own AGENTS.md is never replaced; Hevanti's own one is updated
 unhide(os.path.join(cd, "AGENTS.md"))
@@ -108,7 +109,8 @@ L.MIRROR.lectures_changed(C)
 now_cloud = os.path.join(drive, "הבנתי", C, "עכשיו.txt")
 all_cloud = os.path.join(drive, "הבנתי", C, "כל ההרצאות.txt")
 for _ in range(80):
-    if os.path.isfile(now_cloud) and os.path.isfile(all_cloud):
+    if os.path.isfile(now_cloud) and os.path.isfile(all_cloud) and "מומנט סביב A" in read(now_cloud) \
+            and "מומנט סביב A" in read(all_cloud):    # both copies written, with the last line (an earlier copy may exist)
         break
     time.sleep(0.5)
 check("cloud: now file", os.path.isfile(now_cloud) and "מומנט סביב A" in read(now_cloud))

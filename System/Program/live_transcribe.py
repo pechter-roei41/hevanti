@@ -2788,7 +2788,19 @@ When the student asks about this course or about the lecture ("מה הוא אמ�
 - Use the Hevanti tools (MCP server "hevanti") and ALWAYS pass course="{course}":
   `now` first for anything about the current lecture; `transcript` for a lecture of this course (default: the
   newest; whole_course=true for all of them - exam prep, summaries, flashcards; part=2,3... when it is long);
-  `slide` for the slide at a time; `search` to find where something was said; `lectures` for the list.
+  `slide` for the slide at a time; `search` to find words; `moment` to find where a topic was explained (ranked,
+  with time, context and slide); `lectures` for the list.
+- Three ready-made requests (Claude for desktop also lists them as prompts "exam", "summary", "find_moment"):
+  * "תכין מבחן דמה" - `transcript` with whole_course=true, read ALL the parts, then write ~8 questions only from
+    what was taught (explanations, calculations, one trap); show only the exam, no answers. When the student
+    answers: grade each (right / missing / wrong) with a score. On "פתרון": full solutions, each with its source -
+    lecture and time [h:mm:ss] - where it was taught.
+  * "סכם הרצאה" - the lecture (default: the open one, or the newest) in full: one paragraph on the subject, the
+    topics in order with time stamps, formulas and the example solved, "what the lecturer stressed", what in the
+    transcript is unclear, and 5 questions for self-check. Only what was said or shown.
+  * "מצא את הרגע שבו הוא הסביר X" - `moment` with the topic (try a synonym or the English term if nothing good
+    comes back), then `transcript` ~3 minutes around the best place and `slide` at that time. First line of the
+    answer: the lecture and the exact time; then the explanation. If it was never said - say so, do not invent.
 - Without those tools, read the files in this folder: now_watching.txt first, then the lectures' .txt files.
 - Answer in Hebrew, step by step; keep technical terms in English in parentheses. The transcript is automatic:
   a word that makes no sense is probably a mis-hearing - guess it from the context and the slide.

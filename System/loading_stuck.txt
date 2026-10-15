@@ -1,0 +1,1 @@
+--- 2026-10-15 18:59:24.282611 (גרסה 2.1) loading the model took over 3 minutes - where it was: ---

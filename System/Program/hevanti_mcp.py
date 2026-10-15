@@ -21,6 +21,9 @@ SLIDES = "שקופיות"
 GLOSSARY = "מילון מונחים.txt"
 OCR_NAME = ".ocr.json"     # the text Hevanti read from each slide (when Tesseract is installed)
 MAX_TEXT = 90_000          # characters of transcript in one answer
+MOMENT_WINDOW = 75         # seconds: the words of a topic must come within this stretch
+MOMENT_APART = 150         # seconds between two places of the same lecture
+MOMENT_TOP = 5             # places returned by `moment`
 PROTOCOLS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
 
 LIVE_LINE = re.compile(r"\[(\d\d:\d\d:\d\d) \| \+(\d+):(\d\d):(\d\d)\] (.*)$")
@@ -43,7 +46,68 @@ INSTRUCTIONS = (
     "COURSES: every lecture belongs to a course (a folder). When the conversation is about one course - e.g. a "
     "project whose instructions name a Hevanti course, or a folder that is a course folder - pass that course's "
     "name as `course` to every tool, so only its lectures are used. `transcript` with `whole_course: true` "
-    "returns all the lectures of a course (in parts) for exam preparation, summaries and flashcards.")
+    "returns all the lectures of a course (in parts) for exam preparation, summaries and flashcards. "
+    "READY-MADE REQUESTS (also offered as prompts): a mock exam of a course ('תכין מבחן דמה'), a summary of a "
+    "lecture ('סכם הרצאה'), and 'where did he explain X' ('מצא את הרגע שבו הוא הסביר ...') - for the last one call "
+    "`moment` first: it returns the best places with time, the lines around them and the slide of that time.")
+
+# The three ready-made requests. Each is a short recipe for the AI, shown to the student as a prompt (a "/" command
+# in Claude for desktop) and repeated in the course's AGENTS.md / CLAUDE.md / GEMINI.md for AIs without prompts.
+RECIPES = {
+    "exam": (
+        "Make a MOCK EXAM for {course}.\n"
+        "1. `lectures` (course={course!r}) for the lectures and the glossary. Then `transcript` with whole_course=true "
+        "and read ALL the parts (part=1, 2, ... until the last). Questions may only be about what was taught in "
+        "these lectures and slides - never outside material.\n"
+        "2. Write {count} questions like a university exam of this course: concept explanations, calculation / "
+        "problem-solving, and one 'trap' about a common mistake. Cover the whole course, not only the last "
+        "lecture; give each question a score (total 100).\n"
+        "3. Show ONLY the exam. Do not show answers. Tell the student: 'כשתסיים - שלח לי את התשובות ואבדוק, "
+        "או כתוב \"פתרון\" ואתן פתרון מלא'.\n"
+        "4. When the student sends answers: grade every question - what is right, what is missing, what is wrong - "
+        "and give the score. On 'פתרון': a full solution of each question, and for each its SOURCE: lecture name "
+        "and time [h:mm:ss] (and the slide) where it was taught, so the student can go back to it.\n"
+        "Answer in Hebrew, technical terms in English in parentheses."),
+    "summary": (
+        "SUMMARIZE a lecture of {course}: {lecture}.\n"
+        "1. `transcript` with course={course!r}{lecture_arg} (default: the lecture open now, or the newest). If it "
+        "is long, read all of it with from_min/to_min. Use `slide` for the important slides and boards.\n"
+        "2. The summary, in Hebrew, technical terms in English in parentheses:\n"
+        "   - ONE paragraph: what the lecture was about.\n"
+        "   - The topics in the order they were taught; for each: the idea, the definitions, the formulas "
+        "(written clearly), and the example the lecturer solved. Put the time [h:mm:ss] next to each topic.\n"
+        "   - 'מה המרצה הדגיש': everything he stressed or hinted may be in the exam ('שימו לב', 'חשוב', 'במבחן').\n"
+        "   - 'מה כדאי לבדוק': places where the automatic transcript is unclear or probably mis-heard.\n"
+        "   - 5 questions to check that the student understood.\n"
+        "Only what was said or shown - do not add material."),
+    "find_moment": (
+        "FIND THE MOMENT in {course} where the lecturer explained: {topic}.\n"
+        "1. `moment` with query={topic!r}, course={course!r}. If nothing good comes back, try other wording - "
+        "a synonym, the English term, a shorter phrase (the lecturer may use other words, and the transcript "
+        "may have mis-heard the term).\n"
+        "2. Take the best place and call `transcript` for ~3 minutes around it (from_min/to_min), and `slide` at "
+        "that time.\n"
+        "3. Answer in Hebrew: first line = the lecture and the exact time ('בהרצאה X, בדקה 23:40'), so the "
+        "student can jump to it; then what he explained, in clear steps; then what is on the slide. If there are "
+        "other places where he came back to it, list them with their times.\n"
+        "4. If it was not said in any lecture, say so plainly - do not make up an explanation."),
+}
+
+PROMPTS = [
+    {"name": "exam", "title": "מבחן דמה",
+     "description": "מבחן דמה מכל התמלולים והשקופיות של הקורס, עם בדיקה ופתרון עם מקורות.",
+     "arguments": [{"name": "course", "description": "שם הקורס", "required": False},
+                   {"name": "count", "description": "כמה שאלות (ברירת מחדל 8)", "required": False}]},
+    {"name": "summary", "title": "סיכום הרצאה",
+     "description": "סיכום מסודר של הרצאה: נושאים, נוסחאות, מה המרצה הדגיש ושאלות לבדיקה עצמית.",
+     "arguments": [{"name": "course", "description": "שם הקורס", "required": False},
+                   {"name": "lecture", "description": "איזו הרצאה (ברירת מחדל: האחרונה / שרצה עכשיו)",
+                    "required": False}]},
+    {"name": "find_moment", "title": "מצא את הרגע",
+     "description": "מוצא באיזו הרצאה ובאיזו דקה המרצה הסביר נושא, ומסביר אותו מחדש.",
+     "arguments": [{"name": "topic", "description": "הנושא או המושג", "required": True},
+                   {"name": "course", "description": "שם הקורס", "required": False}]},
+]
 
 TOOLS = [
     {"name": "now",
@@ -78,6 +142,15 @@ TOOLS = [
                     "Returns lecture, time and line.",
      "inputSchema": {"type": "object", "properties": {
          "query": {"type": "string"}, "course": {"type": "string"}},
+         "required": ["query"], "additionalProperties": False}},
+    {"name": "moment",
+     "description": "Find the MOMENT where a topic was explained: the best places in the lectures (or one course / "
+                    "one lecture) for a few words, ranked, each with the lecture, the time, the lines said around "
+                    "it and the slide of that time. Better than `search` for 'where did he explain X'.",
+     "inputSchema": {"type": "object", "properties": {
+         "query": {"type": "string", "description": "the topic in a few words, e.g. 'מומנט התמד של גליל'"},
+         "course": {"type": "string", "description": "only lectures of this course"},
+         "lecture": {"type": "string", "description": "only this lecture ('<course>/<lecture>' or part of its name)"}},
          "required": ["query"], "additionalProperties": False}},
     {"name": "lectures",
      "description": "The courses and their lectures (newest first), and each course's glossary of terms "
@@ -455,6 +528,70 @@ class Server:
                 break
         return [text("\n".join(hits) if hits else "לא נמצא.")]
 
+    def tool_moment(self, args):
+        words = [w for w in re.split(r"\s+", str(args.get("query") or "").lower().replace('"', " ").strip()) if w]
+        if not words:
+            return [text("צריך נושא לחפש, בכמה מילים.")]
+        course, err = self._course(args)
+        if err:
+            return [text(err)]
+        if args.get("lecture"):
+            one = self.lib.find(args.get("lecture"), course)
+            items = [one] if one else []
+        else:
+            items = [it for it in self.lib.lectures() if not course or it[0] == course]
+        need = max(1, -(-len(words) * 6 // 10))   # at least 60% of the words (rounded up) in one stretch
+        phrase = " ".join(words)
+        found = []     # (score, mtime, course, lecture, dir, start, lines)
+        for c, n, d, path, mt in items:
+            lines = read_lines(path)
+            bodies = []
+            for t, x in lines:
+                m = SHOT.match(x)
+                bodies.append((ocr_of(slide_path(d, self.lib.root, m.group(1))) if m else x).lower())
+            picked, j = [], 0
+            cands = []
+            for i, (t, _) in enumerate(lines):
+                if not any(w in bodies[i] for w in words):
+                    continue
+                j = max(j, i)
+                while j < len(lines) and lines[j][0] < t + MOMENT_WINDOW:
+                    j += 1
+                blob = " ".join(bodies[i:j])
+                hit = sum(1 for w in words if w in blob)
+                if hit < need:
+                    continue
+                score = hit * 10 + (6 if phrase in blob else 0) + min(5, sum(blob.count(w) for w in words) - hit)
+                cands.append((score, t))
+            for score, t in sorted(cands, key=lambda e: (-e[0], e[1])):   # best first, not two close together
+                if all(abs(t - p) >= MOMENT_APART for _, p in picked):
+                    picked.append((score, t))
+                if len(picked) >= 3:
+                    break
+            found += [(s, mt, c, n, d, t, lines) for s, t in picked]
+        if not found:
+            return [text("לא מצאתי בשום הרצאה" + (f" של הקורס \"{course}\"" if course else "") +
+                         ". כדאי לנסות מילה אחרת (מילה נרדפת, המונח באנגלית, ניסוח קצר יותר) - "
+                         "ייתכן שהמרצה השתמש במילים אחרות או שהתמלול שמע את המונח לא נכון.")]
+        found.sort(key=lambda e: (-e[0], -e[1]))
+        out = [f"מצאתי {len(found[:MOMENT_TOP])} מקומות, הראשון הכי מתאים. להרחבה: `transcript` עם lecture ו-from_min/to_min, "
+               "`slide` עם at."]
+        for k, (score, mt, c, n, d, t, lines) in enumerate(found[:MOMENT_TOP], 1):
+            rows = rows_of(self.lib, d, lines, t - 20, t + MOMENT_WINDOW, ocr_max=200)
+            rows = [r if len(r) <= 320 else r[:320] + "..." for r in rows][:14]
+            shot = None
+            for st, x in lines:
+                m = SHOT.match(x)
+                if m and st <= t + 5:
+                    shot = (st, m.group(1))
+            block = [f"--- {k}. {c}/{n} בזמן {hms(t)} ---"] + rows
+            if shot and t - shot[0] <= 900:
+                words_on = ocr_of(slide_path(d, self.lib.root, shot[1]))
+                block.append(f"[השקופית באותו זמן: {shot[1]} מ-{hms(shot[0])}" +
+                             (f" - כתוב עליה: {words_on.replace(chr(10), ' | ')[:200]}" if words_on else "") + "]")
+            out.append("\n".join(block))
+        return [text("\n\n".join(out))]
+
     def tool_lectures(self, args):
         course, err = self._course(args)
         if err:
@@ -483,19 +620,45 @@ class Server:
                 out.append("  מונחים: " + ", ".join(words[:120]))
         return [text("\n".join(out))]
 
+    # --- ready-made requests (MCP prompts) ---
+    def prompt(self, params):
+        name, a = params.get("name"), params.get("arguments") or {}
+        if name not in RECIPES:
+            raise KeyError("unknown prompt")
+        course, _ = self._course({"course": a.get("course")})
+        label = f"\"{course}\"" if course else "the course this conversation is about (if it is not clear, ask the student; `lectures` lists the courses)"
+        cname = course or ""
+        try:
+            count = max(3, min(30, int(a.get("count") or 8)))
+        except (TypeError, ValueError):
+            count = 8
+        lecture = str(a.get("lecture") or "").strip()
+        fill = {"course": cname or "<the course>", "count": count, "topic": str(a.get("topic") or "").strip() or "<the topic>",
+                "lecture": lecture or "the lecture open now, or the newest",
+                "lecture_arg": f", lecture={lecture!r}" if lecture else ""}
+        body = RECIPES[name].format(**fill)
+        if not course:
+            body = f"(Course: {label}.)\n" + body
+        return {"description": next(p["title"] for p in PROMPTS if p["name"] == name),
+                "messages": [{"role": "user", "content": text(body)}]}
+
     # --- the protocol ---
     def handle(self, msg):
         method, mid = msg.get("method"), msg.get("id")
         if method == "initialize":
             want = (msg.get("params") or {}).get("protocolVersion")
             return {"protocolVersion": want if want in PROTOCOLS else PROTOCOLS[1],
-                    "capabilities": {"tools": {"listChanged": False}},
+                    "capabilities": {"tools": {"listChanged": False}, "prompts": {"listChanged": False}},
                     "serverInfo": {"name": "hevanti", "title": "הבנתי", "version": VERSION},
                     "instructions": INSTRUCTIONS}
         if method == "ping":
             return {}
         if method == "tools/list":
             return {"tools": TOOLS}
+        if method == "prompts/list":
+            return {"prompts": PROMPTS}
+        if method == "prompts/get":
+            return self.prompt((msg.get("params") or {}))
         if method == "tools/call":
             p = msg.get("params") or {}
             fn = getattr(self, "tool_" + str(p.get("name")), None)
