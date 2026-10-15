@@ -37,7 +37,7 @@ except Exception:  # lets "uninstall" run even if the install never finished
     np = None
 
 VERSION = "2.0"
-VERSION_DATE = "14.10.2026"  # same version number, newer build: the date tells them apart
+VERSION_DATE = "15.10.2026"
 PRODUCT = "הבנתי"
 GUIDE_URL = "https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD"
 
@@ -1566,7 +1566,7 @@ class YtClock:
                 self.last_pos = pos
             self.visible = bool(d.get("visible", True))
             self.full = bool(d.get("full"))
-            self.region = screen_rect(d.get("view")) if not self.full else None
+            self.region = d.get("view") if not self.full else None   # (turned into screen pixels when photographing)
             try:
                 self.duration = float(d.get("duration") or self.duration or 0)
             except (TypeError, ValueError):
@@ -1610,12 +1610,73 @@ class YtClock:
                 return None
             if self.full:
                 return "screen"
-            return self.region
+            view = self.region
+        return screen_rect(view)
 
 
-def screen_rect(v):
-    """The page's report about where the player is -> a rectangle on the screen in physical pixels.
-    (The browser speaks in CSS pixels from the window's corner; the screenshot in real pixels from the screen's.)"""
+PAGE_TITLE = "הבנתי · האפליקציה"   # app.html's <title>: the browser window that shows it is named after it
+
+
+def _page_windows():
+    """Windows: the browser windows showing Hevanti's page, as (left, top, right, bottom) in screen pixels."""
+    import ctypes
+    from ctypes import wintypes
+    user32, dwm = ctypes.WinDLL("user32"), ctypes.WinDLL("dwmapi")
+    HWND = wintypes.HWND
+    user32.GetWindowTextW.argtypes = [HWND, wintypes.LPWSTR, ctypes.c_int]
+    user32.IsWindowVisible.argtypes = user32.IsIconic.argtypes = [HWND]
+    dwm.DwmGetWindowAttribute.argtypes = [HWND, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD]
+    out = []
+
+    def each(hwnd, _):
+        try:
+            if user32.IsWindowVisible(hwnd) and not user32.IsIconic(hwnd):
+                buf = ctypes.create_unicode_buffer(300)
+                user32.GetWindowTextW(hwnd, buf, 300)
+                if buf.value.startswith(PAGE_TITLE):
+                    rc = wintypes.RECT()   # DWMWA_EXTENDED_FRAME_BOUNDS: always real pixels, on any monitor
+                    if dwm.DwmGetWindowAttribute(hwnd, 9, ctypes.byref(rc), ctypes.sizeof(rc)) == 0:
+                        out.append((rc.left, rc.top, rc.right, rc.bottom))
+        except Exception:
+            pass
+        return True
+
+    user32.EnumWindows(ctypes.WINFUNCTYPE(wintypes.BOOL, HWND, wintypes.LPARAM)(each), 0)
+    return out
+
+
+def rect_in_window(v, win):
+    """The player's rectangle from the window's real place on the screen. The page is at the bottom of the window,
+    centred across it; inside it, a CSS pixel is dpr real pixels. (Correct on any monitor and at any scaling -
+    unlike window.screenX, which Windows reports in a mixed scale when the monitors have different scaling.)"""
+    l, t, r, b = win
+    iw, ih, dpr = float(v["iw"]), float(v["ih"]), min(4.0, max(0.5, float(v.get("dpr") or 1)))
+    page_l, page_t = l + max(0.0, (r - l - iw * dpr) / 2), b - ih * dpr
+    x, y, w, h = float(v["x"]), float(v["y"]), float(v["w"]), float(v["h"])
+    return {"left": int(round(page_l + x * dpr)), "top": int(round(page_t + y * dpr)),
+            "width": int(round(w * dpr)), "height": int(round(h * dpr))}
+
+
+def pick_page_window(v, wins):
+    """Of the windows named like Hevanti's page, the one whose real size fits the page's report."""
+    try:
+        ow, oh = float(v["ow"]), float(v["oh"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    best, err = None, 0.12
+    for win in wins:
+        w, h = win[2] - win[0], win[3] - win[1]
+        if w <= 0 or h <= 0 or ow <= 0 or oh <= 0:
+            continue
+        e = abs((w / h) / (ow / oh) - 1)   # the same shape (the scale of the monitor is unknown here)
+        if e < err:
+            best, err = win, e
+    return best
+
+
+def screen_rect(v, wins=None):
+    """The page's report about where the player is -> a rectangle on the screen, in the screenshot's coordinates.
+    Windows: from the browser window's real place (mixed-scale monitors); Mac: in points, as the screenshot is."""
     if not isinstance(v, dict):
         return None
     try:
@@ -1625,11 +1686,21 @@ def screen_rect(v):
         dpr = min(4.0, max(0.5, float(v.get("dpr") or 1)))
     except (KeyError, TypeError, ValueError):
         return None
+    if w < 160 or h < 90:
+        return None
+    if wins is None and os.name == "nt":
+        try:
+            wins = _page_windows()
+        except Exception:
+            wins = []
+    win = pick_page_window(v, wins or [])
+    if win is not None:
+        return rect_in_window(v, win)
+    if IS_MAC:
+        dpr = 1.0   # the Mac's screen coordinates are points, like window.screenX
     border = max(0.0, (ow - iw) / 2)
     top_bar = max(0.0, oh - ih - border)
     left, top = (sx + border + x) * dpr, (sy + top_bar + y) * dpr
-    if w < 160 or h < 90:
-        return None
     return {"left": int(round(left)), "top": int(round(top)), "width": int(round(w * dpr)), "height": int(round(h * dpr))}
 
 
