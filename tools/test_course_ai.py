@@ -25,6 +25,15 @@ def check(name, ok, detail=""):
     print(("PASS " if ok else "FAIL ") + name + ("" if ok else ": " + str(detail)[:500]))
     if not ok:
         fails.append(name)
+        if os.environ.get("GITHUB_ACTIONS"):   # shown on the run's page (annotations)
+            print(f"::error title={name}::" + str(detail)[:300].replace("\n", " | "))
+
+
+def unhide(p):
+    """Windows cannot open a hidden file for writing (Hevanti hides the AI files)."""
+    if os.name == "nt" and os.path.exists(p):
+        import ctypes
+        ctypes.windll.kernel32.SetFileAttributesW(str(p), 0x80)
 
 
 def read(p):
@@ -41,10 +50,12 @@ for n in L.AI_FILE_NAMES:
     check(f"{n} written", os.path.isfile(p) and f'course="{C}"' in read(p) and read(p).startswith(L.AI_FILE_MARK))
 
 # the student's own AGENTS.md is never replaced; Hevanti's own one is updated
+unhide(os.path.join(cd, "AGENTS.md"))
 with open(os.path.join(cd, "AGENTS.md"), "w", encoding="utf-8") as f:
     f.write("my own rules\n")
 L.write_course_ai_files(C)
 check("student's own AGENTS.md kept", read(os.path.join(cd, "AGENTS.md")) == "my own rules\n")
+unhide(os.path.join(cd, "GEMINI.md"))
 with open(os.path.join(cd, "GEMINI.md"), "w", encoding="utf-8") as f:
     f.write(L.AI_FILE_MARK + "\nold\n")
 L.write_course_ai_files(C)

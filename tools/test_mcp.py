@@ -15,6 +15,8 @@ def check(name, ok, detail=""):
     print(("PASS " if ok else "FAIL ") + name + ("" if ok else ": " + str(detail)[:600]))
     if not ok:
         fails.append(name)
+        if os.environ.get("GITHUB_ACTIONS"):   # shown on the run's page (annotations)
+            print(f"::error title={name}::" + str(detail)[:300].replace("\n", " | "))
 
 
 def write(path, body):
