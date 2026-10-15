@@ -169,6 +169,9 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .ctabs button[aria-selected="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .ctabs button[aria-selected="true"] b{color:var(--accent)}
 .aihint{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between;background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:12px;padding:10px 14px;margin:0 0 14px}
+.pano{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.pano summary{cursor:pointer}
+.pano ol{margin:6px 0;padding-inline-start:22px}
 .aitabs{display:flex;gap:6px;margin:12px 0;border-bottom:1.5px solid var(--line)}
 .aitab{border:0;background:none;padding:8px 18px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1.5px}
 .aitab.on{color:var(--accent);border-bottom-color:var(--accent)}
@@ -421,6 +424,17 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
         <div class="seg" role="group" aria-label="שפת ההרצאה"><button type="button" data-lang="he" aria-pressed="true">עברית</button><button type="button" data-lang="en" aria-pressed="false">אנגלית</button></div>
         <button class="btn" id="recGo" type="button" disabled>פתיחה בנגן</button>
       </div>
+      <details class="pano">
+        <summary><b>הקלטה מפנופטו (Panopto)</b> <span class="sub">· הקלטות של הקורס במודל</span></summary>
+        <p class="sub">הקלטות בפנופטו דורשות התחברות, אז הבנתי לוקחת אותן דרך הדפדפן שבו כבר התחברת. מכינים פעם אחת סימנייה:</p>
+        <ol class="sub">
+          <li>גוררים את הכפתור הירוק לשורת הסימניות של הדפדפן (אם היא מוסתרת: Ctrl+Shift+B).</li>
+          <li>פותחים את ההקלטה בפנופטו. אם היא בתוך מודל: לפתוח אותה בפנופטו עצמו (הכפתור של פנופטו בנגן, או "פתיחה בחלון חדש").</li>
+          <li>לוחצים על הסימנייה. הבנתי נפתחת ושואלת באיזו שפה ההרצאה, ומתחילה להוריד ולתמלל.</li>
+        </ol>
+        <p class="row"><a class="btn small" id="panoLink" href="#" draggable="true">הבנתי ← פנופטו</a><span class="sub">לגרור לשורת הסימניות, לא ללחוץ כאן</span></p>
+        <p class="sub" style="margin:0">רק לשימוש אישי שלך, לפי הכללים של המוסד. לא להפיץ את ההקלטות.</p>
+      </details>
     </div>
 
     <div class="card" id="startCard" hidden>
@@ -758,6 +772,12 @@ function route() {
   if (raw.startsWith("t=")) { if (view !== "past") backTo = view === "course" && courseName ? "c=" + encodeURIComponent(courseName) : "";
     $("#pastBack").textContent = backTo ? "→ חזרה לקורס" : "→ למסך הבית"; const [f, at] = raw.slice(2).split("&at="); openPast(decodeURIComponent(f), at != null ? +at : null); return; }
   if (raw.startsWith("c=")) { openCourse(decodeURIComponent(raw.slice(2))); return; }
+  if (raw.startsWith("rec=")) {   // a recording sent from another tab (the Panopto bookmark): offer it, then home
+    const q = new URLSearchParams(raw), src = q.get("rec") || "", name = q.get("name") || "";
+    history.replaceState(null, "", location.pathname);
+    if (/^https:\/\//i.test(src)) api("/api/cmd", {action: "offer", source: src, name});   // the regular poll shows the question
+    show("home"); loadLib(true); return;
+  }
   show("home");
   if (h === "rec") openRec();
   loadLib(true);
@@ -847,11 +867,29 @@ $("#askOk").addEventListener("click", () => answer($("#askIn").value));
 $("#askNo").addEventListener("click", () => answer(""));
 $("#askIn").addEventListener("keydown", e => { if (e.key === "Enter") answer($("#askIn").value); });
 document.querySelectorAll("[data-offer]").forEach(b => b.addEventListener("click", async () => {
-  const lang = b.dataset.offer, src = app && app.pending ? app.pending.source : "";
+  const lang = b.dataset.offer, src = app && app.pending ? app.pending.source : "", title = app && app.pending ? app.pending.title : "";
   await api("/api/cmd", {action: "dismiss_pending"});
   $("#offer").hidden = true;
-  if (lang && src) startRecording(src, lang);
+  if (lang && src) startRecording(src, lang, title);
 }));
+
+// ---------- a recording from Panopto: a bookmark that runs on the Panopto page ----------
+// Panopto's own viewer asks DeliveryInfo.aspx for the recording's streams (with the student's sign-in); the bookmark
+// does the same and sends the file's address to Hevanti, which downloads it like any link. (As Panopto-Video-DL does.)
+(function panoBookmark() {
+  const code = `(async()=>{const H=${JSON.stringify(location.origin)};const u=new URL(location.href);` +
+    `const id=u.searchParams.get("id")||u.searchParams.get("tid");const tid=!u.searchParams.get("id")&&!!u.searchParams.get("tid");` +
+    `if(!/panopto/i.test(location.hostname)||!id){alert("הבנתי: לפתוח קודם את ההקלטה בפנופטו עצמו (לא בתוך מודל), ואז ללחוץ שוב.");return}` +
+    `try{const r=await fetch(location.origin+"/Panopto/Pages/Viewer/DeliveryInfo.aspx",{method:"POST",credentials:"include",` +
+    `headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},body:(tid?"tid=":"deliveryId=")+encodeURIComponent(id)+"&isEmbed=true&responseType=json"});` +
+    `const j=await r.json();const d=j.Delivery||{};const p=(d.PodcastStreams||[])[0]||(d.Streams||[])[0];` +
+    `if(!p||!p.StreamUrl){alert("הבנתי: פנופטו לא נתן את ההקלטה"+(j.ErrorMessage?" ("+j.ErrorMessage+")":"")+". אולי צריך להתחבר מחדש.");return}` +
+    `window.open(H+"/#rec="+encodeURIComponent(p.StreamUrl)+"&name="+encodeURIComponent(d.SessionName||document.title),"hevanti")}` +
+    `catch(e){alert("הבנתי: לא הצלחתי לקבל את ההקלטה מפנופטו ("+e.message+").")}})()`;
+  const a = $("#panoLink");
+  a.href = "javascript:" + encodeURIComponent(code);
+  a.addEventListener("click", e => { e.preventDefault(); toast("לגרור את הכפתור לשורת הסימניות, ואז ללחוץ עליו כשההקלטה פתוחה בפנופטו."); });
+})();
 
 // ---------- starting ----------
 async function okToReplace() {
@@ -903,11 +941,11 @@ async function startYoutube(url, lang, course) {
   $("#recBox").hidden = true; $("#recTile").classList.remove("on"); $("#linkIn").value = ""; choose("", "");
   ytVid = ""; location.hash = "yt";
 }
-async function startRecording(src, lang) {
+async function startRecording(src, lang, title) {
   if (isYoutube(src)) return startYoutube(src, lang);
   if (!(await okToReplace())) return;
   wantPlayer = Date.now() / 1000 - 2; shownErr = "";
-  await api("/api/cmd", {action: "start_recording", source: src, lang, course: curCourse || NO_COURSE});
+  await api("/api/cmd", {action: "start_recording", source: src, lang, title: title || "", course: curCourse || NO_COURSE});
   $("#recBox").hidden = true; $("#recTile").classList.remove("on"); $("#linkIn").value = ""; choose("", "");
 }
 $("#recGo").addEventListener("click", () => { if (recSource) startRecording(recSource, recLang); });
