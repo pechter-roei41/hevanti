@@ -142,5 +142,22 @@ res = {json.loads(x)["id"]: json.loads(x) for x in p.stdout.decode().splitlines(
 txt = " ".join(c.get("text", "") for c in res[1]["result"]["content"] if c.get("type") == "text")
 check("connector: now in the course, no warning", "מומנט סביב A" in txt and "שימו לב" not in txt, txt[:300])
 
+# Hevanti-Setup after the ZIP version: keep the lectures the ZIP version used (found from the AI connector it set)
+old_lib = os.path.join(tmp, "Desktop", "Hevanti_v2.0", "ההרצאות שלי")
+os.makedirs(os.path.join(old_lib, "סטטיקה"))
+os.environ["APPDATA"] = os.path.join(tmp, "appdata")
+os.makedirs(os.path.join(tmp, "appdata", "Claude"))
+with open(os.path.join(tmp, "appdata", "Claude", "claude_desktop_config.json"), "w", encoding="utf-8") as f:
+    json.dump({"mcpServers": {"hevanti": {"command": "py", "args": ["x.py", "--lib", old_lib]}}}, f)
+saved_env, L.INSTALLED = os.environ.pop("BZM_DATA_DIR"), True
+os.environ["LOCALAPPDATA"] = os.path.join(tmp, "local2")
+d = L._data_dir()
+check("installed after the ZIP: keeps the ZIP's lectures", d == os.path.dirname(old_lib), d)
+check("installed after the ZIP: remembered", L._data_dir() == d)
+os.environ["LOCALAPPDATA"] = os.path.join(tmp, "local3")
+os.rename(old_lib, old_lib + "x")
+check("installed, nothing before: Documents\\הבנתי", L._data_dir().endswith("הבנתי"), L._data_dir())
+os.environ["BZM_DATA_DIR"] = saved_env
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)
