@@ -36,7 +36,7 @@ try:
 except Exception:  # lets "uninstall" run even if the install never finished
     np = None
 
-VERSION = "2.0"
+VERSION = "2.1"
 VERSION_DATE = "15.10.2026"
 PRODUCT = "הבנתי"
 GUIDE_URL = "https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD"
@@ -1342,9 +1342,13 @@ def write_now_file(text):
         with open(tmp, "w", encoding="utf-8") as f:
             f.write(text.rstrip("\n") + "\n")
         os.replace(tmp, NOW_FILE)
-        return True
     except OSError:
         return False  # open in another program right now - the next update writes it
+    try:
+        course_now_write(text)
+    except Exception:
+        save_error("course now")
+    return True
 
 
 class LiveNow(threading.Thread):
@@ -1696,6 +1700,10 @@ def screen_rect(v, wins=None):
     win = pick_page_window(v, wins or [])
     if win is not None:
         return rect_in_window(v, win)
+    if os.name == "nt":
+        # the page's window was not found: a guess from window.screenX lands beside the player on monitors with
+        # different scaling, and photographs Hevanti's own transcript - a "new slide" every few seconds. No picture.
+        return None
     if IS_MAC:
         dpr = 1.0   # the Mac's screen coordinates are points, like window.screenX
     border = max(0.0, (ow - iw) / 2)
@@ -2275,6 +2283,7 @@ def create_course(name, terms=None):
     if not os.path.exists(glossary_path(name)):
         terms = [str(t) for t in terms if isinstance(t, str)] if isinstance(terms, list) else []
         write_glossary(name, "\n".join(terms))
+    write_course_ai_files(name)
     return name
 
 
@@ -2315,30 +2324,39 @@ def claude_config_paths():
 
 
 def gemini_config_path():
-    """Gemini CLI's user settings (Windows and Mac alike: ~/.gemini/settings.json)."""
+    """Gemini CLI's user settings (Windows and Mac alike: ~/.gemini/settings.json). Gemini CLI stopped serving
+    personal Google accounts on 18.6.2026; it is still written for school/work accounts that use it."""
     home = os.environ.get("BZM_GEMINI_DIR") or os.path.join(os.path.expanduser("~"), ".gemini")
     return os.path.join(home, "settings.json")
 
 
+def antigravity_config_path():
+    """Antigravity CLI (agy) - Google's terminal Gemini since June 2026 - reads its MCP servers from
+    ~/.gemini/config/mcp_config.json ({"mcpServers": {...}}, the same shape as Claude's)."""
+    home = os.environ.get("BZM_GEMINI_DIR") or os.path.join(os.path.expanduser("~"), ".gemini")
+    return os.path.join(home, "config", "mcp_config.json")
+
+
 def gemini_cli_found():
     import shutil
-    return bool(shutil.which("gemini")) or os.path.isdir(os.path.dirname(gemini_config_path()))
+    return bool(shutil.which("agy") or shutil.which("gemini")) or os.path.isdir(os.path.dirname(gemini_config_path()))
 
 
 def gemini_connected():
-    d = _read_json(gemini_config_path()) or {}
-    return isinstance(d.get("mcpServers"), dict) and MCP_NAME in d["mcpServers"]
+    for p in (antigravity_config_path(), gemini_config_path()):
+        d = _read_json(p) or {}
+        if isinstance(d.get("mcpServers"), dict) and MCP_NAME in d["mcpServers"]:
+            return True
+    return False
 
 
-def gemini_set(on):
-    """Gemini CLI reads its MCP servers from settings.json, like Claude for desktop (other settings are kept)."""
-    p = gemini_config_path()
+def _json_servers_set(p, entry, on, name):
     d = _read_json(p)
     if d is None:
-        return {"ok": False, "error": f"קובץ ההגדרות של Gemini CLI לא תקין, אז לא שיניתי אותו: {p}"}
+        return {"ok": False, "error": f"קובץ ההגדרות של {name} לא תקין, אז לא שיניתי אותו: {p}"}
     servers = d.get("mcpServers") if isinstance(d.get("mcpServers"), dict) else {}
     if on:
-        servers[MCP_NAME] = dict(_mcp_entry(), timeout=60000)
+        servers[MCP_NAME] = entry
     elif MCP_NAME in servers:
         del servers[MCP_NAME]
     else:
@@ -2351,8 +2369,17 @@ def gemini_set(on):
         _write_text(p, json.dumps(d, ensure_ascii=False, indent=2) + "\n")
     except OSError:
         save_error("gemini config")
-        return {"ok": False, "error": "לא הצלחתי לכתוב את ההגדרות של Gemini CLI."}
+        return {"ok": False, "error": f"לא הצלחתי לכתוב את ההגדרות של {name}."}
     return {"ok": True}
+
+
+def gemini_set(on):
+    """Antigravity CLI (agy) first, and Gemini CLI too (school/work accounts); other settings are kept."""
+    a = _json_servers_set(antigravity_config_path(), _mcp_entry(), on, "Antigravity CLI")
+    g = {"ok": True}
+    if on or os.path.exists(gemini_config_path()):
+        g = _json_servers_set(gemini_config_path(), dict(_mcp_entry(), timeout=60000), on, "Gemini CLI")
+    return a if not a.get("ok") else g if not g.get("ok") else {"ok": True}
 
 
 def codex_config_path():
@@ -2496,10 +2523,10 @@ CONNECT_NEXT = {
               "מהפעם הבאה אפשר פשוט לשאול אותו \"מה המרצה אמר עכשיו?\" או \"מה כתוב בשקופית?\".",
     "chatgpt": "מחובר. עכשיו לסגור את ChatGPT למחשב ולפתוח אותו שוב, לעבור למצב Codex, ולשאול שם "
                "\"מה המרצה אמר עכשיו?\". (צריך את ChatGPT ל-Windows מ-chatgpt.com/download.)",
-    "gemini": "מחובר ל-Gemini CLI (Gemini בחלון פקודות). לפתוח חלון פקודות (PowerShell או Terminal), לכתוב gemini, "
-              "ולשאול \"מה המרצה אמר עכשיו?\". בפעם הראשונה הוא שואל אם לאשר את הכלים של הבנתי - לבחור לאשר תמיד. "
-              "אין עדיין Gemini CLI? להתקין פעם אחת את Node.js (nodejs.org), ואז בחלון פקודות: "
-              "npm install -g @google/gemini-cli. (האפליקציה והאתר של Gemini עוד לא יודעים לקרוא מהמחשב.)",
+    "gemini": "מחובר ל-Antigravity CLI (Gemini בחלון פקודות, agy). בדף של כל קורס יש \"פתיחת Gemini בקורס\": "
+              "חלון פקודות נפתח בשליש המסך, כבר בתוך הקורס. בפעם הראשונה הוא שואל אם לאשר את הכלים של הבנתי - לאשר תמיד. "
+              "אין עדיין Antigravity CLI? פעם אחת ב-PowerShell: irm https://antigravity.google/cli/install.ps1 | iex . "
+              "(האפליקציה והאתר של Gemini עוד לא קוראים מהמחשב ב-Windows: בשבילם יש \"סנכרון לענן\".)",
 }
 
 
@@ -2511,7 +2538,7 @@ def connect_app(app, on=True):
     out["status"] = connect_status()
     if out.get("ok"):
         out["next"] = CONNECT_NEXT[app] if on else "החיבור הוסר. כדי שזה ייכנס לתוקף: לסגור ולפתוח שוב את " + \
-            {"claude": "Claude", "chatgpt": "ChatGPT", "gemini": "Gemini CLI"}[app] + "."
+            {"claude": "Claude", "chatgpt": "ChatGPT", "gemini": "Gemini (agy)"}[app] + "."
     return out
 
 
@@ -2620,12 +2647,479 @@ def refresh_connections():
                 text = f.read()
             if _toml_str(MCP_SCRIPT) not in text or _toml_str(want["command"]) not in text or _toml_str(LIB_DIR) not in text:
                 chatgpt_set(True)
-        g = (_read_json(gemini_config_path()) or {}).get("mcpServers") or {}
-        cur = g.get(MCP_NAME) if isinstance(g, dict) else None
-        if isinstance(cur, dict) and (cur.get("command"), cur.get("args")) != (want["command"], want["args"]):
-            gemini_set(True)
+        for gp in (antigravity_config_path(), gemini_config_path()):
+            g = (_read_json(gp) or {}).get("mcpServers") or {}
+            cur = g.get(MCP_NAME) if isinstance(g, dict) else None
+            if isinstance(cur, dict) and (cur.get("command"), cur.get("args")) != (want["command"], want["args"]):
+                gemini_set(True)
+                break
     except Exception:
         save_error("refresh connections")
+
+
+# ---------- the AI of each course: Claude, ChatGPT and Gemini, each in a project of its own for the course ----------
+# The student keeps one project per course in each AI (a Claude project, a ChatGPT project or Codex folder, a Gem or
+# an agy window). The AI reads that course by itself - no copying and pasting of questions:
+#   * apps on this computer with the connector (Claude for desktop, ChatGPT/Codex, Antigravity CLI): the tools get
+#     course="<the course>". Codex and agy open the course FOLDER as their project, and read AGENTS.md there.
+#   * AI websites and apps that cannot read this computer (a ChatGPT project, Gemini): "sync to the cloud" copies
+#     each course's "now" file and all its transcripts into the student's Google Drive (or OneDrive) folder, which
+#     those AIs read from their Drive connection, at the moment of the question.
+# A project link per course and AI (saved in the course folder) makes the AI button open THAT project, on a third
+# of the screen, beside the lecture.
+COURSE_AI_FILE = ".hevanti_ai.json"     # {"claude": "<project link>", "chatgpt": ..., "gemini": ...}
+COURSE_NOW_NAME = "now_watching.txt"     # a copy of now_watching.txt in the course folder (hidden), for that course
+AI_FILE_NAMES = ("AGENTS.md", "GEMINI.md", "CLAUDE.md")   # Codex / agy, Gemini, Claude read these in a folder
+AI_FILE_MARK = "<!-- hevanti course file -->"
+MIRROR_DIR_NAME = "הבנתי"
+AI_LINK_HOSTS = {"claude": ("claude.ai",), "chatgpt": ("chatgpt.com", "chat.openai.com"),
+                 "gemini": ("gemini.google.com", "notebooklm.google.com", "notebook.google.com")}
+
+
+def course_ai_md(course):
+    """AGENTS.md / GEMINI.md / CLAUDE.md of a course folder: an AI that opens the folder knows the course."""
+    return f"""{AI_FILE_MARK}
+# הבנתי · הקורס: {course}
+
+This folder is the course "{course}" in Hevanti (הבנתי), the student's lecture app. Each sub-folder is one lecture:
+its transcript ("<lecture>.txt", with times) and its slides ("שקופיות/", pictures; ".ocr.json" = text read from them).
+"now_watching.txt" here (a hidden file) says what is happening in this course right now: a live lecture, a recording
+or a YouTube video, the last minutes of what was said and the slide on the screen.
+
+When the student asks about this course or about the lecture ("מה הוא אמר עכשיו?", "מה כתוב בשקופית?",
+"לא הבנתי את החלק האחרון", "תכין לי מבחן תרגול"):
+- Use the Hevanti tools (MCP server "hevanti") and ALWAYS pass course="{course}":
+  `now` first for anything about the current lecture; `transcript` for a lecture of this course (default: the
+  newest; whole_course=true for all of them - exam prep, summaries, flashcards; part=2,3... when it is long);
+  `slide` for the slide at a time; `search` to find where something was said; `lectures` for the list.
+- Without those tools, read the files in this folder: now_watching.txt first, then the lectures' .txt files.
+- Answer in Hebrew, step by step; keep technical terms in English in parentheses. The transcript is automatic:
+  a word that makes no sense is probably a mis-hearing - guess it from the context and the slide.
+- Do not change, move or delete any file in this folder.
+"""
+
+
+def write_course_ai_files(course):
+    """The AI files of one course folder (only files Hevanti wrote are replaced, never the student's own)."""
+    d = course_dir(course)
+    if not os.path.isdir(d):
+        return
+    body = course_ai_md(course)
+    for name in AI_FILE_NAMES:
+        p = os.path.join(d, name)
+        try:
+            if os.path.exists(p):
+                with open(p, encoding="utf-8", errors="replace") as f:
+                    old = f.read()
+                if not old.startswith(AI_FILE_MARK) or old == body:
+                    continue
+                os.chmod(p, 0o666)
+            if os.name == "nt" and os.path.exists(p):   # a hidden file cannot be opened for writing - unhide first
+                try:
+                    import ctypes
+                    ctypes.windll.kernel32.SetFileAttributesW(str(p), 0x80)
+                except Exception:
+                    pass
+            with open(p, "w", encoding="utf-8") as f:
+                f.write(body)
+            hide_file(p)
+        except OSError:
+            save_error("course ai file")
+
+
+def write_all_course_ai_files():
+    for c in course_names():
+        write_course_ai_files(c)
+
+
+def clean_ai_link(app, url):
+    """A project/Gem link of that AI, or "" (anything else is refused: the page opens it)."""
+    url = str(url or "").strip()
+    if not url:
+        return ""
+    try:
+        import urllib.parse
+        u = urllib.parse.urlsplit(url)
+    except ValueError:
+        return None
+    host = (u.hostname or "").lower()
+    if u.scheme != "https" or not any(host == h or host.endswith("." + h) for h in AI_LINK_HOSTS.get(app, ())):
+        return None
+    return url[:500]
+
+
+def course_ai_links(course):
+    d = _read_json(os.path.join(course_dir(course), COURSE_AI_FILE)) or {}
+    return {a: clean_ai_link(a, d.get(a)) or "" for a in AI_APPS}
+
+
+def set_course_ai_link(course, app, url):
+    if app not in AI_APPS:
+        return {"ok": False, "error": "לא מוכר."}
+    if not os.path.isdir(course_dir(course)):
+        return {"ok": False, "error": "הקורס לא נמצא."}
+    link = clean_ai_link(app, url)
+    if link is None:
+        return {"ok": False, "error": "זה לא נראה כמו קישור לפרויקט של " +
+                {"claude": "Claude (claude.ai/project/...)", "chatgpt": "ChatGPT (chatgpt.com/g/...)",
+                 "gemini": "Gemini (gemini.google.com/gem/...)"}[app] + "."}
+    links = course_ai_links(course)
+    links[app] = link
+    p = os.path.join(course_dir(course), COURSE_AI_FILE)
+    try:
+        if os.name == "nt" and os.path.exists(p):
+            import ctypes
+            ctypes.windll.kernel32.SetFileAttributesW(str(p), 0x80)
+        _write_text(p, json.dumps(links, ensure_ascii=False, indent=1) + "\n")
+        hide_file(p)
+    except (OSError, AttributeError):
+        save_error("course ai link")
+        return {"ok": False, "error": "לא הצלחתי לשמור."}
+    return {"ok": True, "links": links}
+
+
+def project_instructions(course, app):
+    """The text to paste ONCE into the course's project (Claude project, ChatGPT project, Gem)."""
+    mirror = mirror_root()
+    cloud = (f'בתיקייה "{MIRROR_DIR_NAME}/{clean_name(course)}" ב-Google Drive' if mirror else
+             "בתיקיית הסנכרון לענן של הבנתי (עוד לא הופעלה: \"סנכרון לענן\" בחיבור AI)")
+    if app == "claude":
+        return (f'הפרויקט הזה הוא הקורס "{course}". ההרצאות שלו בהבנתי (Hevanti), שמחוברת אליך בכלים של hevanti.\n'
+                f'בכל שאלה על הקורס או על ההרצאה ("מה הוא אמר עכשיו?", "מה כתוב בשקופית?", "תכין מבחן תרגול"): '
+                f'להשתמש בכלים של hevanti ותמיד לתת course="{course}". קודם now על מה שקורה עכשיו; transcript '
+                'להרצאה של הקורס (whole_course=true לכל הקורס, part=2,3 כשארוך); slide לשקופית; search לחיפוש.\n'
+                "לענות בעברית, צעד אחר צעד, מונחים מקצועיים באנגלית בסוגריים. התמלול אוטומטי: מילה מוזרה היא כנראה "
+                "טעות תמלול - לנחש לפי ההקשר והשקופית.")
+    return (f'הפרויקט הזה הוא הקורס "{course}". הבנתי (Hevanti), אפליקציית ההרצאות שלי, שומרת את הקורס {cloud}:\n'
+            '- "עכשיו.txt": מה שקורה עכשיו בהרצאה (חיה, הקלטה או יוטיוב): הדקות האחרונות של מה שנאמר והטקסט '
+            "מהשקופית שעל המסך. מתעדכן כל כמה שניות.\n"
+            '- "כל ההרצאות.txt": כל ההרצאות של הקורס, מהישנה לחדשה.\n'
+            "בכל שאלה על ההרצאה (\"מה הוא אמר עכשיו?\", \"לא הבנתי את החלק האחרון\") - לפתוח מחדש את הגרסה הנוכחית של "
+            '"עכשיו.txt" מ-Google Drive לפני שעונים, גם אם כבר נפתח קודם בשיחה. למבחן, סיכום וכרטיסיות - '
+            '"כל ההרצאות.txt".\n'
+            "לענות בעברית, צעד אחר צעד, מונחים מקצועיים באנגלית בסוגריים. התמלול אוטומטי: מילה מוזרה היא כנראה "
+            "טעות תמלול.")
+
+
+# --- the "now" file of each course, and a copy in the cloud folder ---
+_NOW_COURSE = {"name": None}
+_TRANSCRIPT_LINE = re.compile(r"^תמלול מלא: (.+?)/", re.M)
+
+
+def course_now_write(text):
+    """now_watching.txt -> also into the folder of the course it is about. When nothing runs, the last course's
+    copy says so too (an AI in that course's project must not think the lecture is still on)."""
+    m = _TRANSCRIPT_LINE.search(text)
+    course = clean_name(m.group(1)) if m else None
+    if course:
+        _NOW_COURSE["name"] = course
+    elif _NOW_COURSE["name"]:
+        course = _NOW_COURSE["name"]
+    if not course or not os.path.isdir(course_dir(course)):
+        return
+    p = os.path.join(course_dir(course), COURSE_NOW_NAME)
+    try:
+        if os.name == "nt" and os.path.exists(p):
+            import ctypes
+            ctypes.windll.kernel32.SetFileAttributesW(str(p), 0x80)
+        tmp = p + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(text.rstrip("\n") + "\n")
+        os.replace(tmp, p)
+        hide_file(p)
+    except (OSError, AttributeError):
+        pass
+    MIRROR.now_changed(course)
+
+
+def find_cloud_folders():
+    """Folders of Google Drive for desktop / OneDrive on this computer: [(label, path)], Google Drive first."""
+    out = []
+    home = os.path.expanduser("~")
+    my = ("My Drive", "האחסון שלי", "Mi unidad", "Meine Ablage", "Mon Drive")
+    if IS_MAC:
+        import glob
+        for d in sorted(glob.glob(os.path.join(home, "Library", "CloudStorage", "GoogleDrive-*"))):
+            for n in my:
+                if os.path.isdir(os.path.join(d, n)):
+                    out.append(("Google Drive", os.path.join(d, n)))
+    elif os.name == "nt":
+        import string
+        for letter in string.ascii_uppercase[3:]:
+            for n in my:
+                p = f"{letter}:\\{n}"
+                try:
+                    if os.path.isdir(p):
+                        out.append(("Google Drive", p))
+                except OSError:
+                    pass
+        for n in my:
+            p = os.path.join(home, "Google Drive", n)
+            if os.path.isdir(p):
+                out.append(("Google Drive", p))
+    for env in ("OneDriveConsumer", "OneDrive"):
+        p = os.environ.get(env)
+        if p and os.path.isdir(p) and all(p != x[1] for x in out):
+            out.append(("OneDrive", p))
+    return out
+
+
+def mirror_root():
+    """<the cloud folder>/הבנתי when "sync to the cloud" is on, else None."""
+    base = load_settings().get("mirror")
+    if not base or not os.path.isdir(base):
+        return None
+    return os.path.join(base, MIRROR_DIR_NAME)
+
+
+class Mirror:
+    """Copies each course's "now" file (at most every MIN_S) and all its lectures into the cloud folder."""
+    MIN_S = 12
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.due = {}          # course -> time it should be written
+        self.full_due = set()  # courses whose "כל ההרצאות.txt" should be rewritten
+        self.last = {}
+        self.evt = threading.Event()
+        self.started = False
+
+    def start(self):
+        if not self.started:
+            self.started = True
+            threading.Thread(target=self.run, daemon=True).start()
+
+    def now_changed(self, course):
+        if mirror_root() is None:
+            return
+        with self.lock:
+            self.due.setdefault(course, max(time.time(), self.last.get(course, 0) + self.MIN_S))
+        self.evt.set()
+
+    def lectures_changed(self, course=None):
+        if mirror_root() is None:
+            return
+        with self.lock:
+            self.full_due.update([course] if course else course_names())
+        self.evt.set()
+
+    def scan(self):
+        """Courses whose lectures changed since the last look (a lecture ended, was moved, renamed or deleted)."""
+        sig = {}
+        for c, n, d in lecture_dirs():
+            try:
+                mt = os.path.getmtime(lecture_txt(d))
+            except OSError:
+                mt = 0
+            a = sig.setdefault(c, [0, 0.0])
+            a[0] += 1
+            a[1] = max(a[1], mt)
+        for c in course_names():
+            sig.setdefault(c, [0, 0.0])
+        old, self.sig = getattr(self, "sig", None), sig
+        if old is None:
+            return set(sig)
+        return {c for c in sig if old.get(c) != sig[c]}
+
+    def run(self):
+        last_scan = 0.0
+        while True:
+            self.evt.wait(5)
+            self.evt.clear()
+            root = mirror_root()
+            if root is None:
+                continue
+            if time.time() - last_scan > 60:
+                last_scan = time.time()
+                try:
+                    with self.lock:
+                        self.full_due |= self.scan()
+                except Exception:
+                    save_error("mirror scan")
+            now = time.time()
+            with self.lock:
+                ready = [c for c, t in self.due.items() if t <= now]
+                for c in ready:
+                    del self.due[c]
+                    self.last[c] = now
+                full, self.full_due = self.full_due, set()
+            for c in ready:
+                self.write_now(root, c)
+            for c in full:
+                self.write_course(root, c)
+
+    @staticmethod
+    def _put(path, text):
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            try:
+                with open(path, encoding="utf-8") as f:
+                    if f.read() == text:
+                        return
+            except OSError:
+                pass
+            tmp = path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write(text)
+            os.replace(tmp, path)
+        except OSError:
+            pass   # the cloud app may hold the file for a moment - the next change writes it
+
+    def write_now(self, root, course):
+        try:
+            with open(os.path.join(course_dir(course), COURSE_NOW_NAME), encoding="utf-8") as f:
+                body = f.read()
+        except OSError:
+            return
+        # the cloud copy has no pictures: the slide's text goes in instead of its file name
+        def slide_text(m):
+            rel = m.group(2).replace("\\", "/")
+            words = ""
+            try:
+                with open(os.path.join(LIB_DIR, *rel.split("/")[:-1], ".ocr.json"), encoding="utf-8") as f:
+                    words = str((json.load(f) or {}).get(rel.split("/")[-1], ""))
+            except (OSError, ValueError, AttributeError):
+                pass
+            return m.group(1) + (("הטקסט שעליה:\n" + words.strip()) if words.strip() else "(תמונה, בלי טקסט שנקרא)")
+        body = re.sub(r"^((?:צילום המסך האחרון|השקופית שעל המסך עכשיו): )(\S.+?\.(?:jpg|png))(?: \(.*\))?$",
+                      slide_text, body, flags=re.M)
+        stamp = datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+        self._put(os.path.join(root, clean_name(course), "עכשיו.txt"),
+                  f"הבנתי · הקורס: {course} · עודכן: {stamp}\n\n{body.rstrip()}\n")
+
+    def write_course(self, root, course):
+        if not os.path.isdir(course_dir(course)):
+            return
+        try:
+            text, n = course_text(course)
+        except Exception:
+            save_error("mirror course")
+            return
+        d = os.path.join(root, clean_name(course))
+        self._put(os.path.join(d, "כל ההרצאות.txt"), text + "\n")
+        self._put(os.path.join(d, "קרא אותי - הוראות ל-AI.txt"), project_instructions(course, "chatgpt") + "\n")
+
+
+MIRROR = Mirror()
+
+
+def set_mirror(path):
+    """Turn "sync to the cloud" on (a folder of Google Drive / OneDrive) or off ("")."""
+    path = str(path or "").strip()
+    if not path:
+        save_settings(mirror="")
+        return {"ok": True, "mirror": ""}
+    if not os.path.isdir(path):
+        return {"ok": False, "error": "התיקייה לא נמצאה. צריך את Google Drive למחשב (או OneDrive) מותקן ומחובר."}
+    save_settings(mirror=path)
+    MIRROR.start()
+    MIRROR.lectures_changed()
+    for c in course_names():
+        MIRROR.now_changed(c)
+    return {"ok": True, "mirror": path, "folder": os.path.join(path, MIRROR_DIR_NAME)}
+
+
+def mirror_status():
+    return {"mirror": load_settings().get("mirror") or "", "found": [{"label": a, "path": b} for a, b in find_cloud_folders()]}
+
+
+# --- the AI's window on a third of the screen, beside the lecture ---
+def place_window_left_third(match, timeout=10.0):
+    """Windows: move the newest window whose title matches to the left third of the main screen (the lecture
+    keeps the right two thirds - the layout the guide recommends). Waits for it to appear. True when moved."""
+    if os.name != "nt":
+        return False
+    import ctypes
+    from ctypes import wintypes
+    user32 = ctypes.WinDLL("user32")
+    HWND = wintypes.HWND
+    user32.GetWindowTextW.argtypes = [HWND, wintypes.LPWSTR, ctypes.c_int]
+    user32.IsWindowVisible.argtypes = [HWND]
+    user32.ShowWindow.argtypes = [HWND, ctypes.c_int]
+    user32.MoveWindow.argtypes = [HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.BOOL]
+    user32.SetForegroundWindow.argtypes = [HWND]
+    area = wintypes.RECT()
+    if not user32.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0):   # SPI_GETWORKAREA: without the taskbar
+        return False
+    end = time.time() + timeout
+    while time.time() < end:
+        found = []
+
+        def each(hwnd, _):
+            try:
+                if user32.IsWindowVisible(hwnd):
+                    buf = ctypes.create_unicode_buffer(300)
+                    user32.GetWindowTextW(hwnd, buf, 300)
+                    if buf.value and match(buf.value):
+                        found.append(hwnd)
+            except Exception:
+                pass
+            return True
+
+        user32.EnumWindows(ctypes.WINFUNCTYPE(wintypes.BOOL, HWND, wintypes.LPARAM)(each), 0)
+        if found:
+            h = found[0]   # EnumWindows lists from the top: the one just opened or brought forward
+            w = (area.right - area.left) // 3
+            user32.ShowWindow(h, 9)   # SW_RESTORE: a maximized window does not move
+            user32.MoveWindow(h, area.left, area.top, w, area.bottom - area.top, True)
+            user32.SetForegroundWindow(h)
+            return True
+        time.sleep(0.4)
+    return False
+
+
+AI_WINDOW_TITLE = {"claude": re.compile(r"^Claude\b"), "chatgpt": re.compile(r"^ChatGPT\b|^Codex\b"),
+                   "gemini": re.compile(r"Gemini|Antigravity|agy\b")}
+
+
+def open_ai_app_placed(app):
+    """open_ai_app, and its window on the left third (in the background: it takes a few seconds to appear)."""
+    ok = open_ai_app(app)
+    if ok and os.name == "nt" and load_settings().get("place_ai", True):
+        rx = AI_WINDOW_TITLE.get(app)
+        threading.Thread(target=place_window_left_third, args=(rx.search,), daemon=True).start()
+    return ok
+
+
+def open_course_terminal(course):
+    """A command window inside the course folder running Gemini (Antigravity CLI, agy), on the left third."""
+    d = course_dir(course)
+    if not os.path.isdir(d):
+        return {"ok": False, "error": "הקורס לא נמצא."}
+    import shutil
+    import subprocess
+    title = f"Gemini - {clean_name(course)}"
+    tool = "agy" if shutil.which("agy") else "gemini" if shutil.which("gemini") else None
+    try:
+        if IS_MAC:
+            q = d.replace("\\", "\\\\").replace('"', '\\"')
+            run = f'cd \\"{q}\\"; ' + (tool or "echo 'Antigravity CLI is not installed'")
+            subprocess.Popen(["osascript", "-e", f'tell application "Terminal" to do script "{run}"',
+                              "-e", 'tell application "Terminal" to activate'])
+        elif os.name == "nt":
+            lit = d.replace("'", "''")
+            missing = ("Write-Host 'Antigravity CLI (agy) is not installed yet. Install once:'; "
+                       "Write-Host 'irm https://antigravity.google/cli/install.ps1 | iex'")
+            ps = (f"$Host.UI.RawUI.WindowTitle = '{title.replace(chr(39), chr(39) * 2)}'; "
+                  f"Set-Location -LiteralPath '{lit}'; " + (tool if tool else missing))
+            subprocess.Popen(["cmd", "/c", "start", "", "powershell", "-NoExit", "-NoProfile", "-Command", ps],
+                             creationflags=0x08000000)
+            if load_settings().get("place_ai", True):
+                threading.Thread(target=place_window_left_third, args=(lambda t: t.startswith(title),),
+                                 daemon=True).start()
+        else:
+            return {"ok": False, "error": "לא נתמך במחשב הזה."}
+    except OSError:
+        save_error("open course terminal")
+        return {"ok": False, "error": "לא הצלחתי לפתוח חלון פקודות."}
+    return {"ok": True, "tool": tool or "", "folder": d}
+
+
+def course_ai_info(course):
+    """Everything the course page shows about the course's AI."""
+    return {"links": course_ai_links(course), "folder": course_dir(course),
+            "instructions": {a: project_instructions(course, a) for a in AI_APPS},
+            "mirror": bool(mirror_root()), "mirror_folder": os.path.join(mirror_root(), clean_name(course)) if mirror_root() else ""}
 
 
 # ---------- is there a newer version? (the GitHub releases of the open-source project) ----------
@@ -3923,7 +4417,16 @@ class App:
         if a == "delete_course":
             return self.delete_course(clean_name(d.get("course"), NO_COURSE))
         if a == "open_ai_app":
-            return {"ok": open_ai_app(d.get("app"))}
+            return {"ok": open_ai_app_placed(d.get("app"))}
+        if a == "course_ai_link":
+            return set_course_ai_link(course, str(d.get("app") or ""), d.get("url"))
+        if a == "open_course_terminal":
+            return open_course_terminal(course)
+        if a == "set_mirror":
+            return set_mirror(d.get("path"))
+        if a == "place_ai":
+            save_settings(place_ai=bool(d.get("on")))
+            return {"ok": True}
         if a in ("connect", "disconnect"):
             out = connect_app(d.get("app"), a == "connect")
             self._connect_at = 0.0
@@ -4614,7 +5117,9 @@ def _app_handler():
                     c = clean_name(q.get("c", [""])[0])
                     if not c or not os.path.isdir(course_dir(c)):
                         return self._json({"none": True}, 404)
-                    return self._json({"name": c, "glossary": glossary_text(c)})
+                    return self._json({"name": c, "glossary": glossary_text(c), "ai": course_ai_info(c)})
+                if p == "/api/mirror":
+                    return self._json(dict(mirror_status(), place_ai=load_settings().get("place_ai", True)))
                 if p == "/api/suggest":
                     return self._json(suggest_terms(q.get("c", [""])[0][:120]))
                 if p == "/api/course_text":
@@ -5064,6 +5569,8 @@ def main():
         log(f"{APP.migrated} הרצאות מגרסה קודמת הועברו לתיקייה \"{LIB_NAME}\\{NO_COURSE}\". אפשר להעביר אותן לקורסים.")
     threading.Thread(target=check_update, daemon=True).start()
     threading.Thread(target=refresh_connections, daemon=True).start()
+    threading.Thread(target=write_all_course_ai_files, daemon=True).start()   # also courses made before 2.1
+    MIRROR.start()
     threading.Thread(target=ocr_backfill, daemon=True).start()
     with _AI_APPS_LOCK:
         _AI_APPS["busy"] = True
@@ -5642,6 +6149,13 @@ def uninstall():
 
 
 if __name__ == "__main__":
+    if "--disconnect-ai" in sys.argv:   # Hevanti-Setup's uninstaller: take Hevanti out of the AI apps, quietly
+        for _app in AI_APPS:
+            try:
+                connect_app(_app, False)
+            except Exception:
+                pass
+        sys.exit(0)
     if "--uninstall" in sys.argv:
         try:
             uninstall()
