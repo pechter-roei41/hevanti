@@ -3185,6 +3185,8 @@ RELEASES_URL = os.environ.get("BZM_RELEASES_URL") or f"https://api.github.com/re
 def check_update():
     """A release tag looks like v2.0 or v2.0-20261014 (same number, newer build: the date tells them apart)."""
     import urllib.request
+    if not load_settings().get("check_updates", True):   # turned off in "חיבור AI"
+        return None
     try:
         req = urllib.request.Request(RELEASES_URL, headers={"User-Agent": "Hevanti/" + VERSION,
                                                             "Accept": "application/vnd.github+json"})
@@ -4482,6 +4484,9 @@ class App:
         if a == "place_ai":
             save_settings(place_ai=bool(d.get("on")))
             return {"ok": True}
+        if a == "check_updates":
+            save_settings(check_updates=bool(d.get("on")))
+            return {"ok": True}
         if a in ("connect", "disconnect"):
             out = connect_app(d.get("app"), a == "connect")
             self._connect_at = 0.0
@@ -5174,7 +5179,8 @@ def _app_handler():
                         return self._json({"none": True}, 404)
                     return self._json({"name": c, "glossary": glossary_text(c), "ai": course_ai_info(c)})
                 if p == "/api/mirror":
-                    return self._json(dict(mirror_status(), place_ai=load_settings().get("place_ai", True)))
+                    return self._json(dict(mirror_status(), place_ai=load_settings().get("place_ai", True),
+                                           check_updates=load_settings().get("check_updates", True)))
                 if p == "/api/suggest":
                     return self._json(suggest_terms(q.get("c", [""])[0][:120]))
                 if p == "/api/course_text":

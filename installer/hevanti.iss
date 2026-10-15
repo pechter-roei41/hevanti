@@ -33,6 +33,7 @@ WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 LicenseFile={#Src}\System\LICENSE.txt
+InfoBeforeFile={#Src}\PRIVACY.txt
 CloseApplications=yes
 
 [Languages]
