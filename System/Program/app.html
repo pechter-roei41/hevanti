@@ -173,6 +173,10 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .pano summary{cursor:pointer}
 .pano ol{margin:6px 0;padding-inline-start:22px}
 .aitabs{display:flex;gap:6px;margin:12px 0;border-bottom:1.5px solid var(--line)}
+.reqs{display:grid;gap:8px}
+.req{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;border:1.5px solid var(--line);border-radius:12px;padding:10px 14px}
+.req .rt{display:grid;gap:2px;flex:1 1 260px}.req .rt small{color:var(--muted);font-size:13px}
+.req .btns{display:flex;gap:6px;align-items:center;flex:0 1 auto}.req input{min-width:0;width:210px;max-width:100%;font:inherit;font-size:14px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:6px 10px}
 .aitab{border:0;background:none;padding:8px 18px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1.5px}
 .aitab.on{color:var(--accent);border-bottom-color:var(--accent)}
 .aic{display:block}
@@ -554,6 +558,9 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
       <p class="sub">הכי נוח: <b>פרויקט נפרד לקורס הזה בכל מודל</b>. מגדירים פעם אחת, ומאז כל שיחה בפרויקט יודעת באיזה קורס מדובר וקוראת את ההרצאות שלו (גם את זו שרצה עכשיו) בלי העתק-הדבק. בוחרים מודל ועוברים על הצעדים לפי הסדר.</p>
       <div class="aitabs" id="cAiTabs" role="tablist"></div>
       <div class="aic" id="cAi"></div>
+      <h3 style="margin:18px 0 4px">בקשות מוכנות</h3>
+      <p class="sub" style="margin:0 0 8px">מעתיקים ומדביקים בשיחה של הקורס. ה-AI כבר יודע מה לעשות עם כל אחת. ב-Claude לדסקטופ הן מופיעות גם בתפריט ה-<b>+</b> ← הבנתי.</p>
+      <div class="reqs" id="cReqs"></div>
     </div>
     <div class="cpanel card" data-cp="exam" hidden>
       <h2>הכנה למבחן</h2>
@@ -1326,6 +1333,34 @@ function drawCourseAi(ai) {
   const fin = el("div", "btns"); fin.appendChild(mk("פתיחה בשליש", "ghost", () => { if (window.BZMAsk) BZMAsk.openFor(id, ai.links[id] || ""); }));
   card.append(lab, lk, fin);
   box.appendChild(card);
+  drawCourseReqs();
+}
+// the three ready-made requests (the same recipes are in the course's AI files and in the connector's prompts)
+const COURSE_REQS = [
+  ["📝", "מבחן דמה", "שאלות מכל ההרצאות והשקופיות. שולחים תשובות ומקבלים בדיקה, ועם \"פתרון\" מקבלים פתרון מלא עם ההרצאה והדקה של כל נושא.",
+   c => `תכין מבחן דמה מכל ההרצאות של הקורס "${c}"`],
+  ["📄", "סכם הרצאה", "הנושאים לפי הסדר עם זמנים, נוסחאות, מה המרצה הדגיש ושאלות לבדיקה עצמית. בלי שם: ההרצאה האחרונה.",
+   (c, x) => `סכם הרצאה${x ? " \"" + x + "\"" : ""} של הקורס "${c}"`, "איזו הרצאה (לא חובה)"],
+  ["🎯", "מצא את הרגע", "באיזו הרצאה ובאיזו דקה המרצה הסביר נושא, מה הוא אמר שם ומה היה על השקופית.",
+   (c, x) => `מצא את הרגע שבו הוא הסביר ${x || "..."} (בקורס "${c}")`, "הנושא, למשל: מומנט התמד", true],
+];
+function drawCourseReqs() {
+  const box = $("#cReqs"); if (!box) return; box.replaceChildren();
+  for (const [ic, name, what, make, ph, must] of COURSE_REQS) {
+    const row = el("div", "req"), head = el("div", "rt");
+    head.append(el("b", "", ic + " " + name), el("small", "", what));
+    const ctl = el("div", "btns");
+    let inp = null;
+    if (ph) { inp = el("input"); inp.type = "text"; inp.placeholder = ph; inp.setAttribute("aria-label", ph); ctl.appendChild(inp); }
+    const b = el("button", "btn small", "העתקה"); b.type = "button";
+    b.onclick = async () => {
+      const x = inp ? inp.value.trim() : "";
+      if (must && !x) { toast("כתוב קודם את הנושא."); inp.focus(); return; }
+      toast((await copyText(make(courseName, x))) ? "הועתק. להדביק בשיחה של הקורס." : "לא הצלחתי להעתיק.");
+    };
+    ctl.appendChild(b);
+    row.append(head, ctl); box.appendChild(row);
+  }
 }
 function drawCourseLib() {
   const items = libItems.filter(e => e.course === courseName), list = $("#cLib");

@@ -114,5 +114,57 @@ with tempfile.TemporaryDirectory() as tmp:
     check("long course: in parts", "חלק 1 מתוך" in b1 and "חלק 2 מתוך" in b2 and "part=2" in b1, b1[:300])
     check("long course: parts within the limit", len(b1) < 95_000 and len(b2) < 95_000, (len(b1), len(b2)))
 
+    # --- "find the moment": ranked places with time, context and the slide of that time ---
+    r = call(root, [("moment", {"query": "מומנט נקודה", "course": S}),                 # 10
+                    ("moment", {"query": "תנע זוויתי"}),                                # 11 (another course)
+                    ("moment", {"query": "free body"}),                                # 12 (text on a slide)
+                    ("moment", {"query": "ננומטר", "course": S}),                       # 13 (nowhere)
+                    ("moment", {"query": ""}),                                         # 14
+                    ("moment", {"query": "מומנט", "course": "אלגברה"})])               # 15
+    check("moment: finds the place with its time", "בזמן 0:02:00" in body(r[10]) and "מומנט סביב נקודה A" in body(r[10]), body(r[10]))
+    check("moment: carries the slide of that time", "Free body diagram" in body(r[10]), body(r[10]))
+    check("moment: all the courses when none is given", D in body(r[11]) and "תנע זוויתי של דיסקה" in body(r[11]), body(r[11]))
+    check("moment: a word written on a slide", "0:01:00" in body(r[12]), body(r[12]))
+    check("moment: nothing found - says so, suggests other words", "לא מצאתי" in body(r[13]) and "מילה אחרת" in body(r[13]), body(r[13]))
+    check("moment: empty query", "צריך נושא" in body(r[14]), body(r[14]))
+    check("moment: unknown course", "אין בהבנתי קורס" in body(r[15]), body(r[15]))
+
+    # the best place first, and two places of one lecture far from each other are both returned
+    far = os.path.join(root, S, "2026-10-16 10-00 ארוכה")
+    write(os.path.join(far, "2026-10-16 10-00 ארוכה.txt"),
+          "[10:00:10 | +0:00:10] נדבר על מומנט התמד\n[10:00:20 | +0:00:20] מומנט ההתמד של גליל הוא חצי מסה בריבוע רדיוס\n"
+          "[10:10:00 | +0:10:00] עכשיו משהו אחר לגמרי\n[10:30:00 | +0:30:00] שוב מומנט התמד של קורה\n")
+    r = call(root, [("moment", {"query": "מומנט התמד של גליל", "course": S}),
+                    ("moment", {"query": "מומנט התמד", "lecture": "2026-10-16"})])
+    b = body(r[10])
+    check("moment: best place first", b.find("בזמן 0:00:10") != -1 and "חצי מסה" in b, b)
+    b = body(r[11])
+    check("moment: two far places of one lecture", "0:00:10" in b and "0:30:00" in b and "עכשיו משהו אחר" not in b, b)
+
+    # --- ready-made requests as MCP prompts ---
+    msgs = [{"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}},
+            {"jsonrpc": "2.0", "id": 1, "method": "prompts/list"},
+            {"jsonrpc": "2.0", "id": 2, "method": "prompts/get", "params": {"name": "exam", "arguments": {"course": "סטטיקה", "count": "12"}}},
+            {"jsonrpc": "2.0", "id": 3, "method": "prompts/get", "params": {"name": "summary", "arguments": {"course": S, "lecture": "10-12"}}},
+            {"jsonrpc": "2.0", "id": 4, "method": "prompts/get", "params": {"name": "find_moment", "arguments": {"topic": "מומנט התמד"}}},
+            {"jsonrpc": "2.0", "id": 5, "method": "prompts/get", "params": {"name": "nothing", "arguments": {}}}]
+    rr = subprocess.run([sys.executable, MCP, "--lib", root], input=("\n".join(json.dumps(m, ensure_ascii=False) for m in msgs) + "\n").encode("utf-8"),
+                        capture_output=True, timeout=60)
+    P = {}
+    for line in rr.stdout.decode("utf-8").splitlines():
+        m = json.loads(line)
+        P[m["id"]] = m
+
+    def ptext(i):
+        return P[i]["result"]["messages"][0]["content"]["text"]
+    check("prompts: capability announced", "prompts" in P[0]["result"]["capabilities"])
+    check("prompts: the three requests are listed",
+          [p["name"] for p in P[1]["result"]["prompts"]] == ["exam", "summary", "find_moment"])
+    check("prompt exam: the course name is resolved and the count used",
+          f"'{S}'" in ptext(2) and "12 questions" in ptext(2) and "whole_course=true" in ptext(2), ptext(2))
+    check("prompt summary: the lecture is passed on", "lecture='10-12'" in ptext(3), ptext(3))
+    check("prompt find_moment: the topic is used, no course is allowed", "מומנט התמד" in ptext(4) and "`moment`" in ptext(4), ptext(4))
+    check("prompts: an unknown one is an error", "error" in P[5])
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)

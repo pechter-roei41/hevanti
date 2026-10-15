@@ -43,7 +43,7 @@ Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsx
 | `System/Program/app.html` | The app (opens in the browser) |
 | `System/Program/player.html` | The player for recorded lectures |
 | `System/Program/ask.js` | The "ask AI" box |
-| `System/Program/hevanti_mcp.py` | The AI connector (MCP server, standard library only): `now`, `transcript`, `slide`, `search`, `lectures` |
+| `System/Program/hevanti_mcp.py` | The AI connector (MCP server, standard library only): `now`, `transcript`, `slide`, `search`, `moment` (where a topic was explained), `lectures`, plus the prompts `exam`, `summary`, `find_moment` |
 | `System/Program/course_terms.json` | Suggested glossary terms per course, matched by the course name. Corrections and new courses are welcome |
 | `Install.bat`, `System/get_python.ps1`, `System/install_ocr.*` | Windows setup: the packages into Hevanti's own Python, and Tesseract with the Hebrew and English language files |
 | `Install.command`, `Hevanti.command` | Mac setup and start |
