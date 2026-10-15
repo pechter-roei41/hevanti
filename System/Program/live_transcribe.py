@@ -4758,6 +4758,7 @@ def load_real_av():
     """PyAV for reading recordings. The live mode may have put a stand-in there (see _stub_av)."""
     mod = sys.modules.get("av")
     if mod is not None and not getattr(mod, "_bzm_stub", False):
+        _av_compat(mod)
         return mod
     for k in [k for k in sys.modules if k == "av" or k.startswith("av.")]:
         del sys.modules[k]
@@ -4766,12 +4767,32 @@ def load_real_av():
     except Exception:
         _stub_av()  # the live mode keeps working
         raise
+    _av_compat(av)
     try:
         import faster_whisper.audio as fwa
         fwa.av = av  # faster-whisper may have been loaded with the stand-in
     except Exception:
         pass
     return av
+
+
+def _av_compat(av):
+    """faster-whisper opens files with av.open(..., metadata_errors="ignore"), which newer PyAV (15+) no longer
+    accepts ("open() got an unexpected keyword argument 'metadata_errors'"): drop it there."""
+    if getattr(av.open, "_bzm", False):
+        return
+    real = av.open
+
+    def open_(*a, **k):
+        try:
+            return real(*a, **k)
+        except TypeError as e:
+            if "metadata_errors" in k and "metadata_errors" in str(e):
+                k.pop("metadata_errors")
+                return real(*a, **k)
+            raise
+    open_._bzm = True
+    av.open = open_
 
 
 def display_name(src):
