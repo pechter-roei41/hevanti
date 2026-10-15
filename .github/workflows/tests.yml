@@ -29,3 +29,5 @@ jobs:
         run: python tools/test_course_ai.py
       - name: Photographing the YouTube player
         run: python tools/test_youtube_rect.py
+      - name: Stopping a lecture right after starting it
+        run: python tools/test_stop.py
