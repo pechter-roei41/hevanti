@@ -76,7 +76,62 @@ def _documents():
     return os.path.join(os.path.expanduser("~"), "Documents")
 
 
-DATA_DIR = os.environ.get("BZM_DATA_DIR") or (os.path.join(_documents(), "הבנתי") if INSTALLED else HERE)
+def _has_lectures(lib):
+    """True when this "ההרצאות שלי" folder holds at least one lecture (or a course folder)."""
+    try:
+        return any(not n.startswith(".") and os.path.isdir(os.path.join(lib, n)) for n in os.listdir(lib))
+    except OSError:
+        return False
+
+
+def _earlier_library():
+    """The "ההרצאות שלי" folder an earlier copy of Hevanti (the ZIP) used, from the AI connector it set up -
+    so moving to Hevanti-Setup keeps the student's lectures instead of starting with an empty library."""
+    found = []
+    homes = [os.environ.get("APPDATA", ""), os.path.join(os.path.expanduser("~"), ".gemini", "config"),
+             os.path.join(os.path.expanduser("~"), ".gemini")]
+    names = [os.path.join(homes[0], "Claude", "claude_desktop_config.json"),
+             os.path.join(homes[1], "mcp_config.json"), os.path.join(homes[2], "settings.json")]
+    for p in names:
+        try:
+            with open(p, encoding="utf-8-sig") as f:
+                entry = (json.load(f).get("mcpServers") or {}).get("hevanti") or {}
+            args = entry.get("args") or []
+            lib = args[args.index("--lib") + 1] if "--lib" in args else ""
+        except (OSError, ValueError, AttributeError, IndexError):
+            continue
+        if lib and os.path.basename(lib.rstrip("\\/")) == LIB_NAME and _has_lectures(lib):
+            found.append(os.path.dirname(lib.rstrip("\\/")))
+    return found[0] if found else None
+
+
+def _data_dir():
+    if os.environ.get("BZM_DATA_DIR"):
+        return os.environ["BZM_DATA_DIR"]
+    if not INSTALLED:
+        return HERE
+    # Hevanti-Setup: Documents\הבנתי - unless the student already has lectures from the ZIP version: keep using them.
+    keep = os.path.join(os.environ.get("LOCALAPPDATA") or HERE, "Hevanti", "data_dir.txt")
+    try:
+        with open(keep, encoding="utf-8") as f:
+            d = f.read().strip()
+        if d and os.path.isdir(d):
+            return d
+    except OSError:
+        pass
+    d = os.path.join(_documents(), "הבנתי")
+    if not _has_lectures(os.path.join(d, LIB_NAME)):
+        d = _earlier_library() or d
+    try:
+        os.makedirs(os.path.dirname(keep), exist_ok=True)
+        with open(keep, "w", encoding="utf-8") as f:
+            f.write(d)
+    except OSError:
+        pass
+    return d
+
+
+DATA_DIR = _data_dir()
 LIB_DIR = os.path.join(DATA_DIR, LIB_NAME)   # <course>/<lecture>/<lecture>.txt + שקופיות/
 NO_COURSE = "ללא קורס"
 SLIDES_NAME = "שקופיות"
