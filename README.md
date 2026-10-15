@@ -53,11 +53,19 @@ Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsx
 
 New version: push a tag such as `v2.0-20261014` (same number, new build) or `v2.1`. GitHub Actions builds both ZIPs and attaches them to a release, and the app tells students that an update is available.
 
-Code signing: `Hevanti-Setup.exe` is set up to be signed through the free [SignPath Foundation](https://signpath.org/) program for open-source projects ([policy](CODE_SIGNING.md)); until the project is approved Windows shows "Windows protected your PC" once.
+Code signing: see [Code signing policy](#code-signing-policy).
 
 ## Contributing and issues
 
 Found a bug? [Open an issue](https://github.com/pechter-roei41/hevanti/issues) with a screenshot and `System\error_log.txt`. Pull requests are welcome, and a good first one is adding your course to `course_terms.json`: its name, the words its name may contain (`match`), and 20-30 terms, most important first.
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org) (applied for; until approved, Windows shows "Windows protected your PC" once).
+
+- What is signed: `Hevanti-Setup.exe`, built from the tagged commit by the public [release workflow](.github/workflows/release.yml). Nothing built on a personal computer is signed.
+- Committers and reviewers: [Roei Pechter](https://github.com/pechter-roei41). Approvers: [Roei Pechter](https://github.com/pechter-roei41).
+- Privacy: this program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. Details: [CODE_SIGNING.md](CODE_SIGNING.md#privacy).
 
 ## License
 

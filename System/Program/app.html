@@ -582,6 +582,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
     <p class="cstate" id="cloudState"></p>
     <div class="row" id="cloudBtns"></div>
     <label style="display:flex;gap:8px;align-items:center;font-size:15px"><input type="checkbox" id="placeAi"> לפתוח את ה-AI בשליש השמאלי של המסך (ההרצאה בשני השלישים)</label>
+    <label style="display:flex;gap:8px;align-items:center;font-size:15px"><input type="checkbox" id="checkUpd"> בדיקת עדכונים: לבדוק ב-GitHub אם יצאה גרסה חדשה</label>
   </div>
   <div class="row"><a href="https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD#ai" target="_blank" rel="noopener" style="margin-inline-end:auto">הסבר מלא במדריך</a><button class="btn quiet" id="connClose" type="button">סגירה</button></div>
 </div></div>
@@ -638,6 +639,7 @@ function openConn() { $("#connMsg").textContent = ""; $("#connMsg").className = 
 async function drawCloud() {
   let d; try { d = await api("/api/mirror"); } catch (e) { return; }
   $("#placeAi").checked = d.place_ai !== false;
+  $("#checkUpd").checked = d.check_updates !== false;
   const st = $("#cloudState"), btns = $("#cloudBtns"); btns.replaceChildren();
   st.className = "cstate" + (d.mirror ? " ok" : "");
   st.textContent = d.mirror ? "פועל: " + d.mirror + "\\הבנתי" : (d.found.length ? "כבוי." : "כבוי. לא מצאתי במחשב את Google Drive למחשב (google.com/drive/download) או OneDrive.");
@@ -655,6 +657,7 @@ async function setCloud(path) {
   if (view === "course" && courseName) openCourse(courseName);
 }
 $("#placeAi").addEventListener("change", e => api("/api/cmd", {action: "place_ai", on: e.target.checked}));
+$("#checkUpd").addEventListener("change", e => api("/api/cmd", {action: "check_updates", on: e.target.checked}));
 async function setConn(c, on) {
   $("#connMsg").className = "cstate"; $("#connMsg").textContent = on ? "מחבר..." : "מנתק...";
   let r; try { r = await api("/api/cmd", {action: on ? "connect" : "disconnect", app: c.id}); } catch (e) { r = {ok: false, error: "האפליקציה לא ענתה."}; }
