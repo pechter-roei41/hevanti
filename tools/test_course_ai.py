@@ -107,7 +107,7 @@ L.MIRROR.now_changed(C)
 L.MIRROR.lectures_changed(C)
 now_cloud = os.path.join(drive, "הבנתי", C, "עכשיו.txt")
 all_cloud = os.path.join(drive, "הבנתי", C, "כל ההרצאות.txt")
-for _ in range(40):
+for _ in range(80):
     if os.path.isfile(now_cloud) and os.path.isfile(all_cloud):
         break
     time.sleep(0.5)
@@ -158,6 +158,22 @@ os.environ["LOCALAPPDATA"] = os.path.join(tmp, "local3")
 os.rename(old_lib, old_lib + "x")
 check("installed, nothing before: Documents\\הבנתי", L._data_dir().endswith("הבנתי"), L._data_dir())
 os.environ["BZM_DATA_DIR"] = saved_env
+
+# the folder's old name "ההרצאות שלי" is renamed to "הקורסים שלי" once, with everything in it
+dd = os.path.join(tmp, "rename")
+os.makedirs(os.path.join(dd, "ההרצאות שלי", "פיזיקה 2"))
+r = L._lib_dir(dd)
+check("old folder renamed to הקורסים שלי", r == os.path.join(dd, "הקורסים שלי") and os.path.isdir(os.path.join(r, "פיזיקה 2"))
+      and not os.path.exists(os.path.join(dd, "ההרצאות שלי")), r)
+check("already renamed: left as it is", L._lib_dir(dd) == r)
+check("nothing yet: הקורסים שלי", L._lib_dir(os.path.join(tmp, "empty")).endswith("הקורסים שלי"))
+# an AI app still set to the old name reads the renamed folder
+p = subprocess.run([sys.executable, L.MCP_SCRIPT, "--lib", os.path.join(dd, "ההרצאות שלי")],
+                   input=(json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                                      "params": {"name": "lectures", "arguments": {}}}) + "\n").encode(),
+                   capture_output=True, timeout=60)
+txt = json.loads(p.stdout.decode().splitlines()[0])["result"]["content"][0]["text"]
+check("connector set to the old name still finds the courses", "פיזיקה 2" in txt, txt[:200])
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)

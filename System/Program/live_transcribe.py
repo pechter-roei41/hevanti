@@ -4,7 +4,7 @@
 """
 Lecture transcription (Hebrew / English), live or recorded - run from the app page in the browser.
 Hevanti.bat starts the tool and opens the app (http://127.0.0.1:8765/, this computer only).
-Every lecture is one folder: "ההרצאות שלי/<course>/<lecture>/" with "<lecture>.txt" and "שקופיות/".
+Every lecture is one folder: "הקורסים שלי/<course>/<lecture>/" with "<lecture>.txt" and "שקופיות/".
 Live: captures whatever audio the computer plays (WASAPI loopback - no microphone), transcribes it with
 Whisper (ivrit.ai Hebrew model), and takes a screenshot whenever the screen changes noticeably
 (new slide, new writing on the board).
@@ -58,7 +58,8 @@ HERE = _tool_root(SCRIPT_DIR)
 IS_MAC = sys.platform == "darwin"   # the Mac version: Hevanti.command, the sound through BlackHole
 SYSTEM_DIR = os.path.dirname(SCRIPT_DIR) if os.path.basename(os.path.dirname(SCRIPT_DIR)).lower() == "system" else HERE
 ERROR_LOG = os.path.join(SYSTEM_DIR, "error_log.txt")
-LIB_NAME = "ההרצאות שלי"
+LIB_NAME = "הקורסים שלי"
+OLD_LIB_NAMES = ("ההרצאות שלי",)   # the folder's name before 16.10.2026 - renamed on the first start
 # Installed with Hevanti-Setup.exe (a Python of its own next to System\): the lectures go to Documents\הבנתי,
 # not into the program's folder. From the ZIP: next to Hevanti.bat.
 INSTALLED = os.path.isfile(os.path.join(HERE, "python", "python.exe"))
@@ -77,7 +78,7 @@ def _documents():
 
 
 def _has_lectures(lib):
-    """True when this "ההרצאות שלי" folder holds at least one lecture (or a course folder)."""
+    """True when this "הקורסים שלי" folder holds at least one lecture (or a course folder)."""
     try:
         return any(not n.startswith(".") and os.path.isdir(os.path.join(lib, n)) for n in os.listdir(lib))
     except OSError:
@@ -85,7 +86,7 @@ def _has_lectures(lib):
 
 
 def _earlier_library():
-    """The "ההרצאות שלי" folder an earlier copy of Hevanti (the ZIP) used, from the AI connector it set up -
+    """The "הקורסים שלי" (or older "ההרצאות שלי") folder an earlier copy of Hevanti (the ZIP) used, from the AI connector it set up -
     so moving to Hevanti-Setup keeps the student's lectures instead of starting with an empty library."""
     found = []
     homes = [os.environ.get("APPDATA", ""), os.path.join(os.path.expanduser("~"), ".gemini", "config"),
@@ -100,7 +101,7 @@ def _earlier_library():
             lib = args[args.index("--lib") + 1] if "--lib" in args else ""
         except (OSError, ValueError, AttributeError, IndexError):
             continue
-        if lib and os.path.basename(lib.rstrip("\\/")) == LIB_NAME and _has_lectures(lib):
+        if lib and os.path.basename(lib.rstrip("\\/")) in (LIB_NAME,) + OLD_LIB_NAMES and _has_lectures(lib):
             found.append(os.path.dirname(lib.rstrip("\\/")))
     return found[0] if found else None
 
@@ -120,7 +121,7 @@ def _data_dir():
     except OSError:
         pass
     d = os.path.join(_documents(), "הבנתי")
-    if not _has_lectures(os.path.join(d, LIB_NAME)):
+    if not any(_has_lectures(os.path.join(d, n)) for n in (LIB_NAME,) + OLD_LIB_NAMES):
         d = _earlier_library() or d
     try:
         os.makedirs(os.path.dirname(keep), exist_ok=True)
@@ -132,7 +133,26 @@ def _data_dir():
 
 
 DATA_DIR = _data_dir()
-LIB_DIR = os.path.join(DATA_DIR, LIB_NAME)   # <course>/<lecture>/<lecture>.txt + שקופיות/
+
+
+def _lib_dir(data_dir):
+    """The courses folder. Its old name "ההרצאות שלי" is renamed to "הקורסים שלי" once; if Windows will not
+    rename it (a file open in it, OneDrive busy), the old folder keeps being used and the rename is tried next time."""
+    new = os.path.join(data_dir, LIB_NAME)
+    if os.path.isdir(new):
+        return new
+    for old in OLD_LIB_NAMES:
+        old = os.path.join(data_dir, old)
+        if os.path.isdir(old):
+            try:
+                os.rename(old, new)
+                return new
+            except OSError:
+                return old
+    return new
+
+
+LIB_DIR = _lib_dir(DATA_DIR)   # <course>/<lecture>/<lecture>.txt + שקופיות/
 NO_COURSE = "ללא קורס"
 SLIDES_NAME = "שקופיות"
 GLOSSARY_NAME = "מילון מונחים.txt"
@@ -1271,7 +1291,7 @@ def ocr_backfill():
 
 class ScreenWatcher(threading.Thread):
     """Saves into the lecture's "שקופיות" folder. The transcript says "שקופיות/<file>" (the lecture folder can
-    move to another course); on_shot gets the path inside "ההרצאות שלי" (what the app and Claude use)."""
+    move to another course); on_shot gets the path inside "הקורסים שלי" (what the app and Claude use)."""
 
     def __init__(self, lecture_dir, lecture_rel, start_ts, write_line, on_shot=None, region_fn=None):
         super().__init__(daemon=True)
@@ -1776,7 +1796,7 @@ class YtNow(LiveNow):
         self.clock, self.url = clock, url
         self.yt = True
         self.rev = 0
-        self.shots = sorted(shots or [])          # (video seconds, path inside ההרצאות שלי)
+        self.shots = sorted(shots or [])          # (video seconds, path inside הקורסים שלי)
         for t, x in sorted(lines or []):
             self.all.append((t, x))
         self.seen_version = -1
@@ -2121,7 +2141,7 @@ def safe_stem(name):
     return s[:80].strip(" .") or "video"
 
 
-# ---------- "ההרצאות שלי": a folder per course, a folder per lecture ----------
+# ---------- "הקורסים שלי": a folder per course, a folder per lecture ----------
 _RESERVED = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}
 
 
@@ -2185,7 +2205,7 @@ def lecture_dirs():
 
 
 def lecture_from_rel(rel):
-    """"<course>/<lecture>" from the page -> the lecture folder, only inside "ההרצאות שלי"."""
+    """"<course>/<lecture>" from the page -> the lecture folder, only inside "הקורסים שלי"."""
     parts = [x for x in str(rel or "").replace("\\", "/").split("/") if x]
     if len(parts) != 2 or any(x in (".", "..") or clean_name(x) != x for x in parts):
         return None
@@ -3249,7 +3269,7 @@ OLD_LIVE_STEM = re.compile(r"(\d{4}-\d\d-\d\d)_(\d\d-\d\d)(_en)?")
 
 def migrate_old_layout():
     """1.x kept "transcripts\\" and "screenshots\\" in the tool folder. Each lecture moves into
-    "ההרצאות שלי\\ללא קורס\\<lecture>\\" with its slides. Returns how many moved."""
+    "הקורסים שלי\\ללא קורס\\<lecture>\\" with its slides. Returns how many moved."""
     import shutil
     if not os.path.isdir(OUT_DIR):
         return 0
@@ -4992,7 +5012,7 @@ def recording_from_library(fname):
 
 
 def safe_shot(rel):
-    """A slide from the page ("<course>/<lecture>/שקופיות/<file>.jpg") -> the file, only inside "ההרצאות שלי"."""
+    """A slide from the page ("<course>/<lecture>/שקופיות/<file>.jpg") -> the file, only inside "הקורסים שלי"."""
     rel = str(rel or "").replace("\\", "/")
     parts = [p for p in rel.split("/") if p]
     if len(parts) != 4 or parts[2] != SLIDES_NAME or any(p in (".", "..") for p in parts):

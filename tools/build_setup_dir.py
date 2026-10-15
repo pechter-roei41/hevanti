@@ -15,14 +15,14 @@ SKIP_EXT = (".command", ".sh")
 
 PRIVACY = """הבנתי (Hevanti) - פרטיות / Privacy
 
-התמלול וקריאת השקופיות רצים במחשב שלך. ההרצאות נשמרות בתיקייה "ההרצאות שלי" במחשב שלך.
+התמלול וקריאת השקופיות רצים במחשב שלך. ההרצאות נשמרות בתיקייה "הקורסים שלי" במחשב שלך.
 הבנתי לא שולחת שום דבר בעצמה:
 - ה-AI שלך (Claude, ChatGPT, Gemini) קורא מההרצאות רק כשמבקשים ממנו, ומה שהוא קורא עובר לחברה שלו כמו כל שיחה איתו.
 - "סנכרון לענן" כבוי עד שמפעילים אותו. כשהוא פועל, התמלולים מועתקים לתיקיית Google Drive / OneDrive שלך.
 - הבנתי בודקת ב-GitHub אם יצאה גרסה חדשה, ומורידה בפעם הראשונה את מודל התמלול (Hugging Face) ואת קריאת השקופיות (GitHub, אם מסכימים).
   אפשר לכבות את בדיקת העדכונים: "בדיקת עדכונים" בחיבור AI.
 
-Transcription and slide reading run on your computer; lectures stay in the "ההרצאות שלי" folder.
+Transcription and slide reading run on your computer; lectures stay in the "הקורסים שלי" folder.
 This program will not transfer any information to other networked systems unless specifically requested by the user
 or the person installing or operating it. It checks GitHub for a newer release (can be turned off), downloads the
 transcription model from Hugging Face and, if you agree, Tesseract from GitHub. Your AI app reads lectures only when

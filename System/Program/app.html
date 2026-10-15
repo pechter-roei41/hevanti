@@ -378,7 +378,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
   <!-- HOME -->
   <section id="vHome" aria-label="מסך הבית">
     <h1>מה עושים עכשיו?</h1>
-    <p class="lead">הכל קורה במחשב שלך: כל הרצאה נשמרת בתיקייה "ההרצאות שלי", בתיקייה של הקורס.</p>
+    <p class="lead">הכל קורה במחשב שלך: כל הרצאה נשמרת בתיקייה "הקורסים שלי", בתיקייה של הקורס.</p>
     <div class="coursebar">
       <label for="courseSel"><b>הקורס:</b></label>
       <select id="courseSel"></select>
@@ -428,14 +428,14 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
       <p class="progress" id="startProg"></p>
     </div>
 
-    <div class="libhead"><h2>ההרצאות שלי</h2><input type="search" id="libFind" placeholder="חיפוש בכל מה שנאמר" aria-label="חיפוש בכל ההרצאות"></div>
+    <div class="libhead"><h2>הקורסים שלי</h2><input type="search" id="libFind" placeholder="חיפוש בכל מה שנאמר" aria-label="חיפוש בכל ההרצאות"></div>
     <div class="tabs" id="libTabs" role="group" aria-label="קורסים"></div>
     <div class="cbar" id="libCbar" hidden><span id="libCbarText"></span><button class="btn small" id="libCbarGo" type="button">לדף הקורס</button></div>
     <ol class="lib" id="lib"><li class="empty">טוען...</li></ol>
     <ol class="hits" id="hits" hidden></ol>
 
     <div class="foot">
-      <button class="btn quiet small" type="button" data-open="lib">פתיחת "ההרצאות שלי" בתיקייה</button>
+      <button class="btn quiet small" type="button" data-open="lib">פתיחת "הקורסים שלי" בתיקייה</button>
       <button class="btn ghost small" id="connBtn" type="button" data-conn-open>חיבור AI</button>
       <button class="btn quiet small" type="button" data-how>איך משתמשים (הדגמה)</button>
       <a href="https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD" target="_blank" rel="noopener">המדריך (הסבר מלא ועדכונים, באינטרנט)</a>
@@ -479,7 +479,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
       <div class="ytcol">
         <div class="ytscreen"><div id="ytFrame"></div><div class="ytwait" id="ytWait">טוען את הנגן של יוטיוב...</div></div>
         <div class="ycover" id="ytCover" title="ירוק = כבר תומלל. הבנתי מתמללת את מה שמתנגן, אז מה שעוד לא ראית עוד לא כתוב."><b id="ytHead"></b></div>
-        <p class="lead" style="margin:0;font-size:14px">הבנתי מתמללת את מה שמתנגן כאן ושומרת את השקופיות מהנגן, עם הזמן של הסרטון. מה שכבר תומלל לא מתומלל שוב, ואפשר להמשיך את הסרטון ביום אחר מ"ההרצאות שלי".</p>
+        <p class="lead" style="margin:0;font-size:14px">הבנתי מתמללת את מה שמתנגן כאן ושומרת את השקופיות מהנגן, עם הזמן של הסרטון. מה שכבר תומלל לא מתומלל שוב, ואפשר להמשיך את הסרטון ביום אחר מ"הקורסים שלי".</p>
         <div class="card" id="ytAsk"></div>
         <div class="row"><button class="btn ghost small" id="ytShotCopy" type="button" hidden>העתקת השקופית</button></div>
       </div>
@@ -1277,7 +1277,7 @@ function drawCourseAi(ai) {
 }
 function drawCourseLib() {
   const items = libItems.filter(e => e.course === courseName), list = $("#cLib");
-  $("#cSub").textContent = items.length + " הרצאות · התיקייה: ההרצאות שלי\\" + courseName;
+  $("#cSub").textContent = items.length + " הרצאות · התיקייה: הקורסים שלי\\" + courseName;
   list.replaceChildren(...(items.length ? items.map(e => lecItem(e, false)) : [el("li", "empty", "עוד אין הרצאות בקורס הזה. בוחרים אותו במסך הבית לפני שמתחילים הרצאה.")]));
   $("#ctLec").textContent = items.length ? items.length + " הרצאות" : "עוד אין";
 }
@@ -1401,7 +1401,7 @@ async function pollLive() {
   if (d.lag > 15) add("איחור", Math.round(d.lag) + " שניות" + (d.fast ? " (מצב מהיר)" : ""));
   if (info.transcript) add("נשמר ב", info.transcript);
   $("#liveEnded").hidden = !d.ended;
-  if (d.ended) { $("#liveEnded").textContent = "ההרצאה נשמרה ב-" + (info.transcript || "ההרצאות שלי") + ". אפשר לחזור למסך הבית, ולפתוח אותה מ\"ההרצאות שלי\"."; $("#liveStop").hidden = true; }
+  if (d.ended) { $("#liveEnded").textContent = "ההרצאה נשמרה ב-" + (info.transcript || "הקורסים שלי") + ". אפשר לחזור למסך הבית, ולפתוח אותה מ\"הקורסים שלי\"."; $("#liveStop").hidden = true; }
   setTimeout(pollLive, d.ended ? 4000 : 1000);
 }
 $("#liveLines").addEventListener("scroll", () => {
@@ -1576,7 +1576,7 @@ function ytHead(s) {
   $("#ytWhat").textContent = sessionName(s);
   if (s.done) {
     $("#ytStop").hidden = true; $("#ytEnded").hidden = false;
-    $("#ytEnded").textContent = "הסרטון נשמר ב\"ההרצאות שלי\". אפשר להמשיך אותו מאוחר יותר עם \"המשך צפייה\".";
+    $("#ytEnded").textContent = "הסרטון נשמר ב\"הקורסים שלי\". אפשר להמשיך אותו מאוחר יותר עם \"המשך צפייה\".";
     try { if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); } catch (e) {}
     return;
   }
@@ -1851,7 +1851,7 @@ const HOW = (() => {
     for (const [b, s] of [["הרצאה חיה בעברית", "זום או שידור: נכתב תוך כדי"], ["הרצאה חיה באנגלית", "אותו דבר, באנגלית"], ["הרצאה מוקלטת", "קובץ, קישור או יוטיוב"]]) {
       const t = mk("div", "h-tile", null, tiles); mk("span", "h-ic", null, t); mk("b", "", b, t); mk("span", "", s, t); tl.push(t);
     }
-    mk("div", "h-sub", "ההרצאות שלי", w.body);
+    mk("div", "h-sub", "הקורסים שלי", w.body);
     const lib = mk("div", "h-lib", null, w.body);
     for (const [a, b] of [["דינמיקה · הרצאה 5 - קינטיקה של גוף קשיח", "אתמול"], ["מד\"ר · משוואות מסדר שני", "לפני 3 ימים"]]) {
       const r = mk("div", "", null, lib); mk("span", "", a, r); mk("small", "", b, r);
