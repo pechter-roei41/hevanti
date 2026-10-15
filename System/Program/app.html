@@ -158,14 +158,17 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .cloud b{font-size:17px}
 .cloud p{margin:0;font-size:15px;color:var(--muted);line-height:1.5}
 .cloud .row{gap:8px;flex-wrap:wrap}
-.cgrid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start;margin-top:14px}
-@media (max-width:900px){.cgrid{grid-template-columns:minmax(0,1fr)}}
-.cside{display:grid;gap:14px}
-.cside details.gl summary{cursor:pointer;list-style:none;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
-.cside details.gl summary::-webkit-details-marker{display:none}
-.cside details.gl summary::before{content:"◂";color:var(--muted);transition:transform .15s}
-.cside details.gl[open] summary::before{transform:rotate(-90deg)}
-.aicard{margin-top:18px}
+.ctabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0 16px}
+@media (max-width:760px){.ctabs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ctabs button{display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:center;text-align:start;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer;color:var(--fg)}
+.ctabs button .ic{grid-row:span 2;font-size:24px}
+.ctabs button b{font-size:16px}
+.ctabs button small{color:var(--muted);font-size:13px;line-height:1.3}
+.ctabs button small.warn{color:var(--rec);font-weight:700}
+.ctabs button small.ok{color:var(--ok);font-weight:700}
+.ctabs button[aria-selected="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.ctabs button[aria-selected="true"] b{color:var(--accent)}
+.aihint{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between;background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:12px;padding:10px 14px;margin:0 0 14px}
 .aitabs{display:flex;gap:6px;margin:12px 0;border-bottom:1.5px solid var(--line)}
 .aitab{border:0;background:none;padding:8px 18px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1.5px}
 .aitab.on{color:var(--accent);border-bottom-color:var(--accent)}
@@ -518,17 +521,30 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
       <button class="btn quiet" id="cFolder" type="button">פתיחת התיקייה</button>
       <button class="btn quiet" id="cDelete" type="button" style="color:var(--danger,#b42318)">מחיקת הקורס</button>
     </div>
-    <div class="cgrid">
-      <div class="cmain">
-        <div class="libhead"><h2>ההרצאות בקורס</h2></div>
-        <p class="sub" id="cSize" style="margin:0 0 10px"></p>
-        <ol class="lib" id="cLib"></ol>
+    <nav class="ctabs" id="cTabs" role="tablist" aria-label="חלקי הקורס">
+      <button type="button" role="tab" data-ct="lec"><span class="ic">📚</span><b>ההרצאות</b><small id="ctLec"></small></button>
+      <button type="button" role="tab" data-ct="ai"><span class="ic">🤖</span><b>ה-AI של הקורס</b><small id="ctAi"></small></button>
+      <button type="button" role="tab" data-ct="exam"><span class="ic">📝</span><b>הכנה למבחן</b><small>מבחן, סיכום, כרטיסיות</small></button>
+      <button type="button" role="tab" data-ct="gl"><span class="ic">🔤</span><b>מילון מונחים</b><small id="ctGl"></small></button>
+    </nav>
+    <div class="cpanel" data-cp="lec">
+      <div class="aihint" id="cAiHint" hidden>
+        <span>🤖 <b>עוד לא חיברת AI לקורס הזה.</b> הגדרה של דקה, ומאז שואלים על ההרצאה בלי להעתיק.</span>
+        <button class="btn small" type="button" data-goct="ai">להגדרה ←</button>
       </div>
-      <div class="cside">
-        <div class="card">
-          <h2>הכנה למבחן</h2>
-          <p class="sub">כל ההרצאות של הקורס נשלחות ל-AI ביחד עם המשימה. אפשר לבחור משימה מוכנה או לכתוב משלך.</p>
-          <div class="presets" id="presets">
+      <p class="sub" id="cSize" style="margin:0 0 10px"></p>
+      <ol class="lib" id="cLib"></ol>
+    </div>
+    <div class="cpanel card" data-cp="ai" hidden>
+      <h2>ה-AI של הקורס</h2>
+      <p class="sub">הכי נוח: <b>פרויקט נפרד לקורס הזה בכל מודל</b>. מגדירים פעם אחת, ומאז כל שיחה בפרויקט יודעת באיזה קורס מדובר וקוראת את ההרצאות שלו (גם את זו שרצה עכשיו) בלי העתק-הדבק. בוחרים מודל ועוברים על הצעדים לפי הסדר.</p>
+      <div class="aitabs" id="cAiTabs" role="tablist"></div>
+      <div class="aic" id="cAi"></div>
+    </div>
+    <div class="cpanel card" data-cp="exam" hidden>
+      <h2>הכנה למבחן</h2>
+      <p class="sub">כל ההרצאות של הקורס נשלחות ל-AI ביחד עם המשימה. אפשר לבחור משימה מוכנה או לכתוב משלך.</p>
+      <div class="presets" id="presets">
             <button type="button" data-preset="exam">מבחן תרגול</button>
             <button type="button" data-preset="summary">סיכום כל הקורס</button>
             <button type="button" data-preset="cards">כרטיסיות חזרה</button>
@@ -536,24 +552,16 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
             <button type="button" data-preset="formulas">דף נוסחאות</button>
           </div>
           <div id="cAsk"></div>
-        </div>
-        <details class="card gl">
-          <summary><b>מילון מונחים</b><span class="sub"> · עוזר לתמלול לכתוב נכון</span></summary>
-          <p class="sub">מונח בכל שורה. התמלול משתמש בהם כדי לכתוב נכון מונחים, שמות ומילים באנגלית, מההרצאה הבאה. כדאי להוסיף גם את <b>שם המרצה והמתרגלים</b> ושמות שחוזרים בקורס (חוקרים, משפטים). הכי חשובים למעלה: נכנסים בערך 30-40 הראשונים, ואחריהם גם מילים שנקראו מהשקופית שעל המסך.</p>
+    </div>
+    <div class="cpanel card" data-cp="gl" hidden>
+      <h2>מילון מונחים</h2>
+      <p class="sub">מונח בכל שורה. התמלול משתמש בהם כדי לכתוב נכון מונחים, שמות ומילים באנגלית, מההרצאה הבאה. כדאי להוסיף גם את <b>שם המרצה והמתרגלים</b> ושמות שחוזרים בקורס (חוקרים, משפטים). הכי חשובים למעלה: נכנסים בערך 30-40 הראשונים, ואחריהם גם מילים שנקראו מהשקופית שעל המסך.</p>
           <div class="sug" id="cSug" hidden></div>
           <label for="glossIn" class="sub" style="display:block;margin:0 0 4px">המונחים של הקורס</label>
           <textarea class="gloss" id="glossIn" dir="auto" spellcheck="false"></textarea>
           <div class="row" style="margin-top:10px">
             <button class="btn" id="glossSave" type="button" style="margin-inline-start:auto">שמירה</button>
           </div>
-        </details>
-      </div>
-    </div>
-    <div class="card aicard">
-      <h2>ה-AI של הקורס</h2>
-      <p class="sub">הדרך הכי נוחה ללמוד עם AI: <b>פרויקט נפרד לכל קורס, בכל מודל</b>. מגדירים פעם אחת, ומאז כל שיחה בפרויקט כבר יודעת באיזה קורס מדובר ויכולה לקרוא את ההרצאות שלו (גם את זו שרצה עכשיו) בלי העתק-הדבק. בוחרים מודל, ועוברים על הצעדים לפי הסדר.</p>
-      <div class="aitabs" id="cAiTabs" role="tablist"></div>
-      <div class="aic" id="cAi"></div>
     </div>
   </section>
 
@@ -1159,6 +1167,7 @@ async function openCourse(name) {
   let d; try { d = await api("/api/course?c=" + encodeURIComponent(name)); } catch (e) { d = {none: true}; }
   if (d.none) { $("#cSub").textContent = "הקורס לא נמצא."; return; }
   $("#glossIn").value = d.glossary || "";
+  setCTab("lec"); drawGlCount();
   drawCourseAi(d.ai);
   drawCourseLib();
   drawCourseSuggest();
@@ -1205,6 +1214,10 @@ function drawCourseAi(ai) {
   const box = $("#cAi"), tabs = $("#cAiTabs"); box.replaceChildren(); tabs.replaceChildren();
   if (!ai) return;
   const conn = connInfo();
+  const ready = ["claude", "chatgpt", "gemini"].filter(k => !!conn[k] || ai.links[k] || (k !== "claude" && ai.mirror));
+  const st = $("#ctAi"); st.textContent = ready.length ? "✓ " + ready.map(k => AI_WAYS[k].name).join(", ") : "עוד לא הוגדר - להגדרה";
+  st.className = ready.length ? "ok" : "warn";
+  $("#cAiHint").hidden = ready.length > 0;
   for (const k of ["claude", "chatgpt", "gemini"]) {
     const on = !!conn[k] || (k !== "claude" && ai.mirror);
     const tb = el("button", "aitab" + (k === aiTab ? " on" : ""), AI_WAYS[k].name + (on ? " ✓" : ""));
@@ -1266,7 +1279,17 @@ function drawCourseLib() {
   const items = libItems.filter(e => e.course === courseName), list = $("#cLib");
   $("#cSub").textContent = items.length + " הרצאות · התיקייה: ההרצאות שלי\\" + courseName;
   list.replaceChildren(...(items.length ? items.map(e => lecItem(e, false)) : [el("li", "empty", "עוד אין הרצאות בקורס הזה. בוחרים אותו במסך הבית לפני שמתחילים הרצאה.")]));
+  $("#ctLec").textContent = items.length ? items.length + " הרצאות" : "עוד אין";
 }
+// the course page's parts: one shown at a time, chosen from the tabs at the top
+function setCTab(t) {
+  document.querySelectorAll("#cTabs [data-ct]").forEach(b => b.setAttribute("aria-selected", b.dataset.ct === t ? "true" : "false"));
+  document.querySelectorAll("#vCourse [data-cp]").forEach(p => { p.hidden = p.dataset.cp !== t; });
+}
+document.querySelectorAll("#cTabs [data-ct], #vCourse [data-goct]").forEach(b =>
+  b.addEventListener("click", () => setCTab(b.dataset.ct || b.dataset.goct)));
+function drawGlCount() { const n = $("#glossIn").value.split(/\n+/).filter(x => x.trim()).length; $("#ctGl").textContent = n ? n + " מונחים" : "עוד ריק"; }
+$("#glossIn").addEventListener("input", drawGlCount);
 document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => {
   if (courseAsk) { courseAsk.textarea.value = PRESETS[b.dataset.preset]; courseAsk.focus(); }
 }));
