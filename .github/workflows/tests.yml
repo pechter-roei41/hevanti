@@ -31,3 +31,5 @@ jobs:
         run: python tools/test_youtube_rect.py
       - name: Stopping a lecture right after starting it
         run: python tools/test_stop.py
+      - name: Recordings from Panopto
+        run: python tools/test_panopto.py

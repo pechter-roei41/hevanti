@@ -3431,15 +3431,27 @@ def is_youtube(url):
     return any(host == h or host.endswith("." + h) for h in YOUTUBE_HOSTS)
 
 
+LINK_TITLES = {}   # link -> the recording's name, when the page knows it (the Panopto bookmark)
+
+
 def fetch_link(url):
     """A link -> Media on this computer, or None (after telling the user why)."""
+    m = _fetch_link(url)
+    if m is not None and LINK_TITLES.get(url):
+        m.title = LINK_TITLES[url]
+    return m
+
+
+def _fetch_link(url):
     import urllib.parse
     if is_youtube(url):
         problem(YOUTUBE_MSG)
         return None
-    host = (urllib.parse.urlsplit(url).hostname or "").lower()
-    if any(h in host for h in SITE_HOSTS):
-        return site_download(url)
+    parts = urllib.parse.urlsplit(url)
+    host = (parts.hostname or "").lower()
+    is_file = parts.path.lower().endswith((".mp4", ".m4a", ".mp3", ".m4v", ".webm", ".mov", ".wav"))
+    if (any(h in host for h in SITE_HOSTS) and not is_file) or parts.path.lower().endswith(".m3u8"):
+        return site_download(url)   # a video site, or a stream in pieces (HLS) - yt-dlp puts it together
     try:
         resp = _http(direct_link(url), headers={"User-Agent": "Mozilla/5.0"}, timeout=60)
     except Exception as e:
@@ -3530,6 +3542,10 @@ LINK_MESSAGES = {
 }
 
 
+PANOPTO_MSG = ("הקלטה בפנופטו דורשת התחברות, אז הבנתי לא יכולה להוריד אותה מהקישור. במקום זה: \"הרצאה מוקלטת\" ← "
+               "\"הקלטה מפנופטו\" - גוררים פעם אחת את הכפתור לשורת הסימניות, ואז לוחצים עליו כשההקלטה פתוחה בפנופטו.")
+
+
 def _ytdlp_info(url):
     """yt-dlp looks at the link: title, length, live or not. Asks for a passcode if the recording has one."""
     password, upgraded = None, False
@@ -3556,7 +3572,7 @@ def _ytdlp_info(url):
             ensure_ytdlp(upgrade=True)
             continue
         save_error_text("yt-dlp " + url, text)
-        problem(LINK_MESSAGES[kind])
+        problem(PANOPTO_MSG if kind == "login" and "panopto" in url.lower() else LINK_MESSAGES[kind])
         return None, None
     return None, None
 
@@ -4495,7 +4511,10 @@ class App:
             if not src:
                 return {"ok": False, "error": "לא נבחרה הקלטה."}
             save_settings(course=course)
-            self.start("rec", d.get("lang"), run_recording, src, d.get("lang"), course, title=display_name(src),
+            title = clean_name(str(d.get("title") or "")[:120])
+            if title and src.lower().startswith(("http://", "https://")):
+                LINK_TITLES[src] = title   # a name for a recording whose link says nothing (Panopto)
+            self.start("rec", d.get("lang"), run_recording, src, d.get("lang"), course, title=title or display_name(src),
                        course=course)
             return {"ok": True}
         if a == "open_recording":
@@ -4566,8 +4585,9 @@ class App:
             return {"ok": True}
         if a == "offer":
             src = str(d.get("source") or "")
+            title = clean_name(str(d.get("name") or "")[:120]) if d.get("name") else ""
             with self.lock:
-                self.pending = {"source": src, "name": display_name(src)} if src else None
+                self.pending = {"source": src, "name": title or display_name(src), "title": title} if src else None
             return {"ok": True}
         if a == "dismiss_pending":
             with self.lock:
