@@ -58,6 +58,7 @@ HERE = _tool_root(SCRIPT_DIR)
 IS_MAC = sys.platform == "darwin"   # the Mac version: Hevanti.command, the sound through BlackHole
 SYSTEM_DIR = os.path.dirname(SCRIPT_DIR) if os.path.basename(os.path.dirname(SCRIPT_DIR)).lower() == "system" else HERE
 ERROR_LOG = os.path.join(SYSTEM_DIR, "error_log.txt")
+STUCK_LOG = os.path.join(SYSTEM_DIR, "loading_stuck.txt")   # written only when loading the model hangs
 LIB_NAME = "הקורסים שלי"
 OLD_LIB_NAMES = ("ההרצאות שלי",)   # the folder's name before 16.10.2026 - renamed on the first start
 # Installed with Hevanti-Setup.exe (a Python of its own next to System\): the lectures go to Documents\הבנתי,
@@ -870,6 +871,19 @@ def model_path(name):
     return fast_download(name) or name
 
 
+def _cuda_libs_ok():
+    """Windows: can NVIDIA's cuBLAS and cuDNN be loaded? (Mac/Linux: leave it to CTranslate2.)"""
+    if os.name != "nt":
+        return True
+    import ctypes
+    for dll in ("cublas64_12.dll", "cudnn64_9.dll"):
+        try:
+            ctypes.WinDLL(dll)
+        except OSError:
+            return False
+    return True
+
+
 def load_model(stub_av=True):
     if stub_av:
         _stub_av()
@@ -889,7 +903,15 @@ def load_model(stub_av=True):
         try:
             path = model_path(name)
             import ctranslate2
-            if ctranslate2.get_cuda_device_count() > 0:
+            gpus = ctranslate2.get_cuda_device_count()
+            if gpus > 0 and not _cuda_libs_ok():
+                # an NVIDIA card but no cuBLAS/cuDNN (Hevanti-Setup's own Python has none until install_gpu):
+                # trying the GPU then can hang for ever - straight to the CPU
+                log("טיפ: יש במחשב כרטיס מסך של NVIDIA. כדי שהתמלול יהיה מהיר יותר, להריץ פעם אחת את install_gpu "
+                    "(בתיקייה System של הבנתי). עד אז: על המעבד.")
+                gpus = 0
+            log("טוען את מודל התמלול (" + ("כרטיס מסך" if gpus > 0 else "מעבד") + ")...")
+            if gpus > 0:
                 err = None
                 for ctype in ("float16", "int8_float16", "int8"):
                     try:
@@ -4691,7 +4713,22 @@ def get_model(lang, stub_av):
             _PIPE = _PIPE_REC = None
             import gc
             gc.collect()
-        m = load_model(stub_av=stub_av)
+        import faulthandler
+        dump = None
+        try:
+            dump = open(STUCK_LOG, "w", encoding="utf-8")
+            dump.write(f"--- {datetime.datetime.now()} (גרסה {VERSION}) loading the model took over 3 minutes - where it was: ---\n")
+            dump.flush()
+            faulthandler.dump_traceback_later(180, file=dump)
+        except Exception:
+            dump = None
+        try:
+            m = load_model(stub_av=stub_av)
+        finally:
+            if dump is not None:
+                faulthandler.cancel_dump_traceback_later()
+                dump.close()
+        _remove_quietly(STUCK_LOG)   # loaded: nothing to report
         APP.models[LANG] = m
         APP.device = "GPU" if m[2].endswith("GPU") else "CPU"
         return m
