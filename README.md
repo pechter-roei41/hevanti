@@ -30,7 +30,7 @@ Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsx
 ## Privacy
 
 - Transcripts and screenshots stay on your computer. The app only listens on `127.0.0.1`.
-- There is no Hevanti server. The connector (`hevanti_mcp.py`) only reads files from the "ההרצאות שלי" (My Lectures) folder, and only when your AI asks for them. What your AI reads is sent to its provider like any other conversation with it.
+- There is no Hevanti server. The connector (`hevanti_mcp.py`) only reads files from the "הקורסים שלי" (My Lectures) folder, and only when your AI asks for them. What your AI reads is sent to its provider like any other conversation with it.
 - "Sync to the cloud" is off until you turn it on; then your transcripts are copied to your own Google Drive / OneDrive.
 - Lectures belong to their lecturers and institutions. Some institutions forbid recording online lectures: see [what is allowed](docs/what-is-allowed.md) (Hebrew). Full policy: [CODE_SIGNING.md](CODE_SIGNING.md#privacy).
 

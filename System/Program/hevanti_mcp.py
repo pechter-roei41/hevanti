@@ -3,10 +3,10 @@
 
 A small MCP server (Model Context Protocol, over stdin/stdout) that lets the student's own AI app - Claude for
 desktop, ChatGPT/Codex - read what Hevanti saved: what is happening in the lecture right now, the slide on the
-screen, any transcript, and search in all of them. It only reads files in the "ההרצאות שלי" folder; it changes
+screen, any transcript, and search in all of them. It only reads files in the "הקורסים שלי" folder; it changes
 nothing and sends nothing anywhere by itself. Hevanti adds it to the AI app's settings ("חיבור" in the app).
 
-Run by the AI app as:  python hevanti_mcp.py --lib "<path to ההרצאות שלי>"
+Run by the AI app as:  python hevanti_mcp.py --lib "<path to הקורסים שלי>"
 Standard library only (Pillow is used when it is there, to make big screenshots smaller)."""
 import base64
 import io
@@ -472,7 +472,7 @@ class Server:
         if course:
             courses = [course]
         if not courses:
-            return [text("עוד אין קורסים ולא הרצאות שמורות בתיקיית ההרצאות שלי.")]
+            return [text("עוד אין קורסים ולא הרצאות שמורות בתיקיית הקורסים שלי.")]
         out = []
         for c in courses:
             words = glossary_words(os.path.join(self.lib.root, c))
@@ -516,7 +516,11 @@ def main():
     if "--lib" in args and args.index("--lib") + 1 < len(args):
         lib = args[args.index("--lib") + 1]
     if not lib:
-        lib = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "ההרצאות שלי")
+        root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        lib = next((os.path.join(root, n) for n in ("הקורסים שלי", "ההרצאות שלי") if os.path.isdir(os.path.join(root, n))),
+                   os.path.join(root, "הקורסים שלי"))
+    if not os.path.isdir(lib) and os.path.basename(lib.rstrip("\\/")) == "ההרצאות שלי":
+        lib = os.path.join(os.path.dirname(lib.rstrip("\\/")), "הקורסים שלי")   # renamed by Hevanti since connecting
     server = Server(Lib(lib))
     out = sys.stdout.buffer
     for raw in sys.stdin.buffer:
