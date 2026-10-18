@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 import tempfile
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -165,6 +166,23 @@ with tempfile.TemporaryDirectory() as tmp:
     check("prompt summary: the lecture is passed on", "lecture='10-12'" in ptext(3), ptext(3))
     check("prompt find_moment: the topic is used, no course is allowed", "מומנט התמד" in ptext(4) and "`moment`" in ptext(4), ptext(4))
     check("prompts: an unknown one is an error", "error" in P[5])
+
+    # --- a live lecture is recognised: the status line, the brief check, a stopped one, and no lecture ---
+    nowf = os.path.join(root, "now_watching.txt")
+    r = call(root, [("now", {"course": D}), ("now", {"course": D, "brief": True})])
+    check("now: says a live lecture is running, and tells the AI to answer in its context",
+          "🔴 הרצאה חיה רצה עכשיו" in body(r[10]) and "בהקשר של מה שנאמר" in body(r[10]) and D in body(r[10]), body(r[10]))
+    check("now brief: only the status (no transcript)", "🔴" in body(r[11]) and "תנע זוויתי של דיסקה" not in body(r[11]), body(r[11]))
+    old_t = time.time() - 600
+    os.utime(nowf, (old_t, old_t))
+    r = call(root, [("now", {"course": D, "brief": True})])
+    check("now: a file that stopped updating is not called live", "🔴" not in body(r[10]) and "נעצר" in body(r[10]), body(r[10]))
+    write(nowf, "מצב: אין כרגע הרצאה חיה ולא צפייה בהקלטה.\nההרצאה האחרונה: x\n")
+    r = call(root, [("now", {"brief": True})])
+    check("now: no lecture - says so", "אין כרגע הרצאה חיה" in body(r[10]) and "🔴" not in body(r[10]), body(r[10]))
+    instr = call(root, [])[0]["result"]["instructions"]
+    check("instructions: the live lecture rule", "LIVE LECTURE RULE" in instr and "START of every conversation" in instr, instr[:200])
+    check("now: tool description asks to call it at the start", "start of every conversation" in tools["now"]["description"])
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)

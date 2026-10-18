@@ -51,5 +51,16 @@ lectures = [n for n in os.listdir(L.course_dir(C)) if os.path.isdir(os.path.join
 check("stop while loading: no lecture folder", lectures == [], lectures)
 check("a new lecture can start right after", app.start("live", "he", lambda sess, *a: None, course=C) is not None)
 
+# a quiet live lecture keeps now_watching.txt fresh (the AI treats a file that stopped updating as a stopped lecture)
+import datetime  # noqa: E402
+L.LiveNow.EVERY_S, L.LiveNow.BEAT_S = 0.2, 1
+ln = L.LiveNow("a/b.txt", datetime.datetime.now(), course="x")
+ln.start()
+time.sleep(0.6)
+m1 = os.path.getmtime(L.NOW_FILE)
+time.sleep(2.2)
+check("live now file: rewritten while nobody speaks", os.path.getmtime(L.NOW_FILE) > m1)
+ln.stop_evt.set()
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)
