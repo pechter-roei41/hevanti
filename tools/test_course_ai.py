@@ -48,6 +48,7 @@ check("new course", name == C and os.path.isdir(cd))
 for n in L.AI_FILE_NAMES:
     p = os.path.join(cd, n)
     check(f"{n} written", os.path.isfile(p) and f'course="{C}"' in read(p) and read(p).startswith(L.AI_FILE_MARK))
+    check(f"{n}: the live lecture rule", "LIVE LECTURE RULE" in read(p) and "START of every conversation" in read(p) and f'course="{C}"' in read(p))
     check(f"{n}: the three ready-made requests", all(x in read(p) for x in ("מבחן דמה", "סכם הרצאה", "מצא את הרגע", "`moment`")))
 
 # the student's own AGENTS.md is never replaced; Hevanti's own one is updated

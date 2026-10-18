@@ -1452,6 +1452,7 @@ class LiveNow(threading.Thread):
     """now_watching.txt during a live lecture."""
     KEEP_S = 300   # the last 5 minutes
     EVERY_S = 3    # rewritten at most this often (the folder is often synced to the cloud)
+    BEAT_S = 30    # and at least this often while the lecture runs, even when nobody speaks
 
     def __init__(self, transcript_rel, start_dt, drafts=False, course=""):
         super().__init__(daemon=True)
@@ -1515,8 +1516,19 @@ class LiveNow(threading.Thread):
                 self.dirty = True
 
     def run(self):
+        last = time.time()   # when the file was last written
         while not self.stop_evt.wait(self.EVERY_S):
+            if time.time() - last >= self.BEAT_S:   # a quiet lecture: still say "alive" (the AI checks how fresh the file is)
+                with self.lock:
+                    self.dirty = True
+            with self.lock:
+                due = self.dirty
             self.write()
+            if due:
+                with self.lock:
+                    wrote = not self.dirty
+                if wrote:
+                    last = time.time()
 
     def finish(self, transcript_rel):
         self.stop_evt.set()
@@ -2782,6 +2794,15 @@ This folder is the course "{course}" in Hevanti (הבנתי), the student's lect
 its transcript ("<lecture>.txt", with times) and its slides ("שקופיות/", pictures; ".ocr.json" = text read from them).
 "now_watching.txt" here (a hidden file) says what is happening in this course right now: a live lecture, a recording
 or a YouTube video, the last minutes of what was said and the slide on the screen.
+
+LIVE LECTURE RULE (the most important one): the student often asks while a lecture is running and does not say so -
+even a general question ("מה זה מומנט התמד?", "למה צריך את זה?") is probably about what the lecturer is saying right
+now. So at the START of every conversation, and before answering any question on the subject of this course, call
+`now` first (course="{course}"; brief=true is a cheap check). If it reports a live lecture: tie the answer to it -
+what the lecturer just said (a few words and its time) and what is on the slide - e.g. "לפני דקה הוא אמר ש...".
+Keep it short (3-5 lines, offer more): the student is listening. If the question has nothing to do with the last
+minutes, answer normally and say so; if no lecture is running, answer normally and do not mention it. Never invent
+what the lecturer said.
 
 When the student asks about this course or about the lecture ("מה הוא אמר עכשיו?", "מה כתוב בשקופית?",
 "לא הבנתי את החלק האחרון", "תכין לי מבחן תרגול"):

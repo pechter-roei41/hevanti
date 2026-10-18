@@ -14,6 +14,7 @@ import json
 import os
 import re
 import sys
+import time
 
 VERSION = "2.1"
 NOW_NAME = "now_watching.txt"
@@ -24,6 +25,7 @@ MAX_TEXT = 90_000          # characters of transcript in one answer
 MOMENT_WINDOW = 75         # seconds: the words of a topic must come within this stretch
 MOMENT_APART = 150         # seconds between two places of the same lecture
 MOMENT_TOP = 5             # places returned by `moment`
+LIVE_STALE_S = 150         # a live lecture whose file was not rewritten for this long has probably stopped
 PROTOCOLS = ("2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05")
 
 LIVE_LINE = re.compile(r"\[(\d\d:\d\d:\d\d) \| \+(\d+):(\d\d):(\d\d)\] (.*)$")
@@ -35,8 +37,16 @@ NOW_TRANSCRIPT = re.compile(r"^תמלול מלא: (.+?\.txt)", re.M)
 INSTRUCTIONS = (
     "Hevanti (הבנתי) is the student's lecture app on this computer. It transcribes live lectures, recorded "
     "lectures and YouTube videos (Hebrew or English) and saves every new slide/board as a picture. "
+    "LIVE LECTURE RULE (the most important one): the student often asks while a lecture is running and does not say "
+    "so - even a general question ('מה זה מומנט התמד?', 'למה צריך את זה?') is probably about what the lecturer is "
+    "saying right now. So at the START of every conversation, and before answering any question on the subject "
+    "of a course, call `now` first (with brief=true it is a cheap check). If it reports a live lecture: tie the "
+    "answer to it - what the lecturer just said (a few words and its time) and what is on the slide - e.g. 'לפני "
+    "דקה הוא אמר ש...'. Keep it short (3-5 lines, offer more): the student is listening. If the question has "
+    "nothing to do with the last minutes, answer normally and say so; if no lecture is running, answer normally and "
+    "do not mention it. Never invent what the lecturer said. "
     "Whenever the user asks about the lecture, the lecturer, 'what he just said', the slide or the board "
-    "(e.g. 'מה הוא אמר עכשיו?', 'מה כתוב בשקופית?', 'לא הבנתי את החלק האחרון'), call `now` FIRST: it returns "
+    "(e.g. 'מה הוא אמר עכשיו?', 'מה כתוב בשקופית?', 'לא הבנתי את החלק האחרון'), call `now`: it returns "
     "what is happening right now (live, or the exact minute in a recording/video), the last minutes of the "
     "transcript and the slide on the screen. Use `transcript` for more context or another lecture, `slide` for "
     "the slide at a given time, `search` to find where something was said, `lectures` for the list. "
@@ -113,9 +123,12 @@ TOOLS = [
     {"name": "now",
      "description": "What is happening in the lecture RIGHT NOW: live lecture or the user's exact place in a "
                     "recording/YouTube video, the transcript of the last minutes, and the picture of the slide "
-                    "on the screen. Call this first for any question about the current lecture.",
+                    "on the screen. Call this at the start of every conversation and before answering any question "
+                    "about a course's subject - a lecture may be running without the user saying so; if it is, "
+                    "answer in its context. brief=true: only whether something is running (cheap).",
      "inputSchema": {"type": "object", "properties": {
-         "course": {"type": "string", "description": "the course this conversation is about (optional)"}},
+         "course": {"type": "string", "description": "the course this conversation is about (optional)"},
+         "brief": {"type": "boolean", "description": "only the status line, without the transcript and the slide"}},
          "additionalProperties": False}},
     {"name": "transcript",
      "description": "The transcript of a lecture (default: the one open now, or the newest). Optional time range "
@@ -373,6 +386,25 @@ class Server:
                       ". אם זה הקורס הנכון בשם אחר - להשתמש בשם כפי שהוא כאן.")
 
     # --- tools ---
+    def now_status(self, body):
+        """One clear line: is a live lecture running (and is the file fresh), or a recording, or nothing."""
+        first = body.strip().splitlines()[0] if body.strip() else ""
+        try:
+            age = time.time() - os.path.getmtime(os.path.join(self.lib.root, NOW_NAME))
+        except OSError:
+            age = 0
+        cur = self.lib.now_course(body)
+        where = f" בקורס \"{cur}\"" if cur else ""
+        if first.startswith("מצב: הרצאה חיה"):
+            if age > LIVE_STALE_S:
+                return (f"סטטוס: נראה שהתמלול נעצר - הקובץ לא התעדכן כבר {int(age // 60)} דקות (ייתכן שהבנתי נסגרה "
+                        "או שההרצאה נעצרה). אל תניח שההרצאה עדיין רצה.")
+            return (f"סטטוס: 🔴 הרצאה חיה רצה עכשיו{where}. אם השאלה קשורה לחומר - הסבר אותה בהקשר של מה שנאמר "
+                    "עכשיו ושל השקופית (בקצרה, הסטודנט מקשיב).")
+        if first.startswith(("מצב: צפייה", "מצב: סרטון")):
+            return f"סטטוס: הסטודנט צופה עכשיו בהקלטה או בסרטון{where}. השאלה כנראה על המקום שהוא נמצא בו."
+        return "סטטוס: אין כרגע הרצאה חיה. אפשר לענות כרגיל, ולהשתמש ב-`transcript` ו-`moment` להרצאות שנשמרו."
+
     def tool_now(self, args):
         course, err = self._course(args)
         if err:
@@ -382,6 +414,10 @@ class Server:
             return [text("הבנתי לא פועלת כרגע, או שעוד לא התחילה הרצאה (אין now_watching.txt). "
                          "אפשר להשתמש ב-`lectures` וב-`transcript` להרצאות שכבר נשמרו.")]
         out = []
+        status = self.now_status(body)
+        if args.get("brief"):
+            return [text(status)]
+        out.append(text(status))
         cur = self.lib.now_course(body)
         if course and cur and cur != course:
             out.append(text(f"שימו לב: מה שקורה עכשיו בהבנתי שייך לקורס \"{cur}\", לא לקורס \"{course}\" "
