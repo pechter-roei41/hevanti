@@ -1,5 +1,5 @@
 # Quick tests on every push, on Windows (what students use) and Linux: the AI connector, the AI of each course
-# (course files, project links, the cloud copy, Gemini's config) and where the YouTube player is photographed.
+# (course files, project links, the cloud copy, Gemini's config), the search, and where the YouTube player is photographed.
 name: tests
 on:
   push:
@@ -33,3 +33,5 @@ jobs:
         run: python tools/test_stop.py
       - name: Recordings from Panopto
         run: python tools/test_panopto.py
+      - name: Search in the lectures
+        run: python tools/test_search.py

@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Check the Python compiles
-        run: python -m py_compile System/Program/live_transcribe.py System/Program/hevanti_mcp.py
+        run: python -m py_compile System/Program/live_transcribe.py System/Program/hevanti_mcp.py System/Program/hevanti_search.py
       - name: Python for Windows (embeddable, from python.org)
         run: |
           curl -sSfL -o embed.zip https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip
@@ -70,7 +70,7 @@ jobs:
           & $py build/app/python/get-pip.py --no-warn-script-location
           & $py -m pip install "faster-whisper>=1.1" pyaudiowpatch numpy mss pillow comtypes --no-warn-script-location
           & $py -c "import faster_whisper, pyaudiowpatch, numpy, mss, PIL, comtypes; print('packages OK')"
-          & $py -m py_compile build/app/System/Program/live_transcribe.py build/app/System/Program/hevanti_mcp.py
+          & $py -m py_compile build/app/System/Program/live_transcribe.py build/app/System/Program/hevanti_mcp.py build/app/System/Program/hevanti_search.py
           Remove-Item build/app/python/get-pip.py
       - name: Inno Setup
         shell: pwsh

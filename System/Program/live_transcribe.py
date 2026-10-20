@@ -5060,7 +5060,43 @@ def transcript_view(fname):
     return {"entry": entry, "lines": lines}
 
 
+_SEARCH_INDEX = None
+_SEARCH_LOCK = threading.Lock()
+
+
+def _search_index():
+    """The search index (hevanti_search.py): a copy of the lectures' text in LOCAL_DIR, kept up to date by itself."""
+    global _SEARCH_INDEX
+    with _SEARCH_LOCK:
+        if _SEARCH_INDEX is None:
+            import hevanti_search
+            _SEARCH_INDEX = hevanti_search.Index(LIB_DIR, os.path.join(LOCAL_DIR, "search.db"))
+        return _SEARCH_INDEX
+
+
 def search(q, course="", limit=300):
+    """The lines that fit the words best, in all lectures (or one course): ranked, Hebrew prefixes and plurals
+    handled, "a phrase" as written. Falls back to the plain scan if the index cannot be used."""
+    try:
+        res = _search_index().search(q, course=course, limit=limit)
+        by = {e["f"]: e for e in library()}
+    except Exception:
+        save_error("search index")
+        return _search_scan(q, course, limit)
+    hits = []
+    for h in res["hits"]:
+        e = by.get(h["f"])
+        if e is None:
+            continue
+        slide = h["kind"] == "slide"
+        hits.append({"f": e["f"], "course": e["course"], "title": e["title"], "kind": e["kind"],
+                     "has_media": e["has_media"], "t": h["t"], "c": h["c"],
+                     "x": ("[בשקופית] " if slide else "") + h["x"],
+                     **({"slide": f"{e['f']}/{SLIDES_NAME}/{h['slide']}"} if slide else {})})
+    return {"hits": hits, "more": res["more"]}
+
+
+def _search_scan(q, course="", limit=300):
     """Every line with these words, in all lectures (or one course). Newest lectures first."""
     words = [w for w in str(q or "").lower().split() if w]
     if not words or len("".join(words)) < 2:

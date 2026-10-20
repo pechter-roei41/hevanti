@@ -538,6 +538,13 @@ class Server:
         return [text(f"השקופית מ-{hms(best[0])} ({it[0]}/{it[1]}):"), img] + \
             ([text("הטקסט שנקרא מהשקופית (אוטומטי):\n" + words)] if words else [])
 
+    def _search_index(self):
+        """Search in memory (this connector writes nothing): ranked, Hebrew prefixes and plurals handled."""
+        if getattr(self, "_ix", None) is None:
+            from hevanti_search import Index
+            self._ix = Index(self.lib.root, ":memory:")
+        return self._ix
+
     def tool_search(self, args):
         words = [w for w in str(args.get("query") or "").lower().split() if w]
         if not words:
@@ -545,6 +552,13 @@ class Server:
         course, err = self._course(args)
         if err:
             return [text(err)]
+        try:
+            res = self._search_index().search(str(args.get("query")), course=course or "", limit=60)
+            lines = [f"{h['f']} [{hms(h['t'])}] " + (f"[בשקופית {h['slide']}] " if h["kind"] == "slide" else "") + h["x"]
+                     for h in res["hits"]]
+            return [text("\n".join(lines) if lines else "לא נמצא.")]
+        except Exception:
+            pass      # no index: the plain scan below
         hits = []
         for c, n, d, path, _ in self.lib.lectures():
             if course and c != course:
