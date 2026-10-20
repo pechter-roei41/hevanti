@@ -2027,11 +2027,10 @@ const HOW = (() => {
     function arrange() {
       const z = zoomWin();
       const C = claudeWin(LEFT, true);
-      const mac = !!(app && app.mac);
-      const k1 = mk("div", "h-key off", mac ? "fn ⌃ + →" : "⊞ Windows + →", stage); k1.style.left = "44%"; k1.style.top = "44%";
+      const k1 = mk("div", "h-key off", "⊞ Windows + →", stage); k1.style.left = "44%"; k1.style.top = "44%";
       show(k1, 500); hide(k1, 1700);
       at(1300, () => Object.assign(z.style, {left: RIGHT[0] + "%", top: RIGHT[1] + "%", width: RIGHT[2] + "%", height: RIGHT[3] + "%"}));
-      const k2 = mk("div", "h-key off", mac ? "fn ⌃ + ←" : "⊞ Windows + ←", stage); k2.style.left = "7%"; k2.style.top = "44%";
+      const k2 = mk("div", "h-key off", "⊞ Windows + ←", stage); k2.style.left = "7%"; k2.style.top = "44%";
       show(k2, 2300); show(C.c, 2600); hide(k2, 3500);
       const l1 = mk("div", "h-split off", "שליש: ה-AI", stage); l1.style.left = "10%"; l1.style.top = "42%";
       const l2 = mk("div", "h-split off", "שני שליש: ההרצאה", stage); l2.style.left = "57%"; l2.style.top = "88%";
@@ -2166,7 +2165,6 @@ const HOW = (() => {
       });
     }
     $("#hPlay").hidden = still;
-    if (app && app.mac) STEPS[2].text = "מצמידים את ההרצאה לצד אחד (fn+Control+חץ, או גוררים את החלון לקצה המסך) ואת אפליקציית ה-AI לצד השני, וגוררים את הקו ביניהם: שני שליש להרצאה, שליש ל-AI. ככה ההרצאה לא מוסתרת, והתשובה נשארת מול העיניים. בזום יוצאים ממסך מלא.";   // with "reduce motion" nothing plays: the arrows and the list move between the steps
     playing = !still; go(0);
   }
   function stop() { clear(); if (stage) stage.replaceChildren(); cursor = null; }

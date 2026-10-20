@@ -56,7 +56,7 @@ class Tesseract:
         for base in (os.environ.get("ProgramFiles"), os.environ.get("ProgramFiles(x86)"), os.path.join(local, "Programs")):
             if base:
                 cands.append(os.path.join(base, "Tesseract-OCR", "tesseract.exe"))
-        cands += ["/opt/homebrew/bin/tesseract", "/usr/local/bin/tesseract", "/usr/bin/tesseract"]
+        cands += ["/usr/local/bin/tesseract", "/usr/bin/tesseract"]
         self.exe = next((c for c in cands if c and os.path.isfile(c)), None)
         if not self.exe:
             raise RuntimeError("Tesseract not found (run install_ocr in the System folder, or set HEVANTI_TESSERACT)")

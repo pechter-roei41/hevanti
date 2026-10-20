@@ -55,7 +55,6 @@ def _tool_root(d):
 
 
 HERE = _tool_root(SCRIPT_DIR)
-IS_MAC = sys.platform == "darwin"   # the Mac version: Hevanti.command, the sound through BlackHole
 SYSTEM_DIR = os.path.dirname(SCRIPT_DIR) if os.path.basename(os.path.dirname(SCRIPT_DIR)).lower() == "system" else HERE
 ERROR_LOG = os.path.join(SYSTEM_DIR, "error_log.txt")
 STUCK_LOG = os.path.join(SYSTEM_DIR, "loading_stuck.txt")   # written only when loading the model hangs
@@ -161,8 +160,6 @@ STATE_NAME = ".state.json"               # a recording's progress and your place
 OUT_DIR = os.path.join(HERE, "transcripts")  # the 1.x layout - moved into LIB_DIR on the first start
 # ASCII-only path for the model (CTranslate2 can fail on non-English Windows paths)
 MODEL_DIR = os.path.join(os.environ.get("PUBLIC", r"C:\Users\Public"), "whisper_models")
-if IS_MAC:
-    MODEL_DIR = os.path.join(os.path.expanduser("~"), "Library", "Application Support", "Hevanti", "whisper_models")
 # Language: "he" or "en" - chosen on the page for each lecture
 LANG, MODELS = "he", []
 TARGET_SR = 16000
@@ -872,7 +869,7 @@ def model_path(name):
 
 
 def _cuda_libs_ok():
-    """Windows: can NVIDIA's cuBLAS and cuDNN be loaded? (Mac/Linux: leave it to CTranslate2.)"""
+    """Windows: can NVIDIA's cuBLAS and cuDNN be loaded? (elsewhere: leave it to CTranslate2.)"""
     if os.name != "nt":
         return True
     import ctypes
@@ -1010,7 +1007,7 @@ def changed_fraction(a, b, thresh=25):
 # being written would look like a "new slide", and the chat would end up in the saved pictures. So the windows of
 # the AI apps/sites and of Hevanti that are in view are painted over (grey) before comparing and saving.
 MASK_TITLE = re.compile(r"\bClaude\b|ChatGPT|Gemini|הבנתי", re.I)
-MASK_EXE = {"claude", "chatgpt"}    # the program (Windows: claude.exe; Mac: the app's name)
+MASK_EXE = {"claude", "chatgpt"}    # the program (claude.exe, chatgpt.exe)
 
 
 def pick_mask_rects(wins):
@@ -1085,34 +1082,15 @@ def _visible_windows():
     return out
 
 
-def _visible_windows_mac():
-    """Mac: the windows on the screen, the front one first: (title, app, rect in points). Needs pyobjc (Quartz);
-    the titles need the "Screen Recording" permission, which the screenshots need anyway."""
-    import Quartz
-    infos = Quartz.CGWindowListCopyWindowInfo(
-        Quartz.kCGWindowListOptionOnScreenOnly | Quartz.kCGWindowListExcludeDesktopElements, Quartz.kCGNullWindowID)
-    out = []
-    for w in infos or []:
-        if int(w.get("kCGWindowLayer", 0)) != 0:
-            continue   # menus, the Dock, overlays
-        b = w.get("kCGWindowBounds") or {}
-        x, y = int(b.get("X", 0)), int(b.get("Y", 0))
-        out.append((str(w.get("kCGWindowName") or ""), str(w.get("kCGWindowOwnerName") or ""),
-                    (x, y, x + int(b.get("Width", 0)), y + int(b.get("Height", 0)))))
-    return out
-
-
 def mask_windows(arr, area, wins=None):
     """Grey out, in place, the AI/Hevanti windows that are in view inside the grabbed area (BGRA array)."""
     if wins is None:
-        if IS_MAC:
-            wins = _visible_windows_mac()
-        elif os.name == "nt":
+        if os.name == "nt":
             wins = _visible_windows()
         else:
             return False
     h, w = arr.shape[:2]
-    sx, sy = w / max(1, area.get("width", w)), h / max(1, area.get("height", h))   # a Mac's Retina: 2 pixels a point
+    sx, sy = w / max(1, area.get("width", w)), h / max(1, area.get("height", h))
     done = False
     for l, t, r, b in pick_mask_rects(wins):
         x0, y0 = max(0, int((l - area["left"]) * sx)), max(0, int((t - area["top"]) * sy))
@@ -1128,7 +1106,7 @@ def mask_windows(arr, area, wins=None):
 # ".ocr.json" in the lecture's "שקופיות" folder: {"13-40-11.jpg": "the text"}. The text can be searched, goes into
 # exam prep and into what is copied for an AI, and the connector gives it to the AI. The words in English on the
 # slide now on the screen also help the transcription (hotwords). No Tesseract: everything works as before.
-# Tesseract: "install_ocr" (Windows) or "brew install tesseract tesseract-lang" (Mac).
+# Tesseract: "install_ocr" (in the System folder).
 OCR_NAME = ".ocr.json"
 OCR_MAX = 4000    # characters kept per slide
 _OCR_LOCK = threading.Lock()
@@ -1153,7 +1131,7 @@ def find_tesseract():
             if base:
                 cands.append(os.path.join(base, "Tesseract-OCR", "tesseract.exe"))
     else:
-        cands += ["/opt/homebrew/bin/tesseract", "/usr/local/bin/tesseract", "/usr/bin/tesseract"]
+        cands += ["/usr/local/bin/tesseract", "/usr/bin/tesseract"]
     return next((c for c in cands if c and os.path.isfile(c)), None)
 
 
@@ -1789,7 +1767,7 @@ def pick_page_window(v, wins):
 
 def screen_rect(v, wins=None):
     """The page's report about where the player is -> a rectangle on the screen, in the screenshot's coordinates.
-    Windows: from the browser window's real place (mixed-scale monitors); Mac: in points, as the screenshot is."""
+    Windows: from the browser window's real place (mixed-scale monitors)."""
     if not isinstance(v, dict):
         return None
     try:
@@ -1813,8 +1791,6 @@ def screen_rect(v, wins=None):
         # the page's window was not found: a guess from window.screenX lands beside the player on monitors with
         # different scaling, and photographs Hevanti's own transcript - a "new slide" every few seconds. No picture.
         return None
-    if IS_MAC:
-        dpr = 1.0   # the Mac's screen coordinates are points, like window.screenX
     border = max(0.0, (ow - iw) / 2)
     top_bar = max(0.0, oh - ih - border)
     left, top = (sx + border + x) * dpr, (sy + top_bar + y) * dpr
@@ -2059,8 +2035,6 @@ class AudioInput:
 
     def open(self):
         self.close()  # full PortAudio restart -> fresh device list
-        if IS_MAC:
-            return self._open_mac()
         import pyaudiowpatch as pyaudio
         p = pyaudio.PyAudio()
         try:
@@ -2095,40 +2069,17 @@ class AudioInput:
         self.p, self.stream, self.sr, self.ch, self.name = p, stream, sr, ch, out_name
         self.opened_at = time.time()
 
-    def _open_mac(self):
-        """Mac: the computer's sound cannot be recorded without a driver. It comes through BlackHole (free, open
-        source), with a "Multi-Output Device" that sends the sound both to the speakers and to BlackHole."""
-        import sounddevice as sd
-        want = (os.environ.get("HEVANTI_AUDIO_DEVICE") or "BlackHole").lower()
-        devs = sd.query_devices()
-        dev = next((i for i, d in enumerate(devs) if want in str(d["name"]).lower() and d["max_input_channels"] > 0), None)
-        if dev is None:
-            raise RuntimeError("BlackHole not found")
-        info = devs[dev]
-        sr, ch = int(info["default_samplerate"]), max(1, min(2, int(info["max_input_channels"])))
-        self.gen += 1
-        gen, q = self.gen, self.q
-
-        def cb(indata, frames, time_info, status):
-            q.put((gen, time.time(), bytes(indata)))
-
-        stream = sd.RawInputStream(samplerate=sr, channels=ch, dtype="int16", device=dev, blocksize=2048, callback=cb)
-        stream.start()
-        self.stream, self.sr, self.ch, self.name = stream, sr, ch, str(info["name"])
-        self.opened_at = time.time()
-
     def alive(self):
         try:
             if self.stream is None:
                 return False
-            return bool(self.stream.active) if IS_MAC else self.stream.is_active()
+            return bool(self.stream.is_active())
         except Exception:
             return False
 
     def close(self):
         s = self.stream
-        steps = ((lambda: s.stop(), lambda: s.close()) if IS_MAC else
-                 (lambda: s.stop_stream(), lambda: s.close(), lambda: self.p.terminate()))
+        steps = (lambda: s.stop_stream(), lambda: s.close(), lambda: self.p.terminate())
         for fn in steps:
             try:
                 fn()
@@ -2144,8 +2095,6 @@ class AudioInput:
 # page tells the tool exactly where you are (at any playback speed), so now_watching.txt always says
 # which part of the lecture you are asking about. The part you are watching is transcribed first.
 LOCAL_DIR = os.path.join(os.environ.get("LOCALAPPDATA") or HERE, "Hevanti")
-if IS_MAC:
-    LOCAL_DIR = os.path.join(os.path.expanduser("~"), "Library", "Application Support", "Hevanti")
 OLD_LOCAL_DIR = os.path.join(os.environ.get("LOCALAPPDATA") or HERE, "BeZmanEmet")  # 1.x
 VIDEO_DIR = os.path.join(LOCAL_DIR, "videos")  # downloads: not in the tool folder, which is often synced to the cloud
 CACHE_DIR = os.path.join(OLD_LOCAL_DIR, "progress")  # 1.x: unfinished transcriptions (2.0 keeps them in the lecture folder)
@@ -2255,13 +2204,6 @@ def to_recycle_bin(path):
     a copy kept in %LOCALAPPDATA%\\Hevanti\\deleted. Returns "bin", "kept" or "" (failed)."""
     import shutil
     path = os.path.abspath(path)
-    if IS_MAC:
-        try:
-            trash = os.path.join(os.path.expanduser("~"), ".Trash")
-            shutil.move(path, os.path.join(trash, free_folder(trash, os.path.basename(path))))
-            return "bin"
-        except OSError:
-            save_error("trash")
     if os.name == "nt":
         try:
             import ctypes
@@ -2403,7 +2345,7 @@ def create_course(name, terms=None):
 # own window. One button per app, the same for all three:
 #   Claude  - Claude for desktop reads its MCP servers from claude_desktop_config.json
 #   ChatGPT - ChatGPT for Windows (Codex) reads them from ~/.codex/config.toml
-#   Gemini  - the Gemini app for Windows cannot use local files or connectors yet (Mac only, Sept 2026)
+#   Gemini  - the Gemini app for Windows cannot use local files or connectors yet
 SUMMARY_NAME = "סיכום.txt"
 MCP_SCRIPT = os.path.join(SCRIPT_DIR, "hevanti_mcp.py")
 MCP_NAME = "hevanti"
@@ -2418,9 +2360,6 @@ def _mcp_entry():
 def claude_config_paths():
     """Claude for desktop's config: the usual installer, and the Microsoft Store (MSIX) copy."""
     import glob
-    if IS_MAC:
-        return [os.path.join(os.path.expanduser("~"), "Library", "Application Support", "Claude",
-                             "claude_desktop_config.json")]
     out = []
     appdata = os.environ.get("APPDATA")
     if appdata:
@@ -2433,7 +2372,7 @@ def claude_config_paths():
 
 
 def gemini_config_path():
-    """Gemini CLI's user settings (Windows and Mac alike: ~/.gemini/settings.json). Gemini CLI stopped serving
+    """Gemini CLI's user settings (~/.gemini/settings.json). Gemini CLI stopped serving
     personal Google accounts on 18.6.2026; it is still written for school/work accounts that use it."""
     home = os.environ.get("BZM_GEMINI_DIR") or os.path.join(os.path.expanduser("~"), ".gemini")
     return os.path.join(home, "settings.json")
@@ -2628,7 +2567,7 @@ def connect_status():
 
 
 CONNECT_NEXT = {
-    "claude": "מחובר. עכשיו לסגור את Claude למחשב לגמרי (ב-Windows גם מהאייקון ליד השעון, ב-Mac: Cmd+Q) ולפתוח אותו שוב. "
+    "claude": "מחובר. עכשיו לסגור את Claude למחשב לגמרי (גם מהאייקון ליד השעון) ולפתוח אותו שוב. "
               "מהפעם הבאה אפשר פשוט לשאול אותו \"מה המרצה אמר עכשיו?\" או \"מה כתוב בשקופית?\".",
     "chatgpt": "מחובר. עכשיו לסגור את ChatGPT למחשב ולפתוח אותו שוב, לעבור למצב Codex, ולשאול שם "
                "\"מה המרצה אמר עכשיו?\". (צריך את ChatGPT ל-Windows מ-chatgpt.com/download.)",
@@ -2664,15 +2603,6 @@ def find_ai_apps():
     fake = os.environ.get("BZM_FAKE_APPS")   # tests: "claude,gemini"
     if fake is not None:
         return {a: "fake!" + a for a in fake.split(",") if a in AI_APP_NAMES}
-    if IS_MAC:   # /Applications/Claude.app, ChatGPT.app, Gemini.app (also in ~/Applications)
-        out = {}
-        bases = ["/Applications", os.path.join(os.path.expanduser("~"), "Applications")]
-        apps = [os.path.join(b, f) for b in bases if os.path.isdir(b) for f in sorted(os.listdir(b)) if f.endswith(".app")]
-        for app, names in AI_APP_NAMES.items():
-            hit = next((x for x in apps if os.path.basename(x)[:-4].lower() in names), None)
-            if hit:
-                out[app] = "mac:" + hit
-        return out
     if os.name != "nt":
         return {}
     import subprocess
@@ -2731,9 +2661,6 @@ def open_ai_app(app):
         return True
     import subprocess
     try:
-        if aid.startswith("mac:"):
-            subprocess.Popen(["open", aid[4:]])
-            return True
         subprocess.Popen(["explorer.exe", "shell:AppsFolder\\" + aid], close_fds=True)
         return True
     except OSError:
@@ -2967,13 +2894,7 @@ def find_cloud_folders():
     out = []
     home = os.path.expanduser("~")
     my = ("My Drive", "האחסון שלי", "Mi unidad", "Meine Ablage", "Mon Drive")
-    if IS_MAC:
-        import glob
-        for d in sorted(glob.glob(os.path.join(home, "Library", "CloudStorage", "GoogleDrive-*"))):
-            for n in my:
-                if os.path.isdir(os.path.join(d, n)):
-                    out.append(("Google Drive", os.path.join(d, n)))
-    elif os.name == "nt":
+    if os.name == "nt":
         import string
         for letter in string.ascii_uppercase[3:]:
             for n in my:
@@ -3221,12 +3142,7 @@ def open_course_terminal(course):
     title = f"Gemini - {clean_name(course)}"
     tool = "agy" if shutil.which("agy") else "gemini" if shutil.which("gemini") else None
     try:
-        if IS_MAC:
-            q = d.replace("\\", "\\\\").replace('"', '\\"')
-            run = f'cd \\"{q}\\"; ' + (tool or "echo 'Antigravity CLI is not installed'")
-            subprocess.Popen(["osascript", "-e", f'tell application "Terminal" to do script "{run}"',
-                              "-e", 'tell application "Terminal" to activate'])
-        elif os.name == "nt":
+        if os.name == "nt":
             lit = d.replace("'", "''")
             missing = ("Write-Host 'Antigravity CLI (agy) is not installed yet. Install once:'; "
                        "Write-Host 'irm https://antigravity.google/cli/install.ps1 | iex'")
@@ -4456,7 +4372,7 @@ class App:
                     "notes": [n for n in self.notes if n["id"] > notes_since],
                     "lib_rev": self.lib_rev, "first_view": self.first_view,
                     "screens": SCREEN_ENABLED, "product": PRODUCT, "migrated": self.migrated,
-                    "course": load_settings().get("course") or "", "connect": self.connect_info(), "mac": IS_MAC,
+                    "course": load_settings().get("course") or "", "connect": self.connect_info(),
                     "ai_apps": ai_apps_status(), "update": self.update}
 
     def connect_info(self):
@@ -4836,7 +4752,7 @@ def display_name(src):
 
 
 def open_in_explorer(what, fname=None):
-    if os.name != "nt" and not IS_MAC:
+    if os.name != "nt":
         return
     paths = {"tool": DATA_DIR, "lib": LIB_DIR, "videos": VIDEO_DIR}
     p = paths.get(what, LIB_DIR)
@@ -4849,11 +4765,7 @@ def open_in_explorer(what, fname=None):
     try:
         if what != "file":
             os.makedirs(p, exist_ok=True)
-        if IS_MAC:
-            import subprocess
-            subprocess.Popen(["open", p])
-        else:
-            os.startfile(p)
+        os.startfile(p)
     except Exception:
         save_error("open folder")
 
@@ -4874,14 +4786,6 @@ def pick_file():
     """Windows' own "open file" window. Returns the chosen path, or ''."""
     if os.environ.get("BZM_FAKE_PICK") is not None:  # tests
         return os.environ["BZM_FAKE_PICK"]
-    if IS_MAC:
-        import subprocess
-        try:
-            r = subprocess.run(["osascript", "-e", 'POSIX path of (choose file with prompt "בחירת הקלטה")'],
-                               capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600)
-            return (r.stdout or "").strip()
-        except Exception:
-            return ""
     if os.name != "nt":
         return ""
     import base64
@@ -5713,15 +5617,6 @@ _INSTANCE = None  # keeps the "already running" marker alive while the tool runs
 def another_window_open():
     """True if the tool is already running (two copies = double work, slower)."""
     global _INSTANCE
-    if IS_MAC:
-        try:
-            import fcntl
-            os.makedirs(LOCAL_DIR, exist_ok=True)
-            _INSTANCE = open(os.path.join(LOCAL_DIR, ".running"), "w")
-            fcntl.flock(_INSTANCE, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            return False
-        except OSError:
-            return True
     if os.name != "nt":
         return os.environ.get("BZM_FAKE_RUNNING") == "1"
     try:
@@ -5870,8 +5765,6 @@ def run_live(sess, lang, course=""):
         _ensure_packages([("mss", "mss"), ("PIL", "pillow")])
     if os.name == "nt":
         _ensure_packages([("comtypes", "comtypes")], "למעבר בין אוזניות לרמקולים")
-    if IS_MAC:
-        _ensure_packages([("sounddevice", "sounddevice")], "להקלטת הקול של המחשב")
     if sess.stop.is_set():
         return   # stopped while loading: no lecture folder
     model, beam, model_desc = get_model(lang, stub_av=True)
@@ -5891,11 +5784,7 @@ def run_live(sess, lang, course=""):
             if is_blocked(e) or isinstance(e, ImportError):
                 raise
             if not told:
-                if IS_MAC:
-                    log("לא מצאתי את BlackHole - בלעדיו Mac לא נותן להקליט את הקול של המחשב. ההתקנה וההגדרה (פעם אחת) "
-                        "כתובות ב-README, בחלק \"Mac\". ממשיך לנסות...")
-                else:
-                    log(f"לא נמצא התקן שמע פעיל ({e.__class__.__name__}). לחבר רמקולים או אוזניות - ממשיך לנסות...")
+                log(f"לא נמצא התקן שמע פעיל ({e.__class__.__name__}). לחבר רמקולים או אוזניות - ממשיך לנסות...")
                 told = True
             sess.stop.wait(5)
     if sess.stop.is_set():
