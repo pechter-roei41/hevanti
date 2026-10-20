@@ -5674,6 +5674,9 @@ def initial_action(argv, env):
 
 def main():
     log(f"{PRODUCT} - גרסה {VERSION} ({VERSION_DATE})")
+    if os.name != "nt" and not os.environ.get("BZM_ALLOW_NON_WINDOWS"):   # the tests on other systems set the variable
+        log(f"{PRODUCT} עובדת רק ב-Windows 10 ו-11.")
+        sys.exit(1)
     act = initial_action(sys.argv[1:], os.environ)
     if another_window_open():
         url = running_url()
