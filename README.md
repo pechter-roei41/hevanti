@@ -37,7 +37,7 @@ Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsx
 - Transcripts and screenshots stay on your computer. The app only listens on `127.0.0.1`.
 - There is no Hevanti server. If you turn on Answer here, what you ask (the question, the last minutes of the transcript and the current slide) is sent to Google's Gemini API with your own key; with Formulas and handwriting, every saved slide too. The connector (`hevanti_mcp.py`) only reads files from the "הקורסים שלי" (My Lectures) folder, and only when your AI asks for them. What your AI reads is sent to its provider like any other conversation with it.
 - "Sync to the cloud" is off until you turn it on; then your transcripts are copied to your own Google Drive / OneDrive.
-- Lectures belong to their lecturers and institutions. Some institutions forbid recording online lectures: see [what is allowed](docs/what-is-allowed.md) (Hebrew). Full policy: [CODE_SIGNING.md](CODE_SIGNING.md#privacy).
+- **Responsibility:** Hevanti is provided s is, without warranty of any kind (see [LICENSE](LICENSE)). Using it, including recording, transcribing and saving lectures and slides, is entirely the user's responsibility. **Each user must check the rules of their own institution and lecturer before using it.** The author and contributors are not liable for its use. Full policy: [CODE_SIGNING.md](CODE_SIGNING.md#privacy).
 
 ## How it is built
 
