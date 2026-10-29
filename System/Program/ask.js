@@ -33,7 +33,7 @@
 .askp .chips2 button{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:2px 11px;font:inherit;font-size:13px;cursor:pointer}
 .askp .chips2 button:hover{border-color:var(--accent)}
 .askp .conv{display:grid;gap:8px;max-height:min(55vh,560px);overflow-y:auto}
-.askp .conv:empty,.askp .convbar[hidden]{display:none}
+.askp .conv:empty,.askp [hidden]{display:none!important}
 .askp .qa{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
 .askp .qa .q{font-weight:700;margin:0 0 4px;color:var(--accent);font-size:14px}
 .askp .qa .a{line-height:1.65;font-size:calc(15px * var(--tx, 1))}
@@ -177,7 +177,7 @@
     const buttons = {};
     // ---- the answer inside Hevanti (built-in, free Gemini key) ----
     const here = mk("button", "here", "תשובה כאן"); here.type = "button";
-    here.title = "Gemini עונה כאן, בתוך הבנתי, עם מה שנאמר" + (opts.hasImage ? " והשקופית שעל המסך" : "") + ". Ctrl+Enter";
+    here.title = "Gemini עונה כאן, בתוך הבנתי, עם מה שנאמר" + (opts.hasImage ? " והשקופית שעל המסך" : "") + ". Enter לשליחה, Shift+Enter לשורה חדשה";
     const chips = mk("div", "chips2"); chips.setAttribute("role", "group"); chips.setAttribute("aria-label", "שאלות מוכנות");
     for (const c of opts.chips || ["תסביר בפשטות את מה שנאמר עכשיו", "תן דוגמה", "מה כתוב בשקופית?", "למה זה חשוב?"]) {
       const b = mk("button", "", c); b.type = "button";
@@ -304,9 +304,10 @@
       buttons[a.id] = bt; row.appendChild(bt);
     }
     ta.addEventListener("keydown", e => {
-      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      // Enter sends (Shift+Enter is a new line); Ctrl+Enter sends too
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
         e.preventDefault();
-        if (hereDefault() && !e.shiftKey) { const q = ta.value.trim(); ta.value = ""; askHere(q); }
+        if (hereDefault()) { if (busy) return; const q = ta.value.trim(); ta.value = ""; askHere(q); }
         else send(AIS.find(a => a.id === getLast()) || AIS[0]);
       }
     });
