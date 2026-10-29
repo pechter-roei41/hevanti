@@ -280,6 +280,12 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 .shotdel{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 6px;text-decoration:underline}
 .shotdel:hover{color:var(--rec)}
 .study .row .btn{flex:1 1 150px}
+/* the first-start card */
+.setup{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.setup li{border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:grid;gap:8px;background:var(--bg)}
+.setup li .stdone{display:none;color:var(--ok);font-weight:800;font-size:14px}
+.setup li.done{background:var(--ok-soft)}
+.setup li.done .stdone{display:inline}
 /* 2.2: the animated "how to use" shows the old way (asking another AI app), and each course's AI-project tab is
    for that old way too - both hidden until they are redone around "תשובה כאן" */
 html:not(.plan-paid) #cTabs [data-ct="ai"]{display:none!important}   /* shown to students with a paid AI plan (see render) */
@@ -451,6 +457,25 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="cbar" id="updBar" hidden><span id="updText"></span><a class="btn small" id="updGo" href="#" target="_blank" rel="noopener">להורדה</a></div>
     <div class="msg" id="homeErr" hidden></div>
 
+    <div class="card" id="setupCard" hidden>
+      <h2 style="margin:0 0 4px">בואו נתחיל: שני צעדים, בערך דקה</h2>
+      <p class="sub" style="margin-top:0">אחרי זה כל הרצאה היא לחיצה אחת, ואפשר לשאול שאלות תוך כדי.</p>
+      <ol class="setup">
+        <li id="stKey">
+          <div class="row"><b>1. תשובות בתוך הבנתי, בחינם</b><span class="stdone">✓ מוכן</span></div>
+          <p class="sub" style="margin:0">הבנתי שואלת את Gemini של Google בשבילך. לשם כך צריך "מפתח": קוד חינמי, בלי כרטיס אשראי.</p>
+          <div class="row"><a class="btn small" id="setupOpen" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">פתיחת Google ליצירת המפתח</a><span class="sub2" style="font-size:14px;color:var(--muted)">שם: Create API key, ואז Copy key.</span></div>
+          <div class="row"><input type="password" id="setupKey" placeholder="להדביק כאן את המפתח (Ctrl+V)" autocomplete="off" aria-label="מפתח Gemini" dir="ltr"><button class="btn small" id="setupKeySave" type="button">שמירה ובדיקה</button></div>
+          <p class="capstat" id="setupKeyStat" style="margin:0;color:var(--muted)"></p>
+        </li>
+        <li id="stWin">
+          <div class="row"><b>2. מה לצלם מהמסך</b><span class="stdone">✓ מוכן</span></div>
+          <p class="sub" style="margin:0">בחרו את חלון ההרצאה (למשל זום), כך שהודעות וצ'אטים לא ייכנסו לצילומים.</p>
+          <div class="row"><button class="btn small" id="setupWin" type="button">בחירת חלון הרצאה</button></div>
+        </li>
+      </ol>
+      <div class="row" style="margin-top:8px"><span class="sub2" style="font-size:14px;color:var(--muted)">ואז: <b>הרצאה חיה</b> (זום או שידור) או <b>הרצאה מוקלטת</b>, למטה.</span><button class="btn quiet small" id="setupLater" type="button" style="margin-inline-start:auto">לא עכשיו</button></div>
+    </div>
     <div class="connbar" id="howBar" hidden><span><b>פעם ראשונה בהבנתי?</b> הדגמה של דקה מראה הכל: בחירת חלון, הרצאה חיה, שאלה ותשובה, ולימוד אחרי ההרצאה.</span><button class="btn small" type="button" data-how>לצפייה בהדגמה</button><button class="btn quiet small" id="howNo" type="button">לא עכשיו</button></div>
     <div class="connbar" id="connBar" hidden><span><b>יש לך מנוי?</b> מחברים פעם אחת את Claude או ChatGPT למחשב להבנתי, ואז שואלים אותם ישר בחלון שלהם, בלי מכסה ובלי להעתיק: הם קוראים לבד מה נאמר ואת השקופית.</span><button class="btn small" type="button" data-conn-open>חיבור AI</button></div>
 
@@ -1079,6 +1104,35 @@ $("#mathSave").addEventListener("click", async () => {
 $("#mathOn").addEventListener("change", () => mathSend({on: $("#mathOn").checked}, $("#mathOn").checked ? "קריאת הנוסחאות פועלת." : "קריאת הנוסחאות כבויה. שקופיות לא נשלחות ל-Google."));
 $("#planPaid").addEventListener("change", () => mathSend({plan: $("#planPaid").checked ? "paid" : "free"}, $("#planPaid").checked ? "מעכשיו שאלות והרצאות שלמות ילכו לאפליקציית ה-AI שלך." : "מעכשיו הבנתי עונה כאן, במכסה החינמית."));
 $("#askOn").addEventListener("change", () => mathSend({ask: $("#askOn").checked}, $("#askOn").checked ? "תשובות בתוך הבנתי פועלות." : "תשובות בתוך הבנתי כבויות."));
+// ---------- the first start: two steps (a free Gemini key, one window to photograph) ----------
+let setupNo = false;
+try { setupNo = localStorage.getItem("bzm.setupNo") === "1"; } catch (e) {}
+function drawSetup() {
+  const m = (app && app.math) || {}, c = (app && app.capture) || {};
+  const keyDone = !!m.has_key || m.plan === "paid", winDone = c.mode === "window" && !!c.window || c.mode === "region" && !!c.region;
+  $("#stKey").classList.toggle("done", keyDone); $("#stWin").classList.toggle("done", winDone);
+  const show = !setupNo && !(keyDone && winDone) && view === "home" && !(app && app.session && !app.session.done);
+  $("#setupCard").hidden = !show;
+  if (show) $("#tutorBar").hidden = true;   // (the same invitation, in the card)
+  if (keyDone && !$("#setupKeyStat").textContent.startsWith("המפתח לא")) $("#setupKeyStat").textContent = "";
+}
+async function setupSaveKey() {
+  const k = $("#setupKey").value.trim().replace(/\s+/g, ""); if (!k) return;
+  $("#setupKeySave").disabled = true; $("#setupKeyStat").textContent = "בודק את המפתח...";
+  let r; try { r = await api("/api/cmd", {action: "math_set", key: k, ask: true}); } catch (e) { r = {ok: false, error: "לא הצלחתי להגיע להבנתי. לרענן את הדף (F5)."}; }
+  $("#setupKeySave").disabled = false;
+  if (r.ok) { $("#setupKey").value = ""; if (r.math && app) app.math = r.math; mathSig = ""; drawMath(); toast("המפתח תקין. מעכשיו יש \"תשובה כאן\" בכל תיבת שאלה."); drawSetup(); }
+  else $("#setupKeyStat").textContent = "המפתח לא נשמר: " + (r.error || "בדקו שהעתקתם את כולו (Copy key).");
+}
+$("#setupKeySave").addEventListener("click", setupSaveKey);
+$("#setupKey").addEventListener("paste", () => setTimeout(() => { if ($("#setupKey").value.trim().length > 20) setupSaveKey(); }, 50));   // pasting is enough
+$("#setupKey").addEventListener("keydown", e => { if (e.key === "Enter") setupSaveKey(); });
+$("#setupWin").addEventListener("click", async () => {
+  await capSend({mode: "window"}); await capLoadWins();
+  const box = $("#capHome"); box.scrollIntoView({block: "center", behavior: "smooth"});
+  toast("בוחרים את חלון ההרצאה מהרשימה ולוחצים \"שמירה\".");
+});
+$("#setupLater").addEventListener("click", () => { setupNo = true; $("#setupCard").hidden = true; try { localStorage.setItem("bzm.setupNo", "1"); } catch (e) {} });
 let tutorBarNo = false;
 try { tutorBarNo = localStorage.getItem("bzm.tutorNo") === "1"; } catch (e) {}
 $("#tutorGo").addEventListener("click", () => { $("#mathBox").open = true; $("#mathBox").scrollIntoView({block: "start", behavior: "smooth"}); setTimeout(() => $("#mathKey").focus(), 400); });
@@ -1250,6 +1304,7 @@ function render(d) {
   drawCaps(); drawMath();
   document.documentElement.classList.toggle("plan-paid", !!(d.math && d.math.plan === "paid")); drawConnBar();
   if (view === "past") drawStudyWhere();
+  drawSetup();
   if (window.BZMAsk) { BZMAsk.setBuiltin(!!(d.math && d.math.ask)); BZMAsk.setPlan((d.math && d.math.plan) || ""); }
   $("#tutorBar").hidden = !!(d.math && (d.math.has_key || d.math.plan === "paid")) || tutorBarNo;
   if (view === "yt") ytHead(s);
