@@ -262,6 +262,52 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 .big img{max-width:100%;max-height:100%;border-radius:8px}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:14px;font-weight:600;max-width:min(92vw,520px);text-align:center;z-index:40;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.on{opacity:1}
+/* what is photographed (2.2) */
+.capcard{display:grid;gap:10px}
+.capcard h2{margin:0;font-size:18px}
+.capcard .capstat{margin:0;font-size:15px;color:var(--muted)}
+.capcard .capstat b{color:var(--fg)}
+.capcard.paused{border-color:var(--rec);box-shadow:0 0 0 2px var(--rec) inset}
+.capcard .sub2{color:var(--muted);font-size:13.5px;margin:0;line-height:1.5}
+.capcard select,.capcard input[type=text]{padding:7px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg);min-width:0;font:inherit;font-size:14.5px}
+.capcard .row input[type=text]{flex:1}
+.capcanvas{position:relative;direction:ltr;width:100%;aspect-ratio:16/9;background:var(--sunk);border:1px solid var(--line);border-radius:10px;overflow:hidden;touch-action:none;cursor:crosshair;user-select:none}
+.capcanvas img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none}
+.capcanvas .none{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);text-align:center;padding:16px;font-size:15px;pointer-events:none}
+.capbox{position:absolute;border:2px solid var(--accent);background:rgba(31,122,85,.18);box-sizing:border-box}
+.capbox.blur{border-color:var(--rec);background:repeating-linear-gradient(45deg,rgba(194,65,45,.35) 0 6px,rgba(194,65,45,.15) 6px 12px)}
+.capbox .capx{position:absolute;top:-2px;right:-2px;width:22px;height:22px;border:0;border-radius:0 0 0 8px;background:var(--rec);color:#fff;cursor:pointer;font-weight:700;line-height:1;padding:0}
+.shotdel{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 6px;text-decoration:underline}
+.shotdel:hover{color:var(--rec)}
+.study .row .btn{flex:1 1 150px}
+/* 2.2: the animated "how to use" shows the old way (asking another AI app), and each course's AI-project tab is
+   for that old way too - both hidden until they are redone around "תשובה כאן" */
+#cTabs [data-ct="ai"]{display:none!important}
+/* display and accessibility (2.2): chosen in "תצוגה ונגישות", kept in this browser */
+.lines{font-size:calc(17px * var(--tx, 1))}
+.lines li.note,.lines li.gap{font-size:calc(14px * var(--tx, 1))}
+.lines li.mark{background:var(--accent-soft);font-weight:700}
+html.a-read body{line-height:1.95;letter-spacing:.015em;word-spacing:.14em}
+html.a-read .lines li{padding-block:8px}
+html.a-read p,html.a-read .lines li span{max-width:75ch}
+html.a-contrast{--muted:var(--fg);--line:#7d7d7d}
+html.a-contrast .card,html.a-contrast .btn.ghost,html.a-contrast .start{border-width:2px}
+html.a-contrast :focus-visible{outline:3px solid var(--mark)!important;outline-offset:2px}
+html.a-still *,html.a-still *::before,html.a-still *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.a11y-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#a11y label{display:flex;gap:8px;align-items:flex-start;cursor:pointer;line-height:1.5}
+#a11y label input{margin-top:5px}
+/* the floating window as large captions */
+.pipbody .pbtn{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:8px;padding:2px 9px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1fr)}
+.pipbody.caps .card,.pipbody.caps .pshot{display:none}
+.pipbody.caps ol{background:#000;border-color:#444;font-size:calc(26px * var(--tx, 1))}
+.pipbody.caps ol li{font-size:inherit;line-height:1.35;grid-template-columns:minmax(0,1fr);padding:6px 8px}
+.pipbody.caps ol li .ts{display:none}
+.pipbody.caps ol li.draft{color:#ffd84d;font-style:normal}
+.pipbody.caps .pbtn{color:#ffd84d;border-color:#ffd84d}
+.pipbody.caps .phead{color:#fff}
 .log{margin-top:24px}
 .log summary{cursor:pointer;color:var(--muted);font-size:14px}
 .log ol{list-style:none;margin:8px 0 0;padding:0;font-size:14px;display:grid;gap:3px;max-height:260px;overflow:auto}
@@ -358,6 +404,10 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 .h-input .h-send{width:2.4cqw;height:2.4cqw;border-radius:50%;background:var(--accent);flex:none;transition:transform .12s}
 .h-key{position:absolute;z-index:6;background:var(--surface);border:1px solid var(--line);border-bottom-width:.35cqw;border-radius:.8cqw;padding:.4cqw 1.2cqw;font-weight:700;font-family:var(--f-mono);font-size:1.6cqw;box-shadow:0 1cqw 2cqw rgba(0,0,0,.18);transition:opacity .25s,transform .25s}
 .h-key.off{opacity:0;transform:scale(.8)}
+.h-qa{border-top:1px solid var(--line);padding-top:.6cqw;display:grid;gap:.3cqw;font-size:1.2cqw;line-height:1.5;transition:opacity .35s}
+.h-qa b{color:var(--accent);font-size:1.15cqw}
+.h-qa.off{opacity:0}
+.h-qa div{white-space:pre-wrap}
 .h-presets{display:flex;gap:.6cqw;flex-wrap:wrap}
 .h-presets span{border:1px solid var(--line);border-radius:99cqw;padding:.15cqw 1cqw;font-size:1.15cqw;background:var(--surface);transition:border-color .2s,background .2s}
 .h-presets span.h-hot{background:var(--accent-soft)}
@@ -376,6 +426,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
     <button class="brand" id="brand" type="button" title="למסך הבית של האפליקציה"><svg class="logo" width="30" height="30" viewBox="0 0 120 120" aria-hidden="true"><path d="M20 14H100A14 14 0 0 1 114 28V76A14 14 0 0 1 100 90H96L99 110L74 90H20A14 14 0 0 1 6 76V28A14 14 0 0 1 20 14Z" fill="var(--accent)"></path><path d="M35 52L51 68L85 34" fill="none" stroke="var(--mark)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"></path></svg>הבנתי <small>האפליקציה</small></button>
     <span class="pill" id="statePill" aria-live="polite">מוכן</span>
     <span class="pill" id="devPill" hidden></span>
+    <button class="btn ghost small" id="a11yBtn" type="button" aria-haspopup="dialog">תצוגה ונגישות</button>
     <button class="btn ghost small" type="button" data-how>איך משתמשים?</button>
     <button class="btn quiet small" id="quitBtn" type="button">סגירת האפליקציה</button>
   </div>
@@ -400,8 +451,12 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
     <div class="cbar" id="updBar" hidden><span id="updText"></span><a class="btn small" id="updGo" href="#" target="_blank" rel="noopener">להורדה</a></div>
     <div class="msg" id="homeErr" hidden></div>
 
-    <div class="connbar" id="howBar" hidden><span><b>פעם ראשונה בהבנתי?</b> הדגמה של דקה מראה את הדרך הכי נוחה להשתמש בה: קורס, הרצאה חיה, ההרצאה בשני שליש מהמסך וה-AI בשליש.</span><button class="btn small" type="button" data-how>לצפייה בהדגמה</button><button class="btn quiet small" id="howNo" type="button">לא עכשיו</button></div>
+    <div class="connbar" id="howBar" hidden><span><b>פעם ראשונה בהבנתי?</b> הדגמה של דקה מראה הכל: בחירת חלון, הרצאה חיה, שאלה ותשובה, ולימוד אחרי ההרצאה.</span><button class="btn small" type="button" data-how>לצפייה בהדגמה</button><button class="btn quiet small" id="howNo" type="button">לא עכשיו</button></div>
     <div class="connbar" id="connBar" hidden><span><b>טיפ:</b> מחברים פעם אחת את Claude או ChatGPT למחשב להבנתי, ואז שואלים אותם ישר בחלון שלהם, בלי להעתיק - הם רואים מה נאמר ואת השקופית.</span><button class="btn small" type="button" data-conn-open>חיבור AI</button></div>
+
+    <div class="connbar" id="tutorBar" hidden><span><b>חדש: תשובות בתוך הבנתי, תוך כדי ההרצאה ובחינם.</b> שואלים "מה הוא אמר עכשיו?" ו-Gemini עונה כאן, עם מה שנאמר והשקופית. צריך פעם אחת מפתח חינמי של Google (דקה).</span><button class="btn small" id="tutorGo" type="button">להגדרה</button><button class="btn quiet small" id="tutorNo" type="button">לא עכשיו</button></div>
+
+    <div class="card capcard" id="capHome"></div>
 
     <div class="starts">
       <button class="start" type="button" data-start="he">
@@ -452,6 +507,33 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
     <ol class="lib" id="lib"><li class="empty">טוען...</li></ol>
     <ol class="hits" id="hits" hidden></ol>
 
+    <details class="card" id="mathBox" style="margin-top:18px">
+      <summary><b>AI מובנה בחינם (Gemini): תשובות בתוך הבנתי וקריאת נוסחאות</b> <span class="sub2" id="mathSum" style="color:var(--muted)"></span></summary>
+      <div style="display:grid;gap:10px;margin-top:10px">
+        <p class="sub" style="margin:0">עם מפתח חינמי אחד של Google, הבנתי עונה בעצמה: בכל תיבת "שאלה ל-AI" (בהרצאה חיה, בחלון הצף, בנגן, ביוטיוב ובהרצאה שנשמרה) יש <b>"תשובה כאן"</b>, והתשובה נכתבת מתחת, עם מה שנאמר בדקות האחרונות והשקופית שעל המסך. גם סיכום, כרטיסיות ומבחן דמה נעשים כאן, בלי להעתיק. אין תשלום: לא לך ולא להבנתי.</p>
+        <ol class="sub" style="margin:0;padding-inline-start:20px"><li>מפתח חינמי: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> ← Create API key ← להעתיק. (חשבון Google רגיל, בלי כרטיס אשראי.)</li><li>להדביק כאן וללחוץ "שמירה ובדיקה". המפתח נשמר מוצפן, רק למשתמש שלך במחשב הזה.</li></ol>
+        <div class="row"><input type="password" id="mathKey" placeholder="המפתח של Gemini (מתחיל ב-AQ. או ב-AIza)" autocomplete="off" aria-label="מפתח Gemini" dir="ltr"><button class="btn small" id="mathSave" type="button">שמירה ובדיקה</button></div>
+        <label class="row" style="gap:8px;cursor:pointer"><input type="checkbox" id="askOn"><b>תשובות בתוך הבנתי</b> <span class="sub2">(נשלח רק מה ששואלים: השאלה, הדקות האחרונות והשקופית)</span></label>
+        <p class="sub" style="margin:0">ובנוסף, אופציונלי: הקריאה הרגילה של השקופיות (Tesseract) לא קוראת נוסחאות וכתב יד. כשזה פועל, כל שקופית שנשמרת נשלחת ל-Gemini, והוא כותב את הטקסט ואת הנוסחאות ב-LaTeX (<code dir="ltr">$I = \int r^2\,dm$</code>), לחיפוש, להכנה למבחן ולתשובות.</p>
+        <label class="row" style="gap:8px;cursor:pointer"><input type="checkbox" id="mathOn"><b>לקרוא נוסחאות וכתב יד בכל שקופית חדשה</b> <span class="sub2">(שולח כל שקופית)</span></label>
+        <p class="msg" style="margin:0"><b>פרטיות:</b> מה שנשלח ל-Gemini עובר ל-Google. בתוכנית החינמית Google עשויה להשתמש בו כדי לשפר את המוצרים שלה. כדאי לצלם רק את חלון ההרצאה ("מה הבנתי מצלמת"). המכסה החינמית מוגבלת לדקה וליום; כשהיא נגמרת, הכפתורים שמעתיקים ל-ChatGPT, Gemini ו-Claude ממשיכים לעבוד.</p>
+        <p class="capstat" id="mathStat" style="margin:0;color:var(--muted)"></p>
+        <div class="row"><button class="btn ghost small" id="mathForget" type="button" hidden>מחיקת המפתח</button></div>
+      </div>
+    </details>
+
+    <details class="card" id="privBox" style="margin-top:18px">
+      <summary><b>פרטיות: מה נשמר, איפה, ומה נשלח</b></summary>
+      <ul style="margin:10px 0 0;padding-inline-start:20px;display:grid;gap:6px;line-height:1.6">
+        <li><b>מה נשמר:</b> התמלול של ההרצאות, צילומי המסך של מה שבחרת לצלם, והטקסט שנקרא מהם.</li>
+        <li><b>איפה:</b> רק במחשב שלך, בתיקייה "הקורסים שלי". אין חשבון ואין שרת של הבנתי. אם התיקייה נמצאת בתוך OneDrive או Google Drive (למשל Documents שמסונכרן), התוכנה של הענן מעתיקה אותה לחשבון שלך שם.</li>
+        <li><b>מה נשלח ל-AI:</b> רק כשלוחצים על כפתור "שאלה ל-AI" או על אחת המשימות (סיכום, כרטיסיות, מבחן), או כשמבקשים מ-AI מחובר. אז הטקסט, והתמונה אם מצרפים אותה, עוברים לחברה של אותו AI. בלי זה, שום דבר לא יוצא מהמחשב.</li>
+        <li><b>מה עוד עובר ברשת:</b> בדיקת גרסה חדשה ב-GitHub (אפשר לכבות בחיבור AI), הורדה חד-פעמית של מודל התמלול (Hugging Face) ושל קריאת השקופיות (GitHub). ורק אם הגדרת "AI מובנה בחינם": בלחיצה על "תשובה כאן" נשלחים ל-Google השאלה, הדקות האחרונות והשקופית; ועם "קריאת נוסחאות וכתב יד" גם כל שקופית שנשמרת.</li>
+        <li><b>מה בשליטתך:</b> לבחור חלון אחד או חלק מהמסך במקום כל המסך, להשהות את הצילום (גם עם <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd>), לטשטש אזורים קבועים, ולמחוק צילומים לצמיתות.</li>
+        <li><b>חשוב:</b> התמלול והצילומים לשימוש אישי ללימוד. לפני שמקליטים הרצאה כדאי לוודא שמותר לפי הכללים של המוסד.</li>
+      </ul>
+    </details>
+
     <div class="foot">
       <button class="btn quiet small" type="button" data-open="lib">פתיחת "הקורסים שלי" בתיקייה</button>
       <button class="btn ghost small" id="connBtn" type="button" data-conn-open>חיבור AI</button>
@@ -466,10 +548,15 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
     <div class="livebar">
       <button class="btn ghost back" type="button" data-home>→ למסך הבית</button>
       <div class="what"><b id="liveWhat">הרצאה חיה</b><small id="liveSub">טוען...</small></div>
-      <button class="btn" type="button" data-float title="חלון קטן שנשאר מעל ההרצאה: מה נאמר, השקופית ושאלה ל-AI">חלון צף</button>
+      <button class="btn ghost" id="markLost" type="button" title="מסמן את הרגע הזה בתמלול. אחרי ההרצאה ה-AI יסביר את כל הרגעים שסימנת. גם Ctrl+Alt+M מכל תוכנה.">❓ לא הבנתי</button>
+      <button class="btn ghost" id="markImp" type="button" title="מסמן את הרגע הזה בתמלול כחשוב">⭐ חשוב</button>
+      <button class="btn" type="button" data-float title="חלון קטן שנשאר מעל ההרצאה: מה נאמר, השקופית ושאלה ל-AI. אפשר גם כתוביות גדולות">חלון צף</button>
       <button class="btn ghost" id="liveStop" type="button">עצירה</button>
     </div>
     <div class="ended" id="liveEnded" hidden></div>
+    <div class="card study" id="liveStudy" hidden><h2 style="margin:0 0 6px">ההרצאה נשמרה. מה עושים איתה?</h2>
+      <p class="sub" style="margin-top:0">לחיצה אחת: הבנתי שולחת ל-AI שלך את ההרצאה הזו עם המשימה (סיכום, כרטיסיות או מבחן דמה).</p>
+      <div class="row"><button class="btn" id="liveStudyGo" type="button">סיכום, כרטיסיות ומבחן דמה ←</button></div></div>
     <div class="split">
       <div class="tbox">
         <div class="tools"><input type="search" id="liveFind" placeholder="חיפוש בתמלול" aria-label="חיפוש בתמלול"><button class="btn ghost small" id="liveFollow" type="button" hidden>לסוף</button></div>
@@ -477,7 +564,14 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
       </div>
       <div class="side">
         <div class="card" id="liveAsk"></div>
-        <div class="card shotbox"><div class="row" style="justify-content:space-between;margin-bottom:8px"><b>צילום המסך האחרון</b><button class="btn ghost small" id="shotCopy" type="button" hidden>העתקת צילום המסך</button></div><div id="shotSlot"><div class="none">עוד אין צילום מסך.</div></div></div>
+        <div class="card capcard" id="capLive"></div>
+        <div class="card shotbox"><div class="row" style="justify-content:space-between;margin-bottom:8px"><b>צילום המסך האחרון</b><button class="btn ghost small" id="shotCopy" type="button" hidden>העתקת צילום המסך</button></div><div id="shotSlot"><div class="none">עוד אין צילום מסך.</div></div>
+          <div class="row" style="margin-top:8px" id="shotDelRow">
+            <button class="btn danger small" id="shotDel" type="button" hidden>מחיקת הצילום הזה</button>
+            <span class="sub2" style="font-size:13.5px;color:var(--muted)">למחיקה של כמה:</span>
+            <select id="shotDelMin" aria-label="כמה דקות אחורה"><option value="5">5 דקות אחרונות</option><option value="15">15 דקות</option><option value="30">30 דקות</option><option value="60">שעה אחרונה</option><option value="1440">כל ההרצאה</option></select>
+            <button class="btn danger small" id="shotDelMany" type="button">מחיקה</button>
+          </div></div>
         <div class="card stat" id="liveStat"></div>
       </div>
     </div>
@@ -517,11 +611,24 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
       <button class="btn ghost" id="pastCopy" type="button">העתקת כל התמלול</button>
       <button class="btn quiet" id="pastFile" type="button">פתיחת הקובץ</button>
       <button class="btn quiet" id="pastMore" type="button" aria-label="עוד פעולות להרצאה">העברה / שם / מחיקה</button>
+      <button class="btn quiet" id="pastDelShots" type="button" title="מוחק את כל תמונות המסך של ההרצאה, לצמיתות. התמלול נשאר.">מחיקת כל צילומי המסך</button>
+      <button class="btn quiet" id="pastMath" type="button" hidden title="שולח ל-Gemini את השקופיות שעוד לא נקראו, כדי לקרוא נוסחאות וכתב יד">קריאת נוסחאות בשקופיות</button>
     </div>
     <div class="card" id="pastSum" hidden style="margin-bottom:14px">
       <div class="row" style="justify-content:space-between"><h2>סיכום</h2>
         <div class="row"><button class="btn quiet small" id="sumCopy" type="button" hidden>העתקה</button></div></div>
       <div id="sumText" class="sumtext"></div>
+    </div>
+    <div class="card study" id="pastStudy" style="margin-bottom:14px">
+      <h2 style="margin:0 0 4px">אחרי ההרצאה: לימוד בלחיצה אחת</h2>
+      <p class="sub" style="margin-top:0">הבנתי שולחת ל-AI שלך את ההרצאה הזו (התמלול והטקסט מהשקופיות) עם המשימה. אחרי הלחיצה הראשונה היא זוכרת לאיזה AI, ובמשימות הבאות שולחת אליו ישר.</p>
+      <div class="row">
+        <button class="btn" type="button" data-study="summary">סיכום ההרצאה</button>
+        <button class="btn" type="button" data-study="cards">כרטיסיות חזרה</button>
+        <button class="btn" type="button" data-study="exam">מבחן דמה</button>
+        <button class="btn ghost" type="button" data-study="formulas">דף נוסחאות</button>
+        <button class="btn ghost" type="button" data-study="marks" id="studyMarks" hidden>הסבר לרגעים שסימנתי</button>
+      </div>
     </div>
     <div class="card" id="pastAsk" style="margin-bottom:14px"></div>
     <div class="tbox">
@@ -590,7 +697,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
   <section id="vHow" aria-label="איך משתמשים" hidden>
     <div class="livebar">
       <button class="btn ghost back" type="button" data-home>→ למסך הבית</button>
-      <div class="what"><b>איך משתמשים בהבנתי</b><small>הדרך המומלצת: ההרצאה בשני שליש מהמסך, ה-AI בשליש. שישה צעדים קצרים, בערך דקה.</small></div>
+      <div class="what"><b>איך משתמשים בהבנתי</b><small>מהתחלה ועד שאלה ותשובה. חמישה צעדים קצרים, בערך דקה.</small></div>
     </div>
     <div class="howgrid">
       <div class="hstage" id="hStage" aria-hidden="true"></div>
@@ -651,6 +758,26 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
   <div class="row"><input type="text" id="lmName" maxlength="80"><button class="btn ghost small" id="lmRename" type="button">שמירת השם</button></div>
   <div class="row"><button class="btn quiet small" id="lmFolder" type="button">פתיחת התיקייה שלה</button><button class="btn danger small" id="lmDelete" type="button">מחיקת ההרצאה</button><button class="btn quiet" id="lmClose" type="button" style="margin-inline-start:auto">סגירה</button></div>
 </div></div>
+<div class="modal" id="capModal" hidden role="dialog" aria-modal="true" aria-labelledby="capT"><div class="card wide">
+  <h3 id="capT">בחירת אזור על המסך</h3>
+  <p class="sub" id="capHint" style="margin:0"></p>
+  <div class="row"><button class="btn small" id="capShot" type="button">צילום מסך לבחירה (בעוד 5 שניות)</button><span class="sub" id="capWait" style="margin:0"></span></div>
+  <div class="capcanvas" id="capCanvas" aria-label="המסך. לגרור עם העכבר כדי לסמן אזור"><div class="none" id="capNone">לוחצים על "צילום מסך לבחירה", עוברים להרצאה, ואחרי כמה שניות חוזרים לכאן.</div></div>
+  <div class="row"><button class="btn" id="capSave" type="button">שמירה</button><button class="btn quiet" id="capCancel" type="button">ביטול</button><button class="btn ghost small" id="capClear" type="button">ניקוי</button></div>
+</div></div>
+<div class="modal" id="a11y" hidden role="dialog" aria-modal="true" aria-labelledby="a11yT"><div class="card">
+  <h3 id="a11yT">תצוגה ונגישות</h3>
+  <p class="sub" style="margin:0">נשמר בדפדפן הזה, וחל גם על החלון הצף.</p>
+  <div class="a11y-row"><b>גודל הכל:</b><div class="seg" role="group" aria-label="גודל הכל" id="a11yZoom"><button type="button" data-v="1">100%</button><button type="button" data-v="1.15">115%</button><button type="button" data-v="1.3">130%</button><button type="button" data-v="1.5">150%</button></div></div>
+  <div class="a11y-row"><b>גודל התמלול:</b><div class="seg" role="group" aria-label="גודל התמלול" id="a11yTx"><button type="button" data-v="1">רגיל</button><button type="button" data-v="1.25">גדול</button><button type="button" data-v="1.5">גדול מאוד</button><button type="button" data-v="1.9">ענק</button></div></div>
+  <label><input type="checkbox" id="a11yRead"><span><b>ריווח לקריאה נוחה.</b> שורות, אותיות ומילים מרווחות יותר ושורות קצרות יותר. עוזר בדיסלקציה ובקשב.</span></label>
+  <label><input type="checkbox" id="a11yContrast"><span><b>ניגודיות גבוהה.</b> טקסט משני כהה כמו הראשי, מסגרות עבות וסימון בולט של המקום במקלדת.</span></label>
+  <label><input type="checkbox" id="a11yStill"><span><b>בלי אנימציות ותנועה.</b></span></label>
+  <label><input type="checkbox" id="a11ySay"><span><b>הקראת שורות חדשות לקורא מסך</b> (NVDA, JAWS, Narrator) בזמן הרצאה חיה.</span></label>
+  <p class="sub" style="margin:0"><b>כתוביות גדולות:</b> בחלון הצף, הכפתור "כתוביות". <b>קיצורים מכל תוכנה</b> (Windows): <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd> השהיית הצילום, <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>M</kbd> סימון "לא הבנתי".</p>
+  <div class="row"><button class="btn" id="a11yClose" type="button">סגירה</button></div>
+</div></div>
+<div class="sr-only" id="srLive" aria-live="polite"></div>
 <div class="big" id="big" hidden><img alt=""></div>
 <div class="toast" id="toast" role="status"></div>
 <div class="gone" id="gone" hidden><div><h1>האפליקציה סגורה</h1><p class="lead">כדי לפתוח אותה שוב: לחיצה כפולה על Hevanti בתיקייה של הבנתי.<br>אפשר לסגור את הלשונית הזו.</p></div></div>
@@ -718,7 +845,7 @@ async function setConn(c, on) {
 function drawConnState(info) {
   const names = CONN.filter(c => info[c.id]).map(c => c.name);
   $("#connBtn").textContent = names.length ? "חיבור AI: " + names.join(", ") + " ✓" : "חיבור AI";
-  $("#connBar").hidden = names.length > 0;
+  $("#connBar").hidden = true;   // (2.2: answers come inside Hevanti - connecting an AI app is an extra, under "חיבור AI")
   if (window.BZMAsk) BZMAsk.setConnected(info);
 }
 document.querySelectorAll("[data-conn-open]").forEach(b => b.addEventListener("click", openConn));
@@ -760,6 +887,247 @@ async function copyImage(src) {
 }
 const shotUrl = rel => "/shot?p=" + encodeURIComponent(rel);
 
+// ---------- what is photographed: the whole screen / one window / a part of the screen; pause; mosaic; delete ----------
+let capSig = "", capWins = [], capWinsAt = 0, capPurpose = "", capBoxes = [], capImg = "";
+const capOf = () => (app && app.capture) || {mode: "screen", window: "", region: null, blur: [], paused: false, found: true, hotkey: ""};
+async function capSend(d) {
+  const r = await api("/api/cmd", Object.assign({action: "capture_set"}, d));
+  if (r.capture && app) { app.capture = r.capture; capSig = ""; drawCaps(); }
+  return r;
+}
+async function capPause() {
+  const r = await api("/api/cmd", {action: "capture_pause"});
+  if (app && app.capture) { app.capture.paused = !!r.paused; capSig = ""; drawCaps(); }
+  toast(r.paused ? "צילום המסך הושהה. התמלול ממשיך, ושום תמונה לא נשמרת עד שממשיכים." : "צילום המסך חזר.");
+}
+async function capLoadWins() {
+  try { const r = await api("/api/cmd", {action: "capture_windows"}); capWins = r.windows || []; } catch (e) {}
+  capWinsAt = Date.now(); capSig = ""; drawCaps();
+}
+function capStatus(c) {
+  if (c.paused) return ["הצילום מושהה.", "לא נשמרת שום תמונה, והתמלול ממשיך."];
+  if (c.mode === "window") {
+    if (!c.window) return ["חלון אחד: עוד לא נבחר חלון.", "לא נשמרת שום תמונה עד שבוחרים."];
+    return c.found ? ["מצלמת רק את החלון \"" + c.window + "\".", ""] : ["החלון \"" + c.window + "\" לא נמצא על המסך.", "לא נשמרת שום תמונה עד שהוא חוזר."];
+  }
+  if (c.mode === "region") return c.region ? ["מצלמת רק חלק מהמסך.", ""] : ["חלק מהמסך: עוד לא נבחר אזור.", "לא נשמרת שום תמונה עד שבוחרים."];
+  return ["מצלמת את כל המסך הראשי.", "מומלץ לבחור חלון אחד או חלק מהמסך, כדי שהתראות וצ'אטים לא ייכנסו."];
+}
+function drawCaps() {
+  const c = capOf();
+  const sig = JSON.stringify([c, capWinsAt, view]);
+  if (sig === capSig) return;
+  capSig = sig;
+  for (const box of [$("#capHome"), $("#capLive")]) if (box && !box.closest("[hidden]")) drawCap(box, c);   // the visible one
+}
+function drawCap(box, c) {
+  box.replaceChildren(); box.classList.toggle("paused", !!c.paused);
+  box.appendChild(el("h2", "", "מה הבנתי מצלמת"));
+  const [t, sub] = capStatus(c), st = el("p", "capstat"); st.appendChild(el("b", "", t)); if (sub) st.append(" " + sub);
+  box.appendChild(st);
+  const seg = el("div", "seg"); seg.setAttribute("role", "group"); seg.setAttribute("aria-label", "מה לצלם");
+  for (const [m, label] of [["screen", "כל המסך"], ["window", "חלון אחד"], ["region", "חלק מהמסך"]]) {
+    const b = el("button", "", label); b.type = "button"; b.setAttribute("aria-pressed", c.mode === m ? "true" : "false");
+    b.onclick = () => { if (m === "region" && !c.region) { capOpen("region"); return; } capSend({mode: m}); if (m === "window") capLoadWins(); };
+    seg.appendChild(b);
+  }
+  box.appendChild(seg);
+  if (c.mode === "window") {
+    if (!capWinsAt) capLoadWins();
+    const sel = el("select"); sel.setAttribute("aria-label", "החלונות הפתוחים"); sel.appendChild(new Option("בחירת חלון פתוח...", ""));
+    for (const w of capWins) sel.appendChild(new Option(w.title.slice(0, 70) + (w.app ? " (" + w.app + ")" : ""), w.title));
+    const ref = el("button", "btn ghost small", "רענון הרשימה"); ref.type = "button"; ref.onclick = capLoadWins;
+    const r1 = el("div", "row"); r1.append(sel, ref); box.appendChild(r1);
+    const inp = el("input"); inp.type = "text"; inp.value = c.window; inp.placeholder = "חלק מהכותרת של החלון, למשל Zoom"; inp.setAttribute("aria-label", "כותרת החלון");
+    sel.onchange = () => { if (sel.value) inp.value = sel.value; };
+    const save = el("button", "btn small", "שמירה"); save.type = "button"; save.onclick = () => capSend({mode: "window", window: inp.value});
+    const r2 = el("div", "row"); r2.append(inp, save); box.appendChild(r2);
+    box.appendChild(el("p", "sub2", "הרשימה היא החלונות הפתוחים עכשיו. אפשר לקצר את הכותרת (למשל Zoom), כי כותרות משתנות. חלון אחר שמגיע מעל ההרצאה, כמו הודעה או צ'אט, מוסתר במוזאיקה."));
+  } else if (c.mode === "region") {
+    const b = el("button", "btn ghost small", "שינוי האזור..."); b.type = "button"; b.onclick = () => capOpen("region");
+    const r = el("div", "row"); r.appendChild(b); box.appendChild(r);
+  }
+  const bl = el("div", "row"), bb = el("button", "btn ghost small", c.blur.length ? "עריכת אזורי הטשטוש (" + c.blur.length + ")" : "הוספת אזור לטשטוש..."); bb.type = "button"; bb.onclick = () => capOpen("blur");
+  bl.append(bb, el("span", "sub2", "חלקים במסך שתמיד יוסתרו בצילומים: סרגל סימניות, פס צ'אט, שם משתמש."));
+  box.appendChild(bl);
+  const pr = el("div", "row"), pb = el("button", c.paused ? "btn" : "btn ghost small", c.paused ? "▶ המשך הצילום" : "⏸ השהיית הצילום"); pb.type = "button"; pb.onclick = capPause;
+  pr.append(pb); if (c.hotkey) { const k = el("span", "sub2"); k.append("או מהמקלדת, מכל תוכנה: "); const kk = el("kbd", "", c.hotkey); kk.dir = "ltr"; k.append(kk, " (צליל נמוך = הושהה)"); pr.append(k); }
+  box.appendChild(pr);
+}
+function capOpen(purpose) {
+  const c = capOf(); capPurpose = purpose;
+  capBoxes = purpose === "region" ? (c.region ? [c.region.slice()] : []) : c.blur.map(b => b.slice());
+  $("#capT").textContent = purpose === "region" ? "בחירת האזור לצילום" : "אזורים לטשטוש";
+  $("#capHint").textContent = purpose === "region"
+    ? "לגרור עם העכבר ולסמן את החלק מהמסך שמצלמים, בדרך כלל ההרצאה. רק הוא יישמר בצילומים."
+    : "לגרור עם העכבר ולסמן חלקים שתמיד יוסתרו בצילומים: סרגל סימניות, פס צ'אט, שם משתמש. אפשר כמה. ה-X מוחק אזור.";
+  $("#capWait").textContent = ""; capImg = ""; capPaint(); $("#capModal").hidden = false;
+}
+function capClose() { $("#capModal").hidden = true; capImg = ""; }   // (the screen picture is not kept)
+function capPaint() {
+  const cv = $("#capCanvas"); cv.querySelectorAll(".capbox,img").forEach(x => x.remove());
+  $("#capNone").hidden = !!capImg;
+  if (capImg) { const im = el("img"); im.src = capImg; im.alt = ""; cv.prepend(im); }
+  capBoxes.forEach((b, i) => {
+    const d = el("div", "capbox" + (capPurpose === "blur" ? " blur" : ""));
+    Object.assign(d.style, {left: b[0] * 100 + "%", top: b[1] * 100 + "%", width: (b[2] - b[0]) * 100 + "%", height: (b[3] - b[1]) * 100 + "%"});
+    const x = el("button", "capx", "×"); x.type = "button"; x.setAttribute("aria-label", "מחיקת האזור");
+    x.onclick = e => { e.stopPropagation(); capBoxes.splice(i, 1); capPaint(); };
+    d.appendChild(x); cv.appendChild(d);
+  });
+}
+(function () {
+  const cv = $("#capCanvas"); let s = null, tmp = null;
+  const pt = e => { const r = cv.getBoundingClientRect(); return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))]; };
+  cv.addEventListener("pointerdown", e => {
+    if (e.target.closest(".capx")) return;
+    s = pt(e); cv.setPointerCapture(e.pointerId);
+    tmp = el("div", "capbox" + (capPurpose === "blur" ? " blur" : "")); cv.appendChild(tmp);
+  });
+  cv.addEventListener("pointermove", e => {
+    if (!s) return; const p = pt(e);
+    Object.assign(tmp.style, {left: Math.min(s[0], p[0]) * 100 + "%", top: Math.min(s[1], p[1]) * 100 + "%", width: Math.abs(p[0] - s[0]) * 100 + "%", height: Math.abs(p[1] - s[1]) * 100 + "%"});
+  });
+  cv.addEventListener("pointerup", e => {
+    if (!s) return; const p = pt(e), b = [Math.min(s[0], p[0]), Math.min(s[1], p[1]), Math.max(s[0], p[0]), Math.max(s[1], p[1])];
+    s = null; if (tmp) tmp.remove(); tmp = null;
+    if (b[2] - b[0] < 0.02 || b[3] - b[1] < 0.02) return;
+    if (capPurpose === "region") capBoxes = [b]; else if (capBoxes.length < 12) capBoxes.push(b);
+    capPaint();
+  });
+  cv.addEventListener("pointercancel", () => { s = null; if (tmp) tmp.remove(); tmp = null; });
+})();
+$("#capShot").addEventListener("click", async () => {
+  $("#capWait").textContent = "עוברים להרצאה. הצילום יילקח בעוד 5 שניות, ואז חוזרים לכאן."; $("#capShot").disabled = true;
+  let r; try { r = await api("/api/cmd", {action: "capture_preview", delay: 5}); } catch (e) { r = {ok: false}; }
+  $("#capShot").disabled = false;
+  if (!r.ok) { $("#capWait").textContent = r.error || "לא הצלחתי לצלם את המסך."; return; }
+  capImg = r.image; $("#capWait").textContent = "אפשר לסמן."; capPaint();
+});
+$("#capSave").addEventListener("click", async () => {
+  if (capPurpose === "region") {
+    if (!capBoxes.length) { toast("צריך לסמן אזור."); return; }
+    await capSend({mode: "region", region: capBoxes[0]});
+  } else await capSend({blur: capBoxes});
+  capClose(); toast("נשמר.");
+});
+$("#capCancel").addEventListener("click", capClose);
+$("#capClear").addEventListener("click", () => { capBoxes = []; capPaint(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#capModal").hidden) capClose(); });
+// deleting pictures: for good (not the Recycle Bin - they may show something private); the transcript stays
+async function delShots(payload, what) {
+  if (!(await confirmBox("למחוק " + what + "?", "התמונות נמחקות לצמיתות, לא לסל המחזור, יחד עם הטקסט שנקרא מהן. התמלול נשאר. אם התיקייה מסונכרנת ל-OneDrive, עותק יכול להישאר בסל המחזור של OneDrive עד 30 יום.", "מחיקה"))) return null;
+  let r; try { r = await api("/api/cmd", payload); } catch (e) { r = {ok: false}; }
+  toast(r.ok ? "נמחקו " + r.deleted + " צילומים." : (r.error || "לא הצלחתי למחוק."));
+  return r;
+}
+function refreshShotImgs() {
+  const bust = u => u.split("&d=")[0] + "&d=" + Date.now();
+  document.querySelectorAll("#liveLines img, #shotSlot img").forEach(im => { im.src = bust(im.src); if (im.dataset.src) im.dataset.src = bust(im.dataset.src); });
+  document.querySelectorAll("#liveLines details.ocr").forEach(d => d.remove());
+  for (const x of liveItems) if (x.img) x.ocr = "";
+}
+$("#shotDel").addEventListener("click", async () => {
+  const f = liveLast && liveLast.shot; if (!f) return;
+  const r = await delShots({action: "delete_shot", p: f}, "את הצילום הזה"); if (r && r.ok) refreshShotImgs();
+});
+$("#shotDelMany").addEventListener("click", async () => {
+  const m = +$("#shotDelMin").value;
+  const r = await delShots({action: "delete_shots_recent", minutes: m}, m >= 1440 ? "את כל צילומי המסך של ההרצאה הזו" : "את צילומי המסך (" + $("#shotDelMin").selectedOptions[0].textContent + ")");
+  if (r && r.ok) refreshShotImgs();
+});
+
+// ---------- formulas and handwriting: Gemini reads the slides (the student's own key, off until turned on) ----------
+let mathSig = "", pastHasImgs = false;
+function drawMath() {
+  const m = (app && app.math) || {}, sig = JSON.stringify([m, pastHasImgs]);
+  if (sig === mathSig) return;
+  mathSig = sig;
+  $("#mathOn").checked = !!m.on; $("#mathOn").disabled = !m.has_key; $("#mathForget").hidden = !m.has_key;
+  $("#askOn").checked = !!m.ask; $("#askOn").disabled = !m.has_key;
+  $("#mathSum").textContent = m.has_key ? "· " + [m.ask ? "תשובות פועלות" : "תשובות כבויות", m.on ? "נוסחאות פועל" : ""].filter(Boolean).join(", ") : "· לא מוגדר";
+  $("#mathStat").textContent = (m.has_key ? "המפתח שמור" + (m.model ? " (" + m.model + ")" : "") + "." +
+    (m.on ? " נוסחאות: נקראו בהפעלה הזו " + (m.done || 0) + " שקופיות" + (m.waiting ? ", ממתינות " + m.waiting : "") + "." : "") : "עוד אין מפתח.") + (m.error ? " " + m.error : "");
+  $("#pastMath").hidden = !(m.on && pastHasImgs);
+}
+async function mathSend(d, okText) {
+  let r; try { r = await api("/api/cmd", Object.assign({action: "math_set"}, d)); } catch (e) { r = {ok: false}; }
+  if (r.math && app) { app.math = r.math; mathSig = ""; drawMath(); }
+  toast(r.ok ? okText : (r.error || "לא הצלחתי."));
+  return r;
+}
+$("#mathSave").addEventListener("click", async () => {
+  const k = $("#mathKey").value.trim(); if (!k) { toast("צריך להדביק את המפתח."); return; }
+  $("#mathSave").disabled = true; $("#mathStat").textContent = "בודק את המפתח...";
+  const r = await mathSend({key: k, ask: true}, "המפתח תקין ונשמר. מעכשיו יש \"תשובה כאן\" בכל תיבת שאלה.");
+  $("#mathSave").disabled = false;
+  if (r.ok) $("#mathKey").value = "";
+  else { mathSig = ""; $("#mathStat").textContent = "המפתח לא נשמר: " + (r.error || "לא הצלחתי להגיע להבנתי. לרענן את הדף (F5) ולנסות שוב."); }
+});
+$("#mathOn").addEventListener("change", () => mathSend({on: $("#mathOn").checked}, $("#mathOn").checked ? "קריאת הנוסחאות פועלת." : "קריאת הנוסחאות כבויה. שקופיות לא נשלחות ל-Google."));
+$("#askOn").addEventListener("change", () => mathSend({ask: $("#askOn").checked}, $("#askOn").checked ? "תשובות בתוך הבנתי פועלות." : "תשובות בתוך הבנתי כבויות."));
+let tutorBarNo = false;
+try { tutorBarNo = localStorage.getItem("bzm.tutorNo") === "1"; } catch (e) {}
+$("#tutorGo").addEventListener("click", () => { $("#mathBox").open = true; $("#mathBox").scrollIntoView({block: "start", behavior: "smooth"}); setTimeout(() => $("#mathKey").focus(), 400); });
+$("#tutorNo").addEventListener("click", () => { tutorBarNo = true; $("#tutorBar").hidden = true; try { localStorage.setItem("bzm.tutorNo", "1"); } catch (e) {} });
+$("#mathForget").addEventListener("click", async () => {
+  if (!(await confirmBox("למחוק את המפתח של Gemini?", "קריאת הנוסחאות תיכבה. מה שכבר נקרא נשאר בשקופיות.", "מחיקה"))) return;
+  mathSend({key: ""}, "המפתח נמחק.");
+});
+$("#pastMath").addEventListener("click", async () => {
+  if (!pastFile) return;
+  let r; try { r = await api("/api/cmd", {action: "math_lecture", f: pastFile}); } catch (e) { r = {ok: false}; }
+  if (!r.ok) { toast(r.error || "לא הצלחתי."); return; }
+  toast(r.queued ? "נשלחו " + r.queued + " שקופיות לקריאה. זה לוקח בערך " + Math.max(1, Math.round(r.queued * 7 / 60)) + " דקות. אחר כך לפתוח שוב את ההרצאה." : "כל השקופיות כבר נקראו.");
+});
+
+// ---------- marking a moment in a live lecture: "לא הבנתי" / "חשוב" (also Ctrl+Alt+M) ----------
+async function markMoment(kind, say) {
+  let r; try { r = await api("/api/cmd", {action: "mark", kind}); } catch (e) { r = {ok: false}; }
+  (say || toast)(r.ok ? (kind === "important" ? "סומן כחשוב." : "סומן: לא הבנתי. אחרי ההרצאה: \"הסבר לרגעים שסימנתי\".") : (r.error || "לא הצלחתי לסמן."));
+}
+$("#markLost").addEventListener("click", () => markMoment("lost"));
+$("#markImp").addEventListener("click", () => markMoment("important"));
+const MARK_RE = /^\[סימון: (.+)\]$/;
+// a marked moment: live lines bring it as text "[סימון: ...]", a saved lecture as a note "סימון: ..."
+function markOf(x) {
+  const m = (x.x && MARK_RE.exec(x.x)) || (x.note && /^סימון: (.+)$/.exec(x.note));
+  return m ? m[1] : null;
+}
+
+// ---------- display and accessibility: kept in this browser, applied here and in the floating window ----------
+const A11Y_KEY = "bzm.a11y";
+const a11y = {zoom: 1, tx: 1, read: false, contrast: false, still: false, say: false, caps: false};
+try { Object.assign(a11y, JSON.parse(localStorage.getItem(A11Y_KEY) || "{}")); } catch (e) {}
+function a11yApply(doc, pip) {
+  const r = (doc || document).documentElement;
+  r.style.zoom = pip || a11y.zoom === 1 ? "" : String(a11y.zoom);   // (the floating window keeps its size; its text grows)
+  r.style.setProperty("--tx", String(a11y.tx));
+  r.classList.toggle("a-read", !!a11y.read); r.classList.toggle("a-contrast", !!a11y.contrast); r.classList.toggle("a-still", !!a11y.still);
+}
+function a11yDraw() {
+  for (const [id, k] of [["#a11yZoom", "zoom"], ["#a11yTx", "tx"]])
+    $(id).querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", +b.dataset.v === +a11y[k] ? "true" : "false"));
+  for (const [id, k] of [["#a11yRead", "read"], ["#a11yContrast", "contrast"], ["#a11yStill", "still"], ["#a11ySay", "say"]]) $(id).checked = !!a11y[k];
+}
+function a11ySet(k, v) {
+  a11y[k] = v;
+  try { localStorage.setItem(A11Y_KEY, JSON.stringify(a11y)); } catch (e) {}
+  a11yApply();
+  if (pipWin && !pipWin.closed) { a11yApply(pipWin.document, true); pipWin.document.body.classList.toggle("caps", !!a11y.caps); pipKey = ""; }
+  a11yDraw();
+}
+for (const [id, k] of [["#a11yZoom", "zoom"], ["#a11yTx", "tx"]])
+  $(id).querySelectorAll("button").forEach(b => b.addEventListener("click", () => a11ySet(k, +b.dataset.v)));
+for (const [id, k] of [["#a11yRead", "read"], ["#a11yContrast", "contrast"], ["#a11yStill", "still"], ["#a11ySay", "say"]])
+  $(id).addEventListener("change", () => a11ySet(k, $(id).checked));
+$("#a11yBtn").addEventListener("click", () => { a11yDraw(); $("#a11y").hidden = false; $("#a11yClose").focus(); });
+$("#a11yClose").addEventListener("click", () => { $("#a11y").hidden = true; $("#a11yBtn").focus(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#a11y").hidden) { $("#a11y").hidden = true; $("#a11yBtn").focus(); } });
+a11yApply();
+// new lines of a live lecture, read aloud by a screen reader (when chosen)
+function srSay(text) { if (a11y.say && text) { const s = $("#srLive"); s.textContent = ""; setTimeout(() => { s.textContent = text; }, 50); } }
+
 // ---------- views ----------
 function show(v) {
   const was = view;
@@ -773,7 +1141,7 @@ function show(v) {
 let backTo = "";  // where "חזרה" on a lecture goes: the course page it was opened from, or home
 function route() {
   const raw = location.hash.slice(1), h = decodeURIComponent(raw);
-  if (h === "live") { show("live"); liveSince = 0; liveItems = []; $("#liveLines").replaceChildren(); pollLive(); return; }
+  if (h === "live") { show("live"); liveSince = 0; liveItems = []; liveStudyF = ""; $("#liveStudy").hidden = true; $("#liveLines").replaceChildren(); pollLive(); return; }
   if (h === "yt") { show("yt"); ytOpen(); return; }
   if (h === "how") { show("how"); HOW.open(); return; }
   if (raw.startsWith("t=")) { if (view !== "past") backTo = view === "course" && courseName ? "c=" + encodeURIComponent(courseName) : "";
@@ -866,6 +1234,9 @@ function render(d) {
   if (!d.pending) { $("#offer").hidden = true; lastOffer = null; }
   if (d.lib_rev !== libRev && view === "home") loadLib();
   if (view === "live") renderLiveHead(s);
+  drawCaps(); drawMath();
+  if (window.BZMAsk) BZMAsk.setBuiltin(!!(d.math && d.math.ask));
+  $("#tutorBar").hidden = !!(d.math && d.math.has_key) || tutorBarNo;
   if (view === "yt") ytHead(s);
   floatHead(s);
 }
@@ -1430,19 +1801,33 @@ $("#cDelete").addEventListener("click", async () => {
 });
 
 // ---------- a live lecture ----------
-let liveSince = 0, liveItems = [], liveFollow = true, liveLast = null;
+let liveSince = 0, liveItems = [], liveFollow = true, liveLast = null, liveStudyF = "";
+$("#liveStudyGo").addEventListener("click", () => { if (liveStudyF) location.hash = "t=" + encodeURIComponent(liveStudyF); });
 function renderLiveHead(s) {
   if (!s || s.kind !== "live") return;
   $("#liveWhat").textContent = sessionName(s);
   $("#liveStop").hidden = s.done;
+  $("#markLost").hidden = $("#markImp").hidden = s.done || !s.ready || !!s.yt;
   if (s.error) { $("#liveSub").textContent = "נעצר בגלל שגיאה"; }
 }
 function lineEl(x) {
+  const mk = markOf(x);
+  if (mk) {   // a moment the student marked in the lecture
+    const li = el("li", "mark"); li.appendChild(el("span", "ts", x.c));
+    li.appendChild(el("span", "", (mk === "חשוב" ? "⭐ סימנת: חשוב" : "❓ סימנת: לא הבנתי"))); li._x = x; return li;
+  }
   const li = el("li", x.img ? "shot" : (x.note ? "note" : (x.gap ? "gap" : "")));
   li.appendChild(el("span", "ts", x.c));
   if (x.img) {
     const im = el("img"); im.loading = "lazy"; im.src = shotUrl(x.img); im.alt = "צילום מסך מ-" + x.c; im.onclick = () => big(im.src); li.appendChild(im);
     if (x.ocr) { const dt = el("details", "ocr"); dt.appendChild(el("summary", "", "הטקסט מהשקופית")); const pre = el("p", "", x.ocr); pre.dir = "auto"; dt.appendChild(pre); li.appendChild(dt); }
+    const dl = el("button", "shotdel", "מחיקת התמונה"); dl.type = "button"; dl.title = "מוחק את התמונה הזו לצמיתות. התמלול נשאר.";
+    dl.onclick = async () => {
+      const r = await delShots({action: "delete_shot", p: x.img}, "את הצילום הזה"); if (!r || !r.ok) return;
+      if (view === "past") { li.remove(); if (pastData) pastData.lines = pastData.lines.filter(y => y !== x); return; }
+      x.ocr = ""; im.src = shotUrl(x.img) + "&d=" + Date.now(); const dt = li.querySelector("details"); if (dt) dt.remove(); dl.remove();
+    };
+    li.appendChild(dl);
   }
   else { const sp = el("span", "", x.x || x.note || x.gap); sp.dir = "auto"; li.appendChild(sp); }
   li._x = x; return li;
@@ -1459,6 +1844,7 @@ async function pollLive() {
   const box = $("#liveLines"), atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
   const draftEl = box.querySelector("li.draft"); if (draftEl) draftEl.remove();
   for (const x of d.items) { liveItems.push(x); box.appendChild(lineEl(x)); }
+  if (liveSince && d.items.length) srSay(d.items.filter(x => x.x && !markOf(x)).map(x => x.x).join(" "));
   liveSince = d.total;
   if (d.draft) { const li = el("li", "draft"); li.appendChild(el("span", "ts", "עכשיו")); const sp = el("span", "", "טיוטה: " + d.draft); sp.dir = "auto"; li.appendChild(sp); box.appendChild(li); }
   else if (d.pending >= 3 && !d.ended) { const li = el("li", "draft"); li.appendChild(el("span", "ts", "עכשיו")); li.appendChild(el("span", "", "מה שנאמר ב-" + Math.round(d.pending) + " השניות האחרונות עוד בתמלול...")); box.appendChild(li); }
@@ -1479,7 +1865,7 @@ async function pollLive() {
       const im = el("img"); im.src = src; im.dataset.src = src; im.alt = "צילום המסך האחרון"; im.onclick = () => big(src); slot.replaceChildren(im);
     }
     if ($("#shotCopy").hidden && liveAskBox) liveAskBox.refresh();
-    $("#shotCopy").hidden = false;
+    $("#shotCopy").hidden = false; $("#shotDel").hidden = false;
   }
   const st = $("#liveStat"); st.replaceChildren();
   const add = (k, v) => { const r = el("div"); r.append(el("span", "k", k + ": "), el("span", "", v)); st.appendChild(r); };
@@ -1488,7 +1874,8 @@ async function pollLive() {
   if (d.lag > 15) add("איחור", Math.round(d.lag) + " שניות" + (d.fast ? " (מצב מהיר)" : ""));
   if (info.transcript) add("נשמר ב", info.transcript);
   $("#liveEnded").hidden = !d.ended;
-  if (d.ended) { $("#liveEnded").textContent = "ההרצאה נשמרה ב-" + (info.transcript || "הקורסים שלי") + ". אפשר לחזור למסך הבית, ולפתוח אותה מ\"הקורסים שלי\"."; $("#liveStop").hidden = true; }
+  if (d.ended) { $("#liveEnded").textContent = "ההרצאה נשמרה ב-" + (info.transcript || "הקורסים שלי") + ". אפשר לחזור למסך הבית, ולפתוח אותה מ\"הקורסים שלי\"."; $("#liveStop").hidden = true; liveStudyF = info.f || ""; }
+  $("#liveStudy").hidden = !(d.ended && liveStudyF);
   setTimeout(pollLive, d.ended ? 4000 : 1000);
 }
 $("#liveLines").addEventListener("scroll", () => {
@@ -1532,7 +1919,8 @@ async function liveContext(q) {
   return out + ANSWER_HINT + "\nהשאלה שלי: " + q;
 }
 let liveAskBox = null;
-if (window.BZMAsk) liveAskBox = BZMAsk.mount($("#liveAsk"), {context: liveContext, toast, hasImage: () => !!$("#shotSlot img")});
+if (window.BZMAsk) liveAskBox = BZMAsk.mount($("#liveAsk"), {context: liveContext, toast, hasImage: () => !!$("#shotSlot img"),
+  image: () => liveLast && liveLast.shot, where: () => "live", at: () => new Date().toLocaleTimeString("he-IL")});
 $("#shotCopy").addEventListener("click", async () => {
   const im = $("#shotSlot img"); if (!im) return;
   toast((await copyImage(im.src)) ? "צילום המסך הועתק. להדביק בצ'אט (Ctrl+V)." : "לא הצלחתי להעתיק את התמונה.");
@@ -1545,6 +1933,9 @@ async function openPast(f, at) {
   let d; try { d = await api("/api/transcript?f=" + encodeURIComponent(f)); } catch (e) { d = {none: true}; }
   if (d.none) { $("#pastTitle").textContent = "התמלול לא נמצא"; return; }
   pastData = d; const e = d.entry; pastSummary = d.summary || ""; drawSummary();
+  $("#pastDelShots").hidden = !d.lines.some(x => x.img);
+  pastHasImgs = d.lines.some(x => x.img); drawMath();
+  $("#studyMarks").hidden = !d.lines.some(markOf);
   $("#pastTitle").textContent = e.title;
   $("#pastSub").textContent = [e.course, e.when, langName(e.lang), e.length ? "אורך " + e.length : "", e.lines + " שורות"].filter(Boolean).join(" · ");
   $("#pastPlay").hidden = !(e.kind === "rec" && e.has_media);
@@ -1562,7 +1953,7 @@ let pastSummary = "";
 function drawSummary() {
   const box = $("#pastSum"); if (!box) return;
   box.hidden = !pastSummary;
-  $("#sumText").replaceChildren(...String(pastSummary || "").split("\n").filter(x => x.trim()).map(x => { const p = el("p", "", x.replace(/^#+\s*/, "")); p.dir = "auto"; return p; }));
+  $("#sumText").replaceChildren(...String(pastSummary || "").split("\n").filter(x => x.trim()).map(x => { const p = el("p", "", x.replace(/^#+\s*/, "").replace(/\*\*/g, "")); p.dir = "auto"; return p; }));
   $("#sumCopy").hidden = !pastSummary;
 }
 $("#sumCopy").addEventListener("click", async () => { toast((await copyText(pastSummary)) ? "הסיכום הועתק." : "לא הצלחתי להעתיק."); });
@@ -1573,7 +1964,9 @@ function pastText() {
   const e = pastData.entry;
   let out = `זה תמלול אוטומטי של הרצאה (${e.title}, ב${langName(e.lang)}). יכולות להיות בו טעויות תמלול.\n\n`;
   for (const x of pastData.lines) {
-    if (x.x) out += `[${x.c}] ${x.x}\n`;
+    const mk = markOf(x);
+    if (mk) out += `[${x.c}] [סימון: ${mk}]\n`;   // the moments the student marked
+    else if (x.x) out += `[${x.c}] ${x.x}\n`;
     else if (x.ocr) out += `[${x.c}] [על השקופית כתוב: ${x.ocr.replace(/\n+/g, " | ").slice(0, 700)}]\n`;
   }
   return out;
@@ -1582,10 +1975,38 @@ $("#pastCopy").addEventListener("click", async () => {
   if (!pastData) return;
   toast((await copyText(pastText())) ? "כל התמלול הועתק." : "לא הצלחתי להעתיק. אפשר לפתוח את הקובץ ולהעתיק משם.");
 });
-if (window.BZMAsk) BZMAsk.mount($("#pastAsk"), {
-  example: "תסביר לי את ההרצאה הזו",
+let pastAskBox = null;
+if (window.BZMAsk) pastAskBox = BZMAsk.mount($("#pastAsk"), {
+  example: "תסביר לי את ההרצאה הזו", where: () => "past", lecture: () => pastFile,
+  chips: ["מה הרעיון המרכזי של ההרצאה?", "תסביר את החלק הכי קשה", "תן תרגיל לדוגמה עם פתרון"],
   context: q => (pastData ? pastText() : "") + ANSWER_HINT + "\nהשאלה שלי: " + q,
   toast});
+// after the lecture: one click = a ready task for this lecture, sent to the AI the student used last
+const STUDY = {
+  summary: "תסכם את ההרצאה הזו: הרעיונות המרכזיים לפי הסדר, ההגדרות והנוסחאות (עם הסבר לכל סימן ויחידות), ובסוף שלושה דברים שחשוב לזכור למבחן. מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול: תתקן לפי ההקשר.",
+  cards: "תכין 15 כרטיסיות חזרה מההרצאה הזו: שאלה בצד אחד ותשובה קצרה בצד השני, על המושגים והנוסחאות החשובים. בטבלה, כדי שאוכל להעתיק ל-Anki או ל-Quizlet.",
+  exam: "תכין לי מבחן דמה מההרצאה הזו: 6 שאלות מהקלה לקשה, בסגנון מבחן אמיתי. קודם רק השאלות. אחרי שאענה, תבדוק ותסביר כל פתרון צעד אחר צעד.",
+  formulas: "תכין דף נוסחאות מההרצאה הזו: כל נוסחה, מה כל סימן אומר, יחידות, ומתי משתמשים בה.",
+  marks: "בתמלול יש שורות [סימון: לא הבנתי] ו-[סימון: חשוב] שסימנתי בזמן ההרצאה. לכל \"לא הבנתי\": תסביר בפשטות מה נאמר בדקה-שתיים שלפני הסימון, עם דוגמה. לכל \"חשוב\": תסכם בשורה-שתיים מה נאמר ולמה זה חשוב. לפי הסדר, עם השעה של כל סימון.",
+};
+document.querySelectorAll("[data-study]").forEach(b => b.addEventListener("click", () => {
+  if (!pastData || !pastAskBox) { toast("ההרצאה עוד נטענת."); return; }
+  const k = b.dataset.study;
+  if (pastAskBox.builtin()) {   // done right here by Gemini; a summary becomes the lecture's summary
+    pastAskBox.askHere(STUDY[k], {task: k, title: b.textContent,
+      onDone: k === "summary" ? t => { pastSummary = t; drawSummary(); } : null});
+    $("#pastAsk").scrollIntoView({block: "start", behavior: "smooth"});
+    return;
+  }
+  const ta = pastAskBox.textarea; ta.value = STUDY[k];
+  let last = ""; try { last = localStorage.getItem("bzm.ai") || ""; } catch (e) {}
+  if (last) ta.dispatchEvent(new KeyboardEvent("keydown", {key: "Enter", ctrlKey: true, bubbles: true, cancelable: true}));   // the AI used last
+  else { $("#pastAsk").scrollIntoView({block: "center"}); ta.focus(); toast("עכשיו לבחור לאיזה AI לשלוח: ChatGPT, Gemini או Claude."); }
+}));
+$("#pastDelShots").addEventListener("click", async () => {
+  if (!pastFile) return;
+  const r = await delShots({action: "delete_lecture_shots", f: pastFile}, "את כל צילומי המסך של ההרצאה"); if (r && r.ok) openPast(pastFile);
+});
 function filterLines(listSel, inputSel) {
   const q = $(inputSel).value.trim().toLowerCase();
   for (const li of $(listSel).children) {
@@ -1763,7 +2184,8 @@ async function ytContext(q) {
   if (!n) out += "(החלק הזה עוד לא תומלל)\n";
   return out + ANSWER_HINT + "\nהשאלה שלי: " + q;
 }
-if (window.BZMAsk) BZMAsk.mount($("#ytAsk"), {context: ytContext, toast, hasImage: () => !!ytShot, imageName: "השקופית", example: "מה הוא הסביר עכשיו?"});
+if (window.BZMAsk) BZMAsk.mount($("#ytAsk"), {context: ytContext, toast, hasImage: () => !!ytShot, imageName: "השקופית", example: "מה הוא הסביר עכשיו?",
+  image: () => ytShot, where: () => "yt", at: () => hms(ytPos())});
 window.addEventListener("pagehide", () => { if (view === "yt") { try { ytPlayer.pauseVideo(); } catch (e) {} ytReport(true); } });
 
 // ---------- the floating window: a small window that stays on top of everything, next to the lecture ----------
@@ -1784,13 +2206,25 @@ async function openFloat() {
   d.body.className = "pipbody";
   const head = d.createElement("div"); head.className = "phead";
   pipTitle = d.createElement("span"); head.appendChild(pipTitle);
+  // big captions (the last lines, large, white on black) and marking "לא הבנתי" without leaving the lecture
+  const capBtn = d.createElement("button"); capBtn.type = "button"; capBtn.className = "pbtn"; capBtn.textContent = "כתוביות";
+  capBtn.title = "כתוביות גדולות: רק השורות האחרונות, באותיות גדולות. לחיצה נוספת מחזירה";
+  capBtn.addEventListener("click", () => a11ySet("caps", !a11y.caps));
+  const markBtn = d.createElement("button"); markBtn.type = "button"; markBtn.className = "pbtn"; markBtn.textContent = "❓ לא הבנתי";
+  markBtn.title = "מסמן את הרגע הזה בתמלול (גם Ctrl+Alt+M)"; markBtn.addEventListener("click", () => markMoment("lost", pipToast));
+  markBtn.hidden = !!(app && app.session && app.session.yt);
+  head.append(markBtn, capBtn);
+  a11yApply(d, true); d.body.classList.toggle("caps", !!a11y.caps);
   pipList = d.createElement("ol"); pipList.setAttribute("aria-label", "מה נאמר עכשיו");
   pipShot = d.createElement("div"); pipShot.className = "pshot";
   const card = d.createElement("div"); card.className = "card";
   pipToastEl = d.createElement("div"); pipToastEl.className = "ptoast"; pipToastEl.setAttribute("role", "status");
   d.body.append(head, card, pipList, pipShot, pipToastEl);   // the question on top, then what is said, then the slide
   if (window.BZMAsk) BZMAsk.mount(card, {win: pipWin, title: "שאלה ל-AI", sub: "עם מה שנאמר עכשיו", placeholder: "מה לא ברור?",
-    context: q => (app && app.session && app.session.yt ? ytContext(q) : floatLiveContext(q)), toast: pipToast});
+    context: q => (app && app.session && app.session.yt ? ytContext(q) : floatLiveContext(q)), toast: pipToast,
+    hasImage: () => !!(app && app.session && app.session.yt ? ytShot : pipLiveShot),
+    image: () => (app && app.session && app.session.yt ? ytShot : pipLiveShot),
+    where: () => (app && app.session && app.session.yt ? "yt" : "live")});
   pipWin.addEventListener("pagehide", () => { pipWin = null; pipKey = ""; });
   pipKey = ""; pipSince = 0; pipItems = []; pipYtRev = -1;
   floatHead(app && app.session); floatLoop();
@@ -1833,9 +2267,10 @@ async function floatLoop() {
 function floatDraw(isYt) {
   if (!pipWin || !pipList) return;
   let rows, shot, draft = "";
-  if (isYt) { const pos = ytPos(); rows = ytItems.filter(x => !x.img && x.t <= pos + 0.5).slice(-14); shot = ytShot; }
-  else { rows = pipItems.filter(x => !x.img).slice(-14); shot = pipLiveShot; draft = pipDraft; }
-  const key = rows.map(x => x.t).join(",") + "|" + (shot || "") + "|" + draft;
+  const many = a11y.caps ? 4 : 14;   // captions: only the last lines, large
+  if (isYt) { const pos = ytPos(); rows = ytItems.filter(x => !x.img && x.t <= pos + 0.5).slice(-many); shot = ytShot; }
+  else { rows = pipItems.filter(x => !x.img && !markOf(x)).slice(-many); shot = pipLiveShot; draft = pipDraft; }
+  const key = rows.map(x => x.t).join(",") + "|" + (shot || "") + "|" + draft + "|" + a11y.caps;
   if (key === pipKey) return;
   pipKey = key;
   const d = pipWin.document, mk = (tag, cls, text) => { const e = d.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -1853,12 +2288,11 @@ function floatDraw(isYt) {
 // With "reduce motion" each step shows its final picture, and nothing moves on by itself.
 const HOW = (() => {
   const STEPS = [
-    {title: "בוחרים קורס", text: "לפני ההרצאה בוחרים במסך הבית את הקורס. ההרצאה תישמר בתיקייה שלו, והתמלול ישתמש במילון המונחים של הקורס, כך שמונחים מקצועיים נכתבים נכון."},
-    {title: "מתחילים הרצאה חיה", text: "פותחים את הזום או את השידור, ולוחצים \"הרצאה חיה\". כל מה שנאמר נכתב תוך כדי, וכל שקופית חדשה או כתיבה על הלוח נשמרת כתמונה."},
-    {title: "מסדרים את המסך: שני שליש ושליש", text: "מצמידים את ההרצאה לצד אחד (מקש Windows + חץ) ואת אפליקציית ה-AI לצד השני, וגוררים את הקו ביניהם: שני שליש להרצאה, שליש ל-AI. ככה ההרצאה לא מוסתרת, והתשובה נשארת מול העיניים. בזום יוצאים ממסך מלא."},
-    {title: "AI מחובר: שואלים ישר", text: "חיברת את Claude (\"חיבור AI\" במסך הבית)? שואלים אותו בשליש שלו על מושג שלא הבנת, למשל \"למה צריך את מומנט ההתמד?\", והוא קורא בעצמו את מה שנאמר ואת השקופית ומסביר לפיהם. בלי להעתיק ובלי להדביק."},
-    {title: "בלי חיבור: חלון צף ו-Ctrl+V", text: "בלי חיבור, או במסך קטן: פותחים \"חלון צף\" בפינת ההרצאה, כותבים מה לא ברור ולוחצים על ה-AI. השאלה מועתקת עם 5 הדקות האחרונות, וה-AI נפתח בשליש של המסך. שם Ctrl+V ושליחה."},
-    {title: "אחרי ההרצאה", text: "בדף הקורס מכינים מכל ההרצאות מבחן תרגול, סיכום, כרטיסיות חזרה או דף נוסחאות, ושולחים ל-AI באותה דרך."},
+    {title: "לפני ההרצאה", text: "בוחרים את הקורס, ובכרטיס \"מה הבנתי מצלמת\" בוחרים \"חלון אחד\" ואת חלון הזום. ככה רק ההרצאה נכנסת לצילומים."},
+    {title: "מתחילים הרצאה חיה", text: "לוחצים \"הרצאה חיה\" ומפעילים את הזום. כל מה שנאמר נכתב תוך כדי, וכל שקופית חדשה נשמרת."},
+    {title: "שואלים: \"תשובה כאן\"", text: "לא הבנת? כותבים בתיבה ולוחצים \"תשובה כאן\". התשובה נכתבת מיד מתחת, לפי מה שנאמר עכשיו ומה שעל השקופית. בלי לעבור חלון."},
+    {title: "חלון צף מעל הזום", text: "\"חלון צף\" נשאר מעל ההרצאה. לוחצים על שאלה מוכנה, או על \"לא הבנתי\" כדי לסמן את הרגע ולהמשיך להקשיב."},
+    {title: "אחרי ההרצאה", text: "פותחים את ההרצאה ולוחצים \"מבחן דמה\", \"סיכום\" או \"כרטיסיות\". הכל נכתב שם, וכל שאלה ותשובה נשמרות בתיקיית ההרצאה."},
   ];
   const LINES = [
     ["10:41:05", "אז בואו נגדיר את מומנט ההתמד של גוף קשיח"],
@@ -1874,14 +2308,14 @@ const HOW = (() => {
     <circle cx="40" cy="78" r="5" fill="#C2412D"/><path d="M28 66 a17 17 0 1 0 6 -6" fill="none" stroke="#C2412D" stroke-width="1.6"/>
     <text x="100" y="98" text-anchor="middle" font-size="9" fill="#56625B">L</text>
     <text x="100" y="114" text-anchor="middle" font-size="12" fill="#1d2a33" direction="ltr">I = ⅓ m L²</text></svg>`;
-  const ANSWER = "מומנט התמד (Moment of Inertia) מודד כמה קשה לשנות את מהירות הסיבוב של גוף. " +
-    "מחברים כל מסה כפול המרחק שלה מהציר בריבוע: \u2066I\u00a0=\u00a0∫\u00a0r²\u00a0dm\u2069, ביחידות \u2066kg·m²\u2069.\nלמוט באורך L שמסתובב סביב הקצה: \u2066I\u00a0=\u00a0⅓·m·L²\u2069.";
-  const NOW_Q = "למה בכלל צריך את מומנט ההתמד, ומה הוא אומר?";
-  const NOW_ANSWER = "מומנט ההתמד הוא ה\"מסה\" של סיבוב: הוא אומר כמה קשה להתחיל לסובב גוף או לעצור אותו. " +
-    "כמו שבתנועה רגילה \u2066F\u00a0=\u00a0m·a\u2069, בסיבוב \u2066τ\u00a0=\u00a0I·α\u2069.\n" +
-    "הוא תלוי לא רק במסה אלא איפה היא נמצאת: מסה רחוקה מהציר שוקלת יותר, כי המרחק בריבוע (\u2066I\u00a0=\u00a0∫\u00a0r²\u00a0dm\u2069, כמו שהמרצה הגדיר עכשיו). " +
-    "לכן המוט בשקופית קשה יותר לסיבוב סביב הקצה (\u2066⅓·m·L²\u2069) מאשר סביב המרכז.";
-  const EXAM_Q = "שאלה 1: מוט אחיד באורך \u20662 m\u2069 ובמסה \u20663 kg\u2069 מסתובב סביב הקצה שלו. מהו מומנט ההתמד שלו?";
+  const NOW_Q = "למה בכלל צריך את מומנט ההתמד?";
+  const NOW_ANSWER = "מומנט ההתמד (Moment of Inertia) הוא ה\"מסה\" של סיבוב: כמה קשה להתחיל לסובב גוף או לעצור אותו. " +
+    "לפני דקה המרצה הגדיר אותו: \u2066I\u00a0=\u00a0∫\u00a0r²\u00a0dm\u2069. מסה רחוקה מהציר שוקלת יותר, כי המרחק בריבוע.";
+  const SIMPLE_Q = "תסביר בפשטות את מה שנאמר עכשיו";
+  const SIMPLE_ANSWER = "המרצה אמר שכדי לחשב מומנט התמד מחברים את כל חלקי המסה, וכל חלק נכפל במרחק שלו מהציר בריבוע. " +
+    "ככל שהמסה רחוקה יותר מהציר, קשה יותר לסובב את הגוף.";
+  const EXAM_Q = "שאלה 1: מוט אחיד באורך \u20662 m\u2069 ובמסה \u20663 kg\u2069 מסתובב סביב הקצה שלו. מהו מומנט ההתמד שלו?\n" +
+    "שאלה 2: איך ישתנה מומנט ההתמד אם הציר יעבור במרכז המוט?";
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
   let i = 0, playing = !still, timers = [], stage = null, cursor = null, built = false, endAt = 0, startAt = 0, progT = 0;
 
@@ -1937,6 +2371,10 @@ const HOW = (() => {
     const sel = mk("div", "h-sel", null, row); const val = mk("span", "", course, sel); mk("span", "", "▾", sel);
     const chip = mk("span", "h-chip", "מילון המונחים של הקורס: 42 מונחים ✓", row);
     chip.style.opacity = course === "ללא קורס" ? "0" : "1";
+    const cap = mk("div", "h-row", null, w.body); mk("b", "", "מה הבנתי מצלמת:", cap);
+    const seg = mk("div", "h-presets", null, cap), capb = {};
+    for (const n of ["כל המסך", "חלון אחד", "חלק מהמסך"]) capb[n] = mk("span", n === "כל המסך" ? "h-hot" : "", n, seg);
+    const capChip = mk("span", "h-chip", "רק חלון הזום ✓", cap); capChip.style.opacity = "0";
     const tiles = mk("div", "h-tiles", null, w.body), tl = [];
     for (const [b, s] of [["הרצאה חיה בעברית", "זום או שידור: נכתב תוך כדי"], ["הרצאה חיה באנגלית", "אותו דבר, באנגלית"], ["הרצאה מוקלטת", "קובץ, קישור או יוטיוב"]]) {
       const t = mk("div", "h-tile", null, tiles); mk("span", "h-ic", null, t); mk("b", "", b, t); mk("span", "", s, t); tl.push(t);
@@ -1946,7 +2384,26 @@ const HOW = (() => {
     for (const [a, b] of [["דינמיקה · הרצאה 5 - קינטיקה של גוף קשיח", "אתמול"], ["מד\"ר · משוואות מסדר שני", "לפני 3 ימים"]]) {
       const r = mk("div", "", null, lib); mk("span", "", a, r); mk("small", "", b, r);
     }
-    return {w, sel, val, chip, tiles: tl};
+    return {w, sel, val, chip, tiles: tl, capb, capChip};
+  }
+  // the "שאלה ל-AI" box, with "תשובה כאן" and the answer written under it
+  function askBox(parent, chips) {
+    const ask = mk("div", "h-ask", null, parent);
+    const hd = mk("div", "h-row", null, ask); mk("b", "", "שאלה ל-AI", hd);
+    const ta = mk("div", "h-ta", null, ask); ta.dataset.ph = "מה לא ברור?";
+    const ais = mk("div", "h-ais", null, ask);
+    const here = mk("span", "last", "תשובה כאן", ais);
+    for (const n of ["ChatGPT", "Gemini", "Claude"]) mk("span", "", n, ais);
+    const ch = {};
+    if (chips) { const row = mk("div", "h-presets", null, ask); for (const c of chips) ch[c] = mk("span", "", c, row); }
+    const qa = mk("div", "h-qa off", null, ask), q = mk("b", "", "", qa), a = mk("div", "", "", qa);
+    return {ask, ta, here, ch, qa, q, a};
+  }
+  // the answer appears under the question, as it is written
+  function answer(A, question, text, t) {
+    at(t, () => { A.q.textContent = question; A.a.textContent = "חושב..."; A.qa.classList.remove("off"); });
+    at(t + 700, () => { A.a.textContent = ""; });
+    return type(A.a, text, t + 800, 18);
   }
   function liveBody(w, course) {
     w.body.replaceChildren();
@@ -1964,7 +2421,6 @@ const HOW = (() => {
     show(li, t); if (isNew) at(t + 1600, () => li.classList.remove("new"));
     return li;
   }
-  const LEFT = [1.5, 3, 32, 94], RIGHT = [34.5, 3, 64, 94];   // the recommended screen: AI on a third, the lecture on two thirds
   function zoomWin(box) {
     const z = win("Zoom · דינמיקה - הרצאה 6", box || [2, 3, 96, 94], "h-zoom");
     const main = mk("div", "h-shot", null, z.body); main.innerHTML = SLIDE;
@@ -1973,46 +2429,29 @@ const HOW = (() => {
     return z;
   }
   function floatWin(box) {
-    const f = win("הבנתי · הרצאה חיה", box || [66, 30, 31, 66]);
+    const f = win("הבנתי · חלון צף", box || [3, 6, 34, 90]);
     f.style.zIndex = "5";
-    const ask = mk("div", "h-ask", null, f.body);
-    const hd = mk("div", "h-row", null, ask); mk("b", "", "שאלה ל-AI", hd);
-    const ta = mk("div", "h-ta", null, ask); ta.dataset.ph = "מה לא ברור?";
-    const ais = mk("div", "h-ais", null, ask), btn = {};
-    for (const n of ["ChatGPT", "Gemini", "Claude"]) btn[n] = mk("span", n === "Claude" ? "last" : "", n, ais);
+    const mark = mk("span", "h-btn ghost", "❓ לא הבנתי"); mark.style.fontSize = "1cqw";
+    f.tb.insertBefore(mark, f.tb.querySelector(".h-dots"));
+    const A = askBox(f.body, [SIMPLE_Q, "תן דוגמה"]);
     const ol = mk("ol", "h-lines", null, f.body); ol.style.flex = "1";
-    const sh = mk("div", "h-shot", null, f.body); sh.innerHTML = SLIDE; sh.style.height = "9cqw"; sh.style.flex = "none";
     const toast = mk("div", "h-toast off", null, f);
-    return {f, ta, btn, ol, toast};
-  }
-  function claudeWin(box, connected, name, color) {
-    const c = win(name || "Claude", box || [3, 5, 50, 90], "off");
-    c.style.zIndex = "6";
-    c.querySelector(".h-logo").style.background = color || "#D97757";
-    if (connected) { const ch = mk("span", "h-chip", "מחובר להבנתי ✓", c.tb); ch.style.fontSize = "1cqw"; }
-    const chat = mk("div", "h-chat", null, c.body);
-    const inp = mk("div", "h-input", null, c.body); const tx = mk("span", "h-tx", null, inp); tx.dataset.ph = "לשאול את " + (name || "Claude") + "...";
-    const send = mk("span", "h-send", null, inp);
-    return {c, chat, tx, send};
+    return {f, A, ol, mark, toast};
   }
 
   // --- the scenes: each builds its picture and returns how long it plays (ms) ---
   const SCENES = [
-    function course() {
-      const h = homeWin("ללא קורס");
-      const menu = mk("div", "h-menu", null, h.sel); menu.style.opacity = "0";
-      const opts = ["ללא קורס", "דינמיקה", "מד\"ר", "חוזק חומרים"].map(n => mk("div", n === "ללא קורס" ? "hl" : "", n, menu));
-      point(h.sel, 500); click(h.sel, 1450);
-      at(1550, () => { menu.style.opacity = "1"; h.sel.classList.add("h-hot"); });
-      point(opts[1], 2100);
-      at(2500, () => { opts[0].className = ""; opts[1].className = "hl"; });
-      click(opts[1], 3000);
-      at(3150, () => { menu.style.opacity = "0"; h.val.textContent = "דינמיקה"; h.sel.classList.remove("h-hot"); });
-      at(3700, () => { h.chip.style.opacity = "1"; h.chip.classList.add("h-hot"); });
-      return 8000;
-    },
-    function live() {
+    function before() {   // step 1: the course, and "what Hevanti photographs": one window
       const h = homeWin("דינמיקה");
+      point(h.capb["חלון אחד"], 700); click(h.capb["חלון אחד"], 1500);
+      at(1600, () => { h.capb["כל המסך"].className = ""; h.capb["חלון אחד"].className = "h-hot"; });
+      at(2300, () => { h.capChip.style.opacity = "1"; h.capChip.classList.add("h-hot"); });
+      at(3200, () => cursor && (cursor.style.opacity = "0"));
+      return 6500;
+    },
+    function live() {   // step 2: the lecture starts, lines appear, a slide is saved
+      const h = homeWin("דינמיקה");
+      h.capb["כל המסך"].className = ""; h.capb["חלון אחד"].className = "h-hot"; h.capChip.style.opacity = "1";
       point(h.tiles[0], 500); at(1100, () => h.tiles[0].classList.add("h-hot")); click(h.tiles[0], 1500);
       let L = null;
       at(1800, () => {
@@ -2024,84 +2463,45 @@ const HOW = (() => {
       at(2600, () => cursor && (cursor.style.opacity = "0"));
       return 9000;
     },
-    function arrange() {
-      const z = zoomWin();
-      const C = claudeWin(LEFT, true);
-      const mac = !!(app && app.mac);
-      const k1 = mk("div", "h-key off", mac ? "fn ⌃ + →" : "⊞ Windows + →", stage); k1.style.left = "44%"; k1.style.top = "44%";
-      show(k1, 500); hide(k1, 1700);
-      at(1300, () => Object.assign(z.style, {left: RIGHT[0] + "%", top: RIGHT[1] + "%", width: RIGHT[2] + "%", height: RIGHT[3] + "%"}));
-      const k2 = mk("div", "h-key off", mac ? "fn ⌃ + ←" : "⊞ Windows + ←", stage); k2.style.left = "7%"; k2.style.top = "44%";
-      show(k2, 2300); show(C.c, 2600); hide(k2, 3500);
-      const l1 = mk("div", "h-split off", "שליש: ה-AI", stage); l1.style.left = "10%"; l1.style.top = "42%";
-      const l2 = mk("div", "h-split off", "שני שליש: ההרצאה", stage); l2.style.left = "57%"; l2.style.top = "88%";
-      show(l1, 4000); show(l2, 4000);
-      return 8000;
-    },
-    function connected() {
-      zoomWin(RIGHT);
-      const C = claudeWin(LEFT, true); C.c.classList.remove("off");
-      const q = NOW_Q;
-      point(C.tx, 400);
-      let t = type(C.tx, q, 1000, 45);
-      point(C.send, t + 200); click(C.send, t + 900);
-      const me = mk("div", "h-msg me off", q, C.chat);
-      at(t + 1000, () => { C.tx.textContent = ""; });
-      show(me, t + 1000);
-      at(t + 1300, () => cursor && (cursor.style.opacity = "0"));
-      const tool = mk("div", "h-tool off", null, C.chat); mk("span", "", "קורא מהבנתי: מה שנאמר עכשיו + השקופית", tool);
-      show(tool, t + 1800);
-      const ai = mk("div", "h-msg ai off", null, C.chat); show(ai, t + 2900);
-      const end = type(ai, NOW_ANSWER, t + 3000, 18);
+    function ask() {   // step 3: a question, and the answer written right under it
+      const z = zoomWin([37, 3, 60, 94]);
+      const f = win("הבנתי · הרצאה חיה", [2, 3, 33, 94]);
+      const A = askBox(f.body, [SIMPLE_Q, "תן דוגמה", "מה כתוב בשקופית?"]);
+      const ol = mk("ol", "h-lines", null, f.body); ol.style.flex = "1";
+      for (let k = 2; k <= 4; k++) addLine(ol, k, 0, false);
+      point(A.ta, 400); at(900, () => A.ta.classList.add("focus"));
+      let t = type(A.ta, NOW_Q, 1000, 45);
+      point(A.here, t + 300); click(A.here, t + 1000);
+      at(t + 1100, () => { A.ta.classList.remove("focus"); A.ta.textContent = ""; });
+      at(t + 1500, () => cursor && (cursor.style.opacity = "0"));
+      const end = answer(A, NOW_Q, NOW_ANSWER, t + 1100);
       return end + 3500;
     },
-    function noconn() {
-      zoomWin(RIGHT);
-      const F = floatWin([71, 33, 26.5, 63]); for (let k = 1; k <= 4; k++) addLine(F.ol, k, 0, false);
-      const G = claudeWin(LEFT, false, "ChatGPT", "#10a37f");
-      const q = "לא הבנתי, מה זה מומנט התמד?";
-      point(F.ta, 400); at(1000, () => F.ta.classList.add("focus"));
-      let t = type(F.ta, q, 1200, 55);
-      point(F.btn.ChatGPT, t + 300); click(F.btn.ChatGPT, t + 1050);
-      at(t + 1150, () => { F.ta.classList.remove("focus"); F.ta.textContent = ""; F.toast.textContent = "הועתק ונפתח ChatGPT בשליש המסך. להדביק (Ctrl+V)"; F.toast.classList.remove("off"); });
-      show(G.c, t + 1600);
-      const key = mk("div", "h-key off", "Ctrl + V", stage); key.style.left = "9%"; key.style.top = "70%";
-      point(G.tx, t + 1900);
-      show(key, t + 2600); hide(key, t + 3300); hide(F.toast, t + 3300);
-      const me = mk("div", "h-msg me off", null, G.chat);
-      mk("span", "h-ctx", "אני בהרצאה חיה. זה התמלול של 5 הדקות האחרונות: [10:41:05] אז בואו נגדיר את מומנט ההתמד... [10:41:31] והיחידות הן קילוגרם כפול מטר בריבוע", me);
-      me.append("השאלה שלי: " + q);
-      show(me, t + 3000);
-      at(t + 3500, () => cursor && (cursor.style.opacity = "0"));
-      const ai = mk("div", "h-msg ai off", null, G.chat); show(ai, t + 4000);
-      const end = type(ai, ANSWER, t + 4100, 16);
-      return end + 3500;
+    function floating() {   // step 4: the floating window above Zoom; a ready question; marking a moment
+      zoomWin([2, 3, 96, 94]);
+      const F = floatWin([62, 8, 35, 84]);
+      for (let k = 2; k <= 4; k++) addLine(F.ol, k, 0, false);
+      point(F.A.ch[SIMPLE_Q], 600); click(F.A.ch[SIMPLE_Q], 1300);
+      const end = answer(F.A, SIMPLE_Q, SIMPLE_ANSWER, 1400);
+      point(F.mark, end + 700); click(F.mark, end + 1400);
+      at(end + 1500, () => { F.toast.textContent = "סומן: לא הבנתי"; F.toast.classList.remove("off"); cursor && (cursor.style.opacity = "0"); });
+      hide(F.toast, end + 3500);
+      return end + 4200;
     },
-    function after() {
+    function after() {   // step 5: a saved lecture: one click = a mock exam, written there
       const w = win("הבנתי", [5, 5, 90, 90]);
       const top = mk("div", "h-row", null, w.body);
-      mk("span", "h-btn ghost", "→ למסך הבית", top);
+      mk("span", "h-btn ghost", "→ חזרה", top);
       const tt = mk("div", "", null, top); tt.style.marginInlineEnd = "auto";
-      mk("div", "h-h1", "דינמיקה", tt); const sm = mk("small", "", "6 הרצאות · מילון: 42 מונחים", tt); sm.style.color = "var(--muted)";
-      mk("span", "h-btn quiet", "קובץ אחד של כל הקורס", top);
-      mk("div", "h-sub", "הכנה למבחן", w.body);
+      mk("div", "h-h1", "הרצאה 6 - מומנט התמד", tt);
+      mk("div", "h-sub", "אחרי ההרצאה: לימוד בלחיצה אחת", w.body);
       const pr = mk("div", "h-presets", null, w.body), p = {};
-      for (const n of ["מבחן תרגול", "סיכום כל הקורס", "כרטיסיות חזרה", "הנושאים הכי קשים", "דף נוסחאות"]) p[n] = mk("span", "", n, pr);
-      const ask = mk("div", "h-ask", null, w.body);
-      const ta = mk("div", "h-ta", null, ask); ta.dataset.ph = "המשימה: לבחור למעלה, או לכתוב כאן";
-      const ais = mk("div", "h-ais", null, ask), btn = {};
-      for (const n of ["ChatGPT", "Gemini", "Claude"]) btn[n] = mk("span", n === "Claude" ? "last" : "", n, ais);
-      const lib = mk("div", "h-lib", null, w.body);
-      for (const [a, b] of [["הרצאה 6 - מומנט התמד", "היום"], ["הרצאה 5 - קינטיקה של גוף קשיח", "אתמול"]]) { const r = mk("div", "", null, lib); mk("span", "", a, r); mk("small", "", b, r); }
-      point(p["מבחן תרגול"], 500); click(p["מבחן תרגול"], 1300);
-      at(1400, () => p["מבחן תרגול"].classList.add("h-hot"));
-      const t = type(ta, "תכין לי מבחן תרגול בסגנון מבחן אמיתי על כל החומר: 8 שאלות מגוונות, מהקלה לקשה.", 1500, 22);
-      point(btn.Claude, t + 200); click(btn.Claude, t + 900);
-      const C = claudeWin([3, 10, 50, 84]);
-      show(C.c, t + 1300);
-      at(t + 1500, () => cursor && (cursor.style.opacity = "0"));
-      const ai = mk("div", "h-msg ai off", null, C.chat); show(ai, t + 2300);
-      const end = type(ai, EXAM_Q, t + 2400, 22);
+      for (const n of ["סיכום ההרצאה", "כרטיסיות חזרה", "מבחן דמה", "דף נוסחאות", "הסבר לרגעים שסימנתי"]) p[n] = mk("span", "", n, pr);
+      const A = askBox(w.body, null);
+      point(p["מבחן דמה"], 600); click(p["מבחן דמה"], 1300);
+      at(1400, () => p["מבחן דמה"].classList.add("h-hot"));
+      at(1700, () => cursor && (cursor.style.opacity = "0"));
+      const end = answer(A, "מבחן דמה", EXAM_Q, 1500);
       return end + 3500;
     },
   ];
@@ -2166,7 +2566,7 @@ const HOW = (() => {
       });
     }
     $("#hPlay").hidden = still;
-    if (app && app.mac) STEPS[2].text = "מצמידים את ההרצאה לצד אחד (fn+Control+חץ, או גוררים את החלון לקצה המסך) ואת אפליקציית ה-AI לצד השני, וגוררים את הקו ביניהם: שני שליש להרצאה, שליש ל-AI. ככה ההרצאה לא מוסתרת, והתשובה נשארת מול העיניים. בזום יוצאים ממסך מלא.";   // with "reduce motion" nothing plays: the arrows and the list move between the steps
+    if (false) STEPS[2].text = "מצמידים את ההרצאה לצד אחד (fn+Control+חץ, או גוררים את החלון לקצה המסך) ואת אפליקציית ה-AI לצד השני, וגוררים את הקו ביניהם: שני שליש להרצאה, שליש ל-AI. ככה ההרצאה לא מוסתרת, והתשובה נשארת מול העיניים. בזום יוצאים ממסך מלא.";   // with "reduce motion" nothing plays: the arrows and the list move between the steps
     playing = !still; go(0);
   }
   function stop() { clear(); if (stage) stage.replaceChildren(); cursor = null; }

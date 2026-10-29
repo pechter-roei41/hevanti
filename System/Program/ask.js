@@ -27,8 +27,40 @@
 .askp .hint{color:var(--muted);font-size:13px;line-height:1.5;margin:0}
 .askp .conn{background:var(--accent-soft);color:var(--fg);border-radius:10px;padding:7px 11px;font-size:14px;line-height:1.5;margin:0}
 .askp .conn b{color:var(--accent)}
+.askp .ais button.here{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:800}
+.askp .ais button.here.stop{background:transparent;color:var(--accent)}
+.askp .chips2{display:flex;gap:6px;flex-wrap:wrap}
+.askp .chips2 button{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:2px 11px;font:inherit;font-size:13px;cursor:pointer}
+.askp .chips2 button:hover{border-color:var(--accent)}
+.askp .conv{display:grid;gap:8px;max-height:min(55vh,560px);overflow-y:auto}
+.askp .conv:empty,.askp .convbar[hidden]{display:none}
+.askp .qa{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.askp .qa .q{font-weight:700;margin:0 0 4px;color:var(--accent);font-size:14px}
+.askp .qa .a{line-height:1.65;font-size:calc(15px * var(--tx, 1))}
+.askp .qa .a .h{font-weight:800;margin-top:6px}
+.askp .qa .a .li{padding-inline-start:6px}
+.askp .qa .a .sp{height:.5em}
+.askp .qa.err .a{color:var(--rec)}
+.askp .convbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.askp .convbar button{border:0;background:none;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;font-size:13px;padding:0}
 `;
-  const AI = {connected: {}, apps: {}, courseFn: null};   // apps: the AI apps installed on this computer (from Hevanti)
+  // builtin: answers inside Hevanti with the student's free Gemini key (set from Hevanti's state)
+  const AI = {connected: {}, apps: {}, courseFn: null, builtin: false};
+  // an answer as a few simple blocks: "# heading", "- item", **bold** - always as text (never HTML)
+  function renderAnswer(doc, box, text) {
+    box.replaceChildren();
+    for (let line of String(text).split("\n")) {
+      const p = doc.createElement("div"); p.dir = "auto";
+      if (/^#{1,4}\s/.test(line)) { line = line.replace(/^#{1,4}\s*/, ""); p.className = "h"; }
+      else if (/^\s*[-*•]\s+/.test(line)) { line = "• " + line.replace(/^\s*[-*•]\s+/, ""); p.className = "li"; }
+      if (!line.trim()) p.className = "sp";
+      for (const part of line.split(/(\*\*[^*]+\*\*)/)) {
+        if (/^\*\*[^*]+\*\*$/.test(part)) { const b = doc.createElement("b"); b.textContent = part.slice(2, -2); p.appendChild(b); }
+        else if (part) p.appendChild(doc.createTextNode(part.replace(/(^|[\s(])\*([^*\s][^*]*?)\*(?=$|[\s.,:;!?)])/g, "$1$2")));   // *italic* -> plain
+      }
+      box.appendChild(p);
+    }
+  }   // apps: the AI apps installed on this computer (from Hevanti)
   // the project links of the course the page is about now: {claude: "https://claude.ai/project/...", ...}
   async function courseLinks() {
     const c = AI.courseFn && AI.courseFn();
@@ -113,9 +145,69 @@
     ta.placeholder = opts.placeholder || "מה לא ברור?";
     ta.setAttribute("aria-label", "השאלה");
     const row = mk("div", "ais"); row.setAttribute("role", "group"); row.setAttribute("aria-label", "לאן לשלוח");
-    const hint = mk("p", "hint", "הלחיצה מעתיקה את השאלה עם מה שנאמר ופותחת את האפליקציה (אם היא מותקנת) או את האתר בשליש המסך - שם Ctrl+V ושליחה.");
+    const COPY_HINT = "הלחיצה מעתיקה את השאלה עם מה שנאמר ופותחת את האפליקציה (אם היא מותקנת) או את האתר בשליש המסך - שם Ctrl+V ושליחה.";
+    const hint = mk("p", "hint", COPY_HINT);
     const buttons = {};
+    // ---- the answer inside Hevanti (built-in, free Gemini key) ----
+    const here = mk("button", "here", "תשובה כאן"); here.type = "button";
+    here.title = "Gemini עונה כאן, בתוך הבנתי, עם מה שנאמר" + (opts.hasImage ? " והשקופית שעל המסך" : "") + ". Ctrl+Enter";
+    const chips = mk("div", "chips2"); chips.setAttribute("role", "group"); chips.setAttribute("aria-label", "שאלות מוכנות");
+    for (const c of opts.chips || ["תסביר בפשטות את מה שנאמר עכשיו", "תן דוגמה", "מה כתוב בשקופית?", "למה זה חשוב?"]) {
+      const b = mk("button", "", c); b.type = "button";
+      b.addEventListener("click", () => { if (AI.builtin) askHere(c); else { ta.value = c; ta.focus(); } });
+      chips.appendChild(b);
+    }
+    const conv = mk("div", "conv"); conv.setAttribute("aria-live", "polite");
+    const convbar = mk("div", "convbar"); convbar.hidden = true;
+    const newBtn = mk("button", "", "שיחה חדשה"); newBtn.type = "button";
+    newBtn.title = "Gemini שוכח את השאלות הקודמות בתיבה הזו (התשובות נשמרות בתיקיית ההרצאה)";
+    newBtn.addEventListener("click", () => { hist.length = 0; conv.replaceChildren(); convbar.hidden = true; });
+    convbar.append(newBtn, mk("span", "hint", "התשובות נשמרות בתיקיית ההרצאה, ב\"שאלות ותשובות.md\"."));
+    const hist = [];
+    let busy = false, ctl = null;
+    function setBusy(on) {
+      busy = on; here.textContent = on ? "■ עצירה" : "תשובה כאן"; here.classList.toggle("stop", on);
+    }
+    // ask Gemini through Hevanti; the answer appears here as it is written
+    async function askHere(q, extra) {
+      extra = extra || {};
+      if (busy) { opts.toast("עוד עונה על השאלה הקודמת."); return; }
+      q = String(q || "").trim();
+      const shown = extra.title || q || "תסביר בפשטות את מה שנאמר עכשיו";
+      let context = "";
+      try { context = extra.context ? await extra.context() : await opts.context(q || "תסביר בפשטות את מה שנאמר בדקות האחרונות"); }
+      catch (e) { context = q; }
+      const qa = mk("div", "qa"), ae = mk("div", "a", "חושב..."); qa.append(mk("p", "q", shown), ae);
+      conv.appendChild(qa); convbar.hidden = false; conv.scrollTop = conv.scrollHeight;
+      const val = f => { try { return (f && f()) || ""; } catch (e) { return ""; } };
+      const body = {context, question: shown, history: hist.slice(-6), task: extra.task || "",
+        where: val(opts.where), f: val(opts.lecture), img: val(opts.image), n: val(opts.shotName), at: val(opts.at)};
+      setBusy(true); ctl = new AbortController();
+      let text = "";
+      try {
+        const r = await fetch("/api/ask", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
+          body: JSON.stringify(body), signal: ctl.signal});
+        if (!r.ok || !r.body) { let e = ""; try { e = (await r.json()).error; } catch (x) {} throw new Error(e || "לא הצלחתי לקבל תשובה."); }
+        const rd = r.body.getReader(), dec = new TextDecoder();
+        for (;;) {
+          const {done, value} = await rd.read(); if (done) break;
+          text += dec.decode(value, {stream: true}); renderAnswer(doc, ae, text); conv.scrollTop = conv.scrollHeight;
+        }
+        text += dec.decode(); renderAnswer(doc, ae, text || "(לא התקבלה תשובה)");
+        if (text && !text.includes("\n\n⚠ ")) { hist.push({q: shown, a: text}); if (extra.onDone) extra.onDone(text); }
+      } catch (e) {
+        if (e.name === "AbortError") renderAnswer(doc, ae, (text ? text + "\n" : "") + "(נעצר)");
+        else { qa.classList.add("err"); ae.textContent = e.message || "לא הצלחתי לקבל תשובה."; }
+      } finally { setBusy(false); ctl = null; }
+    }
+    here.addEventListener("click", () => {
+      if (busy) { if (ctl) ctl.abort(); return; }
+      const q = ta.value.trim(); ta.value = ""; askHere(q);
+    });
     function refresh() {
+      here.hidden = !AI.builtin;
+      hint.textContent = AI.builtin ? "\"תשובה כאן\": Gemini עונה בתוך הבנתי, עם מה שנאמר" + (opts.hasImage ? " והשקופית" : "") +
+        ". הכפתורים האחרים מעתיקים את השאלה ל-AI אחר." : COPY_HINT;
       const names = connectedNames();
       conn.hidden = !names.length || opts.noConnHint;
       conn.replaceChildren();
@@ -166,11 +258,16 @@
       buttons[a.id] = bt; row.appendChild(bt);
     }
     ta.addEventListener("keydown", e => {
-      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(AIS.find(a => a.id === getLast()) || AIS[0]); }
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        if (AI.builtin && !e.shiftKey) { const q = ta.value.trim(); ta.value = ""; askHere(q); }
+        else send(AIS.find(a => a.id === getLast()) || AIS[0]);
+      }
     });
+    row.prepend(here);
     refresh();
-    box.append(head, conn, ta, row, hint);
-    return {focus: () => ta.focus(), textarea: ta, refresh};
+    box.append(head, conn, ta, row, chips, hint, conv, convbar);
+    return {focus: () => ta.focus(), textarea: ta, refresh, askHere, builtin: () => AI.builtin};
   }
   // open an AI for the course page's "פתיחה בשליש": the course's project link, the connected app, or the site
   async function openFor(id, link) {
@@ -180,5 +277,9 @@
     openAi(a, window, link || a.url);
   }
   function setCourseFn(fn) { AI.courseFn = fn; }
-  window.BZMAsk = {mount, AIS, copyText, setConnected, setApps, addCss, openFor, setCourseFn};
+  function setBuiltin(on) {
+    on = !!on;
+    if (on !== AI.builtin) { AI.builtin = on; for (const b of boxes) b(); }
+  }
+  window.BZMAsk = {mount, AIS, copyText, setConnected, setApps, addCss, openFor, setCourseFn, setBuiltin};
 })();

@@ -376,8 +376,11 @@ async function copyText(text) {
 let askBox = null;
 if (window.BZMAsk) {
   askBox = BZMAsk.mount($("#askBox"), {context: contextText, toast: t => toast(t, 4200),
-    hasImage: () => !!shotNow, imageName: "השקופית", example: "מה הוא הסביר בדקה הזו?"});
-  fetch("/api/app", {cache: "no-store"}).then(r => r.json()).then(d => { BZMAsk.setConnected(d.connect); BZMAsk.setApps(d.ai_apps); }).catch(() => {});
+    hasImage: () => !!shotNow, imageName: "השקופית", example: "מה הוא הסביר בדקה הזו?",
+    shotName: () => shotNow, where: () => "rec"});
+  fetch("/api/app", {cache: "no-store"}).then(r => r.json()).then(d => {
+    BZMAsk.setConnected(d.connect); BZMAsk.setApps(d.ai_apps); BZMAsk.setBuiltin(!!(d.math && d.math.ask));
+  }).catch(() => {});
 }
 $("#copyImg").addEventListener("click", async () => {
   if (!shotNow) return;
