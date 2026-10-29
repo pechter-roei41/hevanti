@@ -282,7 +282,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 .study .row .btn{flex:1 1 150px}
 /* 2.2: the animated "how to use" shows the old way (asking another AI app), and each course's AI-project tab is
    for that old way too - both hidden until they are redone around "תשובה כאן" */
-#cTabs [data-ct="ai"]{display:none!important}
+html:not(.plan-paid) #cTabs [data-ct="ai"]{display:none!important}   /* shown to students with a paid AI plan (see render) */
 /* display and accessibility (2.2): chosen in "תצוגה ונגישות", kept in this browser */
 .lines{font-size:calc(17px * var(--tx, 1))}
 .lines li.note,.lines li.gap{font-size:calc(14px * var(--tx, 1))}
@@ -452,7 +452,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="msg" id="homeErr" hidden></div>
 
     <div class="connbar" id="howBar" hidden><span><b>פעם ראשונה בהבנתי?</b> הדגמה של דקה מראה הכל: בחירת חלון, הרצאה חיה, שאלה ותשובה, ולימוד אחרי ההרצאה.</span><button class="btn small" type="button" data-how>לצפייה בהדגמה</button><button class="btn quiet small" id="howNo" type="button">לא עכשיו</button></div>
-    <div class="connbar" id="connBar" hidden><span><b>טיפ:</b> מחברים פעם אחת את Claude או ChatGPT למחשב להבנתי, ואז שואלים אותם ישר בחלון שלהם, בלי להעתיק - הם רואים מה נאמר ואת השקופית.</span><button class="btn small" type="button" data-conn-open>חיבור AI</button></div>
+    <div class="connbar" id="connBar" hidden><span><b>יש לך מנוי?</b> מחברים פעם אחת את Claude או ChatGPT למחשב להבנתי, ואז שואלים אותם ישר בחלון שלהם, בלי מכסה ובלי להעתיק: הם קוראים לבד מה נאמר ואת השקופית.</span><button class="btn small" type="button" data-conn-open>חיבור AI</button></div>
 
     <div class="connbar" id="tutorBar" hidden><span><b>חדש: תשובות בתוך הבנתי, תוך כדי ההרצאה ובחינם.</b> שואלים "מה הוא אמר עכשיו?" ו-Gemini עונה כאן, עם מה שנאמר והשקופית. צריך פעם אחת מפתח חינמי של Google (דקה).</span><button class="btn small" id="tutorGo" type="button">להגדרה</button><button class="btn quiet small" id="tutorNo" type="button">לא עכשיו</button></div>
 
@@ -843,10 +843,12 @@ async function setConn(c, on) {
   $("#connMsg").className = "cstate" + (r.ok ? " ok" : "");
   $("#connMsg").textContent = r.ok ? (r.next || "") : (r.error || "לא הצלחתי.");
 }
+let connNone = true;
+function drawConnBar() { $("#connBar").hidden = !(connNone && app && app.math && app.math.plan === "paid"); }
 function drawConnState(info) {
   const names = CONN.filter(c => info[c.id]).map(c => c.name);
   $("#connBtn").textContent = names.length ? "חיבור AI: " + names.join(", ") + " ✓" : "חיבור AI";
-  $("#connBar").hidden = true;   // (2.2: answers come inside Hevanti - connecting an AI app is an extra, under "חיבור AI")
+  connNone = names.length === 0; drawConnBar();   // (2.2: answers come inside Hevanti; the tip to connect an AI app is for students with a paid plan)
   if (window.BZMAsk) BZMAsk.setConnected(info);
 }
 document.querySelectorAll("[data-conn-open]").forEach(b => b.addEventListener("click", openConn));
@@ -1238,6 +1240,7 @@ function render(d) {
   if (d.lib_rev !== libRev && view === "home") loadLib();
   if (view === "live") renderLiveHead(s);
   drawCaps(); drawMath();
+  document.documentElement.classList.toggle("plan-paid", !!(d.math && d.math.plan === "paid")); drawConnBar();
   if (window.BZMAsk) { BZMAsk.setBuiltin(!!(d.math && d.math.ask)); BZMAsk.setPlan((d.math && d.math.plan) || ""); }
   $("#tutorBar").hidden = !!(d.math && (d.math.has_key || d.math.plan === "paid")) || tutorBarNo;
   if (view === "yt") ytHead(s);
