@@ -43,9 +43,20 @@
 .askp .qa.err .a{color:var(--rec)}
 .askp .convbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .askp .convbar button{border:0;background:none;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;font-size:13px;padding:0}
+.askp .plan{background:var(--accent-soft);color:var(--fg);border-radius:10px;padding:8px 11px;font-size:14px;line-height:1.5;display:grid;gap:6px}
+.askp .plan .btns{display:flex;gap:6px;flex-wrap:wrap}
+.askp .plan button{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;padding:4px 12px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.askp .plan button:hover{background:var(--accent);color:var(--accent-ink)}
+.askp .ais button.here.alt{background:transparent;color:var(--accent);font-weight:600}
+.askp .alt-box{margin-top:6px;display:grid;gap:6px;font-size:14px;line-height:1.5;color:var(--fg)}
 `;
   // builtin: answers inside Hevanti with the student's free Gemini key (set from Hevanti's state)
-  const AI = {connected: {}, apps: {}, courseFn: null, builtin: false};
+  // plan: "paid" = the student has a paid ChatGPT / Claude / Gemini plan - questions and whole-lecture tasks go to that
+  // AI's app (no quota); "free" = answers inside Hevanti, with the free Gemini quota; "" = not asked yet (asked once)
+  const AI = {connected: {}, apps: {}, courseFn: null, builtin: false, plan: "", planKnown: false};
+  // the default way to ask: inside Hevanti (free key) - unless the student pays for an AI of their own
+  const hereDefault = () => AI.builtin && AI.plan !== "paid";
+  const DEF_Q = "תסביר בפשטות את מה שנאמר בדקות האחרונות";
   // an answer as a few simple blocks: "# heading", "- item", **bold** - always as text (never HTML)
   function renderAnswer(doc, box, text) {
     box.replaceChildren();
@@ -141,6 +152,17 @@
     const head = mk("div", "head");
     head.append(mk("b", "", opts.title || "שאלה ל-AI"), mk("small", "", opts.sub || "עם מה שנאמר בהרצאה"));
     const conn = mk("p", "conn"); conn.hidden = true;
+    // asked once, in every box, until it is answered
+    const planBox = mk("div", "plan"); planBox.hidden = true;
+    planBox.append(mk("span", "", "יש לך מנוי בתשלום ל-ChatGPT, Claude או Gemini? (שאלה חד-פעמית)"),
+      mk("span", "hint", "אם כן, שאלות והרצאות שלמות ילכו ישר לאפליקציה שלך, בלי מכסה. אם לא, הבנתי תענה כאן במכסה החינמית."));
+    const planBtns = mk("div", "btns");
+    for (const [val, label] of [["paid", "כן, יש לי מנוי"], ["free", "לא, חינם"]]) {
+      const pb = mk("button", "", label); pb.type = "button";
+      pb.addEventListener("click", () => savePlan(val));
+      planBtns.appendChild(pb);
+    }
+    planBox.appendChild(planBtns);
     const ta = mk("textarea"); ta.rows = opts.rows || 2; ta.dir = "auto";
     ta.placeholder = opts.placeholder || "מה לא ברור?";
     ta.setAttribute("aria-label", "השאלה");
@@ -154,7 +176,7 @@
     const chips = mk("div", "chips2"); chips.setAttribute("role", "group"); chips.setAttribute("aria-label", "שאלות מוכנות");
     for (const c of opts.chips || ["תסביר בפשטות את מה שנאמר עכשיו", "תן דוגמה", "מה כתוב בשקופית?", "למה זה חשוב?"]) {
       const b = mk("button", "", c); b.type = "button";
-      b.addEventListener("click", () => { if (AI.builtin) askHere(c); else { ta.value = c; ta.focus(); } });
+      b.addEventListener("click", () => { if (hereDefault()) askHere(c); else { ta.value = c; ta.focus(); } });
       chips.appendChild(b);
     }
     const conv = mk("div", "conv"); conv.setAttribute("aria-live", "polite");
@@ -167,6 +189,19 @@
     let busy = false, ctl = null;
     function setBusy(on) {
       busy = on; here.textContent = on ? "■ עצירה" : "תשובה כאן"; here.classList.toggle("stop", on);
+    }
+    // The free quota is used up: the same question, with what was said, goes on in the student's own AI app
+    // (the last one used first) - a click copies it and opens that AI, like the three buttons above.
+    function offerElsewhere(qa, q, extra, wait) {
+      const when = wait >= 600 ? "המכסה החינמית של היום נגמרה." : wait ? "המכסה החינמית נגמרה לרגע (עוד כ-" + wait + " שניות)." : "";
+      const bx = mk("div", "alt-box"), rw = mk("div", "ais"), last = getLast();
+      bx.append(mk("span", "", (when ? when + " " : "") + "להמשיך עכשיו באפליקציית AI אחרת, עם אותה שאלה ואותו הקשר:"));
+      for (const a of [...AIS].sort((x, y) => (y.id === last) - (x.id === last))) {
+        const b = mk("button", a.id === last ? "last" : "", a.name); b.type = "button";
+        b.addEventListener("click", () => sendQ(a, q, extra));
+        rw.appendChild(b);
+      }
+      bx.appendChild(rw); qa.appendChild(bx);
     }
     // ask Gemini through Hevanti; the answer appears here as it is written
     async function askHere(q, extra) {
@@ -187,7 +222,10 @@
       try {
         const r = await fetch("/api/ask", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
           body: JSON.stringify(body), signal: ctl.signal});
-        if (!r.ok || !r.body) { let e = ""; try { e = (await r.json()).error; } catch (x) {} throw new Error(e || "לא הצלחתי לקבל תשובה."); }
+        if (!r.ok || !r.body) {
+          let d = {}; try { d = await r.json(); } catch (x) {}
+          const er = new Error(d.error || "לא הצלחתי לקבל תשובה."); er.quota = !!d.quota; er.wait = d.wait || 0; throw er;
+        }
         const rd = r.body.getReader(), dec = new TextDecoder();
         for (;;) {
           const {done, value} = await rd.read(); if (done) break;
@@ -197,7 +235,10 @@
         if (text && !text.includes("\n\n⚠ ")) { hist.push({q: shown, a: text}); if (extra.onDone) extra.onDone(text); }
       } catch (e) {
         if (e.name === "AbortError") renderAnswer(doc, ae, (text ? text + "\n" : "") + "(נעצר)");
-        else { qa.classList.add("err"); ae.textContent = e.message || "לא הצלחתי לקבל תשובה."; }
+        else {
+          qa.classList.add("err"); ae.textContent = e.message || "לא הצלחתי לקבל תשובה.";
+          if (e.quota) offerElsewhere(qa, q || DEF_Q, extra, e.wait);   // the free quota is used up
+        }
       } finally { setBusy(false); ctl = null; }
     }
     here.addEventListener("click", () => {
@@ -206,8 +247,10 @@
     });
     function refresh() {
       here.hidden = !AI.builtin;
-      hint.textContent = AI.builtin ? "\"תשובה כאן\": Gemini עונה בתוך הבנתי, עם מה שנאמר" + (opts.hasImage ? " והשקופית" : "") +
-        ". הכפתורים האחרים מעתיקים את השאלה ל-AI אחר." : COPY_HINT;
+      here.classList.toggle("alt", AI.builtin && !hereDefault());   // a paid plan: the AI apps first, this one second
+      planBox.hidden = !(AI.planKnown && !AI.plan);
+      hint.textContent = hereDefault() ? "\"תשובה כאן\": Gemini עונה בתוך הבנתי, עם מה שנאמר" + (opts.hasImage ? " והשקופית" : "") +
+        ". הכפתורים האחרים מעתיקים את השאלה ל-AI אחר." : COPY_HINT + (AI.builtin ? ' "תשובה כאן" עונה במכסה החינמית.' : "");
       const names = connectedNames();
       conn.hidden = !names.length || opts.noConnHint;
       conn.replaceChildren();
@@ -220,12 +263,11 @@
       for (const a of AIS) buttons[a.id].classList.toggle("last", a.id === l);
     }
     boxes.push(refresh);
-    async function send(a) {
-      const q = ta.value.trim();
+    async function sendQ(a, q, extra) {   // true when the question was copied (and the AI opened)
       let text = "";
-      try { text = await opts.context(q); } catch (e) { text = q; }   // (may read the slides' text first)
+      try { text = extra && extra.context ? await extra.context() : await opts.context(q); } catch (e) { text = q; }   // (may read the slides' text first)
       const ok = await copyText(text, opts.win);
-      if (!ok) { opts.toast("לא הצלחתי להעתיק. לנסות שוב."); return; }
+      if (!ok) { opts.toast("לא הצלחתי להעתיק. לנסות שוב."); return false; }
       setLast(a.id); refresh();
       // (not the "noopener" feature: with it window.open always returns null, and a blocked popup looks the same)
       const img = opts.hasImage && opts.hasImage() ? " צריך גם את המסך? \"העתקת " + (opts.imageName || "צילום המסך") + "\" ולהדביק שוב." : "";
@@ -236,21 +278,20 @@
         const {w} = openAi(a, opts.win, link);
         opts.toast(w === null ? "הועתק. לפתוח את הפרויקט של הקורס ב-" + a.name + " ולהדביק (Ctrl+V)."
           : "נפתח הפרויקט של הקורס ב-" + a.name + " בשליש המסך. השאלה הועתקה (Ctrl+V), או פשוט לשאול שם.");
-        ta.value = "";
-        return;
+        return true;
       }
       if (appFirst && await openApp(a)) {
         opts.toast("הועתק ונפתחה האפליקציה של " + a.name + ". להדביק (Ctrl+V) ולשלוח." +
           (AI.connected[a.id] ? " היא מחוברת להבנתי, אז אפשר גם פשוט לשאול שם" + (link ? ", בפרויקט של הקורס." : ".") : "") + img);
-        ta.value = "";
-        return;
+        return true;
       }
       const {w, reused} = openAi(a, opts.win);
       opts.toast((w === null ? "הועתק. לפתוח את " + a.name + " ולהדביק (Ctrl+V)."
         : reused ? "הועתק. להדביק (Ctrl+V) בחלון של " + a.name + " - השיחה שם ממשיכה."
         : "הועתק ונפתח " + a.name + " בשליש המסך. להדביק (Ctrl+V) ולשלוח.") + img);
-      ta.value = "";
+      return true;
     }
+    async function send(a) { const q = ta.value.trim(); if (await sendQ(a, q)) ta.value = ""; }
     for (const a of AIS) {
       const bt = mk("button", "", a.name); bt.type = "button"; bt.dataset.ai = a.id;
       bt.title = "מעתיק את השאלה עם ההקשר ופותח את " + a.name + " (האפליקציה אם היא מותקנת, אחרת האתר)";
@@ -260,14 +301,14 @@
     ta.addEventListener("keydown", e => {
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
-        if (AI.builtin && !e.shiftKey) { const q = ta.value.trim(); ta.value = ""; askHere(q); }
+        if (hereDefault() && !e.shiftKey) { const q = ta.value.trim(); ta.value = ""; askHere(q); }
         else send(AIS.find(a => a.id === getLast()) || AIS[0]);
       }
     });
     row.prepend(here);
     refresh();
-    box.append(head, conn, ta, row, chips, hint, conv, convbar);
-    return {focus: () => ta.focus(), textarea: ta, refresh, askHere, builtin: () => AI.builtin};
+    box.append(head, planBox, conn, ta, row, chips, hint, conv, convbar);
+    return {focus: () => ta.focus(), textarea: ta, refresh, askHere, builtin: hereDefault};
   }
   // open an AI for the course page's "פתיחה בשליש": the course's project link, the connected app, or the site
   async function openFor(id, link) {
@@ -277,9 +318,21 @@
     openAi(a, window, link || a.url);
   }
   function setCourseFn(fn) { AI.courseFn = fn; }
+  // the plan is kept by Hevanti (the same in every window): "paid", "free" or "" (not asked yet)
+  function setPlan(p) {
+    p = p === "paid" || p === "free" ? p : "";
+    if (p !== AI.plan || !AI.planKnown) { AI.plan = p; AI.planKnown = true; for (const b of boxes) b(); }
+  }
+  async function savePlan(plan) {
+    try {
+      const r = await fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
+        body: JSON.stringify({action: "math_set", plan}), signal: AbortSignal.timeout(4000)}).then(r => r.json());
+      if (r && r.ok) setPlan((r.math && r.math.plan) || plan);
+    } catch (e) {}
+  }
   function setBuiltin(on) {
     on = !!on;
     if (on !== AI.builtin) { AI.builtin = on; for (const b of boxes) b(); }
   }
-  window.BZMAsk = {mount, AIS, copyText, setConnected, setApps, addCss, openFor, setCourseFn, setBuiltin};
+  window.BZMAsk = {mount, AIS, copyText, setConnected, setApps, addCss, openFor, setCourseFn, setBuiltin, setPlan};
 })();

@@ -1783,10 +1783,11 @@ def gemini_candidates(names):
 
 
 class MathError(Exception):
-    def __init__(self, text, wait=0, other=False):
+    def __init__(self, text, wait=0, other=False, kind=""):
         super().__init__(text)
         self.wait = wait     # seconds to wait before trying again (0: don't)
         self.other = other   # this model is busy / gone / slow: another model may answer
+        self.kind = kind     # "quota": the free quota is used up - the page then offers another AI app
 
 
 def gemini_call(path, key, body=None, timeout=90):
@@ -1808,11 +1809,19 @@ def gemini_call(path, key, body=None, timeout=90):
 
 def _gemini_http_error(e):
     try:
-        msg = (json.loads(e.read().decode("utf-8")).get("error") or {}).get("message") or ""
+        raw = e.read().decode("utf-8", "replace")
+    except Exception:
+        raw = ""
+    try:
+        msg = (json.loads(raw).get("error") or {}).get("message") or ""
     except Exception:
         msg = ""
     if e.code == 429:   # (the free quota is per model: another model may still answer)
-        return MathError("Gemini: הגעת למכסה החינמית של הדקה או של היום. לנסות שוב עוד דקה (או מחר).", 65, other=True)
+        if "perday" in raw.lower().replace("_", "").replace(" ", ""):   # the day's quota: a minute will not help
+            return MathError("המכסה החינמית של Gemini נגמרה להיום.", 900, other=True, kind="quota")
+        m = re.search(r'"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"', raw)   # (Google says how long to wait)
+        wait = min(int(float(m.group(1))) + 1, 300) if m else 65
+        return MathError("הגעת למכסה החינמית של Gemini לדקה הזו.", wait, other=True, kind="quota")
     if e.code == 404:
         return MathError("המודל הזה של Gemini כבר לא זמין.", other=True)
     if e.code in (400, 401, 403) and ("key" in msg.lower() or e.code != 400):
@@ -1859,12 +1868,15 @@ class MathReader(threading.Thread):
         self.lock = threading.Lock()
         self.model, self.error, self.done = "", "", 0
         self.order = []   # the models to try, the one that answered first (see probe)
+        self.cool = {}    # model -> (until, the quota error): said "quota" a moment ago - not asked again until then
+        self.quota_err, self.quota_until = None, 0.0   # probe found every model out of quota (not "no model")
 
     def status(self):
         s = math_settings()
         with self.lock:
             return {"on": bool(s.get("on")), "has_key": bool(s.get("key")), "model": self.model,
                     "ask": bool(s.get("key")) and s.get("ask", True) is not False,
+                    "plan": s.get("plan") if s.get("plan") in ("free", "paid") else "",
                     "waiting": self.q.qsize(), "done": self.done, "error": self.error}
 
     def set_error(self, text):
@@ -1873,8 +1885,12 @@ class MathReader(threading.Thread):
 
     def ensure_model(self, key):
         if not self.model:
+            if self.quota_err is not None and time.time() < self.quota_until:   # (do not spend more quota to ask again)
+                raise MathError(str(self.quota_err), int(self.quota_until - time.time()) + 1, kind="quota")
             self.probe(key)
         if not self.model:
+            if self.quota_err is not None:
+                raise MathError(str(self.quota_err), max(1, int(self.quota_until - time.time()) + 1), kind="quota")
             raise MathError("לא נמצא ב-Gemini מודל שעונה כרגע. לנסות שוב עוד כמה דקות.", other=True)
         return self.model
 
@@ -1885,11 +1901,15 @@ class MathReader(threading.Thread):
         cands = gemini_candidates(gemini_models(key))[:8]
         body = {"contents": [{"role": "user", "parts": [{"text": "Answer with one word: OK"}]}]}
 
+        quota = []
+
         def one(m):
             try:
                 gemini_call(f"models/{m}:generateContent", key, body, timeout=20)
                 return True
-            except MathError:
+            except MathError as e:
+                if e.kind == "quota":
+                    quota.append(e)
                 return False
         with ThreadPoolExecutor(max(1, len(cands))) as ex:
             good = dict(zip(cands, ex.map(one, cands)))
@@ -1897,25 +1917,37 @@ class MathReader(threading.Thread):
         with self.lock:
             self.order = order
             self.model = order[0] if order and good[order[0]] else ""
+            if not self.model and quota:   # nothing answered, and the reason is the quota: say so
+                self.quota_err, self.quota_until = quota[0], time.time() + min(quota[0].wait or 60, 60)
+            else:
+                self.quota_err = None
         return self.model
 
     def models_to_try(self, key):
         self.ensure_model(key)
         with self.lock:
-            return list(self.order or [self.model])[:4]
+            now, order = time.time(), list(self.order or [self.model])
+            ready = [m for m in order if self.cool.get(m, (0,))[0] <= now]
+            if order and not ready:   # every model said "quota" a moment ago: do not ask Google again yet
+                until, err = min((self.cool[m] for m in order), key=lambda c: c[0])
+                raise MathError(str(err), max(1, int(until - now) + 1), kind="quota")
+            return ready[:4]
 
-    def failed(self, model):
-        """This model did not answer now: try it last from now on."""
+    def failed(self, model, err=None):
+        """This model did not answer now: try it last from now on (and, when it is the quota, not for a minute)."""
         with self.lock:
             if model in self.order:
                 self.order.remove(model)
                 self.order.append(model)
             if self.order:
                 self.model = self.order[0]
+            if err is not None and err.kind == "quota":   # (at most a minute: a wrong guess must not lock a live lecture)
+                self.cool[model] = (time.time() + min(err.wait or 60, 60), err)
 
     def worked(self, model):
         with self.lock:
             self.model, self.error = model, ""
+            self.cool.pop(model, None)
 
     def run(self):
         last = 0.0
@@ -1941,7 +1973,7 @@ class MathReader(threading.Thread):
                         except MathError as e:
                             if not e.other:
                                 raise
-                            self.failed(model)
+                            self.failed(model, e)
                     if text is None:
                         raise MathError("Gemini עמוס כרגע בכל המודלים. ממשיך לבד אחר כך.", 60)
                     if os.path.isfile(path):   # (not deleted meanwhile)
@@ -2012,6 +2044,8 @@ def math_set(d):
         s["on"] = bool(d.get("on")) and bool(s.get("key"))
     if "ask" in d:
         s["ask"] = bool(d.get("ask"))
+    if "plan" in d:   # "paid": the student has a paid ChatGPT / Claude / Gemini plan - questions and tasks go to its app
+        s["plan"] = d.get("plan") if d.get("plan") in ("free", "paid") else ""
     save_settings(math=s)
     return {"ok": True, "math": math_reader().status()}
 
@@ -6445,7 +6479,7 @@ def _app_handler():
             reader = math_reader()
             try:
                 body = tutor_body(d)
-                pieces, first, last_err = None, "", None
+                pieces, first, last_err, quota_err = None, "", None, None
                 for model in reader.models_to_try(key):   # busy / retired / slow today: the next model
                     try:
                         pieces = gemini_stream(key, model, body)
@@ -6456,11 +6490,14 @@ def _app_handler():
                         if not e.other:
                             raise
                         last_err, pieces = e, None
-                        reader.failed(model)
+                        if e.kind == "quota":
+                            quota_err = e
+                        reader.failed(model, e)
                 if pieces is None:
-                    raise last_err or MathError("Gemini לא ענה.")
+                    raise quota_err or last_err or MathError("Gemini לא ענה.")   # (the quota is what one can act on)
             except MathError as e:
-                return self._json({"ok": False, "error": str(e)}, 400)
+                q = e.kind == "quota"   # the free quota is used up: the page offers to go on in another AI app
+                return self._json({"ok": False, "error": str(e), "quota": q, "wait": e.wait if q else 0}, 429 if q else 400)
             except Exception:
                 save_error("tutor")
                 return self._json({"ok": False, "error": "לא הצלחתי לשאול את Gemini. פרטים ב-error_log.txt."}, 500)
