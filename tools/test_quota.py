@@ -24,6 +24,7 @@ os.environ["BZM_NO_BROWSER"] = "1"
 # ---- a made-up Gemini: the models, a one-word answer, a streamed answer - or the quota ----
 MODE = {"gen": "ok", "stream": "ok"}   # "ok" | "quota-min" | "quota-day"
 HITS = {"gen": 0, "stream": 0}
+USAGE = {"usageMetadata": {"promptTokenCount": 1234, "candidatesTokenCount": 56, "thoughtsTokenCount": 7, "totalTokenCount": 1297}}
 MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-flash-image"]
 
 
@@ -62,7 +63,7 @@ class Fake(BaseHTTPRequestHandler):
         if mode.startswith("quota"):
             return self._reply(429, quota_body(mode == "quota-day"))
         if stream:
-            chunks = "".join("data: " + json.dumps({"candidates": [{"content": {"parts": [{"text": t}]}}]}, ensure_ascii=False) + "\n\n"
+            chunks = "".join("data: " + json.dumps({"candidates": [{"content": {"parts": [{"text": t}]}}], **USAGE}, ensure_ascii=False) + "\n\n"
                              for t in ("שלום ", "לכולם"))
             return self._reply(200, chunks.encode("utf-8"), "text/event-stream")
         self._reply(200, json.dumps({"candidates": [{"content": {"parts": [{"text": "OK"}]}}]}).encode("utf-8"))
@@ -137,6 +138,12 @@ def asked_json(body, code):
 MODE.update(gen="ok", stream="ok")
 code, body = ask()
 check("a question is answered, streamed", code == 200 and body == "שלום לכולם", (code, body))
+tok = os.path.join(tmp, "local", "Hevanti", "tokens.jsonl")
+rows = [json.loads(x) for x in open(tok, encoding="utf-8")] if os.path.isfile(tok) else []
+check("tokens: logged for the developer (counts, no text)",
+      len(rows) == 1 and rows[0]["prompt"] == 1234 and rows[0]["out"] == 56 and rows[0]["total"] == 1297 and rows[0]["ok"]
+      and "מה זה מומנט" not in open(tok, encoding="utf-8").read() and "שלום" not in open(tok, encoding="utf-8").read(), rows)
+check("tokens: not sent to the page", "1234" not in body, body)
 
 # every model says "quota" (the minute's): the answer says so, and how long to wait
 MODE["stream"] = "quota-min"
