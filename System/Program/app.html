@@ -470,7 +470,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="msg" id="homeErr" hidden></div>
 
     <div class="modal" id="setupCard" hidden role="dialog" aria-modal="true" aria-labelledby="setupT"><div class="card">
-      <h2 id="setupT" style="margin:0 0 4px">בואו נתחיל: שני צעדים, בערך דקה</h2>
+      <h2 id="setupT" style="margin:0 0 4px">בואו נתחיל: צעד אחד, בערך דקה</h2>
       <p class="sub" style="margin-top:0">אחרי זה כל הרצאה היא לחיצה אחת, ואפשר לשאול שאלות תוך כדי.</p>
       <ol class="setup">
         <li id="stKey">
@@ -480,13 +480,8 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <div class="row"><input type="password" id="setupKey" placeholder="להדביק כאן את המפתח (Ctrl+V)" autocomplete="off" aria-label="מפתח Gemini" dir="ltr"><button class="btn small" id="setupKeySave" type="button">שמירה ובדיקה</button></div>
           <p class="capstat" id="setupKeyStat" style="margin:0;color:var(--muted)"></p>
         </li>
-        <li id="stWin">
-          <div class="row"><b>2. מה לצלם מהמסך</b><span class="stdone">✓ מוכן</span></div>
-          <p class="sub" style="margin:0">בחרו את חלון ההרצאה (למשל זום), כך שהודעות וצ'אטים לא ייכנסו לצילומים.</p>
-          <div class="row"><button class="btn small" id="setupWin" type="button">בחירת חלון הרצאה</button></div>
-        </li>
       </ol>
-      <div class="row" style="margin-top:8px"><span class="sub2" style="font-size:14px;color:var(--muted)">ואז: <b>הרצאה חיה</b> (זום או שידור) או <b>הרצאה מוקלטת</b>. הכל גם ב"הגדרות".</span><button class="btn quiet small" id="setupLater" type="button" style="margin-inline-start:auto">לא עכשיו</button></div>
+      <div class="row" style="margin-top:8px"><span class="sub2" style="font-size:14px;color:var(--muted)">ואז: <b>הרצאה חיה</b> (זום או שידור) או <b>הרצאה מוקלטת</b>. הבנתי מצלמת את כל המסך. מה לטשטש: ב"הגדרות".</span><button class="btn quiet small" id="setupLater" type="button" style="margin-inline-start:auto">לא עכשיו</button></div>
     </div></div>
     <div class="connbar" id="howBar" hidden><span><b>פעם ראשונה בהבנתי?</b> הדגמה של דקה מראה הכל: בחירת חלון, הרצאה חיה, שאלה ותשובה, ולימוד אחרי ההרצאה.</span><button class="btn small" type="button" data-how>לצפייה בהדגמה</button><button class="btn quiet small" id="howNo" type="button">לא עכשיו</button></div>
     <div class="connbar" id="connBar" hidden><span><b>יש לך מנוי?</b> מחברים פעם אחת את Claude או ChatGPT למחשב להבנתי, ואז שואלים אותם ישר בחלון שלהם, בלי מכסה ובלי להעתיק: הם קוראים לבד מה נאמר ואת השקופית.</span><button class="btn small" type="button" data-conn-open>חיבור AI</button></div>
@@ -975,7 +970,7 @@ function drawCaps() {
 }
 function drawCap(box, c) {
   box.replaceChildren(); box.classList.toggle("paused", !!c.paused);
-  box.appendChild(el("h2", "", "מה הבנתי מצלמת"));
+  box.appendChild(el("h2", "", "צילום וטשטוש"));
   const [t, sub] = capStatus(c), st = el("p", "capstat"); st.appendChild(el("b", "", t)); if (sub) st.append(" " + sub);
   box.appendChild(st);
   const seg = el("div", "seg"); seg.setAttribute("role", "group"); seg.setAttribute("aria-label", "מה לצלם");
@@ -1001,7 +996,7 @@ function drawCap(box, c) {
     const r = el("div", "row"); r.appendChild(b); box.appendChild(r);
   }
   const bl = el("div", "row"), bb = el("button", "btn ghost small", c.blur.length ? "עריכת אזורי הטשטוש (" + c.blur.length + ")" : "הוספת אזור לטשטוש..."); bb.type = "button"; bb.onclick = () => capOpen("blur");
-  bl.append(bb, el("span", "sub2", "חלקים במסך שתמיד יוסתרו בצילומים: סרגל סימניות, פס צ'אט, שם משתמש."));
+  bl.append(bb, el("span", "sub2", "מה לטשטש: חלקים במסך שתמיד יוסתרו בצילומים (מוזאיקה), כמו סרגל סימניות, פס צ'אט או שם משתמש."));
   box.appendChild(bl);
   const pr = el("div", "row"), pb = el("button", c.paused ? "btn" : "btn ghost small", c.paused ? "▶ המשך הצילום" : "⏸ השהיית הצילום"); pb.type = "button"; pb.onclick = capPause;
   pr.append(pb); if (c.hotkey) { const k = el("span", "sub2"); k.append("או מהמקלדת, מכל תוכנה: "); const kk = el("kbd", "", c.hotkey); kk.dir = "ltr"; k.append(kk, " (צליל נמוך = הושהה)"); pr.append(k); }
@@ -1125,10 +1120,10 @@ $("#askOn").addEventListener("change", () => mathSend({ask: $("#askOn").checked}
 let setupNo = false;
 try { setupNo = localStorage.getItem("bzm.setupNo") === "1"; } catch (e) {}
 function drawSetup() {
-  const m = (app && app.math) || {}, c = (app && app.capture) || {};
-  const keyDone = !!m.has_key || m.plan === "paid", winDone = c.mode === "window" && !!c.window || c.mode === "region" && !!c.region;
-  $("#stKey").classList.toggle("done", keyDone); $("#stWin").classList.toggle("done", winDone);
-  const show = !setupNo && !(keyDone && winDone) && view === "home" && !(app && app.session && !app.session.done);
+  const m = (app && app.math) || {};   // (what to photograph: the whole screen by default; to mosaic parts: the settings)
+  const keyDone = !!m.has_key || m.plan === "paid";
+  $("#stKey").classList.toggle("done", keyDone);
+  const show = !setupNo && !keyDone && view === "home" && !(app && app.session && !app.session.done);
   $("#setupCard").hidden = !show;
   if (show) $("#tutorBar").hidden = true;   // (the same invitation, in the card)
   if (keyDone && !$("#setupKeyStat").textContent.startsWith("המפתח לא")) $("#setupKeyStat").textContent = "";
@@ -1144,11 +1139,6 @@ async function setupSaveKey() {
 $("#setupKeySave").addEventListener("click", setupSaveKey);
 $("#setupKey").addEventListener("paste", () => setTimeout(() => { if ($("#setupKey").value.trim().length > 20) setupSaveKey(); }, 50));   // pasting is enough
 $("#setupKey").addEventListener("keydown", e => { if (e.key === "Enter") setupSaveKey(); });
-$("#setupWin").addEventListener("click", async () => {
-  await capSend({mode: "window"}); await capLoadWins();
-  openSettings("cap");   // the choice is in the settings
-  toast("בוחרים את חלון ההרצאה מהרשימה ולוחצים \"שמירה\".");
-});
 $("#setupLater").addEventListener("click", () => { setupNo = true; $("#setupCard").hidden = true; try { localStorage.setItem("bzm.setupNo", "1"); } catch (e) {} });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#setupCard").hidden && $("#settings").hidden && $("#capModal").hidden) $("#setupLater").click(); });
 let tutorBarNo = false;
@@ -1212,7 +1202,7 @@ function srSay(text) { if (a11y.say && text) { const s = $("#srLive"); s.textCon
 
 // ---------- settings (the gear): the key, what to photograph, accessibility, connect an AI app, privacy ----------
 // The pieces already exist on the page (with their buttons): they are moved into the tabs once, here.
-const SET_TABS = [["key", "מפתח API (תשובות)"], ["cap", "מה הבנתי מצלמת"], ["a11y", "נגישות"], ["ai", "חיבור AI"], ["priv", "פרטיות"]];
+const SET_TABS = [["key", "מפתח API (תשובות)"], ["cap", "צילום וטשטוש"], ["a11y", "נגישות"], ["ai", "חיבור AI"], ["priv", "פרטיות"]];
 const setPanels = {};
 (function buildSettings() {
   const tabs = $("#setTabs"), body = $("#setBody");
