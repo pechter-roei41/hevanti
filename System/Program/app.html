@@ -280,6 +280,10 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 .shotdel{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 6px;text-decoration:underline}
 .shotdel:hover{color:var(--rec)}
 .study .row .btn{flex:1 1 150px}
+/* the home screen: only the lecture types and "הקורסים שלי" - the tips and the how-to bar are gone (the settings and
+   the header have them); the first-start popup shows by itself until the key and the window are set */
+#howBar,#tutorBar,#connBar{display:none!important}
+.foot [data-how],.foot #connBtn{display:none}
 /* the first-start card */
 .setup{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .setup li{border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:grid;gap:8px;background:var(--bg)}
@@ -465,8 +469,8 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="cbar" id="updBar" hidden><span id="updText"></span><a class="btn small" id="updGo" href="#" target="_blank" rel="noopener">להורדה</a></div>
     <div class="msg" id="homeErr" hidden></div>
 
-    <div class="card" id="setupCard" hidden>
-      <h2 style="margin:0 0 4px">בואו נתחיל: שני צעדים, בערך דקה</h2>
+    <div class="modal" id="setupCard" hidden role="dialog" aria-modal="true" aria-labelledby="setupT"><div class="card">
+      <h2 id="setupT" style="margin:0 0 4px">בואו נתחיל: שני צעדים, בערך דקה</h2>
       <p class="sub" style="margin-top:0">אחרי זה כל הרצאה היא לחיצה אחת, ואפשר לשאול שאלות תוך כדי.</p>
       <ol class="setup">
         <li id="stKey">
@@ -482,8 +486,8 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <div class="row"><button class="btn small" id="setupWin" type="button">בחירת חלון הרצאה</button></div>
         </li>
       </ol>
-      <div class="row" style="margin-top:8px"><span class="sub2" style="font-size:14px;color:var(--muted)">ואז: <b>הרצאה חיה</b> (זום או שידור) או <b>הרצאה מוקלטת</b>, למטה.</span><button class="btn quiet small" id="setupLater" type="button" style="margin-inline-start:auto">לא עכשיו</button></div>
-    </div>
+      <div class="row" style="margin-top:8px"><span class="sub2" style="font-size:14px;color:var(--muted)">ואז: <b>הרצאה חיה</b> (זום או שידור) או <b>הרצאה מוקלטת</b>. הכל גם ב"הגדרות".</span><button class="btn quiet small" id="setupLater" type="button" style="margin-inline-start:auto">לא עכשיו</button></div>
+    </div></div>
     <div class="connbar" id="howBar" hidden><span><b>פעם ראשונה בהבנתי?</b> הדגמה של דקה מראה הכל: בחירת חלון, הרצאה חיה, שאלה ותשובה, ולימוד אחרי ההרצאה.</span><button class="btn small" type="button" data-how>לצפייה בהדגמה</button><button class="btn quiet small" id="howNo" type="button">לא עכשיו</button></div>
     <div class="connbar" id="connBar" hidden><span><b>יש לך מנוי?</b> מחברים פעם אחת את Claude או ChatGPT למחשב להבנתי, ואז שואלים אותם ישר בחלון שלהם, בלי מכסה ובלי להעתיק: הם קוראים לבד מה נאמר ואת השקופית.</span><button class="btn small" type="button" data-conn-open>חיבור AI</button></div>
 
@@ -1146,6 +1150,7 @@ $("#setupWin").addEventListener("click", async () => {
   toast("בוחרים את חלון ההרצאה מהרשימה ולוחצים \"שמירה\".");
 });
 $("#setupLater").addEventListener("click", () => { setupNo = true; $("#setupCard").hidden = true; try { localStorage.setItem("bzm.setupNo", "1"); } catch (e) {} });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#setupCard").hidden && $("#settings").hidden && $("#capModal").hidden) $("#setupLater").click(); });
 let tutorBarNo = false;
 try { tutorBarNo = localStorage.getItem("bzm.tutorNo") === "1"; } catch (e) {}
 $("#tutorGo").addEventListener("click", () => { openSettings("key"); setTimeout(() => $("#mathKey").focus(), 200); });
