@@ -1903,20 +1903,26 @@ class MathReader(threading.Thread):
 
         quota = []
 
-        def one(m):
+        def one(m):   # (answered?, seconds)
+            t0 = time.time()
             try:
                 gemini_call(f"models/{m}:generateContent", key, body, timeout=20)
-                return True
+                return True, time.time() - t0
             except MathError as e:
                 if e.kind == "quota":
                     quota.append(e)
-                return False
+                return False, 0.0
         with ThreadPoolExecutor(max(1, len(cands))) as ex:
-            good = dict(zip(cands, ex.map(one, cands)))
-        order = [m for m in cands if good[m]] + [m for m in cands if not good[m]]
+            res = dict(zip(cands, ex.map(one, cands)))
+        good = {m: t for m, (ok, t) in res.items() if ok}
+        # Newest first - but a model that is much slower than the fastest one today (a "thinking" model that took
+        # 30 s to start answering a live question) goes after the fast ones: a live question must start answering fast.
+        best = min(good.values()) if good else 0.0
+        fast = [m for m in cands if m in good and good[m] <= max(2 * best, best + 4)]
+        order = fast + sorted((m for m in good if m not in fast), key=good.get) + [m for m in cands if m not in good]
         with self.lock:
             self.order = order
-            self.model = order[0] if order and good[order[0]] else ""
+            self.model = order[0] if order and order[0] in good else ""
             if not self.model and quota:   # nothing answered, and the reason is the quota: say so
                 self.quota_err, self.quota_until = quota[0], time.time() + min(quota[0].wait or 60, 60)
             else:
@@ -2075,7 +2081,9 @@ TUTOR_SYSTEM = (
     "כתוב בעברית פשוטה וברורה; מונח מקצועי גם באנגלית בסוגריים. שאלה בזמן הרצאה: תשובה קצרה, 3-6 שורות, כי "
     "הסטודנט מקשיב - ובסוף אפשר להציע בשורה אחת להרחיב. נוסחאות בכתיב פשוט שקריא כטקסט (כמו I = ∫ r² dm), לא "
     "LaTeX. התמלול אוטומטי: מילה שלא מתאימה היא כנראה טעות שמיעה - נחש מההקשר, בלי להעיר על זה אלא אם זה משנה. "
-    "אם התשובה לא נמצאת בהרצאה, ענה מהידע הכללי ואמור שזה לא מההרצאה. לעולם אל תמציא מה המרצה אמר.")
+    "אם התשובה לא נמצאת בהרצאה, ענה מהידע הכללי ואמור שזה לא מההרצאה. לעולם אל תמציא מה המרצה אמר. "
+    "זו שיחה: הודעה קצרה כמו \"כן\", \"תרחיב\", \"עוד\" או \"תן דוגמה\" מתייחסת לתשובה האחרונה שלך או להצעה שבסופה. "
+    "ענה על זה ישירות, והוסף משהו חדש במקום לחזור על מה שכבר אמרת.")
 TUTOR_TASK = " זו משימת לימוד על הרצאה שלמה: התשובה יכולה להיות ארוכה, מסודרת בכותרות קצרות ורשימות."
 
 
@@ -2109,7 +2117,7 @@ def log_tokens(model, usage, body_chars, ok, started, quota=False):
         pass
 
 
-def gemini_stream(key, model, body, usage=None):
+def gemini_stream(key, model, body, usage=None, timeout=15):
     """Yields the answer's text as Gemini writes it (server-sent events). `usage` (a dict) gets the token counts."""
     import urllib.error
     import urllib.request
@@ -2117,7 +2125,7 @@ def gemini_stream(key, model, body, usage=None):
                                  data=json.dumps(body).encode("utf-8"),
                                  headers={"x-goog-api-key": key, "Content-Type": "application/json"})
     try:
-        r = urllib.request.urlopen(req, timeout=30)
+        r = urllib.request.urlopen(req, timeout=timeout)   # (a live question that has not started in 15 s: the next model)
     except urllib.error.HTTPError as e:
         raise _gemini_http_error(e)
     except TimeoutError:
@@ -5463,7 +5471,7 @@ class App:
         level = "warn" if any(w in body for w in NOTE_WARN) else "info"
         with self.lock:
             self.note_seq += 1
-            self.notes.append({"id": self.note_seq, "clock": clock, "text": body, "level": level})
+            self.notes.append({"id": self.note_seq, "clock": clock, "text": body, "level": level, "t": round(time.time(), 1)})
 
     def set_progress(self, text):
         with self.lock:
@@ -6510,7 +6518,7 @@ def _app_handler():
                 usage, started, chars, used = {}, time.time(), len(json.dumps(body, ensure_ascii=False)), ""
                 for model in reader.models_to_try(key):   # busy / retired / slow today: the next model
                     try:
-                        pieces = gemini_stream(key, model, body, usage)
+                        pieces = gemini_stream(key, model, body, usage, 60 if d.get("task") else 15)   # (a whole lecture takes longer to start)
                         first = next(pieces, "")
                         reader.worked(model)
                         used = model
