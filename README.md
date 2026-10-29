@@ -1,6 +1,6 @@
 # Hevanti (הבנתי)
 
-**Everything the lecturer said, and an answer to everything you didn't understand.** A free, open-source lecture companion for students on Windows (and Mac, in beta).
+**Everything the lecturer said, and an answer to everything you didn't understand.** A free, open-source lecture companion for students on Windows.
 
 Hevanti writes down everything said in the lecture, in Hebrew or English, and saves a picture of every slide and board. You listen instead of copying, and you can ask an AI exactly about the moment you missed.
 
@@ -28,7 +28,6 @@ Hevanti writes down everything said in the lecture, in Hebrew or English, and sa
 
 **Windows:** download `Hevanti-Setup.exe` from the [latest release](https://github.com/pechter-roei41/hevanti/releases/latest) and run it. It installs for your user only (no administrator), with its own Python and every package inside; your lectures are kept in `Documents\הבנתי`. The same app as a folder: `Hevanti.zip` - extract it, double-click `Install`, then `Hevanti`.
 
-**Mac (beta, not yet tested on a real Mac):** download `Hevanti-Mac.zip`, right-click `Install.command` > Open (once), then open `Hevanti.command`. `Install.command` gets its own Python with [uv](https://docs.astral.sh/uv/) (no admin password). A Mac cannot record its own sound without a virtual audio device, so Hevanti listens through [BlackHole](https://existential.audio/blackhole/) (free); the one-time setup is in `README.txt`.
 
 Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD)
 
@@ -50,10 +49,9 @@ Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsx
 | `System/Program/hevanti_mcp.py` | The AI connector (MCP server, standard library only): `now`, `transcript`, `slide`, `search`, `moment` (where a topic was explained), `lectures`, plus the prompts `exam`, `summary`, `find_moment` |
 | `System/Program/course_terms.json` | Suggested glossary terms per course, matched by the course name. Corrections and new courses are welcome |
 | `Install.bat`, `System/get_python.ps1`, `System/install_ocr.*` | Windows setup: the packages into Hevanti's own Python, and Tesseract with the Hebrew and English language files |
-| `Install.command`, `Hevanti.command` | Mac setup and start |
-| `tools/build_zip.py` | Builds `Hevanti.zip` (with the embeddable Python) and `Hevanti-Mac.zip` |
+| `tools/build_zip.py` | Builds `Hevanti.zip` (with the embeddable Python) |
 | `installer/hevanti.iss`, `tools/build_setup_dir.py` | `Hevanti-Setup.exe` (Inno Setup): per-user, its own Python with the packages inside |
-| `tools/test_*.py` | Tests run on every push on Windows and Linux (`.github/workflows/tests.yml`); the Mac is tested on a real GitHub Mac (`mac-test.yml`) |
+| `tools/test_*.py` | Tests run on every push (`.github/workflows/tests.yml`) |
 | `DECISIONS.md` | What was decided and why (Hebrew) |
 
 New version: push a tag such as `v2.0-20261014` (same number, new build) or `v2.1`. GitHub Actions builds both ZIPs and attaches them to a release, and the app tells students that an update is available.

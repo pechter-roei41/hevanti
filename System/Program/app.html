@@ -2705,7 +2705,6 @@ const HOW = (() => {
       });
     }
     $("#hPlay").hidden = still;
-    if (false) STEPS[2].text = "מצמידים את ההרצאה לצד אחד (fn+Control+חץ, או גוררים את החלון לקצה המסך) ואת אפליקציית ה-AI לצד השני, וגוררים את הקו ביניהם: שני שליש להרצאה, שליש ל-AI. ככה ההרצאה לא מוסתרת, והתשובה נשארת מול העיניים. בזום יוצאים ממסך מלא.";   // with "reduce motion" nothing plays: the arrows and the list move between the steps
     playing = !still; go(0);
   }
   function stop() { clear(); if (stage) stage.replaceChildren(); cursor = null; }

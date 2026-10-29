@@ -2,27 +2,22 @@
 
   python tools/build_zip.py [out.zip]                                   Windows, Python downloaded by Install
   python tools/build_zip.py --python-zip E.zip --get-pip G.py out.zip   Windows, with its own Python inside
-  python tools/build_zip.py --mac out.zip                               Mac (Install.command gets Python)
 
 The Windows "embeddable" Python (python.org) goes to System/python, with site-packages turned on, so Install
-only adds the packages - nobody installs Python. The GitHub release workflow builds both ZIPs."""
+only adds the packages - nobody installs Python. The GitHub release workflow builds the ZIP."""
 import argparse
 import os
 import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FOLDER = "Hevanti_v2.0"  # the folder inside the ZIP
-SKIP_DIRS = {"__pycache__", "python", "venv-mac"}   # local copies of Python, never from the working tree
+SKIP_DIRS = {"__pycache__", "python"}   # local copies of Python, never from the working tree
 SKIP_FILES = {"error_log.txt"}
-WIN_ONLY = (".bat", ".ps1")
-MAC_ONLY = (".command", ".sh")
 
 
-def add_file(z, full, arc, mac):
+def add_file(z, full, arc):
     info = zipfile.ZipInfo.from_file(full, arc)
     info.compress_type = zipfile.ZIP_DEFLATED
-    if mac and arc.endswith(MAC_ONLY):
-        info.external_attr = (0o100755 << 16)   # runnable after unzipping on a Mac
     with open(full, "rb") as f:
         z.writestr(info, f.read(), compresslevel=9)
 
@@ -30,32 +25,28 @@ def add_file(z, full, arc, mac):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("out", nargs="?", default=None)
-    ap.add_argument("--mac", action="store_true")
-    ap.add_argument("--python-zip", help="python-3.x-embed-amd64.zip from python.org (Windows)")
+    ap.add_argument("--python-zip", help="python-3.x-embed-amd64.zip from python.org")
     ap.add_argument("--get-pip", help="get-pip.py from bootstrap.pypa.io (with --python-zip)")
     a = ap.parse_args()
-    mac = a.mac
-    out = a.out or ("Hevanti-Mac.zip" if mac else "Hevanti.zip")
-    top = ["Install.command", "Hevanti.command"] if mac else ["Hevanti.bat", "Install.bat"]
-    top += ["README.txt", "System"]
-    skip_ext = WIN_ONLY if mac else MAC_ONLY
+    out = a.out or "Hevanti.zip"
+    top = ["Hevanti.bat", "Install.bat", "README.txt", "System"]
     n = 0
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for item in top:
             path = os.path.join(ROOT, item)
             if os.path.isfile(path):
-                add_file(z, path, f"{FOLDER}/{item}", mac)
+                add_file(z, path, f"{FOLDER}/{item}")
                 n += 1
                 continue
             for d, dirs, files in os.walk(path):
                 dirs[:] = sorted(x for x in dirs if x not in SKIP_DIRS)
                 for f in sorted(files):
-                    if f in SKIP_FILES or f.endswith(skip_ext):
+                    if f in SKIP_FILES:
                         continue
                     full = os.path.join(d, f)
-                    add_file(z, full, f"{FOLDER}/" + os.path.relpath(full, ROOT).replace(os.sep, "/"), mac)
+                    add_file(z, full, f"{FOLDER}/" + os.path.relpath(full, ROOT).replace(os.sep, "/"))
                     n += 1
-        if a.python_zip and not mac:
+        if a.python_zip:
             with zipfile.ZipFile(a.python_zip) as py:
                 for name in py.namelist():
                     data = py.read(name)

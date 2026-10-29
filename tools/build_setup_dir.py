@@ -9,8 +9,8 @@ import sys
 import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SKIP_DIRS = {"__pycache__", "python", "venv-mac"}
-SKIP_EXT = (".command", ".sh")
+SKIP_DIRS = {"__pycache__", "python"}
+SKIP_EXT = (".sh",)
 
 
 PRIVACY = """הבנתי (Hevanti) - פרטיות / Privacy
