@@ -5,7 +5,11 @@
 Hevanti writes down everything said in the lecture, in Hebrew or English, and saves a picture of every slide and board. You listen instead of copying, and you can ask an AI exactly about the moment you missed.
 
 - **Live lecture:** Zoom, a broadcast, or anything playing on your computer. Transcription runs on your computer.
-- **Recorded lecture:** a file or a link (Drive, Dropbox, OneDrive, a Zoom recording). A player synced with the transcript.
+- **Answers inside Hevanti, free (2.2):** an "answer here" button in every question box. With the student's own free Gemini API key (Google AI Studio, no credit card) Hevanti asks Gemini for you and writes the answer under the question as it arrives, using the last minutes of the lecture and the slide on the screen. No Hevanti server, no cost for the student or for us. The key is stored encrypted (Windows DPAPI). The page talks to Hevanti on your computer, which talks to Google; which Gemini model answers is probed on every start, so a retired or busy model does not break it. Without a key, everything works as before (copy to ChatGPT / Gemini / Claude).
+- **After the lecture (2.2):** one click for a summary, flashcards, a mock exam, a formula sheet, or an explanation of the moments you marked ("לא הבנתי" / "חשוב", also Ctrl+Alt+M). Every question and answer is kept in the lecture's folder (`שאלות ותשובות.md`).
+- **Formulas and handwriting (2.2, optional, off):** with the same key, each saved slide can be read by Gemini, with formulas as LaTeX.
+- **Smarter screenshots (2.2):** capture the whole screen, one window (a window that pops over it is mosaicked) or a part of the screen; pause with Ctrl+Alt+P; mosaic fixed areas; delete screenshots for good. A video of the lecturer, a clock or a playing clip no longer counts as a "slide change"; the full board is kept before it is erased.
+- **Accessibility (2.2):** text and interface size, reading spacing, high contrast, no motion, screen-reader announcements, big captions in the floating window.- **Recorded lecture:** a file or a link (Drive, Dropbox, OneDrive, a Zoom recording). A player synced with the transcript.
 - **YouTube video:** plays in YouTube's official player inside Hevanti (no download), and is transcribed while you watch, with the video's timestamps.
 - **Courses:** a folder per course in "הקורסים שלי" (created with the course), a course page with four tabs (lectures, the course's AI, exam prep, glossary), a glossary that improves transcription, and search across everything that was said. Type a course name (for example "סטטיקה של גוף קשיח", rigid-body statics) and Hevanti suggests terms for that course; one click on **+** adds a term to the glossary. Suggestions are per course, not per degree: 55 common courses so far, in [`course_terms.json`](System/Program/course_terms.json).
 - **Better transcription of terms and names:** the course name and its glossary reach the model as *hotwords* with a budget of their own, so the last words said never push them out, and English terms and names read from the slide on the screen join them.
@@ -31,7 +35,7 @@ Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsx
 ## Privacy
 
 - Transcripts and screenshots stay on your computer. The app only listens on `127.0.0.1`.
-- There is no Hevanti server. The connector (`hevanti_mcp.py`) only reads files from the "הקורסים שלי" (My Lectures) folder, and only when your AI asks for them. What your AI reads is sent to its provider like any other conversation with it.
+- There is no Hevanti server. If you turn on Answer here, what you ask (the question, the last minutes of the transcript and the current slide) is sent to Google's Gemini API with your own key; with Formulas and handwriting, every saved slide too. The connector (`hevanti_mcp.py`) only reads files from the "הקורסים שלי" (My Lectures) folder, and only when your AI asks for them. What your AI reads is sent to its provider like any other conversation with it.
 - "Sync to the cloud" is off until you turn it on; then your transcripts are copied to your own Google Drive / OneDrive.
 - Lectures belong to their lecturers and institutions. Some institutions forbid recording online lectures: see [what is allowed](docs/what-is-allowed.md) (Hebrew). Full policy: [CODE_SIGNING.md](CODE_SIGNING.md#privacy).
 

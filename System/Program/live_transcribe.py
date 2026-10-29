@@ -36,8 +36,8 @@ try:
 except Exception:  # lets "uninstall" run even if the install never finished
     np = None
 
-VERSION = "2.1"
-VERSION_DATE = "15.10.2026"
+VERSION = "2.2"
+VERSION_DATE = "28.10.2026"
 PRODUCT = "הבנתי"
 GUIDE_URL = "https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD"
 
@@ -1123,6 +1123,347 @@ def mask_windows(arr, area, wins=None):
     return done
 
 
+# ---------- what the screenshots may see (version 2.2) ----------
+# Before 2.2 the whole main screen was photographed (the AI's and Hevanti's own windows painted grey). Now the student
+# chooses: the whole screen, ONE WINDOW (the lecture - a window that comes in front of it, like a chat, is mosaicked),
+# or a PART of the screen. Parts of the screen can be mosaicked for good (a bookmarks bar, a chat strip), the
+# photographing can be paused (a button in the page, or Ctrl+Alt+P on Windows) - nothing is looked at or saved while
+# paused - and pictures can be deleted for good. The choice is kept in settings.json ("capture"); the pause is not.
+# A mosaic (big blocks), not a soft blur: a soft blur can be sharpened back into text.
+CAPTURE_MODES = ("screen", "window", "region")
+PAUSE_HOTKEY = "Ctrl+Alt+P"
+MARK_HOTKEY = "Ctrl+Alt+M"    # mark "לא הבנתי" in a live lecture (2.2)
+SHELL_TITLES = {"program manager", "windows input experience", "microsoft text input application", "settings"}
+
+
+def _clean_box(b):
+    """[x0, y0, x1, y1] as fractions (0-1) of the screen, left < right, top < bottom - or None."""
+    try:
+        x0, y0, x1, y1 = (min(1.0, max(0.0, float(v))) for v in b)
+    except (TypeError, ValueError):
+        return None
+    x0, x1, y0, y1 = min(x0, x1), max(x0, x1), min(y0, y1), max(y0, y1)
+    return [round(x0, 4), round(y0, 4), round(x1, 4), round(y1, 4)] if x1 - x0 >= 0.02 and y1 - y0 >= 0.02 else None
+
+
+def pixelate(arr, rects):
+    """Mosaic, in place, the rects (left, top, right, bottom - pixels of arr) of a BGRA picture. True if any."""
+    h, w = arr.shape[:2]
+    block = max(12, min(h, w) // 50)
+    done = False
+    for l, t, r, b in rects:
+        x0, y0, x1, y1 = max(0, int(l)), max(0, int(t)), min(w, int(r)), min(h, int(b))
+        if x1 - x0 < 2 or y1 - y0 < 2:
+            continue
+        part = arr[y0:y1, x0:x1, :3]
+        ph, pw = part.shape[:2]
+        bh, bw = -(-ph // block), -(-pw // block)
+        pad = np.pad(part, ((0, bh * block - ph), (0, bw * block - pw), (0, 0)), mode="edge").astype(np.float32)
+        small = pad.reshape(bh, block, bw, block, 3).mean(axis=(1, 3))
+        arr[y0:y1, x0:x1, :3] = np.repeat(np.repeat(small, block, axis=0), block, axis=1)[:ph, :pw].astype(np.uint8)
+        done = True
+    return done
+
+
+def _plain_title(t):
+    """A window title without the invisible direction marks Hebrew titles carry."""
+    return re.sub("[‎‏‪-‮⁦-⁩]", "", str(t or "")).strip()
+
+
+def visible_windows():
+    if IS_MAC:
+        return _visible_windows_mac()
+    return _visible_windows() if os.name == "nt" else []
+
+
+def window_choices():
+    """The windows to pick from, top one first: [{"title", "app"}] - not Hevanti's or the AI's, not tiny ones."""
+    out, seen = [], set()
+    try:
+        wins = visible_windows()
+    except Exception:
+        save_error("list windows")
+        return out
+    for title, exe, rc in wins:
+        title = _plain_title(title)
+        if not title or title in seen or title.lower() in SHELL_TITLES or MASK_TITLE.search(title) \
+                or rc[2] - rc[0] < 200 or rc[3] - rc[1] < 150:
+            continue
+        seen.add(title)
+        out.append({"title": title[:160], "app": os.path.splitext(os.path.basename(str(exe or "")))[0][:40]})
+    return out[:30]
+
+
+def pick_window(wins, want):
+    """wins: [(title, exe, rect)] top first. The top window whose title has `want` in it: (its place in the list, rect)."""
+    want = _plain_title(want).lower()
+    if not want:
+        return None
+    for i, (title, _exe, rc) in enumerate(wins):
+        if want in _plain_title(title).lower() and rc[2] - rc[0] >= 80 and rc[3] - rc[1] >= 80:
+            return i, rc
+    return None
+
+
+def covering_rects(wins, idx, rc):
+    """The windows IN FRONT of wins[idx] that overlap rc (a chat that pops over the lecture) - they get a mosaic."""
+    l, t, r, b = rc
+    return [w[2] for w in wins[:idx]
+            if w[2][0] < r and w[2][2] > l and w[2][1] < b and w[2][3] > t
+            and w[2][2] - w[2][0] >= 40 and w[2][3] - w[2][1] >= 40]
+
+
+def capture_area(mode, want, box, mon):
+    """(what to photograph: an mss area, [rects in screen pixels to mosaic]). area None: nothing to photograph now
+    (a window that is not on the screen, or nothing chosen yet) - it never falls back to the whole screen."""
+    if mode == "region":
+        if not box:
+            return None, []
+        W, H = mon["width"], mon["height"]
+        return {"left": mon["left"] + int(box[0] * W), "top": mon["top"] + int(box[1] * H),
+                "width": max(16, int((box[2] - box[0]) * W)), "height": max(16, int((box[3] - box[1]) * H))}, []
+    if mode == "window":
+        try:
+            wins = visible_windows()
+        except Exception:
+            save_error("pick window")
+            return None, []
+        hit = pick_window(wins, want)
+        if not hit:
+            return None, []
+        idx, rc = hit
+        l, t = max(rc[0], mon["left"]), max(rc[1], mon["top"])
+        r, b = min(rc[2], mon["left"] + mon["width"]), min(rc[3], mon["top"] + mon["height"])
+        if r - l < 80 or b - t < 80:
+            return None, []
+        return {"left": l, "top": t, "width": r - l, "height": b - t}, covering_rects(wins, idx, (l, t, r, b))
+    return mon, []
+
+
+def screen_boxes(boxes, mon):
+    """Boxes as fractions of the screen -> rects in screen pixels."""
+    W, H = mon["width"], mon["height"]
+    return [(mon["left"] + b[0] * W, mon["top"] + b[1] * H, mon["left"] + b[2] * W, mon["top"] + b[3] * H) for b in boxes]
+
+
+def rects_in_picture(rects, area, arr):
+    """Rects in screen pixels -> pixels of the picture grabbed from `area` (a Mac's Retina: 2 pixels a point)."""
+    h, w = arr.shape[:2]
+    sx, sy = w / max(1, area.get("width", w)), h / max(1, area.get("height", h))
+    return [((l - area["left"]) * sx, (t - area["top"]) * sy, (r - area["left"]) * sx, (b - area["top"]) * sy)
+            for l, t, r, b in rects]
+
+
+class CaptureControl:
+    """What the student chose to photograph, and the pause. One for the whole program."""
+
+    def __init__(self):
+        s = load_settings().get("capture")
+        s = s if isinstance(s, dict) else {}
+        self.lock = threading.Lock()
+        self.mode = s.get("mode") if s.get("mode") in CAPTURE_MODES else "screen"
+        self.window = str(s.get("window") or "")[:200]
+        self.region = _clean_box(s.get("region"))
+        self.blur = [b for b in (_clean_box(x) for x in list(s.get("blur") or [])[:12]) if b]
+        self.paused = False
+        self.found = True    # window mode: the window is on the screen right now
+
+    def snapshot(self):
+        with self.lock:
+            return self.paused, self.mode, self.window, self.region, list(self.blur)
+
+    def public(self):
+        with self.lock:
+            return {"mode": self.mode, "window": self.window, "region": self.region, "blur": list(self.blur),
+                    "paused": self.paused, "found": self.found, "hotkey": PAUSE_HOTKEY if os.name == "nt" else "",
+                    "mark_hotkey": MARK_HOTKEY if os.name == "nt" else ""}
+
+    def update(self, d):
+        with self.lock:
+            if d.get("mode") in CAPTURE_MODES:
+                self.mode = d["mode"]
+            if "window" in d:
+                self.window = str(d.get("window") or "").strip()[:200]
+            if "region" in d:
+                self.region = _clean_box(d.get("region"))
+            if "blur" in d:
+                self.blur = [b for b in (_clean_box(x) for x in list(d.get("blur") or [])[:12]) if b]
+            keep = {"mode": self.mode, "window": self.window, "region": self.region, "blur": list(self.blur)}
+        save_settings(capture=keep)
+
+    def set_paused(self, on):
+        with self.lock:
+            self.paused = bool(on)
+            return self.paused
+
+
+_CAPTURE = []
+
+
+def capture_control():
+    if not _CAPTURE:
+        _CAPTURE.append(CaptureControl())
+    return _CAPTURE[0]
+
+
+class PauseHotkey(threading.Thread):
+    """Windows: Ctrl+Alt+P pauses / resumes the photographing from any program - the lecture's own window too.
+    A high beep: photographing again. A low one: paused."""
+
+    def __init__(self):
+        super().__init__(daemon=True)
+        self.stop_evt = threading.Event()
+
+    def toggle(self):
+        paused = capture_control().set_paused(not capture_control().paused)
+        log("צילום המסך הושהה. לא נשמר שום צילום עד שממשיכים (" + PAUSE_HOTKEY + " או הכפתור בדף)." if paused
+            else "צילום המסך חזר.")
+        try:
+            import winsound
+            winsound.Beep(500 if paused else 1000, 130)
+        except Exception:
+            pass
+
+    def mark(self):
+        r = APP.mark_moment("lost")
+        log("סומן: לא הבנתי. אחרי ההרצאה אפשר לבקש מה-AI הסבר לכל הרגעים שסימנת." if r.get("ok") else r.get("error", ""))
+        try:
+            import winsound
+            winsound.Beep(800, 90)
+        except Exception:
+            pass
+
+    def run(self):
+        if os.name != "nt":
+            return
+        try:
+            import ctypes
+            from ctypes import wintypes
+            user32 = ctypes.WinDLL("user32")
+            user32.RegisterHotKey.argtypes = [wintypes.HWND, ctypes.c_int, wintypes.UINT, wintypes.UINT]
+            user32.PeekMessageW.argtypes = [ctypes.POINTER(wintypes.MSG), wintypes.HWND, wintypes.UINT,
+                                            wintypes.UINT, wintypes.UINT]
+            # MOD_ALT | MOD_CONTROL | MOD_NOREPEAT, and the keys P / M
+            mods = 0x0001 | 0x0002 | 0x4000
+            pause_ok = user32.RegisterHotKey(None, 0x4856, mods, 0x50)
+            mark_ok = user32.RegisterHotKey(None, 0x4857, mods, 0x4D)
+            if not pause_ok:
+                log("הקיצור " + PAUSE_HOTKEY + " להשהיית הצילום תפוס בתוכנה אחרת. אפשר להשהות בכפתור בדף.")
+            if not mark_ok:
+                log("הקיצור " + MARK_HOTKEY + " לסימון רגע תפוס בתוכנה אחרת. אפשר לסמן בכפתור בדף.")
+            if not (pause_ok or mark_ok):
+                return
+            try:
+                msg = wintypes.MSG()
+                while not self.stop_evt.wait(0.1):
+                    while user32.PeekMessageW(ctypes.byref(msg), None, 0x0312, 0x0312, 1):   # WM_HOTKEY
+                        if msg.wParam == 0x4857:
+                            self.mark()
+                        else:
+                            self.toggle()
+            finally:
+                for hid, ok in ((0x4856, pause_ok), (0x4857, mark_ok)):
+                    if ok:
+                        user32.UnregisterHotKey(None, hid)
+        except Exception:
+            save_error("pause hotkey")
+
+    def stop(self):
+        self.stop_evt.set()
+
+
+def grey_picture(path):
+    """Replace a picture by a plain grey one (a lecture that is still being recorded: its transcript still points to it)."""
+    try:
+        from PIL import Image
+        Image.new("RGB", (640, 360), (128, 128, 128)).save(path, "JPEG" if path.lower().endswith(".jpg") else "PNG")
+    except Exception:
+        os.remove(path)
+
+
+def drop_ocr(slides_dir, names):
+    """Forget the text read from these slides (it may be as private as the picture)."""
+    with _OCR_LOCK:
+        m = read_math(slides_dir)
+        if any(n in m for n in names):
+            for n in names:
+                m.pop(n, None)
+            with open(os.path.join(slides_dir, MATH_NAME) + ".tmp", "w", encoding="utf-8") as f:
+                json.dump(m, f, ensure_ascii=False)
+            os.replace(os.path.join(slides_dir, MATH_NAME) + ".tmp", os.path.join(slides_dir, MATH_NAME))
+        d = read_ocr(slides_dir)
+        if not any(n in d for n in names):
+            return
+        for n in names:
+            d.pop(n, None)
+        path = os.path.join(slides_dir, OCR_NAME)
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(d, f, ensure_ascii=False)
+        os.replace(tmp, path)
+
+
+def strip_shot_lines(txt_path, names):
+    """Take the lines about these pictures out of a finished lecture's transcript."""
+    try:
+        with open(txt_path, encoding="utf-8") as f:
+            lines = f.read().split("\n")
+    except OSError:
+        return
+    keys = [f"{SLIDES_NAME}/{n}]" for n in names]
+    keep = [ln for ln in lines if not ("[צילום מסך: " in ln and any(k in ln for k in keys))]
+    if len(keep) != len(lines):
+        tmp = txt_path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write("\n".join(keep))
+        os.replace(tmp, txt_path)
+
+
+def capture_preview(delay=0):
+    """One picture of the whole main screen for the page (to draw the part to photograph, or to hide). Not saved.
+    The page asks for a few seconds' delay: time to bring the lecture to the front."""
+    try:
+        import base64
+        import io
+        import mss
+        from PIL import Image
+        time.sleep(max(0, min(10, int(delay or 0))))
+        with (getattr(mss, "MSS", None) or mss.mss)() as sct:
+            mons = sct.monitors
+            shot = sct.grab(mons[SCREEN_MONITOR] if 0 < SCREEN_MONITOR < len(mons) else mons[1])
+        img = Image.frombytes("RGB", shot.size, shot.bgra, "raw", "BGRX")
+        img.thumbnail((1100, 1100))
+        buf = io.BytesIO()
+        img.save(buf, "JPEG", quality=70)
+        return {"ok": True, "image": "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode("ascii"),
+                "w": img.width, "h": img.height}
+    except Exception as e:
+        save_error("capture preview")
+        return {"ok": False, "error": "Windows חסם את צילום המסך." if is_blocked(e) else "לא הצלחתי לצלם את המסך."}
+
+
+def purge_shots(lecture_dir, names, recording=False):
+    """Delete slide pictures for good (not to the Recycle Bin: they may show private things). recording: the lecture
+    is still being written - the picture becomes a grey one and its line stays. Returns how many were deleted."""
+    sd = os.path.join(lecture_dir, SLIDES_NAME)
+    gone = []
+    for name in sorted(names):
+        p = os.path.join(sd, name)
+        try:
+            if recording:
+                grey_picture(p)
+            else:
+                os.remove(p)
+            gone.append(name)
+        except OSError:
+            pass
+    if gone:
+        drop_ocr(sd, gone)
+        if not recording:
+            strip_shot_lines(lecture_txt(lecture_dir), gone)
+    return len(gone)
+
+
 # ---------- the text on the slides (OCR) ----------
 # Every saved slide is read in the background with Tesseract (free, offline; Hebrew + English) into a hidden
 # ".ocr.json" in the lecture's "שקופיות" folder: {"13-40-11.jpg": "the text"}. The text can be searched, goes into
@@ -1213,9 +1554,11 @@ def slide_text(img_path):
     return str(read_ocr(os.path.dirname(img_path)).get(os.path.basename(img_path), ""))
 
 
-def _write_ocr(img_path, text):
+def _write_ocr(img_path, text, unless_math=False):
     d = os.path.dirname(img_path)
     with _OCR_LOCK:
+        if unless_math and os.path.basename(img_path) in read_math(d):
+            return   # Tesseract finished after Gemini: Gemini's text (with the formulas) stays
         data = read_ocr(d)
         data[os.path.basename(img_path)] = text
         path = os.path.join(d, OCR_NAME)
@@ -1271,7 +1614,7 @@ class OcrWorker(threading.Thread):
                 if os.path.isfile(path) and os.path.basename(path) not in read_ocr(os.path.dirname(path)):
                     text = self.read(path)
                     if text is not None:
-                        _write_ocr(path, text)
+                        _write_ocr(path, text, unless_math=True)
                         if cb and text:
                             cb(text)
             except Exception:
@@ -1289,6 +1632,7 @@ def ocr_worker():
 def ocr_add(path, words_to_model=True):
     """A slide was just saved: read it soon; its words in English help the transcription of what follows."""
     ocr_worker().q.put((path, (lambda t: set_slide_words(slide_terms(t))) if words_to_model else None))
+    math_add(path)   # (only when the student turned on reading formulas with Gemini)
 
 
 def ocr_backfill():
@@ -1309,6 +1653,591 @@ def ocr_backfill():
                 n += 1
                 if n >= 3000:
                     return
+
+
+# ---------- formulas and handwriting: an AI reads the slide (2.2, off until the student turns it on) ----------
+# Tesseract reads printed letters - not formulas (fractions, powers, vectors come out as noise) and not handwriting
+# on a board. With the student's own Gemini key (free at aistudio.google.com), each saved slide is sent to Gemini,
+# which writes its text and every formula in LaTeX ($...$). That text replaces Tesseract's in ".ocr.json", so the
+# search, the exam prep, what is copied for an AI and the connector all get the formulas. A slide with no lecture on
+# it (only Zoom's buttons) gets an empty text. Which slides were read this way: ".math.json". The key is kept
+# encrypted for this Windows user (DPAPI). Nothing is sent before the student turns it on.
+MATH_NAME = ".math.json"
+GEMINI_URL = os.environ.get("HEVANTI_GEMINI_URL", "https://generativelanguage.googleapis.com/v1beta")
+MATH_EMPTY = "(אין תוכן)"
+MATH_GAP_S = 7          # at most ~8 slides a minute (the free tier's limit)
+MATH_PROMPT = (
+    "This picture is a screenshot taken during a university lecture (a slide, a whiteboard, handwriting on a "
+    "tablet, or a document). Transcribe only the lecture content, in reading order: all text in its original "
+    "language (Hebrew stays Hebrew) and every formula, equation, matrix and unit in LaTeX between $...$ (display "
+    "equations between $$...$$). A diagram: one short line in Hebrew, in square brackets. Ignore everything that is "
+    "not lecture content: video-call controls (Zoom, Teams), participants' names and videos, chat, browser tabs, "
+    "the taskbar, clock and weather. Do not explain or solve anything. If there is no lecture content at all, "
+    "answer exactly: " + MATH_EMPTY)
+
+
+def _dpapi(data, protect):
+    """Windows: encrypt/decrypt bytes so only this Windows user on this computer can read them."""
+    import ctypes
+    from ctypes import wintypes
+
+    class BLOB(ctypes.Structure):
+        _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_char))]
+    crypt32, k32 = ctypes.WinDLL("crypt32"), ctypes.WinDLL("kernel32")
+    k32.LocalFree.argtypes = [ctypes.c_void_p]
+    buf = ctypes.create_string_buffer(data, len(data))
+    src, out = BLOB(len(data), ctypes.cast(buf, ctypes.POINTER(ctypes.c_char))), BLOB()
+    fn = crypt32.CryptProtectData if protect else crypt32.CryptUnprotectData
+    if not fn(ctypes.byref(src), None, None, None, None, 0x1, ctypes.byref(out)):   # CRYPTPROTECT_UI_FORBIDDEN
+        raise OSError("DPAPI")
+    try:
+        return ctypes.string_at(out.pbData, out.cbData)
+    finally:
+        k32.LocalFree(ctypes.cast(out.pbData, ctypes.c_void_p))
+
+
+def keep_secret(s):
+    import base64
+    s = str(s or "").strip()
+    if not s:
+        return ""
+    if os.name == "nt":
+        try:
+            return "dpapi:" + base64.b64encode(_dpapi(s.encode("utf-8"), True)).decode("ascii")
+        except Exception:
+            save_error("keep secret")
+    return "plain:" + s
+
+
+def read_secret(v):
+    import base64
+    v = str(v or "")
+    try:
+        if v.startswith("dpapi:"):
+            return _dpapi(base64.b64decode(v[6:]), False).decode("utf-8")
+        if v.startswith("plain:"):
+            return v[6:]
+    except Exception:
+        save_error("read secret")
+    return ""
+
+
+def read_math(slides_dir):
+    try:
+        with open(os.path.join(slides_dir, MATH_NAME), encoding="utf-8") as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _mark_math(img_path, model):
+    d = os.path.dirname(img_path)
+    with _OCR_LOCK:
+        data = read_math(d)
+        data[os.path.basename(img_path)] = model
+        path = os.path.join(d, MATH_NAME)
+        new = not os.path.exists(path)
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+        os.replace(tmp, path)
+        if new:
+            hide_file(path)
+
+
+def pick_gemini_model(names):
+    """The model for reading pictures: Google's "always the newest flash" name if it is offered, else the newest
+    plain flash model (not lite / image / speech / live / embedding)."""
+    short = [str(n).split("/")[-1] for n in names]
+    if "gemini-flash-latest" in short:
+        return "gemini-flash-latest"
+    best = None
+    for b in short:
+        if not b.startswith("gemini") or "flash" not in b or \
+                any(x in b for x in ("lite", "image", "tts", "live", "audio", "embed", "thinking", "exp", "latest")):
+            continue
+        nums = re.findall(r"\d+(?:\.\d+)?", b)
+        rank = (float(nums[0]) if nums else 0.0, "preview" not in b, -len(b))
+        if best is None or rank > best[0]:
+            best = (rank, b)
+    return best[1] if best else None
+
+
+_GEMINI_SKIP = ("image", "tts", "live", "audio", "embed", "thinking", "exp", "omni")
+
+
+def gemini_candidates(names):
+    """The models worth trying, best first: the "always newest" flash, the flash models from the newest, then the
+    lighter "lite" ones. (Which of them answers changes from day to day: busy, retired, slow - see MathReader.probe.)"""
+    short = [str(n).split("/")[-1] for n in names]
+
+    def rank(b):
+        nums = re.findall(r"\d+(?:\.\d+)?", b)
+        return float(nums[0]) if nums else 0.0, "preview" not in b
+    ok = [b for b in short if b.startswith("gemini") and "flash" in b and not any(x in b for x in _GEMINI_SKIP)]
+    full = sorted((b for b in ok if "lite" not in b and "latest" not in b), key=rank, reverse=True)
+    lite = sorted((b for b in ok if "lite" in b and "latest" not in b), key=rank, reverse=True)
+    return ([b for b in ("gemini-flash-latest",) if b in short] + full +
+            [b for b in ("gemini-flash-lite-latest",) if b in short] + lite)
+
+
+class MathError(Exception):
+    def __init__(self, text, wait=0, other=False):
+        super().__init__(text)
+        self.wait = wait     # seconds to wait before trying again (0: don't)
+        self.other = other   # this model is busy / gone / slow: another model may answer
+
+
+def gemini_call(path, key, body=None, timeout=90):
+    import urllib.error
+    import urllib.request
+    req = urllib.request.Request(f"{GEMINI_URL}/{path}", method="GET" if body is None else "POST",
+                                 data=None if body is None else json.dumps(body).encode("utf-8"),
+                                 headers={"x-goog-api-key": key, "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raise _gemini_http_error(e)
+    except TimeoutError:
+        raise MathError("Gemini לא ענה בזמן. לנסות שוב עוד רגע.", 60, other=True)
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        raise MathError(f"אין חיבור ל-Gemini ({e.__class__.__name__}). ממשיך לבד אחר כך.", 60)
+
+
+def _gemini_http_error(e):
+    try:
+        msg = (json.loads(e.read().decode("utf-8")).get("error") or {}).get("message") or ""
+    except Exception:
+        msg = ""
+    if e.code == 429:   # (the free quota is per model: another model may still answer)
+        return MathError("Gemini: הגעת למכסה החינמית של הדקה או של היום. לנסות שוב עוד דקה (או מחר).", 65, other=True)
+    if e.code == 404:
+        return MathError("המודל הזה של Gemini כבר לא זמין.", other=True)
+    if e.code in (400, 401, 403) and ("key" in msg.lower() or e.code != 400):
+        return MathError("Gemini לא קיבל את המפתח. לבדוק אותו (aistudio.google.com/apikey).")
+    if e.code >= 500:
+        return MathError(f"Gemini עמוס כרגע ({e.code}). לנסות שוב עוד רגע.", 60, other=True)
+    return MathError(f"Gemini החזיר שגיאה {e.code}: {msg[:160]}")
+
+
+def gemini_models(key):
+    names, token = [], ""
+    for _ in range(5):
+        d = gemini_call("models?pageSize=200" + (f"&pageToken={token}" if token else ""), key, timeout=30)
+        names += [m.get("name", "") for m in d.get("models") or []
+                  if "generateContent" in (m.get("supportedGenerationMethods") or [])]
+        token = d.get("nextPageToken") or ""
+        if not token:
+            break
+    return names
+
+
+def gemini_read(img_path, key, model):
+    import base64
+    with open(img_path, "rb") as f:
+        data = base64.b64encode(f.read()).decode("ascii")
+    mime = "image/png" if img_path.lower().endswith(".png") else "image/jpeg"
+    d = gemini_call(f"models/{model}:generateContent", key, {
+        "contents": [{"role": "user", "parts": [{"inline_data": {"mime_type": mime, "data": data}},
+                                                 {"text": MATH_PROMPT}]}],
+        "generationConfig": {"temperature": 0}})
+    cands = d.get("candidates") or []
+    parts = ((cands[0].get("content") or {}).get("parts") or []) if cands else []
+    text = "".join(p.get("text", "") for p in parts if isinstance(p, dict)).strip()
+    text = re.sub(r"^```[a-zA-Z]*\n?|\n?```$", "", text).strip()
+    return "" if not text or text == MATH_EMPTY else text[:OCR_MAX]
+
+
+class MathReader(threading.Thread):
+    """Sends the saved slides to Gemini one by one, at most one every MATH_GAP_S seconds."""
+
+    def __init__(self):
+        super().__init__(daemon=True)
+        self.q = queue.Queue()
+        self.lock = threading.Lock()
+        self.model, self.error, self.done = "", "", 0
+        self.order = []   # the models to try, the one that answered first (see probe)
+
+    def status(self):
+        s = math_settings()
+        with self.lock:
+            return {"on": bool(s.get("on")), "has_key": bool(s.get("key")), "model": self.model,
+                    "ask": bool(s.get("key")) and s.get("ask", True) is not False,
+                    "waiting": self.q.qsize(), "done": self.done, "error": self.error}
+
+    def set_error(self, text):
+        with self.lock:
+            self.error = text
+
+    def ensure_model(self, key):
+        if not self.model:
+            self.probe(key)
+        if not self.model:
+            raise MathError("לא נמצא ב-Gemini מודל שעונה כרגע. לנסות שוב עוד כמה דקות.", other=True)
+        return self.model
+
+    def probe(self, key):
+        """Which models answer right now: a one-word question to the best few at once (models are retired, busy or
+        slow from day to day). The ones that answered, best first, then the rest - the order to try them in."""
+        from concurrent.futures import ThreadPoolExecutor
+        cands = gemini_candidates(gemini_models(key))[:8]
+        body = {"contents": [{"role": "user", "parts": [{"text": "Answer with one word: OK"}]}]}
+
+        def one(m):
+            try:
+                gemini_call(f"models/{m}:generateContent", key, body, timeout=20)
+                return True
+            except MathError:
+                return False
+        with ThreadPoolExecutor(max(1, len(cands))) as ex:
+            good = dict(zip(cands, ex.map(one, cands)))
+        order = [m for m in cands if good[m]] + [m for m in cands if not good[m]]
+        with self.lock:
+            self.order = order
+            self.model = order[0] if order and good[order[0]] else ""
+        return self.model
+
+    def models_to_try(self, key):
+        self.ensure_model(key)
+        with self.lock:
+            return list(self.order or [self.model])[:4]
+
+    def failed(self, model):
+        """This model did not answer now: try it last from now on."""
+        with self.lock:
+            if model in self.order:
+                self.order.remove(model)
+                self.order.append(model)
+            if self.order:
+                self.model = self.order[0]
+
+    def worked(self, model):
+        with self.lock:
+            self.model, self.error = model, ""
+
+    def run(self):
+        last = 0.0
+        while True:
+            path = self.q.get()
+            s = math_settings()
+            key = read_secret(s.get("key"))
+            if not s.get("on") or not key:
+                continue
+            name, sd = os.path.basename(path), os.path.dirname(path)
+            if not os.path.isfile(path) or name in read_math(sd):
+                continue
+            for _ in range(4):
+                time.sleep(max(0.0, MATH_GAP_S - (time.time() - last)))
+                last = time.time()
+                try:
+                    text, model = None, ""
+                    for model in self.models_to_try(key):   # a busy / retired model: the next one
+                        try:
+                            text = gemini_read(path, key, model)
+                            self.worked(model)
+                            break
+                        except MathError as e:
+                            if not e.other:
+                                raise
+                            self.failed(model)
+                    if text is None:
+                        raise MathError("Gemini עמוס כרגע בכל המודלים. ממשיך לבד אחר כך.", 60)
+                    if os.path.isfile(path):   # (not deleted meanwhile)
+                        _write_ocr(path, text)
+                        _mark_math(path, model)
+                        with self.lock:
+                            self.done += 1
+                            self.error = ""
+                    break
+                except MathError as e:
+                    self.set_error(str(e))
+                    if not e.wait:
+                        break
+                    time.sleep(e.wait)
+                except Exception:
+                    save_error("math reader")
+                    self.set_error("קריאת הנוסחאות נכשלה בשקופית אחת. פרטים ב-error_log.txt.")
+                    break
+
+
+_MATH = []
+
+
+def math_reader():
+    if not _MATH:
+        _MATH.append(MathReader())
+        _MATH[0].start()
+        key = read_secret(math_settings().get("key"))
+        if key:   # which Gemini models answer today - before the first question, so it is answered at once
+            def probe():
+                try:
+                    _MATH[0].probe(key)
+                except Exception:
+                    pass
+            threading.Thread(target=probe, daemon=True).start()
+    return _MATH[0]
+
+
+def math_settings():
+    s = load_settings().get("math")
+    return s if isinstance(s, dict) else {}
+
+
+def math_add(path):
+    s = math_settings()
+    if s.get("on") and s.get("key"):
+        math_reader().q.put(path)
+
+
+def math_set(d):
+    """The page: turn on/off, save or delete the key. A new key is checked at once (the list of models)."""
+    s = dict(math_settings())
+    if "key" in d:
+        key = str(d.get("key") or "").strip()
+        if key:
+            try:
+                model = math_reader().probe(key)   # checks the key, and which models answer now
+            except MathError as e:
+                return {"ok": False, "error": str(e)}
+            if not model:
+                return {"ok": False, "error": "המפתח תקין, אבל כרגע אף מודל של Gemini לא עונה (עומס). לנסות שוב עוד כמה דקות."}
+            with math_reader().lock:
+                math_reader().error = ""
+        s["key"] = keep_secret(key)
+        if not key:
+            s["on"] = False
+    if "on" in d:   # reading formulas sends every slide: only when turned on by itself, never with the key
+        s["on"] = bool(d.get("on")) and bool(s.get("key"))
+    if "ask" in d:
+        s["ask"] = bool(d.get("ask"))
+    save_settings(math=s)
+    return {"ok": True, "math": math_reader().status()}
+
+
+def math_lecture(lecture_dir):
+    """All the slides of a lecture that the AI did not read yet."""
+    sd = os.path.join(lecture_dir, SLIDES_NAME)
+    done = read_math(sd)
+    names = sorted(n for n in (os.listdir(sd) if os.path.isdir(sd) else [])
+                   if re.fullmatch(r"[\w\-]+\.(jpg|png)", n) and n not in done)
+    for n in names:
+        math_reader().q.put(os.path.join(sd, n))
+    return len(names)
+
+
+# ---------- the built-in tutor: answers inside Hevanti, live (2.2) ----------
+# The same free Gemini key: a question is answered right in Hevanti - in the lecture page, the floating window, the
+# player, a saved lecture - with what was said in the last minutes and the slide on the screen, and the answer is
+# written as it comes (streaming). Free for the student (Gemini's free tier) and for Hevanti (no server: the page
+# -> Hevanti on this computer -> Google). Every answer is kept in the lecture's folder ("שאלות ותשובות.md"); a
+# summary of a lecture becomes its "סיכום.txt". Nothing is sent unless the student asks.
+QA_NAME = "שאלות ותשובות.md"
+TUTOR_SYSTEM = (
+    "אתה עוזר לימוד אישי של סטודנט באוניברסיטה, בתוך האפליקציה \"הבנתי\". הסטודנט נמצא עכשיו בהרצאה (חיה, מוקלטת "
+    "או סרטון) או חוזר על הרצאה. בכל שאלה מצורף התמלול האוטומטי של הדקות האחרונות, ולפעמים תמונה של השקופית או "
+    "הלוח שעל המסך. ענה לפי מה שנאמר ומה שבשקופית, וקשר את התשובה לרגע בהרצאה (למשל \"לפני דקה המרצה אמר ש...\"). "
+    "כתוב בעברית פשוטה וברורה; מונח מקצועי גם באנגלית בסוגריים. שאלה בזמן הרצאה: תשובה קצרה, 3-6 שורות, כי "
+    "הסטודנט מקשיב - ובסוף אפשר להציע בשורה אחת להרחיב. נוסחאות בכתיב פשוט שקריא כטקסט (כמו I = ∫ r² dm), לא "
+    "LaTeX. התמלול אוטומטי: מילה שלא מתאימה היא כנראה טעות שמיעה - נחש מההקשר, בלי להעיר על זה אלא אם זה משנה. "
+    "אם התשובה לא נמצאת בהרצאה, ענה מהידע הכללי ואמור שזה לא מההרצאה. לעולם אל תמציא מה המרצה אמר.")
+TUTOR_TASK = " זו משימת לימוד על הרצאה שלמה: התשובה יכולה להיות ארוכה, מסודרת בכותרות קצרות ורשימות."
+
+
+def ask_on():
+    s = math_settings()
+    return bool(s.get("key")) and s.get("ask", True) is not False
+
+
+def gemini_stream(key, model, body):
+    """Yields the answer's text as Gemini writes it (server-sent events)."""
+    import urllib.error
+    import urllib.request
+    req = urllib.request.Request(f"{GEMINI_URL}/models/{model}:streamGenerateContent?alt=sse", method="POST",
+                                 data=json.dumps(body).encode("utf-8"),
+                                 headers={"x-goog-api-key": key, "Content-Type": "application/json"})
+    try:
+        r = urllib.request.urlopen(req, timeout=30)
+    except urllib.error.HTTPError as e:
+        raise _gemini_http_error(e)
+    except TimeoutError:
+        raise MathError("Gemini לא ענה בזמן. לנסות שוב עוד רגע.", other=True)
+    except (urllib.error.URLError, OSError) as e:
+        raise MathError(f"אין חיבור ל-Gemini ({e.__class__.__name__}). לבדוק את האינטרנט.")
+    with r:
+        for raw in _lines_or_timeout(r):
+            line = raw.decode("utf-8", "replace").strip()
+            if not line.startswith("data:"):
+                continue
+            try:
+                d = json.loads(line[5:].strip())
+            except ValueError:
+                continue
+            for c in d.get("candidates") or []:
+                for p in (c.get("content") or {}).get("parts") or []:
+                    if isinstance(p, dict) and p.get("text") and not p.get("thought"):
+                        yield p["text"]
+
+
+def _lines_or_timeout(r):
+    try:
+        yield from r
+    except TimeoutError:
+        raise MathError("Gemini הפסיק לענות באמצע. לנסות שוב.")
+
+
+def tutor_image(d):
+    """The slide to send with the question: one of the library ("img") or of the open recording ("n")."""
+    f = safe_shot(d.get("img")) if d.get("img") else None
+    rec = APP.rec
+    if not f and rec is not None and re.fullmatch(r"[\w\-]+\.(jpg|png)", str(d.get("n") or "")):
+        p = os.path.join(rec.shots_dir, d["n"])
+        f = p if os.path.isfile(p) else None
+    return f
+
+
+def tutor_body(d):
+    """Earlier turns of this conversation, then this question with what was said (and the slide)."""
+    import base64
+    contents = []
+    for h in list(d.get("history") or [])[-6:]:
+        q, a = str((h or {}).get("q") or "")[:2000], str((h or {}).get("a") or "")[:8000]
+        if q and a:
+            contents += [{"role": "user", "parts": [{"text": q}]}, {"role": "model", "parts": [{"text": a}]}]
+    parts = []
+    img = tutor_image(d)
+    if img:
+        with open(img, "rb") as f:
+            parts.append({"inline_data": {"mime_type": "image/png" if img.lower().endswith(".png") else "image/jpeg",
+                                          "data": base64.b64encode(f.read()).decode("ascii")}})
+    parts.append({"text": str(d.get("context") or d.get("question") or "")[:1500000]})
+    contents.append({"role": "user", "parts": parts})
+    return {"systemInstruction": {"parts": [{"text": TUTOR_SYSTEM + (TUTOR_TASK if d.get("task") else "")}]},
+            "contents": contents, "generationConfig": {"temperature": 0.3}}
+
+
+def tutor_lecture_dir(d):
+    """The lecture the question is about (to keep the answer in its folder)."""
+    if d.get("f"):
+        return lecture_from_rel(d.get("f"))
+    s = APP.session
+    if d.get("where") in ("live", "yt") and s is not None and not s.done and s.transcript:
+        return os.path.dirname(s.transcript)
+    if d.get("where") == "rec" and APP.rec is not None:
+        return os.path.dirname(APP.rec.out_path)
+    return None
+
+
+def tutor_save(d, answer):
+    """Keep the question and answer in the lecture's folder; a lecture summary becomes its "סיכום.txt"."""
+    ld = tutor_lecture_dir(d)
+    if not ld or not os.path.isdir(ld):
+        return
+    now = datetime.datetime.now()
+    try:
+        if d.get("task") == "summary":
+            with open(os.path.join(ld, SUMMARY_NAME), "w", encoding="utf-8") as f:
+                f.write(f"# סיכום (Gemini, {now:%d.%m.%Y %H:%M})\n\n{answer}\n")
+        else:
+            q = str(d.get("question") or "").strip() or "(בלי שאלה: הסבר למה שנאמר עכשיו)"
+            with open(os.path.join(ld, QA_NAME), "a", encoding="utf-8") as f:
+                f.write(f"## {now:%d.%m %H:%M}" + (f" · {d.get('at')}" if d.get("at") else "") + f"\n**שאלה:** {q}\n\n{answer}\n\n")
+        with APP.lock:
+            APP.lib_rev += 1
+    except OSError:
+        save_error("tutor save")
+
+
+class SlideJudge:
+    """Which pictures of a live lecture are worth keeping (2.2). Before, any 3% change since the last saved picture
+    saved a new one every 30 s - and the lecturer's video in Zoom changes all the time, so a picture was saved every
+    half minute all lecture long. Now, on a small (1/16) grey copy of each look (every 3 s):
+    - spots that keep changing between looks (a video of the lecturer, a clock, a playing clip) are learned and
+      ignored - only the "calm" part of the screen counts;
+    - a new slide/page (15%+ of the calm part changed) is saved once it has settled (no half-drawn transition);
+    - writing on the board (3-15%) is saved when the writer pauses (two still looks), at most every 45 s;
+    - and the board just BEFORE it changes (erased, or the next slide) is saved too, if it had writing not saved yet -
+      the most complete version of the board;
+    - a picture like one of the last 8 saved (going back and forth between slides) is not saved again."""
+    BIG, SMALL, SAME, STILL = 0.15, 0.03, 0.02, 0.005
+    PREV = 0.01           # the board before it changes is kept from 1% of new writing (one more line counts)
+    WRITE_GAP_S = 45      # writing: at most one picture this often
+    VIDEO_GAP_S = 60      # most of the screen is a video: at most one picture a minute
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.last = None      # the previous look
+        self.motion = None    # per spot: how often it changed between looks (0-1, slowly forgotten)
+        self.saved = None     # the last saved picture (or one it is the same as)
+        self.recent = collections.deque(maxlen=8)
+        self.still = 0        # looks in a row in which nothing calm moved
+        self.prev_since = 0.0  # the previous look: how far it was from the saved picture
+        self.prev_kept = False
+        self.last_save = 0.0
+        self.looks = 0        # looks since the start (or since the area changed)
+
+    def start_from(self, small):
+        """After a pause: this is only the starting point - not saved."""
+        self.reset()
+        self.last, self.saved = small, small
+        self.motion = np.zeros(small.shape, np.float32)
+
+    def _diff(self, a, b, calm, n):
+        return float(((np.abs(a - b) > 25) & calm).sum()) / n
+
+    def look(self, small, now):
+        """-> what to save now: "prev" (the look before this one) and/or "cur" (this one)."""
+        if self.last is None or self.last.shape != small.shape:
+            self.reset()
+            self.last, self.saved, self.motion = small, small, np.zeros(small.shape, np.float32)
+            self.recent.append(small)
+            self.last_save = now
+            return ["cur"]
+        moved = np.abs(small - self.last) > 25
+        self.motion = 0.85 * self.motion + 0.15 * moved
+        self.looks += 1
+        calm = self.motion < 0.35
+        share = float(calm.mean())
+        n = max(1, int(calm.sum()))
+        step = float((moved & calm).sum()) / n
+        self.still = self.still + 1 if step < self.STILL else 0
+        prev_small, self.last = self.last, small
+        if share < 0.25:   # most of it is moving (a video is playing): the old rule, slower
+            if self._diff(small, self.saved, np.ones(small.shape, bool), small.size) >= self.BIG \
+                    and now - self.last_save >= self.VIDEO_GAP_S:
+                return self._keep(small, now, ["cur"])
+            return []
+        since = self._diff(small, self.saved, calm, n)
+        out = []
+        if since >= self.BIG:
+            # the board/slide is changing: first keep the version before, if it had writing not kept yet
+            # (not in the first looks: which spots keep moving - a video - is still being learned then)
+            if self.PREV <= self.prev_since < self.BIG and not self.prev_kept and self.looks >= 5:
+                out.append("prev")
+                self.recent.append(prev_small)
+                self.saved, self.prev_kept = prev_small, True
+                since = self._diff(small, self.saved, calm, n)
+            if self.still >= 1 and since >= self.BIG:
+                if any(self._diff(small, r, calm, n) < self.SAME for r in self.recent):
+                    self.saved = small   # back to a slide that was already saved
+                else:
+                    out = self._keep(small, now, out + ["cur"])
+        elif since >= self.SMALL:
+            if self.still >= 2 and now - self.last_save >= self.WRITE_GAP_S:
+                out = self._keep(small, now, ["cur"])
+        self.prev_since = self._diff(small, self.saved, calm, n)
+        if "cur" in out or self.prev_since < self.PREV:
+            self.prev_kept = False
+        return out
+
+    def _keep(self, small, now, out):
+        self.saved, self.last_save = small, now
+        self.recent.append(small)
+        self.prev_kept = True
+        return out
 
 
 class ScreenWatcher(threading.Thread):
@@ -1343,19 +2272,34 @@ class ScreenWatcher(threading.Thread):
             Image = None
         os.makedirs(self.session_dir, exist_ok=True)
         prev, last_save = None, 0.0
+        cap, resume = capture_control(), False
+        judge, before = SlideJudge(), None   # a live lecture: which looks are worth keeping; the look before this one
         try:
             with (getattr(mss, "MSS", None) or mss.mss)() as sct:
                 mons = sct.monitors
                 mon = mons[SCREEN_MONITOR] if 0 < SCREEN_MONITOR < len(mons) else mons[1]
                 while not self.stop_evt.is_set():
                     try:
-                        area = mon
+                        paused, mode, want, box, blur = cap.snapshot()
+                        if paused:   # the student paused it: nothing is looked at, nothing is saved
+                            resume = True
+                            self.stop_evt.wait(SCREEN_CHECK_S)
+                            continue
+                        area, cover = mon, []
                         if self.region_fn is not None:
                             r = self.region_fn()
                             if r is None:
                                 self.stop_evt.wait(SCREEN_CHECK_S)
                                 continue
                             area = mon if r == "screen" else r
+                        elif mode != "screen":
+                            area, cover = capture_area(mode, want, box, mon)
+                            cap.found = area is not None
+                            if area is None:   # the window is not on the screen / nothing chosen yet: no picture
+                                prev, before = None, None
+                                judge.reset()
+                                self.stop_evt.wait(SCREEN_CHECK_S)
+                                continue
                         shot = sct.grab(area)
                         arr = np.frombuffer(shot.bgra, dtype=np.uint8).reshape(shot.height, shot.width, 4)
                         pixels = None   # the picture to save when windows were painted over
@@ -1367,8 +2311,28 @@ class ScreenWatcher(threading.Thread):
                             except Exception:
                                 self.mask_ok = False   # not on this computer: compare the whole screen as before
                                 save_error("mask windows")
+                        hide = [] if self.region_fn is not None else screen_boxes(blur, mon) + cover
+                        if hide:   # the parts the student chose to hide, and windows that came in front of the lecture
+                            if not arr.flags.writeable:
+                                arr = arr.copy()
+                            if pixelate(arr, rects_in_picture(hide, area if isinstance(area, dict) else mon, arr)):
+                                pixels = arr
                         small = arr[::16, ::16, :3].astype(np.int16).mean(axis=2)
                         now = time.time()
+                        if resume:   # after a pause: only a new starting point - what was on screen then is not saved
+                            prev, resume, before = small, False, None
+                            judge.start_from(small)
+                            self.stop_evt.wait(SCREEN_CHECK_S)
+                            continue
+                        if self.region_fn is None:   # a live lecture: SlideJudge decides
+                            for which in judge.look(small, now):
+                                if which == "prev" and before is not None:
+                                    self._save(before[0], Image, mss.tools, before[1], before[2])
+                                elif which == "cur":
+                                    self._save(shot, Image, mss.tools, now, pixels)
+                            before = (shot, now, pixels)
+                            self.stop_evt.wait(SCREEN_CHECK_S)
+                            continue
                         frac = changed_fraction(small, prev)
                         gap = now - last_save
                         if (frac >= SCREEN_BIG_FRAC and gap >= SCREEN_BIG_GAP_S) or \
@@ -1390,6 +2354,10 @@ class ScreenWatcher(threading.Thread):
                     except Exception as e:
                         log(f"צילום מסך נכשל פעם אחת ({e.__class__.__name__})")
                     self.stop_evt.wait(SCREEN_CHECK_S)
+                # the lecture ended in the middle of writing: keep the last board too
+                if self.region_fn is None and before is not None and not cap.snapshot()[0] \
+                        and judge.prev_since >= SlideJudge.PREV and not judge.prev_kept:
+                    self._save(before[0], Image, mss.tools, before[1], before[2])
         except Exception as e:
             log(f"צילום מסך הופסק ({e.__class__.__name__}) - התמלול ממשיך כרגיל")
 
@@ -4455,7 +5423,8 @@ class App:
                     "progress": progress, "question": self.question, "pending": self.pending,
                     "notes": [n for n in self.notes if n["id"] > notes_since],
                     "lib_rev": self.lib_rev, "first_view": self.first_view,
-                    "screens": SCREEN_ENABLED, "product": PRODUCT, "migrated": self.migrated,
+                    "screens": SCREEN_ENABLED, "capture": capture_control().public(), "math": math_reader().status(),
+                    "product": PRODUCT, "migrated": self.migrated,
                     "course": load_settings().get("course") or "", "connect": self.connect_info(), "mac": IS_MAC,
                     "ai_apps": ai_apps_status(), "update": self.update}
 
@@ -4608,6 +5577,29 @@ class App:
                 return {"ok": False, "error": "לא הצלחתי לשמור את הקובץ (אולי הוא פתוח בתוכנה אחרת)."}
             open_in_explorer("course", course)
             return {"ok": True, "file": lib_rel(out), "lectures": n}
+        if a == "capture_set":
+            capture_control().update(d)
+            return {"ok": True, "capture": capture_control().public()}
+        if a == "capture_pause":
+            cap = capture_control()
+            return {"ok": True, "paused": cap.set_paused(d["on"] if "on" in d else not cap.paused)}
+        if a == "capture_windows":
+            return {"ok": True, "windows": window_choices()}
+        if a == "capture_preview":
+            return capture_preview(d.get("delay"))
+        if a in ("delete_shot", "delete_shots_recent", "delete_lecture_shots"):
+            return self.delete_shots(a, d)
+        if a == "math_set":
+            return math_set(d)
+        if a == "math_lecture":
+            ld = lecture_from_rel(d.get("f"))
+            if ld is None:
+                return {"ok": False, "error": "ההרצאה לא נמצאה."}
+            if not math_reader().status()["on"]:
+                return {"ok": False, "error": "קריאת הנוסחאות כבויה. מפעילים אותה במסך הבית."}
+            return {"ok": True, "queued": math_lecture(ld)}
+        if a == "mark":
+            return self.mark_moment(d.get("kind"))
         if a == "stop":
             self.stop_session(discard=bool(d.get("discard")))
             return {"ok": True}
@@ -4633,6 +5625,58 @@ class App:
             self.quit_evt.set()
             return {"ok": True}
         return {"ok": False, "error": "פקודה לא מוכרת"}
+
+    def mark_moment(self, kind):
+        """Mark this moment of the live lecture: "לא הבנתי" (lost) or "חשוב" (important)."""
+        kind = "חשוב" if kind == "important" else "לא הבנתי"
+        with self.lock:
+            s = self.session
+        fn = getattr(s, "mark_fn", None) if s is not None and not s.done and s.ready else None
+        if fn is None:
+            return {"ok": False, "error": "אפשר לסמן רגע רק בהרצאה חיה שרצה עכשיו."}
+        fn(kind)
+        return {"ok": True, "kind": kind}
+
+    def delete_shots(self, a, d):
+        """Delete slide pictures for good: one picture, the last minutes of the lecture being recorded, or all the
+        pictures of a lecture. (Not the Recycle Bin: a picture may show something private.)"""
+        with self.lock:
+            s, live = self.session, self.live
+        rec_dir = None   # the lecture being recorded right now: its transcript is still being written
+        if s is not None and not s.done and s.kind == "live" and s.transcript:
+            rec_dir = os.path.normcase(os.path.abspath(os.path.dirname(s.transcript)))
+        by_lecture = {}   # lecture folder -> the picture names
+
+        def add(rel):
+            f = safe_shot(rel)
+            if f:
+                by_lecture.setdefault(os.path.dirname(os.path.dirname(f)), set()).add(os.path.basename(f))
+        if a == "delete_shot":
+            add(d.get("p"))
+        elif a == "delete_shots_recent":
+            if live is None or getattr(live, "yt", False) or rec_dir is None:
+                return {"ok": False, "error": "אין הרצאה חיה שרצה עכשיו."}
+            cutoff = time.time() - max(1, min(1440, int(d.get("minutes") or 5))) * 60
+            with live.lock:
+                rels = [x[len("[צילום מסך: "):-1] for t, x in live.all if t >= cutoff and x.startswith("[צילום מסך: ")]
+            for rel in rels:
+                add(rel)
+        else:
+            ld = lecture_from_rel(d.get("f"))
+            if ld is None:
+                return {"ok": False, "error": "ההרצאה לא נמצאה."}
+            sd = os.path.join(ld, SLIDES_NAME)
+            names = {n for n in (os.listdir(sd) if os.path.isdir(sd) else []) if re.fullmatch(r"[\w\-]+\.(jpg|png)", n)}
+            if names:
+                by_lecture[ld] = names
+        n = 0
+        for ld, names in by_lecture.items():
+            n += purge_shots(ld, names, recording=os.path.normcase(os.path.abspath(ld)) == rec_dir)
+        with self.lock:
+            self.lib_rev += 1
+        if not n:
+            return {"ok": False, "error": "לא נמצאו צילומים למחיקה."}
+        return {"ok": True, "deleted": n}
 
     def delete_course(self, name):
         """Delete a whole course folder (its lectures, slides and glossary) - to the Recycle Bin when possible."""
@@ -5373,6 +6417,8 @@ def _app_handler():
                 APP.seen()
                 if p == "/api/upload":
                     return self._json(self._upload(urllib.parse.parse_qs(u.query).get("name", [""])[0]))
+                if p == "/api/ask":   # the built-in tutor (a whole lecture can be sent with a task: a bigger body)
+                    return self._ask(self._body_json(limit=8 << 20))
                 d = self._body_json()  # always read it: the connection is reused
                 if p == "/api/place":
                     rec, live = APP.rec, APP.live
@@ -5388,6 +6434,62 @@ def _app_handler():
                 return self._send(404, b"not found", "text/plain")
             except (ConnectionError, OSError):
                 pass
+
+        def _ask(self, d):
+            """The built-in tutor: the answer is sent as Gemini writes it (plain text; the connection closes at the
+            end). An error before the first word: JSON {"ok": false, "error"}; after it: a last line "⚠ ..."."""
+            s = math_settings()
+            key = read_secret(s.get("key"))
+            if not key or s.get("ask") is False:
+                return self._json({"ok": False, "error": "התשובות בתוך הבנתי לא מוגדרות: במסך הבית, \"AI מובנה בחינם\"."}, 400)
+            reader = math_reader()
+            try:
+                body = tutor_body(d)
+                pieces, first, last_err = None, "", None
+                for model in reader.models_to_try(key):   # busy / retired / slow today: the next model
+                    try:
+                        pieces = gemini_stream(key, model, body)
+                        first = next(pieces, "")
+                        reader.worked(model)
+                        break
+                    except MathError as e:
+                        if not e.other:
+                            raise
+                        last_err, pieces = e, None
+                        reader.failed(model)
+                if pieces is None:
+                    raise last_err or MathError("Gemini לא ענה.")
+            except MathError as e:
+                return self._json({"ok": False, "error": str(e)}, 400)
+            except Exception:
+                save_error("tutor")
+                return self._json({"ok": False, "error": "לא הצלחתי לשאול את Gemini. פרטים ב-error_log.txt."}, 500)
+            self.close_connection = True
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Connection", "close")
+            self.end_headers()
+            out, ok = [first], True
+            try:
+                self.wfile.write(first.encode("utf-8"))
+                self.wfile.flush()
+                for piece in pieces:
+                    out.append(piece)
+                    self.wfile.write(piece.encode("utf-8"))
+                    self.wfile.flush()
+            except MathError as e:
+                ok = False
+                try:
+                    self.wfile.write(("\n\n⚠ " + str(e)).encode("utf-8"))
+                except OSError:
+                    pass
+            except (ConnectionError, OSError):
+                ok = False   # the page stopped it, or was closed
+            answer = "".join(out).strip()
+            if ok and answer:
+                tutor_save(d, answer)
 
         def _upload(self, name):
             """A recording dragged onto the page: the browser sends the file, it is kept in the videos folder."""
@@ -5952,8 +7054,21 @@ def run_live(sess, lang, course=""):
         watcher = ScreenWatcher(ldir, lecture_rel, start.timestamp(), write_line, now_file.add_shot,
                                 region_fn=yt_area if yt else None)
         watcher.start()
+        capture_control().set_paused(False)   # a new lecture always starts un-paused
     else:
         log("צילום מסך כבוי - רק תמלול")
+    if not yt:
+        def mark(kind):
+            """The student marked this moment ("לא הבנתי" / "חשוב"): a line in the transcript - the AI sees it too."""
+            t = time.time()
+            text = f"[סימון: {kind}]"
+            write_line(f"[{datetime.datetime.fromtimestamp(t):%H:%M:%S} | "
+                       f"+{datetime.timedelta(seconds=int(max(0, t - start.timestamp())))}] {text}")
+            now_file.add(t, text)
+        sess.mark_fn = mark
+    hotkey = PauseHotkey()   # Ctrl+Alt+P: pause the pictures, Ctrl+Alt+M: mark "לא הבנתי"
+    hotkey.start()
+    sess.hotkey = hotkey
     ended = [False]
 
     def closing():
@@ -6294,7 +7409,10 @@ def run_live(sess, lang, course=""):
                 pass
         if watcher is not None:
             watcher.stop()
+            watcher.join(5)   # it may keep the last board first (SlideJudge) - before the transcript is closed
             log(f"צילומי מסך שנשמרו: {watcher.count}")
+        if getattr(sess, "hotkey", None) is not None:
+            sess.hotkey.stop()
         closing()
         now_file.ended = True
         if not os.path.isdir(ldir):
