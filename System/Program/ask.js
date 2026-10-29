@@ -49,6 +49,11 @@
 .askp .plan button:hover{background:var(--accent);color:var(--accent-ink)}
 .askp .ais button.here.alt{background:transparent;color:var(--accent);font-weight:600}
 .askp .alt-box{margin-top:6px;display:grid;gap:6px;font-size:14px;line-height:1.5;color:var(--fg)}
+.askp .conv{gap:12px;padding-block:4px}
+.askp .qa{display:grid;gap:6px;background:none;border:0;padding:0}
+.askp .qa .q{justify-self:start;max-width:88%;margin:0;padding:7px 13px;border-radius:16px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:calc(14.5px * var(--tx, 1));line-height:1.5}
+.askp .qa .a{justify-self:end;max-width:96%;padding:8px 13px;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
+.askp .qa.err .a{border-color:var(--rec)}
 `;
   // builtin: answers inside Hevanti with the student's free Gemini key (set from Hevanti's state)
   // plan: "paid" = the student has a paid ChatGPT / Claude / Gemini plan - questions and whole-lecture tasks go to that
@@ -307,7 +312,8 @@
     });
     row.prepend(here);
     refresh();
-    box.append(head, planBox, conn, ta, row, chips, hint, conv, convbar);
+    // like a chat: the conversation first (it grows downward), the box to write in under it
+    box.append(head, planBox, conn, conv, convbar, ta, row, chips, hint);
     return {focus: () => ta.focus(), textarea: ta, refresh, askHere, builtin: hereDefault};
   }
   // open an AI for the course page's "פתיחה בשליש": the course's project link, the connected app, or the site
