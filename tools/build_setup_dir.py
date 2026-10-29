@@ -38,6 +38,11 @@ PRIVACY = """הבנתי (Hevanti) - פרטיות / Privacy
   בתוכנית החינמית Google עשויה להשתמש בהן לשיפור המוצרים שלה. המפתח נשמר מוצפן (Windows DPAPI).
   "Formula reading" (off until you turn it on, with your own Gemini key): slide pictures are sent to Google.
 
+אחריות: הבנתי ניתנת כמו שהיא, בלי אחריות מכל סוג. השימוש בה הוא באחריות המשתמש בלבד. לפני שמשתמשים, כל משתמש צריך
+לבדוק מה הנהלים והכללים במוסד שלו ואצל המרצה. רועי פכטר ומפתחי הכלי אינם אחראים לשימוש בה.
+Responsibility: Hevanti is provided "as is", without warranty of any kind. Use is entirely the user's responsibility.
+Each user must check the rules of their own institution and lecturer before using it. The author and contributors are not liable.
+
 Short version (2.2): what is kept - transcripts, screenshots of what you chose to capture, and the text read from them,
 all on your computer. No account, no server of ours. If the "הקורסים שלי" folder sits inside OneDrive / Google Drive,
 that service copies it to your account there. Text (and a picture, if you attach it) goes to an AI company only when
