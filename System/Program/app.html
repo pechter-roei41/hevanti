@@ -283,6 +283,8 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 /* the home screen: only the lecture types and "הקורסים שלי" - the tips and the how-to bar are gone (the settings and
    the header have them); the first-start popup shows by itself until the key and the window are set */
 #howBar,#tutorBar,#connBar{display:none!important}
+/* dialogs opened from inside the settings (a confirmation, a question, the area picker) must be above it */
+#confirm,#ask,#capModal,#lecMenu{z-index:30}
 .foot [data-how],.foot #connBtn{display:none}
 /* the first-start card */
 .setup{list-style:none;margin:0;padding:0;display:grid;gap:10px}
@@ -1086,9 +1088,9 @@ $("#shotDelMany").addEventListener("click", async () => {
 });
 
 // ---------- formulas and handwriting: Gemini reads the slides (the student's own key, off until turned on) ----------
-let mathSig = "", pastHasImgs = false;
+let mathSig = "", pastHasImgs = false, mathMsg = "";   // mathMsg: the last failure of saving a key (stays until the next try)
 function drawMath() {
-  const m = (app && app.math) || {}, sig = JSON.stringify([m, pastHasImgs]);
+  const m = (app && app.math) || {}, sig = JSON.stringify([m, pastHasImgs, mathMsg]);
   if (sig === mathSig) return;
   mathSig = sig;
   $("#mathOn").checked = !!m.on; $("#mathOn").disabled = !m.has_key; $("#mathForget").hidden = !m.has_key;
@@ -1096,7 +1098,7 @@ function drawMath() {
   $("#planPaid").checked = m.plan === "paid";
   $("#mathSum").textContent = m.has_key ? "· " + [m.ask ? "תשובות פועלות" : "תשובות כבויות", m.on ? "נוסחאות פועל" : ""].filter(Boolean).join(", ") : (m.plan === "paid" ? "· יש מנוי: שאלות הולכות לאפליקציית ה-AI" : "· לא מוגדר");
   $("#mathStat").textContent = (m.has_key ? "המפתח שמור" + (m.model ? " (" + m.model + ")" : "") + "." +
-    (m.on ? " נוסחאות: נקראו בהפעלה הזו " + (m.done || 0) + " שקופיות" + (m.waiting ? ", ממתינות " + m.waiting : "") + "." : "") : "עוד אין מפתח.") + (m.error ? " " + m.error : "");
+    (m.on ? " נוסחאות: נקראו בהפעלה הזו " + (m.done || 0) + " שקופיות" + (m.waiting ? ", ממתינות " + m.waiting : "") + "." : "") : "עוד אין מפתח.") + (m.error ? " " + m.error : "") + (mathMsg ? " " + mathMsg : "");
   $("#pastMath").hidden = !(m.on && pastHasImgs);
 }
 async function mathSend(d, okText) {
@@ -1107,11 +1109,11 @@ async function mathSend(d, okText) {
 }
 $("#mathSave").addEventListener("click", async () => {
   const k = $("#mathKey").value.trim(); if (!k) { toast("צריך להדביק את המפתח."); return; }
-  $("#mathSave").disabled = true; $("#mathStat").textContent = "בודק את המפתח...";
+  $("#mathSave").disabled = true; mathMsg = ""; $("#mathStat").textContent = "בודק את המפתח... (עד כחצי דקה)";
   const r = await mathSend({key: k, ask: true}, "המפתח תקין ונשמר. מעכשיו יש \"תשובה כאן\" בכל תיבת שאלה.");
   $("#mathSave").disabled = false;
   if (r.ok) $("#mathKey").value = "";
-  else { mathSig = ""; $("#mathStat").textContent = "המפתח לא נשמר: " + (r.error || "לא הצלחתי להגיע להבנתי. לרענן את הדף (F5) ולנסות שוב."); }
+  else { mathMsg = "המפתח לא נשמר: " + (r.error || "לא הצלחתי להגיע להבנתי. לרענן את הדף (F5) ולנסות שוב."); mathSig = ""; drawMath(); }
 });
 $("#mathOn").addEventListener("change", () => mathSend({on: $("#mathOn").checked}, $("#mathOn").checked ? "קריאת הנוסחאות פועלת." : "קריאת הנוסחאות כבויה. שקופיות לא נשלחות ל-Google."));
 $("#planPaid").addEventListener("change", () => mathSend({plan: $("#planPaid").checked ? "paid" : "free"}, $("#planPaid").checked ? "מעכשיו שאלות והרצאות שלמות ילכו לאפליקציית ה-AI שלך." : "מעכשיו הבנתי עונה כאן, במכסה החינמית."));
@@ -1146,8 +1148,10 @@ try { tutorBarNo = localStorage.getItem("bzm.tutorNo") === "1"; } catch (e) {}
 $("#tutorGo").addEventListener("click", () => { openSettings("key"); setTimeout(() => $("#mathKey").focus(), 200); });
 $("#tutorNo").addEventListener("click", () => { tutorBarNo = true; $("#tutorBar").hidden = true; try { localStorage.setItem("bzm.tutorNo", "1"); } catch (e) {} });
 $("#mathForget").addEventListener("click", async () => {
-  if (!(await confirmBox("למחוק את המפתח של Gemini?", "קריאת הנוסחאות תיכבה. מה שכבר נקרא נשאר בשקופיות.", "מחיקה"))) return;
-  mathSend({key: ""}, "המפתח נמחק.");
+  if (!(await confirmBox("למחוק את המפתח של Gemini?", "\"תשובה כאן\" וקריאת הנוסחאות ייעצרו עד שתשמרו מפתח חדש. השאלות והתשובות שכבר נשמרו נשארות. המפתח נמחק רק מהמחשב הזה (כדי לבטל אותו גם אצל Google: aistudio.google.com/apikey).", "מחיקה"))) return;
+  setupNo = true; try { localStorage.setItem("bzm.setupNo", "1"); } catch (e) {}   // (deleting is on purpose: the first-start popup must not come back at once)
+  const r = await mathSend({key: ""}, "המפתח נמחק מהמחשב הזה.");
+  if (r && r.ok) $("#mathKey").value = "";
 });
 $("#pastMath").addEventListener("click", async () => {
   if (!pastFile) return;
@@ -1329,7 +1333,8 @@ function render(d) {
   for (const n of d.notes || []) {
     notesSince = Math.max(notesSince, n.id);
     const li = el("li", n.level, n.clock + "  " + n.text); $("#log").prepend(li);
-    if (n.level === "warn") toast(n.text.split("\n")[0]);
+    // (only a fresh warning is shown as a message: opening the page replays the old ones, which are only in the log)
+    if (n.level === "warn" && (!n.t || Date.now() / 1000 - n.t < 25)) toast(n.text.split("\n")[0]);
   }
   // a question (passcode for a link)
   if (d.question && (!lastQ || lastQ !== d.question.id)) {
