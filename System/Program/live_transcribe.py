@@ -2084,8 +2084,33 @@ def ask_on():
     return bool(s.get("key")) and s.get("ask", True) is not False
 
 
-def gemini_stream(key, model, body):
-    """Yields the answer's text as Gemini writes it (server-sent events)."""
+TOKENS_MAX = 512 * 1024
+
+
+def log_tokens(model, usage, body_chars, ok, started, quota=False):
+    """For the developer only: one JSON line per question (model, tokens, size, seconds). Never shown in the app,
+    never holds the question or the answer, never raises."""
+    try:
+        u = usage or {}
+        row = {"t": time.strftime("%Y-%m-%d %H:%M:%S"), "model": model, "ok": bool(ok), "quota": bool(quota),
+               "sec": round(time.time() - started, 1), "chars": body_chars,
+               "prompt": u.get("promptTokenCount"), "out": u.get("candidatesTokenCount"),
+               "thoughts": u.get("thoughtsTokenCount"), "total": u.get("totalTokenCount")}
+        TOKENS_FILE = os.path.join(LOCAL_DIR, "tokens.jsonl")
+        os.makedirs(LOCAL_DIR, exist_ok=True)
+        if os.path.isfile(TOKENS_FILE) and os.path.getsize(TOKENS_FILE) > TOKENS_MAX:
+            with open(TOKENS_FILE, encoding="utf-8") as f:
+                keep = f.readlines()[-500:]
+            with open(TOKENS_FILE, "w", encoding="utf-8") as f:
+                f.writelines(keep)
+        with open(TOKENS_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+
+def gemini_stream(key, model, body, usage=None):
+    """Yields the answer's text as Gemini writes it (server-sent events). `usage` (a dict) gets the token counts."""
     import urllib.error
     import urllib.request
     req = urllib.request.Request(f"{GEMINI_URL}/models/{model}:streamGenerateContent?alt=sse", method="POST",
@@ -2108,6 +2133,8 @@ def gemini_stream(key, model, body):
                 d = json.loads(line[5:].strip())
             except ValueError:
                 continue
+            if usage is not None and isinstance(d.get("usageMetadata"), dict):
+                usage.update(d["usageMetadata"])
             for c in d.get("candidates") or []:
                 for p in (c.get("content") or {}).get("parts") or []:
                     if isinstance(p, dict) and p.get("text") and not p.get("thought"):
@@ -6480,11 +6507,13 @@ def _app_handler():
             try:
                 body = tutor_body(d)
                 pieces, first, last_err, quota_err = None, "", None, None
+                usage, started, chars, used = {}, time.time(), len(json.dumps(body, ensure_ascii=False)), ""
                 for model in reader.models_to_try(key):   # busy / retired / slow today: the next model
                     try:
-                        pieces = gemini_stream(key, model, body)
+                        pieces = gemini_stream(key, model, body, usage)
                         first = next(pieces, "")
                         reader.worked(model)
+                        used = model
                         break
                     except MathError as e:
                         if not e.other:
@@ -6493,6 +6522,7 @@ def _app_handler():
                         if e.kind == "quota":
                             quota_err = e
                         reader.failed(model, e)
+                        log_tokens(model, None, chars, False, started, e.kind == "quota")
                 if pieces is None:
                     raise quota_err or last_err or MathError("Gemini לא ענה.")   # (the quota is what one can act on)
             except MathError as e:
@@ -6525,6 +6555,7 @@ def _app_handler():
             except (ConnectionError, OSError):
                 ok = False   # the page stopped it, or was closed
             answer = "".join(out).strip()
+            log_tokens(used, usage, chars, ok and bool(answer), started)
             if ok and answer:
                 tutor_save(d, answer)
 
