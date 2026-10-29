@@ -630,6 +630,14 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <button class="btn ghost" type="button" data-study="formulas">דף נוסחאות</button>
         <button class="btn ghost" type="button" data-study="marks" id="studyMarks" hidden>הסבר לרגעים שסימנתי</button>
       </div>
+      <div class="row" id="studyWhere" hidden style="margin-top:10px">
+        <span class="sub2" style="font-size:14px;color:var(--muted)">איפה לעשות את זה?</span>
+        <div class="seg" role="group" aria-label="איפה לעשות את המשימה">
+          <button type="button" data-w="here">בתוך הבנתי (מכסה חינמית)</button>
+          <button type="button" data-w="app">באפליקציית ה-AI שלי (בלי מכסה)</button>
+        </div>
+      </div>
+      <p class="sub2" id="studyHint" hidden style="margin:6px 0 0;font-size:14px;line-height:1.5;color:var(--muted)"></p>
     </div>
     <div class="card" id="pastAsk" style="margin-bottom:14px"></div>
     <div class="tbox">
@@ -1241,6 +1249,7 @@ function render(d) {
   if (view === "live") renderLiveHead(s);
   drawCaps(); drawMath();
   document.documentElement.classList.toggle("plan-paid", !!(d.math && d.math.plan === "paid")); drawConnBar();
+  if (view === "past") drawStudyWhere();
   if (window.BZMAsk) { BZMAsk.setBuiltin(!!(d.math && d.math.ask)); BZMAsk.setPlan((d.math && d.math.plan) || ""); }
   $("#tutorBar").hidden = !!(d.math && (d.math.has_key || d.math.plan === "paid")) || tutorBarNo;
   if (view === "yt") ytHead(s);
@@ -1942,6 +1951,7 @@ async function openPast(f, at) {
   $("#pastDelShots").hidden = !d.lines.some(x => x.img);
   pastHasImgs = d.lines.some(x => x.img); drawMath();
   $("#studyMarks").hidden = !d.lines.some(markOf);
+  drawStudyWhere();
   $("#pastTitle").textContent = e.title;
   $("#pastSub").textContent = [e.course, e.when, langName(e.lang), e.length ? "אורך " + e.length : "", e.lines + " שורות"].filter(Boolean).join(" · ");
   $("#pastPlay").hidden = !(e.kind === "rec" && e.has_media);
@@ -1995,10 +2005,32 @@ const STUDY = {
   formulas: "תכין דף נוסחאות מההרצאה הזו: כל נוסחה, מה כל סימן אומר, יחידות, ומתי משתמשים בה.",
   marks: "בתמלול יש שורות [סימון: לא הבנתי] ו-[סימון: חשוב] שסימנתי בזמן ההרצאה. לכל \"לא הבנתי\": תסביר בפשטות מה נאמר בדקה-שתיים שלפני הסימון, עם דוגמה. לכל \"חשוב\": תסכם בשורה-שתיים מה נאמר ולמה זה חשוב. לפי הסדר, עם השעה של כל סימון.",
 };
+// Whole-lecture tasks are what uses the free quota most. With a free key the student chooses where they run:
+// inside Hevanti (the free Gemini quota) or in their own AI app (no quota). A paid plan starts on the app.
+const STUDY_BIG = 40000;   // characters of transcript from which a task is called "big" for the free quota
+function studyWhere() {
+  const m = (app && app.math) || {};
+  if (!m.ask) return "app";
+  let w = ""; try { w = localStorage.getItem("bzm.studyWhere") || ""; } catch (e) {}
+  return w === "here" || w === "app" ? w : (m.plan === "paid" ? "app" : "here");
+}
+function drawStudyWhere() {
+  const m = (app && app.math) || {}, box = $("#studyWhere"), hint = $("#studyHint");
+  box.hidden = !m.ask;   // (without a key there is only "the app")
+  const w = studyWhere();
+  box.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.w === w ? "true" : "false"));
+  const big = pastData ? pastText().length : 0;
+  hint.hidden = !(m.ask && w === "here" && big >= STUDY_BIG);
+  if (!hint.hidden) hint.textContent = "ההרצאה הזו ארוכה (בערך " + Math.round(big / 1000) + " אלף תווים), ומשימה על כולה צורכת חלק גדול מהמכסה החינמית. אם יש לך מנוי ל-ChatGPT, Claude או Gemini, עדיף \"באפליקציית ה-AI שלי\".";
+}
+$("#studyWhere").querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+  try { localStorage.setItem("bzm.studyWhere", b.dataset.w); } catch (e) {}
+  drawStudyWhere();
+}));
 document.querySelectorAll("[data-study]").forEach(b => b.addEventListener("click", () => {
   if (!pastData || !pastAskBox) { toast("ההרצאה עוד נטענת."); return; }
   const k = b.dataset.study;
-  if (pastAskBox.builtin()) {   // done right here by Gemini; a summary becomes the lecture's summary
+  if (studyWhere() === "here" && pastAskBox.builtin()) {   // done right here by Gemini; a summary becomes the lecture's summary
     pastAskBox.askHere(STUDY[k], {task: k, title: b.textContent,
       onDone: k === "summary" ? t => { pastSummary = t; drawSummary(); } : null});
     $("#pastAsk").scrollIntoView({block: "start", behavior: "smooth"});
