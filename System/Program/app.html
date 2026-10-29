@@ -287,14 +287,13 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 #confirm,#ask,#capModal,#lecMenu{z-index:30}
 .foot [data-how],.foot #connBtn{display:none}
 .quitrow{display:flex;justify-content:center;margin-top:28px;padding-bottom:24px}
-.optbox{--optfg:#17261F;--fg:#17261F;--muted:#56625B;--bg:#F6F3E9;--line:#C9C2AC;--accent:#1F7A55;--accent-ink:#FFFFFF;--accent-soft:#DCEBDF;--sunk:#ECE7D8;--rec:#C2412D;background:#FFFFFF;color:#17261F;border:1.5px solid #C9C2AC;border-radius:12px;padding:12px 16px;display:grid;gap:8px}
+.optbox{background:var(--surface);color:var(--fg);border:1px solid rgba(255,255,255,.55);border-radius:12px;padding:12px 16px;display:grid;gap:8px}
 .optbox h4{margin:0;font-size:17px;font-weight:800}
-.optbox p{margin:0;font-size:15px;line-height:1.55;color:#3d4a43}
+.optbox p{margin:0;font-size:15px;line-height:1.55;color:var(--muted)}
 .optbox ol{margin:0;padding-inline-start:20px;font-size:15px;line-height:1.6;display:grid;gap:2px}
 .optbox label.row{gap:8px;cursor:pointer;line-height:1.5}
-.optbox .warn{color:#8a3b13;font-weight:700}
-.optbox a{color:#1F7A55}
-.optbox input[type=password]{background:#F6F3E9;color:#17261F}
+.optbox .warn{color:var(--rec);font-weight:700}
+.optbox a{color:var(--accent)}
 /* the first-start card */
 .setup{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .setup li{border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:grid;gap:8px;background:var(--bg)}
@@ -553,25 +552,22 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <summary><b>AI מובנה בחינם (Gemini): תשובות בתוך הבנתי וקריאת נוסחאות</b> <span class="sub2" id="mathSum" style="color:var(--muted)"></span></summary>
       <div style="display:grid;gap:12px;margin-top:10px">
         <div class="optbox">
-          <h4>1. המפתח של Gemini (חינם)</h4>
+          <h4>1. מפתח Gemini ותשובות בתוך הבנתי (חינם)</h4>
           <p>הבנתי עונה בעצמה על שאלות, בעזרת Gemini של Google. לשם כך צריך "מפתח": קוד חינמי, בלי כרטיס אשראי, ובלי תשלום לך ולהבנתי.</p>
           <ol><li>נכנסים ל-<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> עם חשבון Google רגיל.</li><li>לוחצים <b>Create API key</b>, ואז <b>Copy key</b>.</li><li>מדביקים כאן ולוחצים <b>"שמירה ובדיקה"</b>. המפתח נשמר מוצפן, רק במחשב הזה.</li></ol>
           <div class="row"><input type="password" id="mathKey" placeholder="המפתח של Gemini (מתחיל ב-AQ. או ב-AIza)" autocomplete="off" aria-label="מפתח Gemini" dir="ltr"><button class="btn small" id="mathSave" type="button">שמירה ובדיקה</button></div>
+          <label class="row"><input type="checkbox" id="askOn"><b>להפעיל "תשובה כאן" בכל תיבת שאלה</b></label>
+          <p>הבנתי שולחת ל-Gemini רק מה ששואלים: השאלה, הדקות האחרונות מההרצאה והשקופית שעל המסך. התשובה נכתבת מתחת לשאלה, כמו בצ'אט.</p>
           <p class="capstat" id="mathStat" style="margin:0"></p>
           <div class="row"><button class="btn ghost small" id="mathForget" type="button" hidden>מחיקת המפתח</button></div>
         </div>
         <div class="optbox">
-          <h4>2. תשובות בתוך הבנתי</h4>
-          <label class="row"><input type="checkbox" id="askOn"><b>להפעיל "תשובה כאן" בכל תיבת שאלה</b></label>
-          <p>הבנתי שולחת ל-Gemini רק מה ששואלים: השאלה, הדקות האחרונות מההרצאה והשקופית שעל המסך. התשובה נכתבת מתחת לשאלה, כמו בצ'אט. סיכום, כרטיסיות ומבחן דמה נעשים גם הם כאן.</p>
-        </div>
-        <div class="optbox">
-          <h4>3. יש לי מנוי בתשלום</h4>
+          <h4>2. יש לי מנוי בתשלום</h4>
           <label class="row"><input type="checkbox" id="planPaid"><b>יש לי מנוי ל-ChatGPT, Claude או Gemini</b></label>
           <p>שאלות והרצאות שלמות ילכו ישר לאפליקציה שלך, בלי מכסה. "תשובה כאן" נשארת אפשרות חינמית נוספת.</p>
         </div>
         <div class="optbox">
-          <h4>4. קריאת נוסחאות וכתב יד (אופציונלי)</h4>
+          <h4>3. קריאת נוסחאות וכתב יד (אופציונלי)</h4>
           <label class="row"><input type="checkbox" id="mathOn"><b>לקרוא נוסחאות וכתב יד בכל שקופית חדשה</b></label>
           <p>הקריאה הרגילה של השקופיות לא מבינה נוסחאות וכתב יד. כשזה פועל, כל שקופית שנשמרת נשלחת ל-Gemini, והוא כותב את הטקסט והנוסחאות (למשל <code dir="ltr">$I = \int r^2\,dm$</code>) לחיפוש, להכנה למבחן ולתשובות.</p>
           <p class="warn">שימו לב: זה שולח כל שקופית ל-Google.</p>
