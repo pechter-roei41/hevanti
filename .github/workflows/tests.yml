@@ -27,6 +27,8 @@ jobs:
         run: python tools/test_mcp.py
       - name: The AI of each course
         run: python tools/test_course_ai.py
+      - name: The free quota and the paid-plan question
+        run: python tools/test_quota.py
       - name: Photographing the YouTube player
         run: python tools/test_youtube_rect.py
       - name: Stopping a lecture right after starting it

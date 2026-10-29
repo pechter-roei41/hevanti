@@ -510,6 +510,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <details class="card" id="mathBox" style="margin-top:18px">
       <summary><b>AI מובנה בחינם (Gemini): תשובות בתוך הבנתי וקריאת נוסחאות</b> <span class="sub2" id="mathSum" style="color:var(--muted)"></span></summary>
       <div style="display:grid;gap:10px;margin-top:10px">
+        <label class="row" style="gap:8px;cursor:pointer"><input type="checkbox" id="planPaid"><b>יש לי מנוי בתשלום ל-ChatGPT, Claude או Gemini</b> <span class="sub2">(שאלות והרצאות שלמות ילכו ישר לאפליקציה שלך, בלי מכסה; "תשובה כאן" נשארת אופציה חינמית)</span></label>
         <p class="sub" style="margin:0">עם מפתח חינמי אחד של Google, הבנתי עונה בעצמה: בכל תיבת "שאלה ל-AI" (בהרצאה חיה, בחלון הצף, בנגן, ביוטיוב ובהרצאה שנשמרה) יש <b>"תשובה כאן"</b>, והתשובה נכתבת מתחת, עם מה שנאמר בדקות האחרונות והשקופית שעל המסך. גם סיכום, כרטיסיות ומבחן דמה נעשים כאן, בלי להעתיק. אין תשלום: לא לך ולא להבנתי.</p>
         <ol class="sub" style="margin:0;padding-inline-start:20px"><li>מפתח חינמי: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> ← Create API key ← להעתיק. (חשבון Google רגיל, בלי כרטיס אשראי.)</li><li>להדביק כאן וללחוץ "שמירה ובדיקה". המפתח נשמר מוצפן, רק למשתמש שלך במחשב הזה.</li></ol>
         <div class="row"><input type="password" id="mathKey" placeholder="המפתח של Gemini (מתחיל ב-AQ. או ב-AIza)" autocomplete="off" aria-label="מפתח Gemini" dir="ltr"><button class="btn small" id="mathSave" type="button">שמירה ובדיקה</button></div>
@@ -1045,7 +1046,8 @@ function drawMath() {
   mathSig = sig;
   $("#mathOn").checked = !!m.on; $("#mathOn").disabled = !m.has_key; $("#mathForget").hidden = !m.has_key;
   $("#askOn").checked = !!m.ask; $("#askOn").disabled = !m.has_key;
-  $("#mathSum").textContent = m.has_key ? "· " + [m.ask ? "תשובות פועלות" : "תשובות כבויות", m.on ? "נוסחאות פועל" : ""].filter(Boolean).join(", ") : "· לא מוגדר";
+  $("#planPaid").checked = m.plan === "paid";
+  $("#mathSum").textContent = m.has_key ? "· " + [m.ask ? "תשובות פועלות" : "תשובות כבויות", m.on ? "נוסחאות פועל" : ""].filter(Boolean).join(", ") : (m.plan === "paid" ? "· יש מנוי: שאלות הולכות לאפליקציית ה-AI" : "· לא מוגדר");
   $("#mathStat").textContent = (m.has_key ? "המפתח שמור" + (m.model ? " (" + m.model + ")" : "") + "." +
     (m.on ? " נוסחאות: נקראו בהפעלה הזו " + (m.done || 0) + " שקופיות" + (m.waiting ? ", ממתינות " + m.waiting : "") + "." : "") : "עוד אין מפתח.") + (m.error ? " " + m.error : "");
   $("#pastMath").hidden = !(m.on && pastHasImgs);
@@ -1065,6 +1067,7 @@ $("#mathSave").addEventListener("click", async () => {
   else { mathSig = ""; $("#mathStat").textContent = "המפתח לא נשמר: " + (r.error || "לא הצלחתי להגיע להבנתי. לרענן את הדף (F5) ולנסות שוב."); }
 });
 $("#mathOn").addEventListener("change", () => mathSend({on: $("#mathOn").checked}, $("#mathOn").checked ? "קריאת הנוסחאות פועלת." : "קריאת הנוסחאות כבויה. שקופיות לא נשלחות ל-Google."));
+$("#planPaid").addEventListener("change", () => mathSend({plan: $("#planPaid").checked ? "paid" : "free"}, $("#planPaid").checked ? "מעכשיו שאלות והרצאות שלמות ילכו לאפליקציית ה-AI שלך." : "מעכשיו הבנתי עונה כאן, במכסה החינמית."));
 $("#askOn").addEventListener("change", () => mathSend({ask: $("#askOn").checked}, $("#askOn").checked ? "תשובות בתוך הבנתי פועלות." : "תשובות בתוך הבנתי כבויות."));
 let tutorBarNo = false;
 try { tutorBarNo = localStorage.getItem("bzm.tutorNo") === "1"; } catch (e) {}
@@ -1235,8 +1238,8 @@ function render(d) {
   if (d.lib_rev !== libRev && view === "home") loadLib();
   if (view === "live") renderLiveHead(s);
   drawCaps(); drawMath();
-  if (window.BZMAsk) BZMAsk.setBuiltin(!!(d.math && d.math.ask));
-  $("#tutorBar").hidden = !!(d.math && d.math.has_key) || tutorBarNo;
+  if (window.BZMAsk) { BZMAsk.setBuiltin(!!(d.math && d.math.ask)); BZMAsk.setPlan((d.math && d.math.plan) || ""); }
+  $("#tutorBar").hidden = !!(d.math && (d.math.has_key || d.math.plan === "paid")) || tutorBarNo;
   if (view === "yt") ytHead(s);
   floatHead(s);
 }
