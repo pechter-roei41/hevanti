@@ -6502,7 +6502,7 @@ def _app_handler():
             s = math_settings()
             key = read_secret(s.get("key"))
             if not key or s.get("ask") is False:
-                return self._json({"ok": False, "error": "התשובות בתוך הבנתי לא מוגדרות: במסך הבית, \"AI מובנה בחינם\"."}, 400)
+                return self._json({"ok": False, "error": "התשובות בתוך הבנתי לא מוגדרות: בגלגל השיניים (הגדרות) ← מפתח API."}, 400)
             reader = math_reader()
             try:
                 body = tutor_body(d)

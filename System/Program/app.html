@@ -289,7 +289,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 /* 2.2: the animated "how to use" shows the old way (asking another AI app), and each course's AI-project tab is
    for that old way too - both hidden until they are redone around "תשובה כאן" */
 html:not(.plan-paid) #cTabs [data-ct="ai"]{display:none!important}   /* shown to students with a paid AI plan (see render) */
-/* display and accessibility (2.2): chosen in "תצוגה ונגישות", kept in this browser */
+/* display and accessibility (2.2): chosen in the settings (gear) > accessibility, kept in this browser */
 .lines{font-size:calc(17px * var(--tx, 1))}
 .lines li.note,.lines li.gap{font-size:calc(14px * var(--tx, 1))}
 .lines li.mark{background:var(--accent-soft);font-weight:700}
@@ -302,8 +302,16 @@ html.a-contrast :focus-visible{outline:3px solid var(--mark)!important;outline-o
 html.a-still *,html.a-still *::before,html.a-still *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .a11y-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-#a11y label{display:flex;gap:8px;align-items:flex-start;cursor:pointer;line-height:1.5}
-#a11y label input{margin-top:5px}
+#a11y label,#set-a11y label{display:flex;gap:8px;align-items:flex-start;cursor:pointer;line-height:1.5}
+#a11y label input,#set-a11y label input{margin-top:5px}
+/* settings (gear) */
+.settabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:8px}
+.settabs button{border:1.5px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:4px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+.settabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+#setBody{display:grid;gap:12px;min-height:200px}
+.setpanel{display:grid;gap:12px}
+.setpanel > details.card,.setpanel > .capcard{border:0;padding:0;box-shadow:none;background:none}
+.setpanel > details > summary{display:none}
 /* the floating window as large captions */
 .pipbody .pbtn{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:8px;padding:2px 9px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
 body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1fr)}
@@ -432,7 +440,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <button class="brand" id="brand" type="button" title="למסך הבית של האפליקציה"><svg class="logo" width="30" height="30" viewBox="0 0 120 120" aria-hidden="true"><path d="M20 14H100A14 14 0 0 1 114 28V76A14 14 0 0 1 100 90H96L99 110L74 90H20A14 14 0 0 1 6 76V28A14 14 0 0 1 20 14Z" fill="var(--accent)"></path><path d="M35 52L51 68L85 34" fill="none" stroke="var(--mark)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"></path></svg>הבנתי <small>האפליקציה</small></button>
     <span class="pill" id="statePill" aria-live="polite">מוכן</span>
     <span class="pill" id="devPill" hidden></span>
-    <button class="btn ghost small" id="a11yBtn" type="button" aria-haspopup="dialog">תצוגה ונגישות</button>
+    <button class="btn ghost small" id="setBtn" type="button" aria-haspopup="dialog" title="הגדרות: מפתח, מה לצלם, נגישות, חיבור AI, פרטיות"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-3px;margin-inline-end:5px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>הגדרות</button>
     <button class="btn ghost small" type="button" data-how>איך משתמשים?</button>
     <button class="btn quiet small" id="quitBtn" type="button">סגירת האפליקציה</button>
   </div>
@@ -792,6 +800,11 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <div class="row"><input type="text" id="lmName" maxlength="80"><button class="btn ghost small" id="lmRename" type="button">שמירת השם</button></div>
   <div class="row"><button class="btn quiet small" id="lmFolder" type="button">פתיחת התיקייה שלה</button><button class="btn danger small" id="lmDelete" type="button">מחיקת ההרצאה</button><button class="btn quiet" id="lmClose" type="button" style="margin-inline-start:auto">סגירה</button></div>
 </div></div>
+<div class="modal" id="settings" hidden role="dialog" aria-modal="true" aria-labelledby="setT"><div class="card wide" style="max-height:92vh;overflow:auto;align-content:start">
+  <div class="row" style="justify-content:space-between"><h3 id="setT">הגדרות</h3><button class="btn quiet small" id="setClose" type="button">סגירה</button></div>
+  <div id="setTabs" class="settabs" role="tablist" aria-label="לשוניות הגדרות"></div>
+  <div id="setBody"></div>
+</div></div>
 <div class="modal" id="capModal" hidden role="dialog" aria-modal="true" aria-labelledby="capT"><div class="card wide">
   <h3 id="capT">בחירת אזור על המסך</h3>
   <p class="sub" id="capHint" style="margin:0"></p>
@@ -1129,13 +1142,13 @@ $("#setupKey").addEventListener("paste", () => setTimeout(() => { if ($("#setupK
 $("#setupKey").addEventListener("keydown", e => { if (e.key === "Enter") setupSaveKey(); });
 $("#setupWin").addEventListener("click", async () => {
   await capSend({mode: "window"}); await capLoadWins();
-  const box = $("#capHome"); box.scrollIntoView({block: "center", behavior: "smooth"});
+  openSettings("cap");   // the choice is in the settings
   toast("בוחרים את חלון ההרצאה מהרשימה ולוחצים \"שמירה\".");
 });
 $("#setupLater").addEventListener("click", () => { setupNo = true; $("#setupCard").hidden = true; try { localStorage.setItem("bzm.setupNo", "1"); } catch (e) {} });
 let tutorBarNo = false;
 try { tutorBarNo = localStorage.getItem("bzm.tutorNo") === "1"; } catch (e) {}
-$("#tutorGo").addEventListener("click", () => { $("#mathBox").open = true; $("#mathBox").scrollIntoView({block: "start", behavior: "smooth"}); setTimeout(() => $("#mathKey").focus(), 400); });
+$("#tutorGo").addEventListener("click", () => { openSettings("key"); setTimeout(() => $("#mathKey").focus(), 200); });
 $("#tutorNo").addEventListener("click", () => { tutorBarNo = true; $("#tutorBar").hidden = true; try { localStorage.setItem("bzm.tutorNo", "1"); } catch (e) {} });
 $("#mathForget").addEventListener("click", async () => {
   if (!(await confirmBox("למחוק את המפתח של Gemini?", "קריאת הנוסחאות תיכבה. מה שכבר נקרא נשאר בשקופיות.", "מחיקה"))) return;
@@ -1188,12 +1201,44 @@ for (const [id, k] of [["#a11yZoom", "zoom"], ["#a11yTx", "tx"]])
   $(id).querySelectorAll("button").forEach(b => b.addEventListener("click", () => a11ySet(k, +b.dataset.v)));
 for (const [id, k] of [["#a11yRead", "read"], ["#a11yContrast", "contrast"], ["#a11yStill", "still"], ["#a11ySay", "say"]])
   $(id).addEventListener("change", () => a11ySet(k, $(id).checked));
-$("#a11yBtn").addEventListener("click", () => { a11yDraw(); $("#a11y").hidden = false; $("#a11yClose").focus(); });
-$("#a11yClose").addEventListener("click", () => { $("#a11y").hidden = true; $("#a11yBtn").focus(); });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#a11y").hidden) { $("#a11y").hidden = true; $("#a11yBtn").focus(); } });
 a11yApply();
 // new lines of a live lecture, read aloud by a screen reader (when chosen)
 function srSay(text) { if (a11y.say && text) { const s = $("#srLive"); s.textContent = ""; setTimeout(() => { s.textContent = text; }, 50); } }
+
+// ---------- settings (the gear): the key, what to photograph, accessibility, connect an AI app, privacy ----------
+// The pieces already exist on the page (with their buttons): they are moved into the tabs once, here.
+const SET_TABS = [["key", "מפתח API (תשובות)"], ["cap", "מה הבנתי מצלמת"], ["a11y", "נגישות"], ["ai", "חיבור AI"], ["priv", "פרטיות"]];
+const setPanels = {};
+(function buildSettings() {
+  const tabs = $("#setTabs"), body = $("#setBody");
+  for (const [id, label] of SET_TABS) {
+    const b = el("button", "", label); b.type = "button"; b.dataset.t = id; b.id = "settab-" + id;
+    b.setAttribute("role", "tab"); b.addEventListener("click", () => openSettings(id)); tabs.appendChild(b);
+    const p = el("div", "setpanel"); p.id = "set-" + id; p.hidden = true; p.setAttribute("role", "tabpanel"); p.setAttribute("aria-labelledby", "settab-" + id);
+    body.appendChild(p); setPanels[id] = p;
+  }
+  const mb = $("#mathBox"); mb.open = true; setPanels.key.appendChild(mb);
+  setPanels.cap.appendChild($("#capHome"));
+  const pb = $("#privBox"); pb.open = true; setPanels.priv.appendChild(pb);
+  const card = $("#a11y .card");   // accessibility: its choices (not its own title and close button)
+  for (const x of [...card.children]) if (x.id !== "a11yT" && !x.querySelector("#a11yClose")) setPanels.a11y.appendChild(x);
+  const ai = setPanels.ai;
+  ai.append(el("p", "", "אם יש לך מנוי ל-Claude או ל-ChatGPT, אפשר לחבר אותם להבנתי: הם קוראים לבד מה נאמר ואת השקופית, ושואלים אותם ישר בחלון שלהם, בלי מכסה ובלי להעתיק."),
+    el("p", "sub", "זה אופציונלי. בלי חיבור, \"תשובה כאן\" והכפתורים שמעתיקים ל-ChatGPT, Gemini ו-Claude עובדים כרגיל."));
+  const row = el("div", "row"), go = el("button", "btn", "פתיחת חיבור AI"); go.type = "button"; go.addEventListener("click", () => { $("#settings").hidden = true; $("#connBtn").click(); });
+  row.appendChild(go); ai.appendChild(row);
+})();
+function openSettings(id) {
+  id = setPanels[id] ? id : "key";
+  $("#settings").hidden = false;
+  for (const [t] of SET_TABS) { setPanels[t].hidden = t !== id; $("#settab-" + t).setAttribute("aria-selected", t === id ? "true" : "false"); }
+  if (id === "cap") { capSig = ""; drawCaps(); if (capOf().mode === "window" && !capWinsAt) capLoadWins(); }
+  if (id === "key") { mathSig = ""; drawMath(); }
+  if (id === "a11y") a11yDraw();
+}
+$("#setBtn").addEventListener("click", () => openSettings("key"));
+$("#setClose").addEventListener("click", () => { $("#settings").hidden = true; $("#setBtn").focus(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#settings").hidden && $("#capModal").hidden) { $("#settings").hidden = true; $("#setBtn").focus(); } });
 
 // ---------- views ----------
 function show(v) {
