@@ -301,7 +301,7 @@ function big(src) { $("#big img").src = src; $("#big").classList.add("on"); }
 $("#big").addEventListener("click", () => $("#big").classList.remove("on"));
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") $("#big").classList.remove("on");
-  if (e.target.closest("input, button, video")) return;
+  if (e.target.closest("input, textarea, select, button, video, [contenteditable]")) return;
   if (e.key === " ") { e.preventDefault(); v.paused ? v.play().catch(() => {}) : v.pause(); }
   if (e.key === "ArrowLeft") v.currentTime = Math.max(0, v.currentTime - 5);
   if (e.key === "ArrowRight") v.currentTime = v.currentTime + 5;
