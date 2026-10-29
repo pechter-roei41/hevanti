@@ -1399,7 +1399,9 @@ document.querySelectorAll("[data-offer]").forEach(b => b.addEventListener("click
 (function panoBookmark() {
   const code = `(async()=>{const H=${JSON.stringify(location.origin)};const u=new URL(location.href);` +
     `const id=u.searchParams.get("id")||u.searchParams.get("tid");const tid=!u.searchParams.get("id")&&!!u.searchParams.get("tid");` +
-    `if(!/panopto/i.test(location.hostname)||!id){alert("הבנתי: לפתוח קודם את ההקלטה בפנופטו עצמו (לא בתוך מודל), ואז ללחוץ שוב.");return}` +
+    `if(!/panopto/i.test(location.hostname)||!id){const f=[...document.querySelectorAll("iframe")].map(x=>x.src||x.dataset.src||"").find(s=>/panopto/i.test(s)&&/[?&](id|tid)=/.test(s));` +
+    `if(f){alert("הבנתי: ההקלטה מוטמעת בתוך דף מודל. פותחת אותה בלשונית חדשה: שם ללחוץ שוב על הסימנייה.");window.open(f,"_blank");return}` +
+    `alert("הבנתי: לפתוח קודם את ההקלטה בפנופטו עצמו (לא בתוך מודל), ואז ללחוץ שוב.");return}` +
     `try{const r=await fetch(location.origin+"/Panopto/Pages/Viewer/DeliveryInfo.aspx",{method:"POST",credentials:"include",` +
     `headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},body:(tid?"tid=":"deliveryId=")+encodeURIComponent(id)+"&isEmbed=true&responseType=json"});` +
     `const j=await r.json();const d=j.Delivery||{};const p=(d.PodcastStreams||[])[0]||(d.Streams||[])[0];` +
