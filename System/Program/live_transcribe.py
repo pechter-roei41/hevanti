@@ -3359,6 +3359,136 @@ def write_glossary(course, text):
     return words
 
 
+# ----- the course's syllabus: the student uploads it, Gemini reads it once -----
+# It gives the glossary its terms (names of the lecturers too) and is added to the course's text, so that a mock
+# exam / summary follows the topics the lecturer really listed. The original file is kept next to the text.
+SYLLABUS_NAME = "סילבוס.txt"
+SYLLABUS_ORIG = "סילבוס (המקור)"
+SYLLABUS_EXTS = (".pdf", ".docx", ".txt", ".md")
+SYLLABUS_MAX = 15 << 20
+SYLLABUS_PROMPT = (
+    "זה הסילבוס (תכנית הקורס) של קורס אוניברסיטאי. החזר JSON בלבד, בלי טקסט נוסף, במבנה:\n"
+    '{"summary": "...", "terms": ["..."]}\n'
+    "summary: תקציר מסודר בעברית של הסילבוס, עד 4500 תווים: שם הקורס, נושאי הקורס לפי הסדר (שבוע או נושא), "
+    "ספרי לימוד וחומרי קריאה, מבנה הציון ופרטי המבחן אם כתוב. רק מה שכתוב במסמך, בלי להמציא.\n"
+    "terms: עד 60 מונחים שכדאי שתמלול של ההרצאות יכתוב נכון: מונחים מקצועיים (באנגלית אם כך הם נאמרים בהרצאה), "
+    "שמות חוקרים ושמות הנוסחאות או החוקים, ושמות המרצה והמתרגלים. הכי חשובים קודם. כל מונח קצר, עד 5 מילים.")
+
+
+def syllabus_path(course):
+    return os.path.join(course_dir(course), SYLLABUS_NAME)
+
+
+def read_syllabus(course):
+    try:
+        with open(syllabus_path(course), encoding="utf-8", errors="replace") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def syllabus_info(course):
+    text = read_syllabus(course)
+    orig = ""
+    try:
+        orig = next((n for n in os.listdir(course_dir(course)) if n.startswith(SYLLABUS_ORIG)), "")
+    except OSError:
+        pass
+    return {"has": bool(text), "chars": len(text), "file": orig}
+
+
+def _docx_text(data):
+    import io
+    import zipfile
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        xml = z.read("word/document.xml").decode("utf-8", "replace")
+    xml = re.sub(r"</w:p>", "\n", xml)
+    xml = re.sub(r"<[^>]+>", "", xml)
+    import html
+    return html.unescape(xml)
+
+
+def gemini_generate(key, parts, timeout=120):
+    """One Gemini answer (JSON text) for a non-chat job, the models tried like the tutor does."""
+    reader = math_reader()
+    last = None
+    for model in reader.models_to_try(key):
+        try:
+            d = gemini_call(f"models/{model}:generateContent", key, {
+                "contents": [{"role": "user", "parts": parts}],
+                "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"}}, timeout=timeout)
+            reader.worked(model)
+            cands = d.get("candidates") or []
+            ps = ((cands[0].get("content") or {}).get("parts") or []) if cands else []
+            return "".join(p.get("text", "") for p in ps if isinstance(p, dict)).strip()
+        except MathError as e:
+            if not e.other:
+                raise
+            last = e
+            reader.failed(model, e)
+    raise last or MathError("Gemini עמוס כרגע. לנסות שוב עוד רגע.", 60)
+
+
+def import_syllabus(course, filename, data):
+    """The uploaded syllabus -> (summary text saved in the course folder, terms added to the glossary)."""
+    import base64
+    ext = os.path.splitext(filename or "")[1].lower()
+    if ext not in SYLLABUS_EXTS:
+        return {"ok": False, "error": "הסילבוס צריך להיות קובץ PDF, Word (docx) או טקסט."}
+    if not data:
+        return {"ok": False, "error": "הקובץ ריק."}
+    key = read_secret(math_settings().get("key"))
+    if not key:
+        return {"ok": False, "error": "כדי לקרוא את הסילבוס צריך מפתח Gemini: בגלגל השיניים (הגדרות) ← מפתח API."}
+    if ext == ".pdf":
+        parts = [{"inline_data": {"mime_type": "application/pdf", "data": base64.b64encode(data).decode("ascii")}}]
+    else:
+        try:
+            text = _docx_text(data) if ext == ".docx" else data.decode("utf-8", "replace")
+        except Exception:
+            return {"ok": False, "error": "לא הצלחתי לקרוא את הקובץ. אפשר לנסות לשמור אותו כ-PDF."}
+        parts = [{"text": "הסילבוס:\n" + text[:60000]}]
+    parts.append({"text": SYLLABUS_PROMPT})
+    try:
+        out = gemini_generate(key, parts)
+        d = json.loads(re.sub(r"^```[a-zA-Z]*\n?|\n?```$", "", out).strip())
+    except MathError as e:
+        return {"ok": False, "error": str(e)}
+    except ValueError:
+        return {"ok": False, "error": "Gemini לא החזיר תשובה מסודרת. לנסות שוב."}
+    summary = str(d.get("summary") or "").strip()[:6000]
+    terms = [" ".join(str(t).split())[:60] for t in (d.get("terms") or []) if isinstance(t, str)]
+    terms = [t for t in terms if t][:60]
+    if not summary:
+        return {"ok": False, "error": "לא מצאתי בקובץ תוכן של סילבוס."}
+    cd = course_dir(course)
+    os.makedirs(cd, exist_ok=True)
+    for n in os.listdir(cd):   # one syllabus per course: the old original goes
+        if n.startswith(SYLLABUS_ORIG):
+            _remove_quietly(os.path.join(cd, n))
+    with open(os.path.join(cd, SYLLABUS_ORIG + ext), "wb") as f:
+        f.write(data)
+    with open(syllabus_path(course), "w", encoding="utf-8") as f:
+        f.write(summary + "\n")
+    have = read_glossary(course)
+    low = {t.lower() for t in have}
+    new = [t for t in terms if t.lower() not in low]
+    if new:
+        write_glossary(course, "\n".join(have + new))
+    return {"ok": True, "terms": new, "chars": len(summary)}
+
+
+def delete_syllabus(course):
+    cd = course_dir(course)
+    try:
+        for n in os.listdir(cd):
+            if n == SYLLABUS_NAME or n.startswith(SYLLABUS_ORIG):
+                _remove_quietly(os.path.join(cd, n))
+    except OSError:
+        pass
+    return {"ok": True}
+
+
 def create_course(name, terms=None):
     """A new course folder, with the terms the student chose from the suggestions (or an empty glossary)."""
     name = clean_name(name)
@@ -5526,6 +5656,8 @@ class App:
             with self.lock:
                 self.lib_rev += 1
             return {"ok": True, "terms": len(words)}
+        if a == "delete_syllabus":
+            return delete_syllabus(course)
         if a in ("move_lecture", "rename_lecture", "delete_lecture"):
             return self.change_lecture(a, d)
         if a == "delete_course":
@@ -6122,6 +6254,9 @@ def course_text(course):
             "[טקסט בשקופית: ...] = מה שהיה כתוב על השקופית או על הלוח באותו רגע (נקרא אוטומטית מהתמונה).")
     if terms:
         head += "\nמונחים בקורס: " + ", ".join(terms[:60])
+    syl = read_syllabus(course)
+    if syl:
+        head += "\n\n=== הסילבוס של הקורס (מה שהמרצה פרסם: נושאים, חומר ומבחן) ===\n" + syl
     return head + "\n\n" + "\n\n".join(parts), len(parts)
 
 
@@ -6334,7 +6469,8 @@ def _app_handler():
                     c = clean_name(q.get("c", [""])[0])
                     if not c or not os.path.isdir(course_dir(c)):
                         return self._json({"none": True}, 404)
-                    return self._json({"name": c, "glossary": glossary_text(c), "ai": course_ai_info(c)})
+                    return self._json({"name": c, "glossary": glossary_text(c), "ai": course_ai_info(c),
+                                       "syllabus": syllabus_info(c)})
                 if p == "/api/mirror":
                     return self._json(dict(mirror_status(), place_ai=load_settings().get("place_ai", True),
                                            check_updates=load_settings().get("check_updates", True)))
@@ -6388,6 +6524,22 @@ def _app_handler():
                 APP.seen()
                 if p == "/api/upload":
                     return self._json(self._upload(urllib.parse.parse_qs(u.query).get("name", [""])[0]))
+                if p == "/api/syllabus":   # the course's syllabus (the file itself as the body)
+                    q = urllib.parse.parse_qs(u.query)
+                    c = clean_name(q.get("c", [""])[0])
+                    size = int(self.headers.get("Content-Length") or 0)
+                    if not c or not os.path.isdir(course_dir(c)):
+                        self.close_connection = True
+                        return self._json({"ok": False, "error": "הקורס לא נמצא."}, 404)
+                    if size > SYLLABUS_MAX:
+                        self.close_connection = True
+                        return self._json({"ok": False, "error": "הקובץ גדול מדי (עד 15MB)."}, 413)
+                    data = self._body(SYLLABUS_MAX)
+                    out = import_syllabus(c, q.get("name", [""])[0], data)
+                    if out.get("ok"):
+                        with APP.lock:
+                            APP.lib_rev += 1
+                    return self._json(out)
                 if p == "/api/ask":   # the built-in tutor (a whole lecture can be sent with a task: a bigger body)
                     return self._ask(self._body_json(limit=8 << 20))
                 d = self._body_json()  # always read it: the connection is reused
