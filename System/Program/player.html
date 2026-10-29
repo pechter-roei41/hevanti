@@ -379,7 +379,7 @@ if (window.BZMAsk) {
     hasImage: () => !!shotNow, imageName: "השקופית", example: "מה הוא הסביר בדקה הזו?",
     shotName: () => shotNow, where: () => "rec"});
   fetch("/api/app", {cache: "no-store"}).then(r => r.json()).then(d => {
-    BZMAsk.setConnected(d.connect); BZMAsk.setApps(d.ai_apps); BZMAsk.setBuiltin(!!(d.math && d.math.ask));
+    BZMAsk.setConnected(d.connect); BZMAsk.setApps(d.ai_apps); BZMAsk.setBuiltin(!!(d.math && d.math.ask)); BZMAsk.setPlan((d.math && d.math.plan) || "");
   }).catch(() => {});
 }
 $("#copyImg").addEventListener("click", async () => {
