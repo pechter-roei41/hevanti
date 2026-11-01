@@ -369,5 +369,5 @@
     on = !!on;
     if (on !== AI.builtin) { AI.builtin = on; for (const b of boxes) b(); }
   }
-  window.BZMAsk = {mount, AIS, copyText, setConnected, setApps, addCss, openFor, setCourseFn, setBuiltin, setPlan};
+  window.BZMAsk = {render: renderAnswer, mount, AIS, copyText, setConnected, setApps, addCss, openFor, setCourseFn, setBuiltin, setPlan};
 })();

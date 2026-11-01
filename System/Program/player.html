@@ -66,6 +66,12 @@ video{width:100%;max-height:calc(100vh - 230px);display:block;background:#000}
 #lines{list-style:none;margin:0;padding:8px 6px 40vh;overflow-y:auto;flex:1;min-height:0;position:relative}
 #lines li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:5px 8px;border-radius:8px;cursor:pointer;align-items:start}
 #lines li:hover{background:var(--sunk)}
+#lines li.mk-imp{background:rgba(232,176,0,.16);box-shadow:inset -4px 0 0 #e0a800}
+#lines li.mk-lost{background:rgba(217,83,79,.14);box-shadow:inset -4px 0 0 #d9534f}
+#lines li.mk-imp.mk-lost{background:linear-gradient(90deg,rgba(217,83,79,.14),rgba(232,176,0,.16))}
+.mk{display:inline-block;min-width:1.1em;margin-inline-end:5px;font:700 14px/1 var(--f-ui,inherit);text-align:center;border-radius:50%;padding:2px 3px}
+.mk.imp{color:#fff;background:#d99a00}
+.mk.lost{color:#fff;background:#d9534f}
 #lines li.now{background:var(--now);color:var(--now-ink)}
 .ts{font-family:var(--f-mono);font-size:13px;color:var(--accent);direction:ltr;unicode-bidi:isolate;padding-top:3px;white-space:nowrap}
 #lines li.gap{cursor:default;color:var(--muted);font-style:italic}
@@ -156,7 +162,7 @@ async function poll() {
       $("#chip").textContent = "הכלי סגור"; $("#chip").className = "chip err";
     }
   }
-  setTimeout(poll, st.complete && st.slides_done ? 10000 : 2000);
+  setTimeout(poll, st.complete && st.slides_done ? 3000 : 2000);   // (a mark made in the small window appears within seconds)
 }
 let closedMsg = false;
 
@@ -172,6 +178,8 @@ function apply(d) {
   chip();
   drawBar();
   if (d.lines) render(d.lines);
+  else if (JSON.stringify(st.marks || []) !== marksKey) drawMarks();
+  marksKey = JSON.stringify(st.marks || []);
   if (!resumed && st.resume != null && v.readyState >= 1) resume();
 }
 
@@ -238,10 +246,31 @@ function render(lines) {
     els.push(li); frag.appendChild(li);
   });
   list.replaceChildren(frag);
+  drawMarks();
   filter();
   highlight(true);
   if (keepT != null) { const i = indexAt(keepT); if (els[i]) list.scrollTop = els[i].offsetTop - 8; }
 }
+// the moments the student marked (★ important / ? lost) sit on the transcript line that was playing at that time
+function drawMarks() {
+  els.forEach(li => {
+    li.classList.remove("mk-imp", "mk-lost");
+    li.querySelectorAll(".mk").forEach(b => b.remove());
+  });
+  for (const m of st.marks || []) {
+    let i = indexAt(m.t);
+    while (i > 0 && items[i] && items[i].gap != null) i--;
+    const li = els[i];
+    if (!li || !items[i] || items[i].gap != null) continue;
+    const imp = m.kind === "חשוב";
+    li.classList.add(imp ? "mk-imp" : "mk-lost");
+    const b = document.createElement("span");
+    b.className = "mk " + (imp ? "imp" : "lost"); b.textContent = imp ? "★" : "?";
+    b.title = imp ? "סימנת: חשוב" : "סימנת: לא הבנתי";
+    li.querySelector(".ts").prepend(b);
+  }
+}
+let marksKey = "";
 function center(el, now) { // scroll the transcript (only it - not the page) so el is in the middle
   const top = el.offsetTop - list.clientHeight / 2 + el.offsetHeight / 2;
   list.scrollTo({top: Math.max(0, top), behavior: now ? "auto" : "smooth"});
