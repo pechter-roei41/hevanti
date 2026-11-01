@@ -937,6 +937,44 @@ def load_model(stub_av=True):
 USE_VAD = True
 
 
+# --- noise: what the model writes when there is no speech (a word or a sound repeated again and again, "נאסראראראר") ---
+def _word_key(w):
+    return re.sub(r"[^\w]", "", w)
+
+
+def denoise(text):
+    """Takes the noise out of a piece of transcript: a word (or a phrase of up to five words) said three times or more
+    in a row is kept once, a syllable repeated inside a word ("שיקיקיקיק") is kept once, and a piece with no letters at
+    all (music notes, "[Music]", dots) is dropped. Returns "" for a piece that was only noise."""
+    text = (text or "").strip()
+    if not text:
+        return ""
+    if re.fullmatch(r"[\W_]*(?:[\[(][^\])]*[\])][\W_]*)?", text):   # no letters, or only a tag such as [מוזיקה]
+        return ""
+    toks = text.split()
+    keys = [_word_key(t) for t in toks]
+    out, i = [], 0
+    while i < len(toks):
+        for k in (1, 2, 3, 4, 5):
+            unit = keys[i:i + k]
+            if len(unit) < k or not all(unit):
+                continue
+            j, reps = i + k, 1
+            while j + k <= len(toks) and keys[j:j + k] == unit:
+                reps, j = reps + 1, j + k
+            if reps >= 3:
+                out.extend(toks[j - k:j])   # the last one: it carries the punctuation
+                i = j
+                break
+        else:
+            out.append(toks[i])
+            i += 1
+    text = " ".join(out)
+    text = re.sub(r"([^\W\d_]{2,4}?)\1{2,}", r"\1", text)   # a syllable repeated inside a word (numbers are left alone)
+    text = re.sub(r"([^\W\d_])\1{3,}", r"\1", text)         # one letter stretched ("נננננ")
+    return text if re.search(r"\w", text) else ""
+
+
 def transcribe(model, beam, audio16, prev_text):
     global USE_VAD
     prompt = prompt_now() + " " + prev_text[-150:]
@@ -944,7 +982,7 @@ def transcribe(model, beam, audio16, prev_text):
         segs, _ = model.transcribe(audio16, language=LANG, beam_size=beam,
                                    vad_filter=USE_VAD, condition_on_previous_text=False,
                                    initial_prompt=prompt, **hot_kw())
-        return " ".join(s.text.strip() for s in segs).strip()
+        return denoise(" ".join(s.text.strip() for s in segs))
     except Exception as e:
         if not USE_VAD:
             raise
@@ -969,7 +1007,7 @@ def transcribe_batch(model, beam, audio16, prev_text):
         try:
             segs, _ = _PIPE.transcribe(audio16, language=LANG, beam_size=beam, batch_size=_BATCH_SIZE,
                                        vad_filter=True, initial_prompt=prompt, **hot_kw(batched=True))
-            return [(float(s.start), s.text.strip()) for s in segs]
+            return [(float(s.start), t) for s, t in ((s, denoise(s.text)) for s in segs) if t]
         except Exception as e:
             if "memory" in str(e).lower() and _BATCH_SIZE > 2:
                 _BATCH_SIZE //= 2  # the GPU's memory is too small for 8 at once - try fewer
