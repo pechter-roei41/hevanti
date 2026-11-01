@@ -4446,7 +4446,7 @@ def mini_context(q):
 # --- the floating "?" button: a small round button on top of everything while the small window is closed ---
 # Pressing it opens the small question window and the button hides; hiding / minimizing the window brings it back.
 # It is a window of its own (a layered, no-focus popup, so a click never takes the keyboard from the lecture) and can
-# be dragged to a corner. Only while a live lecture runs.
+# stays in one fixed spot. Only while a live lecture runs.
 def mini_button_wanted():
     if not load_settings().get("mini_button", True):
         return False
@@ -4555,17 +4555,12 @@ class MiniButton(threading.Thread):
                                         ctypes.c_int, wintypes.UINT, wintypes.UINT, ctypes.c_void_p, ctypes.c_void_p, wintypes.UINT]
 
         def place():
-            area, r = wintypes.RECT(), wintypes.RECT()
+            # fixed spot (not movable): the right edge, low on the screen but above the player's controls
+            area = wintypes.RECT()
             u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0)
-            pos = load_settings().get("mini_btn_pos")
-            try:
-                x, y = int(pos[0]), int(pos[1])
-                if not (area.left - S < x < area.right and area.top - S < y < area.bottom):
-                    raise ValueError
-            except (TypeError, ValueError, IndexError):
-                x, y = area.right - S - 14, area.bottom - S - 150
+            x = area.right - S - 12
+            y = area.top + int(0.90 * (area.bottom - area.top)) - S // 2
             u.MoveWindow(self.hwnd, x, y, S, S, True)
-
         def wndproc(hwnd, msg, wp, lp):
             if msg == 0x000F:   # WM_PAINT: a green disc with a white "?"
                 ps = PAINT()
@@ -4589,33 +4584,16 @@ class MiniButton(threading.Thread):
                 return 0
             if msg == 0x0021:   # WM_MOUSEACTIVATE: a click does not take the keyboard from the lecture
                 return 3
-            if msg == 0x0201:   # button down: maybe the start of a drag
-                pt = wintypes.POINT()
-                u.GetCursorPos(ctypes.byref(pt))
-                r = wintypes.RECT()
-                u.GetWindowRect(hwnd, ctypes.byref(r))
-                st["down"], st["moved"] = (pt.x, pt.y, r.left, r.top), False
+            if msg == 0x0201:   # button down
+                st["down"] = True
                 u.SetCapture(hwnd)
                 return 0
-            if msg == 0x0200 and st["down"]:   # move while pressed
-                pt = wintypes.POINT()
-                u.GetCursorPos(ctypes.byref(pt))
-                x0, y0, wl, wt = st["down"]
-                if st["moved"] or abs(pt.x - x0) + abs(pt.y - y0) > 6:
-                    st["moved"] = True
-                    u.MoveWindow(hwnd, wl + pt.x - x0, wt + pt.y - y0, S, S, True)
-                return 0
-            if msg == 0x0202 and st["down"]:   # button up: a click, or the end of a drag
+            if msg == 0x0202 and st["down"]:   # button up: a click (the button goes at once; it stays away a few seconds)
                 u.ReleaseCapture()
-                moved, st["down"] = st["moved"], None
-                if moved:
-                    r = wintypes.RECT()
-                    u.GetWindowRect(hwnd, ctypes.byref(r))
-                    save_settings(mini_btn_pos=[r.left, r.top])
-                else:   # a click: the button goes at once (the window takes a moment to open), and stays away a few seconds
-                    u.ShowWindow(hwnd, 0)
-                    st["shown"], st["hold"] = False, time.time() + 4
-                    threading.Thread(target=self.on_click, daemon=True).start()
+                st["down"] = False
+                u.ShowWindow(hwnd, 0)
+                st["shown"], st["hold"] = False, time.time() + 4
+                threading.Thread(target=self.on_click, daemon=True).start()
                 return 0
             if msg == 0x0113:   # WM_TIMER (twice a second): show / hide as the lecture and the window change
                 want = bool(self.wanted()) and time.time() >= st["hold"]
