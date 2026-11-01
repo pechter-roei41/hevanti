@@ -4340,10 +4340,10 @@ def mini_btn_corner():
     return c if c in MINI_CORNERS else "br"
 
 
-def _mini_btn_xy(area, corner, S=56):
+def _mini_btn_xy(area, corner, S=56, margin=12):
     """The top-left corner of the floating button, in the work area of the main screen: at the edge, the bottom ones a
     bit up from the bottom (above the player's controls), the top ones the same distance from the top."""
-    x = area.left + 12 if corner in ("bl", "tl") else area.right - S - 12
+    x = area.left + margin if corner in ("bl", "tl") else area.right - S - margin
     frac = 0.90 if corner in ("br", "bl") else 0.10
     return x, area.top + int(frac * (area.bottom - area.top)) - S // 2
 
@@ -4593,8 +4593,37 @@ def _logo_pixels(S):
     return im.convert("RGBA").transpose(Image.FLIP_TOP_BOTTOM).tobytes("raw", "BGRA")
 
 
+def _logo_rgba(S):
+    """The logo on a round cream disc with a green ring, as premultiplied BGRA bytes (top-down) for UpdateLayeredWindow:
+    the edge of the disc is smoothed by the alpha channel, and outside the disc the window is transparent."""
+    import numpy as np
+    from PIL import Image, ImageDraw
+    K = 8
+    N = S * K
+    green, yellow, cream = (31, 122, 85, 255), (247, 212, 76, 255), (246, 243, 233, 255)
+    im = Image.new("RGBA", (N, N), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.ellipse([0, 0, N - 1, N - 1], fill=cream, outline=green, width=int(2.4 * K * S / 56))
+    sc = 0.56 * N / 108
+    ox, oy = N / 2 - 60 * sc, N / 2 - 61 * sc
+
+    def P(x, y):
+        return (ox + x * sc, oy + y * sc)
+    d.rounded_rectangle([P(6, 14), P(114, 90)], radius=14 * sc, fill=green)
+    d.polygon([P(96, 88), P(99, 110), P(74, 88)], fill=green)
+    pts = [P(35, 52), P(51, 68), P(85, 34)]
+    d.line(pts, fill=yellow, width=int(12 * sc), joint="curve")
+    for x, y in pts:
+        d.ellipse([x - 6 * sc, y - 6 * sc, x + 6 * sc, y + 6 * sc], fill=yellow)
+    im = im.resize((S, S), Image.LANCZOS)
+    a = np.asarray(im, dtype=np.float32)
+    alpha = a[..., 3:4] / 255.0
+    out = np.concatenate([a[..., 2:3] * alpha, a[..., 1:2] * alpha, a[..., 0:1] * alpha, a[..., 3:4]], axis=2)   # B, G, R, A
+    return np.clip(out + 0.5, 0, 255).astype(np.uint8).tobytes()
+
+
 class MiniButton(threading.Thread):
-    SIZE = 56
+    SIZE = 56   # in "96 dpi" pixels; on a scaled screen the button has the same size on the screen, drawn sharp
 
     def __init__(self, wanted, on_click):
         super().__init__(daemon=True)
@@ -4611,8 +4640,19 @@ class MiniButton(threading.Thread):
     def _loop(self):
         import ctypes
         from ctypes import wintypes
-        u, g, S = ctypes.WinDLL("user32"), ctypes.WinDLL("gdi32"), self.SIZE
+        u, g = ctypes.WinDLL("user32"), ctypes.WinDLL("gdi32")
         LR = ctypes.c_ssize_t
+        # This thread's own windows are drawn in real pixels (per-monitor DPI aware): the rest of the program is not
+        # changed, and the button is not stretched (and blurred) by Windows on a screen with scaling above 100%.
+        scale = 1.0
+        try:
+            u.SetThreadDpiAwarenessContext.argtypes = [ctypes.c_void_p]
+            u.SetThreadDpiAwarenessContext.restype = ctypes.c_void_p
+            if u.SetThreadDpiAwarenessContext(ctypes.c_void_p(-4)):   # DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
+                scale = max(1.0, u.GetDpiForSystem() / 96.0)
+        except Exception:
+            pass
+        S, margin = max(self.SIZE, int(round(self.SIZE * scale))), int(round(12 * scale))
         proc_t = ctypes.WINFUNCTYPE(LR, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)
 
         class WNDCLASS(ctypes.Structure):
@@ -4621,45 +4661,52 @@ class MiniButton(threading.Thread):
                         ("hCursor", wintypes.HANDLE), ("hbrBackground", wintypes.HANDLE),
                         ("lpszMenuName", wintypes.LPCWSTR), ("lpszClassName", wintypes.LPCWSTR)]
 
-        class PAINT(ctypes.Structure):
-            _fields_ = [("hdc", wintypes.HDC), ("erase", wintypes.BOOL), ("rc", wintypes.RECT), ("r", wintypes.BOOL),
-                        ("i", wintypes.BOOL), ("res", ctypes.c_byte * 32)]
-        u.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
-        u.DefWindowProcW.restype = LR
-        u.BeginPaint.argtypes = [wintypes.HWND, ctypes.POINTER(PAINT)]
-        u.BeginPaint.restype = wintypes.HDC
-        u.EndPaint.argtypes = [wintypes.HWND, ctypes.POINTER(PAINT)]
-        u.SetCapture.argtypes = [wintypes.HWND]
-        u.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
-        u.MoveWindow.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.BOOL]
-        u.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
-        u.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
-        u.SetTimer.argtypes = [wintypes.HWND, ctypes.c_size_t, wintypes.UINT, ctypes.c_void_p]
-        u.SetLayeredWindowAttributes.argtypes = [wintypes.HWND, wintypes.DWORD, ctypes.c_ubyte, wintypes.DWORD]
-        u.SetWindowRgn.argtypes = [wintypes.HWND, wintypes.HANDLE, wintypes.BOOL]
-        u.FillRect.argtypes = [wintypes.HDC, ctypes.POINTER(wintypes.RECT), wintypes.HANDLE]
-        u.DrawTextW.argtypes = [wintypes.HDC, wintypes.LPCWSTR, ctypes.c_int, ctypes.POINTER(wintypes.RECT), wintypes.UINT]
-        g.CreateSolidBrush.restype = wintypes.HANDLE
-        g.CreateEllipticRgn.restype = wintypes.HANDLE
-        g.CreateFontW.restype = wintypes.HANDLE
-        g.SelectObject.argtypes = [wintypes.HDC, wintypes.HANDLE]
-        g.SelectObject.restype = wintypes.HANDLE
-        g.DeleteObject.argtypes = [wintypes.HANDLE]
-        g.SetBkMode.argtypes = [wintypes.HDC, ctypes.c_int]
-        g.SetTextColor.argtypes = [wintypes.HDC, wintypes.DWORD]
-        st = {"down": None, "moved": False, "shown": False, "hold": 0.0, "corner": ""}
-        try:
-            pix = ctypes.create_string_buffer(_logo_pixels(S))
-        except Exception:
-            pix = None
-
         class BMIH(ctypes.Structure):
             _fields_ = [("size", wintypes.DWORD), ("w", wintypes.LONG), ("h", wintypes.LONG), ("planes", wintypes.WORD),
                         ("bpp", wintypes.WORD), ("comp", wintypes.DWORD), ("img", wintypes.DWORD), ("xp", wintypes.LONG),
                         ("yp", wintypes.LONG), ("used", wintypes.DWORD), ("imp", wintypes.DWORD)]
-        bmi = BMIH(ctypes.sizeof(BMIH), S, S, 1, 32, 0, 0, 0, 0, 0, 0)
-        g.SetDIBitsToDevice.argtypes = [wintypes.HDC, ctypes.c_int, ctypes.c_int, wintypes.DWORD, wintypes.DWORD, ctypes.c_int,
-                                        ctypes.c_int, wintypes.UINT, wintypes.UINT, ctypes.c_void_p, ctypes.c_void_p, wintypes.UINT]
+
+        class BLEND(ctypes.Structure):
+            _fields_ = [("op", ctypes.c_ubyte), ("flags", ctypes.c_ubyte), ("alpha", ctypes.c_ubyte), ("fmt", ctypes.c_ubyte)]
+        u.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+        u.DefWindowProcW.restype = LR
+        u.SetCapture.argtypes = [wintypes.HWND]
+        u.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+        u.MoveWindow.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.BOOL]
+        u.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
+        u.SetTimer.argtypes = [wintypes.HWND, ctypes.c_size_t, wintypes.UINT, ctypes.c_void_p]
+        u.GetDC.restype = wintypes.HDC
+        u.ReleaseDC.argtypes = [wintypes.HWND, wintypes.HDC]
+        u.UpdateLayeredWindow.argtypes = [wintypes.HWND, wintypes.HDC, ctypes.c_void_p, ctypes.c_void_p, wintypes.HDC,
+                                          ctypes.c_void_p, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD]
+        g.CreateCompatibleDC.argtypes = [wintypes.HDC]
+        g.CreateCompatibleDC.restype = wintypes.HDC
+        g.CreateDIBSection.argtypes = [wintypes.HDC, ctypes.c_void_p, wintypes.UINT, ctypes.POINTER(ctypes.c_void_p),
+                                       wintypes.HANDLE, wintypes.DWORD]
+        g.CreateDIBSection.restype = wintypes.HANDLE
+        g.SelectObject.argtypes = [wintypes.HDC, wintypes.HANDLE]
+        g.SelectObject.restype = wintypes.HANDLE
+        g.DeleteObject.argtypes = [wintypes.HANDLE]
+        g.DeleteDC.argtypes = [wintypes.HDC]
+        st = {"down": None, "shown": False, "hold": 0.0, "corner": ""}
+
+        def draw():
+            """Put the picture on the window (per-pixel alpha: a smooth round edge, and the corners are see-through)."""
+            data = _logo_rgba(S)
+            screen = u.GetDC(None)
+            mdc = g.CreateCompatibleDC(screen)
+            bmi = BMIH(ctypes.sizeof(BMIH), S, -S, 1, 32, 0, 0, 0, 0, 0, 0)   # (negative height: top-down)
+            bits = ctypes.c_void_p()
+            hbm = g.CreateDIBSection(mdc, ctypes.byref(bmi), 0, ctypes.byref(bits), None, 0)
+            ctypes.memmove(bits, data, len(data))
+            old = g.SelectObject(mdc, hbm)
+            size, src = wintypes.SIZE(S, S), wintypes.POINT(0, 0)
+            blend = BLEND(0, 0, 235, 1)   # AC_SRC_OVER, a little see-through overall, AC_SRC_ALPHA
+            u.UpdateLayeredWindow(self.hwnd, screen, None, ctypes.byref(size), mdc, ctypes.byref(src), 0, ctypes.byref(blend), 2)
+            g.SelectObject(mdc, old)
+            g.DeleteObject(hbm)
+            g.DeleteDC(mdc)
+            u.ReleaseDC(None, screen)
 
         def place():
             # a fixed spot at the edge of the screen (not movable): the corner the student chose; the bottom ones a bit
@@ -4667,31 +4714,11 @@ class MiniButton(threading.Thread):
             area = wintypes.RECT()
             u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0)
             corner = mini_btn_corner()
-            x, y = _mini_btn_xy(area, corner, S)
+            x, y = _mini_btn_xy(area, corner, S, margin)
             u.MoveWindow(self.hwnd, x, y, S, S, True)
             st["corner"] = corner
 
         def wndproc(hwnd, msg, wp, lp):
-            if msg == 0x000F:   # WM_PAINT: a green disc with a white "?"
-                ps = PAINT()
-                hdc = u.BeginPaint(hwnd, ctypes.byref(ps))
-                if pix is not None:   # the logo
-                    g.SetDIBitsToDevice(hdc, 0, 0, S, S, 0, 0, 0, S, ctypes.addressof(pix), ctypes.addressof(bmi), 0)
-                    u.EndPaint(hwnd, ctypes.byref(ps))
-                    return 0
-                rc = wintypes.RECT(0, 0, S, S)
-                brush = g.CreateSolidBrush((0x55 << 16) | (0x7A << 8) | 0x1F)   # BGR of #1F7A55
-                u.FillRect(hdc, ctypes.byref(rc), brush)
-                font = g.CreateFontW(-34, 0, 0, 0, 700, 0, 0, 0, 1, 0, 0, 4, 0, "Segoe UI")
-                old = g.SelectObject(hdc, font)
-                g.SetBkMode(hdc, 1)
-                g.SetTextColor(hdc, 0xFFFFFF)
-                u.DrawTextW(hdc, "?", -1, ctypes.byref(rc), 0x25)   # center, vcenter, single line
-                g.SelectObject(hdc, old)
-                g.DeleteObject(font)
-                g.DeleteObject(brush)
-                u.EndPaint(hwnd, ctypes.byref(ps))
-                return 0
             if msg == 0x0021:   # WM_MOUSEACTIVATE: a click does not take the keyboard from the lecture
                 return 3
             if msg == 0x0201:   # button down
@@ -4705,7 +4732,7 @@ class MiniButton(threading.Thread):
                 st["shown"], st["hold"] = False, time.time() + 4
                 threading.Thread(target=self.on_click, daemon=True).start()
                 return 0
-            if msg == 0x0113:   # WM_TIMER (twice a second): show / hide as the lecture and the window change
+            if msg == 0x0113:   # WM_TIMER (four times a second): show / hide as the lecture and the window change
                 want = bool(self.wanted()) and time.time() >= st["hold"]
                 if want and not st["shown"]:
                     place()
@@ -4734,8 +4761,7 @@ class MiniButton(threading.Thread):
         # WS_EX_TOPMOST | TOOLWINDOW | LAYERED | NOACTIVATE, WS_POPUP
         self.hwnd = u.CreateWindowExW(0x8 | 0x80 | 0x80000 | 0x08000000, "HevantiMiniButton", "הבנתי - כפתור שאלות", 0x80000000,
                                       0, 0, S, S, None, None, None, None)
-        u.SetLayeredWindowAttributes(self.hwnd, 0, 230, 2)
-        u.SetWindowRgn(self.hwnd, g.CreateEllipticRgn(0, 0, S + 1, S + 1), True)
+        draw()
         u.SetTimer(self.hwnd, 1, 250, None)
         msg = wintypes.MSG()
         while u.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
