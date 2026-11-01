@@ -813,7 +813,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     </div>
     <figure class="howvid">
       <video controls preload="metadata" poster="/howto.jpg" src="/howto.mp4" aria-label="סרטון הסבר: איך משתמשים בהבנתי"></video>
-      <figcaption>המפתח, ההרצאה, החלון הקטן שנשאר מעל הכל, הסימונים ודף הקורס. לחיצה על פרק קופצת אליו.</figcaption>
+      <figcaption>המפתח, ההרצאה, החלון הקטן שנשאר מעל הכל, הסימונים ודף הקורס. לחיצה על פרק קופצת אליו</figcaption>
     </figure>
     <ol class="chapters" id="howChapters" aria-label="פרקי הסרטון">
       <li><button type="button" data-t="4"><b>0:04</b> מדביקים מפתח Gemini חינמי (פעם אחת)</button></li>
@@ -1317,6 +1317,20 @@ const setPanels = {};
   bc.addEventListener("change", () => api("/api/cmd", {action: "mini_button", on: bc.checked}));
   bl.append(bc, el("b", "", "כפתור ? צף על המסך בזמן הרצאה חיה, כשהחלון הקטן סגור (לחיצה עליו פותחת את החלון)"));
   setPanels.cap.appendChild(bl);
+  // which corner of the screen the floating button sits in
+  const pl = el("div", "row miniopt"), cs = el("div", "seg");
+  cs.id = "miniCorner"; cs.setAttribute("role", "group"); cs.setAttribute("aria-label", "מיקום הכפתור הצף");
+  for (const [k, label] of [["br", "ימין למטה"], ["bl", "שמאל למטה"], ["tl", "שמאל למעלה"], ["tr", "ימין למעלה"]]) {
+    const cb = el("button", "", label); cb.type = "button"; cb.dataset.k = k; cb.setAttribute("aria-pressed", "false");
+    cb.addEventListener("click", async () => {
+      const r = await api("/api/cmd", {action: "mini_btn_corner", corner: k});
+      if (!r.ok) { toast("כדי שזה יעבוד צריך לסגור ולפתוח מחדש את הבנתי."); return; }
+      drawCorner(k);
+    });
+    cs.appendChild(cb);
+  }
+  pl.append(el("b", "", "מיקום הכפתור הצף על המסך"), cs);
+  setPanels.cap.appendChild(pl);
   // how see-through the small window is (the lecture behind it stays visible)
   const ol = el("label", "row miniopt"), oc = el("input"), ov = el("span", "", "60%"); oc.type = "range"; oc.id = "miniOp";
   oc.min = 30; oc.max = 100; oc.step = 5; oc.value = 60; oc.style.width = "160px"; oc.setAttribute("aria-label", "שקיפות החלון הקטן");
@@ -1339,11 +1353,12 @@ const setPanels = {};
   const row = el("div", "row"), go = el("button", "btn", "פתיחת חיבור AI"); go.type = "button"; go.addEventListener("click", () => { $("#settings").hidden = true; $("#connBtn").click(); });
   row.appendChild(go); ai.appendChild(row);
 })();
+function drawCorner(k) { document.querySelectorAll("#miniCorner button").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === k ? "true" : "false")); }
 function openSettings(id) {
   id = setPanels[id] ? id : "key";
   $("#settings").hidden = false;
   for (const [t] of SET_TABS) { setPanels[t].hidden = t !== id; $("#settab-" + t).setAttribute("aria-selected", t === id ? "true" : "false"); }
-  if (id === "cap") { api("/api/mirror").then(m => { $("#miniAuto").checked = m.mini_auto === true; $("#miniBtn").checked = m.mini_button !== false; const o = m.mini_opacity || 60; $("#miniOp").value = o; $("#miniOp").nextElementSibling.textContent = o + "%"; }).catch(() => {}); capSig = ""; drawCaps(); if (capOf().mode === "window" && !capWinsAt) capLoadWins(); }
+  if (id === "cap") { api("/api/mirror").then(m => { $("#miniAuto").checked = m.mini_auto === true; $("#miniBtn").checked = m.mini_button !== false; drawCorner(m.mini_btn_corner || "br"); const o = m.mini_opacity || 60; $("#miniOp").value = o; $("#miniOp").nextElementSibling.textContent = o + "%"; }).catch(() => {}); capSig = ""; drawCaps(); if (capOf().mode === "window" && !capWinsAt) capLoadWins(); }
   if (id === "key") { mathSig = ""; drawMath(); }
   if (id === "a11y") a11yDraw();
 }
