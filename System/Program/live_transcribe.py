@@ -4304,9 +4304,9 @@ def _find_mini(u):
 def mini_opacity():
     """How solid the small window is, in percent (the student chooses it with the slider in the window)."""
     try:
-        return max(30, min(100, int(load_settings().get("mini_opacity", 85))))
+        return max(30, min(100, int(load_settings().get("mini_opacity", 60))))
     except (TypeError, ValueError):
-        return 85
+        return 60
 
 
 def _mini_alpha(u, hwnd, pct):

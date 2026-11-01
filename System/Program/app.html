@@ -1267,6 +1267,19 @@ const setPanels = {};
   mc.addEventListener("change", () => api("/api/cmd", {action: "mini_auto", on: mc.checked}));
   ml.append(mc, el("b", "", "לפתוח את חלון השאלות הקטן לבד כשהרצאה מתחילה"));
   setPanels.cap.appendChild(ml);
+  // how see-through the small window is (the lecture behind it stays visible)
+  const ol = el("label", "row miniopt"), oc = el("input"), ov = el("span", "", "60%"); oc.type = "range"; oc.id = "miniOp";
+  oc.min = 30; oc.max = 100; oc.step = 5; oc.value = 60; oc.style.width = "160px"; oc.setAttribute("aria-label", "שקיפות החלון הקטן");
+  let opT = 0;
+  oc.addEventListener("input", () => {
+    ov.textContent = oc.value + "%"; clearTimeout(opT);
+    opT = setTimeout(async () => {
+      const r = await api("/api/cmd", {action: "mini_opacity", value: +oc.value});
+      if (!r.ok) toast("כדי שהשקיפות תעבוד צריך לסגור ולפתוח מחדש את הבנתי.");
+    }, 150);
+  });
+  ol.append(el("b", "", "שקיפות החלון הקטן (שמאלה: יותר שקוף)"), oc, ov);
+  setPanels.cap.appendChild(ol);
   const pb = $("#privBox"); pb.open = true; setPanels.priv.appendChild(pb);
   const card = $("#a11y .card");   // accessibility: its choices (not its own title and close button)
   for (const x of [...card.children]) if (x.id !== "a11yT" && !x.querySelector("#a11yClose")) setPanels.a11y.appendChild(x);
@@ -1280,7 +1293,7 @@ function openSettings(id) {
   id = setPanels[id] ? id : "key";
   $("#settings").hidden = false;
   for (const [t] of SET_TABS) { setPanels[t].hidden = t !== id; $("#settab-" + t).setAttribute("aria-selected", t === id ? "true" : "false"); }
-  if (id === "cap") { api("/api/mirror").then(m => { $("#miniAuto").checked = m.mini_auto !== false; }).catch(() => {}); capSig = ""; drawCaps(); if (capOf().mode === "window" && !capWinsAt) capLoadWins(); }
+  if (id === "cap") { api("/api/mirror").then(m => { $("#miniAuto").checked = m.mini_auto !== false; const o = m.mini_opacity || 60; $("#miniOp").value = o; $("#miniOp").nextElementSibling.textContent = o + "%"; }).catch(() => {}); capSig = ""; drawCaps(); if (capOf().mode === "window" && !capWinsAt) capLoadWins(); }
   if (id === "key") { mathSig = ""; drawMath(); }
   if (id === "a11y") a11yDraw();
 }
