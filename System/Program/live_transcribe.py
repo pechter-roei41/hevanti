@@ -4251,7 +4251,7 @@ def mirror_status():
 # student's browser, so closing it never closes their tabs.
 MINI_HTML = os.path.join(SCRIPT_DIR, "mini.html")
 MINI_TITLE = "הבנתי - שאלה"
-MINI_SIZE = (430, 600)
+MINI_SIZE = (380, 460)   # small: it stays in a corner of the screen
 _MINI_LOCK = threading.Lock()
 
 
@@ -4316,8 +4316,9 @@ def _show_mini(u, hwnd, place=False):
     u.SetForegroundWindow(hwnd)
 
 
-def toggle_mini(hide_only=False):
-    """Show the small question window (starting it if needed) or hide it."""
+def toggle_mini(hide_only=False, show_only=False):
+    """Show the small question window (starting it if needed) or hide it. show_only: never hides (the lecture
+    just started: bring it forward, whether it is open or not)."""
     if os.name != "nt":
         return {"ok": False, "error": "החלון הקטן עובד רק ב-Windows."}
     import subprocess
@@ -4326,7 +4327,7 @@ def toggle_mini(hide_only=False):
         with _MINI_LOCK:
             hwnd = _find_mini(u)
             if hwnd:
-                if u.IsWindowVisible(hwnd) and not u.IsIconic(hwnd):
+                if u.IsWindowVisible(hwnd) and not u.IsIconic(hwnd) and not show_only:
                     u.ShowWindow(hwnd, 0)   # SW_HIDE
                     return {"ok": True, "shown": False}
                 if hide_only:
@@ -5812,8 +5813,11 @@ class App:
             with self.lock:
                 self.lib_rev += 1
             return {"ok": True, "terms": len(words)}
-        if a in ("toggle_mini", "hide_mini"):
-            return toggle_mini(hide_only=(a == "hide_mini"))
+        if a in ("toggle_mini", "hide_mini", "show_mini"):
+            return toggle_mini(hide_only=(a == "hide_mini"), show_only=(a == "show_mini"))
+        if a == "mini_auto":   # open the small window by itself when a live lecture starts
+            save_settings(mini_auto=bool(d.get("on")))
+            return {"ok": True}
         if a == "delete_syllabus":
             return delete_syllabus(course)
         if a in ("move_lecture", "rename_lecture", "delete_lecture"):
@@ -6633,6 +6637,7 @@ def _app_handler():
                                        "syllabus": syllabus_info(c)})
                 if p == "/api/mirror":
                     return self._json(dict(mirror_status(), place_ai=load_settings().get("place_ai", True),
+                                           mini_auto=load_settings().get("mini_auto", True),
                                            check_updates=load_settings().get("check_updates", True)))
                 if p == "/api/suggest":
                     return self._json(suggest_terms(q.get("c", [""])[0][:120]))
