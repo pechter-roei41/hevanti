@@ -2,10 +2,10 @@
 ; One file, no admin, nothing else to install: Hevanti's own Python with every package already inside.
 ; Installs for this user only (%LOCALAPPDATA%\Programs\Hevanti), so Windows does not ask for an administrator.
 ; The lectures are kept in Documents\הבנתי (not in the program's folder), so an update or uninstall never touches them.
-; Built by .github/workflows/release.yml:  iscc /DAppVersion=2.5 /DSrc=<build folder> installer\hevanti.iss
+; Built by .github/workflows/release.yml:  iscc /DAppVersion=2.6 /DSrc=<build folder> installer\hevanti.iss
 
 #ifndef AppVersion
-  #define AppVersion "2.5"
+  #define AppVersion "2.6"
 #endif
 #ifndef Src
   #define Src "..\build\app"
