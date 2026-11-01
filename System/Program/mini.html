@@ -22,6 +22,7 @@ button,textarea{font:inherit;color:inherit}
 header{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--surface)}
 header b{font-size:15px}
 #lec{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--muted)}
+#op{width:64px;accent-color:var(--accent);cursor:pointer}
 .hb{border:1px solid var(--line);background:none;border-radius:8px;padding:1px 10px;cursor:pointer;font-size:15px;line-height:1.4}
 .hb:hover{background:var(--accent-soft)}
 #note{margin:8px 10px 0;padding:6px 10px;border-radius:10px;background:var(--warn-bg);color:var(--warn-fg);font-size:13px}
@@ -37,6 +38,7 @@ header b{font-size:15px}
 <body>
 <header>
   <b>הבנתי</b><span id="lec">אין עכשיו הרצאה פעילה</span>
+  <input type="range" id="op" min="30" max="100" step="5" value="85" title="שקיפות החלון: שמאלה יותר שקוף" aria-label="שקיפות החלון">
   <button class="hb" id="hide" type="button" title="להסתיר (Ctrl+Alt+Q או Esc)" aria-label="להסתיר">—</button>
 </header>
 <div id="note" hidden>אין עכשיו הרצאה פעילה. מתחילים הרצאה באפליקציה, ואז אפשר לשאול כאן.</div>
@@ -54,6 +56,14 @@ function toast(t) {
 const hide = () => fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
   body: JSON.stringify({action: "hide_mini"})}).catch(() => {});
 $("#hide").addEventListener("click", hide);
+// see-through: the student sees the lecture behind the window (the server applies it to the window and keeps it)
+let opT = 0;
+$("#op").addEventListener("input", e => {
+  clearTimeout(opT); const v = +e.target.value;
+  opT = setTimeout(() => fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
+    body: JSON.stringify({action: "mini_opacity", value: v})}).catch(() => {}), 120);
+});
+fetch("/api/mirror", {cache: "no-store"}).then(r => r.json()).then(d => { if (d.mini_opacity) $("#op").value = d.mini_opacity; }).catch(() => {});
 let box = null;
 if (window.BZMAsk) box = BZMAsk.mount($("#box"), {compact: true, title: "שאלה", placeholder: "מה לא ברור? (Enter לשליחה)",
   context: q => q, toast, hasImage: () => !!shot, image: () => shot, where: () => "mini",
