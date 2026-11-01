@@ -158,7 +158,14 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .cloud b{font-size:17px}
 .cloud p{margin:0;font-size:15px;color:var(--muted);line-height:1.5}
 .cloud .row{gap:8px;flex-wrap:wrap}
-.ctabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0 16px}
+.ctabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:14px 0 16px}
+.mk{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 14px;background:var(--surface)}
+.mk .ic{grid-row:span 2;font-size:24px;line-height:1}
+.mk .ic.lost{color:var(--rec);font-weight:800}
+.mk .ic.imp{color:#C79A00}
+.mk b{font-size:16px}
+.mk .sa{color:var(--muted);font-size:15px;line-height:1.5;grid-column:2}
+.mklist{display:grid;gap:10px;margin:12px 0}
 @media (max-width:760px){.ctabs{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .ctabs button{display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:center;text-align:start;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer;color:var(--fg)}
 .ctabs button .ic{grid-row:span 2;font-size:24px}
@@ -727,6 +734,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <button type="button" role="tab" data-ct="lec"><span class="ic">📚</span><b>ההרצאות</b><small id="ctLec"></small></button>
       <button type="button" role="tab" data-ct="ai"><span class="ic">🤖</span><b>ה-AI של הקורס</b><small id="ctAi"></small></button>
       <button type="button" role="tab" data-ct="exam"><span class="ic">📝</span><b>הכנה למבחן</b><small>מבחן, סיכום, כרטיסיות</small></button>
+      <button type="button" role="tab" data-ct="marks"><span class="ic">⭐</span><b>סימונים</b><small id="ctMarks"></small></button>
       <button type="button" role="tab" data-ct="gl"><span class="ic">📘</span><b>סילבוס ומילון</b><small id="ctGl"></small></button>
     </nav>
     <div class="cpanel" data-cp="lec">
@@ -763,6 +771,12 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
             <button type="button" data-preset="formulas">דף נוסחאות</button>
           </div>
           <div id="cAsk"></div>
+    </div>
+    <div class="cpanel card" data-cp="marks" hidden>
+      <h2>הרגעים שסימנתי</h2>
+      <p class="sub">בחלון השאלות הקטן, ★ מסמן "חשוב" ו-? מסמן "לא הבנתי". כאן יש את כל הסימונים מכל ההרצאות של הקורס. לחיצה על "פתיחה" מפתחת את ההרצאה בדיוק ברגע הזה.</p>
+      <div class="row"><button class="btn small" id="marksAsk" type="button" hidden>הסבר לכל הרגעים (AI)</button></div>
+      <div class="mklist" id="mkList"></div>
     </div>
     <div class="cpanel card" data-cp="gl" hidden>
       <h2>סילבוס ומילון מונחים</h2>
@@ -1789,7 +1803,7 @@ async function openCourse(name) {
   let d; try { d = await api("/api/course?c=" + encodeURIComponent(name)); } catch (e) { d = {none: true}; }
   if (d.none) { $("#cSub").textContent = "הקורס לא נמצא."; return; }
   $("#glossIn").value = d.glossary || ""; $("#sylStat").textContent = "";
-  setCTab("lec"); drawGlCount(); drawSyllabus(d.syllabus);
+  setCTab("lec"); drawGlCount(); drawSyllabus(d.syllabus); drawMarks(name);
   drawCourseAi(d.ai);
   drawCourseLib();
   drawCourseSuggest();
@@ -1940,6 +1954,32 @@ document.querySelectorAll("#cTabs [data-ct], #vCourse [data-goct]").forEach(b =>
   b.addEventListener("click", () => setCTab(b.dataset.ct || b.dataset.goct)));
 function drawGlCount() { const n = $("#glossIn").value.split(/\n+/).filter(x => x.trim()).length; $("#ctGl").textContent = n ? n + " מונחים" : "עוד ריק"; }
 $("#glossIn").addEventListener("input", drawGlCount);
+// the marked moments of the course ("לא הבנתי" and "חשוב", set in the small window or with Ctrl+Alt+M)
+let courseMarks = [];
+async function drawMarks(name) {
+  let r; try { r = await api("/api/marks?c=" + encodeURIComponent(name)); } catch (e) { r = {marks: []}; }
+  if (name !== courseName) return;
+  courseMarks = r.marks || [];
+  const lost = courseMarks.filter(m => m.kind !== "חשוב").length, imp = courseMarks.length - lost;
+  $("#ctMarks").textContent = courseMarks.length ? (lost ? lost + " ? " : "") + (imp ? imp + " ★" : "") : "עוד אין";
+  $("#marksAsk").hidden = !courseMarks.length;
+  const box = $("#mkList");
+  if (!courseMarks.length) { box.replaceChildren(el("p", "sub", "עוד לא סימנת רגעים. בהרצאה חיה, ★ ו-? בחלון השאלות הקטן מסמנים את הרגע (גם Ctrl+Alt+M ל-\"לא הבנתי\").")); return; }
+  box.replaceChildren(...courseMarks.map(m => {
+    const lostM = m.kind !== "חשוב", row = el("div", "mk");
+    const ic = el("span", "ic " + (lostM ? "lost" : "imp"), lostM ? "?" : "★");
+    const open = el("button", "btn ghost small", "פתיחה ברגע הזה"); open.type = "button";
+    open.addEventListener("click", () => { location.hash = "t=" + encodeURIComponent(m.f) + "&at=" + m.t; });
+    row.append(ic, el("b", "", m.kind + " · " + m.title + " · " + m.c), open, el("span", "sa", m.said ? "לפני הסימון נאמר: " + m.said : "(אין תמלול סמוך)"));
+    return row;
+  }));
+}
+$("#marksAsk").addEventListener("click", () => {
+  if (!courseAsk || !courseMarks.length) return;
+  const list = courseMarks.map(m => "- [" + m.kind + "] " + m.title + ", " + m.c + (m.said ? ": " + m.said : "")).join("\n");
+  courseAsk.textarea.value = "אלה הרגעים שסימנתי בקורס:\n" + list + "\n\nלכל \"לא הבנתי\": תסביר בפשטות מה נאמר ברגע הזה, עם דוגמה. לכל \"חשוב\": תסכם בשורה-שתיים למה זה חשוב. לפי הסדר.";
+  setCTab("exam"); courseAsk.focus();
+});
 // the syllabus: uploaded once, read by Gemini (terms for the glossary, topics for exam preparation)
 function drawSyllabus(s) {
   s = s || {};

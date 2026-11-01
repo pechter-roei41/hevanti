@@ -6410,6 +6410,29 @@ def transcript_view(fname):
     return {"entry": entry, "lines": lines}
 
 
+def course_marks(course):
+    """Every moment the student marked ("לא הבנתי" / "חשוב") in the lectures of a course, with what was said just before."""
+    out = []
+    for e in sorted((e for e in library() if e["course"] == course), key=lambda e: e["when"]):
+        v = transcript_view(e["f"])
+        if not v:
+            continue
+        lines = v["lines"]
+        for i, x in enumerate(lines):
+            m = re.match(r"^סימון: (.+)$", x.get("note") or "")
+            if not m:
+                continue
+            said = []
+            for y in reversed(lines[max(0, i - 8):i]):
+                if y.get("x"):
+                    said.append(y["x"])
+                if len(said) >= 3 or sum(len(s) for s in said) > 260:
+                    break
+            out.append({"f": e["f"], "title": e["title"], "when": e["when"], "t": x["t"], "c": x["c"],
+                        "kind": m.group(1), "said": " ".join(reversed(said))[:300]})
+    return out
+
+
 def search(q, course="", limit=300):
     """Every line with these words, in all lectures (or one course). Newest lectures first."""
     words = [w for w in str(q or "").lower().split() if w]
@@ -6686,6 +6709,9 @@ def _app_handler():
                     return self._json(dict(mirror_status(), place_ai=load_settings().get("place_ai", True),
                                            mini_auto=load_settings().get("mini_auto", True), mini_opacity=mini_opacity(),
                                            check_updates=load_settings().get("check_updates", True)))
+                if p == "/api/marks":   # the marked moments of a course
+                    c = clean_name(q.get("c", [""])[0])
+                    return self._json({"marks": course_marks(c) if c and os.path.isdir(course_dir(c)) else []})
                 if p == "/api/suggest":
                     return self._json(suggest_terms(q.get("c", [""])[0][:120]))
                 if p == "/api/course_text":
