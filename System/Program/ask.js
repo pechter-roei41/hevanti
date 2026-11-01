@@ -54,7 +54,21 @@
 .askp .qa .q{justify-self:start;max-width:88%;margin:0;padding:7px 13px;border-radius:16px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:calc(14.5px * var(--tx, 1));line-height:1.5}
 .askp .qa .a{justify-self:end;max-width:96%;padding:8px 13px;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
 .askp .qa.err .a{border-color:var(--rec)}
+.askp .mx{display:inline-block;direction:ltr;unicode-bidi:isolate;vertical-align:middle}
+.askp .mx.d{display:block;text-align:center;margin:4px 0;overflow-x:auto}
+.askp math{font-size:1.12em}
 `;
+  // formulas ($...$ inline, $$...$$ on a line of their own) are drawn by KaTeX (MathML: no fonts or style sheet to carry)
+  if (!window.katex) { const ks = document.createElement("script"); ks.src = "/katex.js"; ks.async = true; document.head.appendChild(ks); }
+  function mathNode(doc, tex, display) {
+    const s = doc.createElement("span"); s.className = display ? "mx d" : "mx";
+    try {
+      if (!window.katex) throw new Error("no katex");
+      s.innerHTML = window.katex.renderToString(tex, {output: "mathml", displayMode: display, throwOnError: false});
+    } catch (e) { s.textContent = (display ? "$$" : "$") + tex + (display ? "$$" : "$"); }
+    return s;
+  }
+  const MATH_RE = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\(.+?\\\)|\$(?=\S)[^$\n]*?\S\$(?!\d)|\$\S\$(?!\d))/;
   // builtin: answers inside Hevanti with the student's free Gemini key (set from Hevanti's state)
   // plan: "paid" = the student has a paid ChatGPT / Claude / Gemini plan - questions and whole-lecture tasks go to that
   // AI's app (no quota); "free" = answers inside Hevanti, with the free Gemini quota; "" = not asked yet (asked once)
@@ -65,14 +79,21 @@
   // an answer as a few simple blocks: "# heading", "- item", **bold** - always as text (never HTML)
   function renderAnswer(doc, box, text) {
     box.replaceChildren();
-    for (let line of String(text).split("\n")) {
+    text = String(text).replace(/\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]/g, m => m.replace(/\n+/g, " "));   // a formula over several lines is one
+    for (let line of text.split("\n")) {
       const p = doc.createElement("div"); p.dir = "auto";
       if (/^#{1,4}\s/.test(line)) { line = line.replace(/^#{1,4}\s*/, ""); p.className = "h"; }
       else if (/^\s*[-*•]\s+/.test(line)) { line = "• " + line.replace(/^\s*[-*•]\s+/, ""); p.className = "li"; }
       if (!line.trim()) p.className = "sp";
-      for (const part of line.split(/(\*\*[^*]+\*\*)/)) {
-        if (/^\*\*[^*]+\*\*$/.test(part)) { const b = doc.createElement("b"); b.textContent = part.slice(2, -2); p.appendChild(b); }
-        else if (part) p.appendChild(doc.createTextNode(part.replace(/(^|[\s(])\*([^*\s][^*]*?)\*(?=$|[\s.,:;!?)])/g, "$1$2")));   // *italic* -> plain
+      for (const seg of line.split(MATH_RE)) {
+        const dm = /^\$\$([\s\S]+)\$\$$/.exec(seg) || /^\\\[([\s\S]+)\\\]$/.exec(seg);
+        const im = !dm && (/^\$(\S|\S[^$\n]*?\S)\$$/.exec(seg) || /^\\\((.+)\\\)$/.exec(seg));
+        if (dm) { p.appendChild(mathNode(doc, dm[1].trim(), line.trim() === seg.trim())); continue; }
+        if (im) { p.appendChild(mathNode(doc, im[1].trim(), false)); continue; }
+        for (const part of seg.split(/(\*\*[^*]+\*\*)/)) {
+          if (/^\*\*[^*]+\*\*$/.test(part)) { const b = doc.createElement("b"); b.textContent = part.slice(2, -2); p.appendChild(b); }
+          else if (part) p.appendChild(doc.createTextNode(part.replace(/(^|[\s(])\*([^*\s][^*]*?)\*(?=$|[\s.,:;!?)])/g, "$1$2")));   // *italic* -> plain
+        }
       }
       box.appendChild(p);
     }

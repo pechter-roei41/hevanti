@@ -2061,8 +2061,9 @@ TUTOR_SYSTEM = (
     "או סרטון) או חוזר על הרצאה. בכל שאלה מצורף התמלול האוטומטי של הדקות האחרונות, ולפעמים תמונה של השקופית או "
     "הלוח שעל המסך. ענה לפי מה שנאמר ומה שבשקופית, וקשר את התשובה לרגע בהרצאה (למשל \"לפני דקה המרצה אמר ש...\"). "
     "כתוב בעברית פשוטה וברורה; מונח מקצועי גם באנגלית בסוגריים. שאלה בזמן הרצאה: תשובה קצרה, 3-6 שורות, כי "
-    "הסטודנט מקשיב - ובסוף אפשר להציע בשורה אחת להרחיב. נוסחאות בכתיב פשוט שקריא כטקסט (כמו I = ∫ r² dm), לא "
-    "LaTeX. התמלול אוטומטי: מילה שלא מתאימה היא כנראה טעות שמיעה - נחש מההקשר, בלי להעיר על זה אלא אם זה משנה. "
+    "הסטודנט מקשיב - ובסוף אפשר להציע בשורה אחת להרחיב. נוסחאות כתוב ב-LaTeX: בתוך שורה בין $...$ "
+    "(למשל $I = \\int r^2\\,dm$), ונוסחה חשובה בשורה נפרדת בין $$...$$. האפליקציה מציגה אותן כנוסחאות. טקסט בעברית "
+    "כתוב מחוץ לנוסחה, לא בתוכה. התמלול אוטומטי: מילה שלא מתאימה היא כנראה טעות שמיעה - נחש מההקשר, בלי להעיר על זה אלא אם זה משנה. "
     "אם התשובה לא נמצאת בהרצאה, ענה מהידע הכללי ואמור שזה לא מההרצאה. לעולם אל תמציא מה המרצה אמר. "
     "זו שיחה: הודעה קצרה כמו \"כן\", \"תרחיב\", \"עוד\" או \"תן דוגמה\" מתייחסת לתשובה האחרונה שלך או להצעה שבסופה. "
     "ענה על זה ישירות, והוסף משהו חדש במקום לחזור על מה שכבר אמרת.")
@@ -5641,6 +5642,7 @@ class VideoSlides(threading.Thread):
 # The black window stays open, minimized: while it is on the taskbar the tool is running, and closing
 # it stops everything. Only this computer can open the page.
 APP_HTML = os.path.join(SCRIPT_DIR, "app.html")
+KATEX_JS = os.path.join(SCRIPT_DIR, "katex", "katex.min.js")   # draws the formulas in the answers (MIT, see katex\LICENSE.txt)
 ASK_JS = os.path.join(SCRIPT_DIR, "ask.js")  # the "ask the AI" box (app + player)
 APP_FILE = os.path.join(LOCAL_DIR, "app.json")  # where the running tool listens - a second launch opens it
 IDLE_EXIT_S = float(os.environ.get("BZM_IDLE_EXIT_S") or 15 * 60)  # nothing running, no page open -> the tool closes
@@ -6648,6 +6650,12 @@ def _app_handler():
                 if p == "/ask.js":
                     try:
                         with open(ASK_JS, "rb") as f:
+                            return self._send(200, f.read(), "text/javascript; charset=utf-8")
+                    except OSError:
+                        return self._send(404, b"", "text/javascript")
+                if p == "/katex.js":
+                    try:
+                        with open(KATEX_JS, "rb") as f:
                             return self._send(200, f.read(), "text/javascript; charset=utf-8")
                     except OSError:
                         return self._send(404, b"", "text/javascript")

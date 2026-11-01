@@ -46,6 +46,7 @@ Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsx
 | `System/Program/app.html` | The app (opens in the browser) |
 | `System/Program/player.html` | The player for recorded lectures |
 | `System/Program/mini.html` | The small always-on-top question window (Ctrl+Alt+Q) |
+| `System/Program/katex/` | [KaTeX](https://katex.org) (MIT), draws the formulas in the answers |
 | `System/Program/ask.js` | The "ask AI" box |
 | `System/Program/hevanti_mcp.py` | The AI connector (MCP server, standard library only): `now`, `transcript`, `slide`, `search`, `moment` (where a topic was explained), `lectures`, plus the prompts `exam`, `summary`, `find_moment` |
 | `System/Program/course_terms.json` | Suggested glossary terms per course, matched by the course name. Corrections and new courses are welcome |
