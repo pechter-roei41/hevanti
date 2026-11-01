@@ -4300,6 +4300,42 @@ def _find_mini(u):
     return found[0] if found else 0
 
 
+def mini_opacity():
+    """How solid the small window is, in percent (the student chooses it with the slider in the window)."""
+    try:
+        return max(30, min(100, int(load_settings().get("mini_opacity", 85))))
+    except (TypeError, ValueError):
+        return 85
+
+
+def _mini_alpha(u, hwnd, pct):
+    """See-through window: the lecture behind it stays visible (a layered window, like Windows does for fades)."""
+    import ctypes
+    from ctypes import wintypes
+    u.GetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int]
+    u.SetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_long]
+    u.SetLayeredWindowAttributes.argtypes = [wintypes.HWND, wintypes.DWORD, ctypes.c_ubyte, wintypes.DWORD]
+    ex = u.GetWindowLongW(hwnd, -20)   # GWL_EXSTYLE
+    u.SetWindowLongW(hwnd, -20, ex | 0x00080000)   # WS_EX_LAYERED
+    u.SetLayeredWindowAttributes(hwnd, 0, int(255 * pct / 100), 2)   # LWA_ALPHA
+
+def set_mini_opacity(value):
+    try:
+        pct = max(30, min(100, int(value)))
+    except (TypeError, ValueError):
+        return {"ok": False, "error": "מספר בין 30 ל-100."}
+    save_settings(mini_opacity=pct)
+    if os.name == "nt":
+        try:
+            u = _mini_user32()
+            hwnd = _find_mini(u)
+            if hwnd:
+                _mini_alpha(u, hwnd, pct)
+        except Exception:
+            save_error("mini opacity")
+    return {"ok": True, "opacity": pct}
+
+
 def _show_mini(u, hwnd, place=False):
     import ctypes
     from ctypes import wintypes
@@ -4310,6 +4346,7 @@ def _show_mini(u, hwnd, place=False):
         if u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0) and u.GetWindowRect(hwnd, ctypes.byref(r)):
             w, h = r.right - r.left, r.bottom - r.top
             u.MoveWindow(hwnd, area.right - w - 16, area.bottom - h - 16, w, h, True)
+    _mini_alpha(u, hwnd, mini_opacity())
     u.SetWindowPos(hwnd, -1, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0040)   # HWND_TOPMOST, no move/size, show
     u.keybd_event(0x12, 0, 0, 0)   # (a tap on Alt lets this program take the keyboard from the lecture's window)
     u.keybd_event(0x12, 0, 2, 0)
@@ -5815,6 +5852,8 @@ class App:
             return {"ok": True, "terms": len(words)}
         if a in ("toggle_mini", "hide_mini", "show_mini"):
             return toggle_mini(hide_only=(a == "hide_mini"), show_only=(a == "show_mini"))
+        if a == "mini_opacity":
+            return set_mini_opacity(d.get("value"))
         if a == "mini_auto":   # open the small window by itself when a live lecture starts
             save_settings(mini_auto=bool(d.get("on")))
             return {"ok": True}
@@ -6637,7 +6676,7 @@ def _app_handler():
                                        "syllabus": syllabus_info(c)})
                 if p == "/api/mirror":
                     return self._json(dict(mirror_status(), place_ai=load_settings().get("place_ai", True),
-                                           mini_auto=load_settings().get("mini_auto", True),
+                                           mini_auto=load_settings().get("mini_auto", True), mini_opacity=mini_opacity(),
                                            check_updates=load_settings().get("check_updates", True)))
                 if p == "/api/suggest":
                     return self._json(suggest_terms(q.get("c", [""])[0][:120]))
