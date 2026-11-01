@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>הבנתי - שאלה</title>
+<title>הבנתי</title>
 <!-- Hevanti (הבנתי) - the small question window (always on top, opened with Ctrl+Alt+Q) - (c) 2026 Roei Pechter. MIT License, see LICENSE.txt -->
 <style>
 :root{
@@ -21,7 +21,7 @@ button,textarea{font:inherit;color:inherit}
 [hidden]{display:none!important}
 header{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--surface)}
 header b{font-size:15px}
-#lec{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--muted)}
+#lec{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:700;color:var(--fg)}
 .hb{border:1px solid var(--line);background:none;border-radius:8px;padding:1px 10px;cursor:pointer;font-size:15px;line-height:1.4}
 .hb:hover{background:var(--accent-soft)}
 #note{margin:8px 10px 0;padding:6px 10px;border-radius:10px;background:var(--warn-bg);color:var(--warn-fg);font-size:13px}
@@ -36,7 +36,7 @@ header b{font-size:15px}
 </head>
 <body>
 <header>
-  <b>הבנתי</b><span id="lec">אין עכשיו הרצאה פעילה</span>
+  <span id="lec">אין עכשיו הרצאה פעילה</span>
  <button class="hb" id="markImp" type="button" title="סימון: חשוב" aria-label="סימון: חשוב">★</button>
  <button class="hb" id="markLost" type="button" title="סימון: לא הבנתי" aria-label="סימון: לא הבנתי">?</button>
  <button class="hb" id="hide" type="button" title="להסתיר (Ctrl+Alt+Q או Esc)" aria-label="להסתיר">—</button>
@@ -75,7 +75,9 @@ async function pollApp() {
   try {
     const d = await getJson("/api/app"), s = d.session;
     live = !!(s && !s.done && s.kind === "live");
-    $("#lec").textContent = live ? (s.title || "הרצאה חיה") : "אין עכשיו הרצאה פעילה";
+    // "הרצאה חיה - <the course>", e.g. "הרצאה חיה - מכניקת מוצקים"
+    const kind = live ? (s.yt ? "סרטון יוטיוב" : "הרצאה חיה") : "";
+    $("#lec").textContent = live ? kind + (s.course && s.course !== "ללא קורס" ? " - " + s.course : "") : "אין עכשיו הרצאה פעילה";
     $("#note").hidden = live;
     if (window.BZMAsk) {
       BZMAsk.setConnected(d.connect); BZMAsk.setApps(d.ai_apps);

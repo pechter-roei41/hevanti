@@ -4251,7 +4251,7 @@ def mirror_status():
 # opened / hidden with Ctrl+Alt+Q (or the button in the page). Its own browser profile keeps it apart from the
 # student's browser, so closing it never closes their tabs.
 MINI_HTML = os.path.join(SCRIPT_DIR, "mini.html")
-MINI_TITLE = "הבנתי - שאלה"
+MINI_TITLE = "הבנתי"   # the page's title; the window is found by an exact match
 MINI_SIZE = (380, 460)   # small: it stays in a corner of the screen
 _MINI_LOCK = threading.Lock()
 
@@ -4282,6 +4282,15 @@ def _mini_user32():
     return u
 
 
+def _is_chrome_window(u, hwnd):
+    """Edge / Chrome windows only (another program might have a window just called "הבנתי")."""
+    import ctypes
+    buf = ctypes.create_unicode_buffer(64)
+    u.GetClassNameW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_int]
+    u.GetClassNameW(hwnd, buf, 64)
+    return buf.value.startswith("Chrome_WidgetWin")
+
+
 def _find_mini(u):
     """The mini window (visible or hidden), or 0."""
     import ctypes
@@ -4292,7 +4301,7 @@ def _find_mini(u):
         try:
             buf = ctypes.create_unicode_buffer(200)
             u.GetWindowTextW(hwnd, buf, 200)
-            if MINI_TITLE in buf.value:   # (the browser wraps a right-to-left title in direction marks)
+            if buf.value.strip("\u202a\u202b\u202c\u200e\u200f ") == MINI_TITLE and _is_chrome_window(u, hwnd):   # (direction marks around it)
                 found.append(hwnd)
         except Exception:
             pass
