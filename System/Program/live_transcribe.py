@@ -6129,8 +6129,8 @@ class App:
         if a == "mini_button":   # the floating "?" button while the small window is closed
             save_settings(mini_button=bool(d.get("on")))
             return {"ok": True}
-        if a == "mini_auto":   # open the small window by itself when a live lecture starts
-            save_settings(mini_auto=bool(d.get("on")))
+        if a == "mini_auto":   # open the small window itself (not only the button) when a live lecture starts - off by default
+            save_settings(mini_open_start=bool(d.get("on")))
             return {"ok": True}
         if a == "rename_course":
             return self.rename_course(d.get("course"), d.get("name"))
@@ -7071,7 +7071,7 @@ def _app_handler():
                                        "syllabus": syllabus_info(c)})
                 if p == "/api/mirror":
                     return self._json(dict(mirror_status(), place_ai=load_settings().get("place_ai", True),
-                                           mini_auto=load_settings().get("mini_auto", True), mini_opacity=mini_opacity(),
+                                           mini_auto=bool(load_settings().get("mini_open_start", False)), mini_opacity=mini_opacity(),
                                            mini_button=load_settings().get("mini_button", True),
                                            check_updates=load_settings().get("check_updates", True)))
                 if p == "/api/marks":   # the marked moments of a course
