@@ -244,7 +244,7 @@
           qa.classList.add("err"); ae.textContent = e.message || "לא הצלחתי לקבל תשובה.";
           if (e.quota) offerElsewhere(qa, q || DEF_Q, extra, e.wait);   // the free quota is used up
         }
-      } finally { setBusy(false); ctl = null; }
+      } finally { setBusy(false); ctl = null; if (opts.compact) { try { ta.focus(); } catch (e) {} } }
     }
     here.addEventListener("click", () => {
       if (busy) { if (ctl) ctl.abort(); return; }
@@ -266,6 +266,10 @@
       }
       const l = getLast();
       for (const a of AIS) buttons[a.id].classList.toggle("last", a.id === l);
+      if (opts.compact) {   // the small window: only "תשובה כאן" (the other buttons only when it is not set up)
+        for (const a of AIS) buttons[a.id].hidden = AI.builtin;
+        chips.hidden = true; hint.hidden = AI.builtin;
+      }
     }
     boxes.push(refresh);
     async function sendQ(a, q, extra) {   // true when the question was copied (and the AI opened)

@@ -621,7 +621,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <div class="what"><b id="liveWhat">הרצאה חיה</b><small id="liveSub">טוען...</small></div>
       <button class="btn ghost" id="markLost" type="button" title="מסמן את הרגע הזה בתמלול. אחרי ההרצאה ה-AI יסביר את כל הרגעים שסימנת. גם Ctrl+Alt+M מכל תוכנה.">❓ לא הבנתי</button>
       <button class="btn ghost" id="markImp" type="button" title="מסמן את הרגע הזה בתמלול כחשוב">⭐ חשוב</button>
-      <button class="btn" type="button" data-float title="חלון קטן שנשאר מעל ההרצאה: מה נאמר, השקופית ושאלה ל-AI. אפשר גם כתוביות גדולות">חלון צף</button>
+      <button class="btn" type="button" data-float title="חלון קטן לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">חלון שאלות קטן</button>
       <button class="btn ghost" id="liveStop" type="button">עצירה</button>
     </div>
     <div class="ended" id="liveEnded" hidden></div>
@@ -653,7 +653,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="livebar">
       <button class="btn ghost back" type="button" data-home>→ למסך הבית</button>
       <div class="what"><b id="ytWhat">סרטון יוטיוב</b><small id="ytSub">טוען...</small></div>
-      <button class="btn" type="button" data-float title="חלון קטן שנשאר מעל הכל: מה נאמר, השקופית ושאלה ל-AI">חלון צף</button>
+      <button class="btn" type="button" data-float title="חלון קטן לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">חלון שאלות קטן</button>
       <button class="btn ghost" id="ytStop" type="button">עצירה</button>
     </div>
     <div class="ended" id="ytEnded" hidden></div>
@@ -792,7 +792,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <li><span class="n">1</span><div><h3>מחברים את התשובות (פעם אחת)</h3><p>בגלגל השיניים <b>⚙ הגדרות ← מפתח API</b> מדביקים מפתח Gemini חינמי. זה לוקח דקה, בלי כרטיס אשראי, ובלי תשלום.</p></div></li>
       <li><span class="n">2</span><div><h3>בוחרים קורס ומה לצלם</h3><p>במסך הבית בוחרים את הקורס. הבנתי מצלמת את כל המסך. אם רוצים רק חלון אחד (למשל הזום) או לטשטש חלקים: <b>⚙ הגדרות ← צילום וטשטוש</b>.</p></div></li>
       <li><span class="n">3</span><div><h3>מתחילים הרצאה</h3><p>לוחצים <b>הרצאה חיה בעברית</b> (או באנגלית), מחכים עד שכתוב "מקליט", ומפעילים את ההרצאה בזום, בהקלטה או ביוטיוב. הבנתי כותבת כל מה שנאמר ושומרת כל שקופית.</p></div></li>
-      <li><span class="n">4</span><div><h3>לא הבנת? שואלים</h3><p>כותבים בתיבת השאלה ולוחצים <b>Enter</b>. Gemini עונה מתחת, לפי מה שנאמר ומה שעל השקופית, וממשיכים לשאול כמו בצ'אט. אפשר גם לסמן רגע עם <b>Ctrl+Alt+M</b> ולקבל הסבר אחרי ההרצאה.</p></div></li>
+      <li><span class="n">4</span><div><h3>לא הבנת? שואלים</h3><p>כותבים בתיבת השאלה ולוחצים <b>Enter</b>. בהרצאה במסך מלא: <b>Ctrl+Alt+Q</b> פותח חלון קטן שנשאר מעל הכל. Gemini עונה מתחת, לפי מה שנאמר ומה שעל השקופית, וממשיכים לשאול כמו בצ'אט. אפשר גם לסמן רגע עם <b>Ctrl+Alt+M</b> ולקבל הסבר אחרי ההרצאה.</p></div></li>
       <li><span class="n">5</span><div><h3>אחרי ההרצאה: דף הקורס</h3><p>לוחצים <b>עצירה</b>, והכל נשמר לבד. בדף הקורס (מ"הקורסים שלי") יש את כל ההקלטות, הכנה למבחן, סיכום וכרטיסיות, חיבור AI לקורס, והעלאת סילבוס שבונה את מילון המונחים.</p></div></li>
     </ol>
     <p class="howfoot">יש הקלטה או סרטון? בבית: <b>הרצאה מוקלטת</b> ← גוררים קובץ או מדביקים קישור.</p>
@@ -2449,7 +2449,12 @@ async function openFloat() {
   pipKey = ""; pipSince = 0; pipItems = []; pipYtRev = -1;
   floatHead(app && app.session); floatLoop();
 }
-document.querySelectorAll("[data-float]").forEach(b => b.addEventListener("click", openFloat));
+// the small question window: a window of its own, always on top (Ctrl+Alt+Q shows / hides it from anywhere)
+document.querySelectorAll("[data-float]").forEach(b => b.addEventListener("click", async () => {
+  const r = await api("/api/cmd", {action: "toggle_mini"});
+  if (!r.ok) toast(r.error || "לא הצלחתי לפתוח את החלון הקטן.");
+  else if (r.shown) toast("החלון הקטן נפתח. Ctrl+Alt+Q מסתיר ומחזיר אותו, גם כשההרצאה במסך מלא.");
+}));
 function pipToast(t) {
   if (!pipToastEl) return;
   pipToastEl.textContent = t; pipToastEl.classList.add("on");
