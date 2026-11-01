@@ -4331,6 +4331,23 @@ def _find_mini(u):
     return found[0] if found else 0
 
 
+MINI_CORNERS = ("br", "bl", "tl", "tr")   # bottom right / bottom left / top left / top right of the main screen
+
+
+def mini_btn_corner():
+    """Where the floating button sits (the student chooses it in the settings): bottom right by default."""
+    c = load_settings().get("mini_btn_corner")
+    return c if c in MINI_CORNERS else "br"
+
+
+def _mini_btn_xy(area, corner, S=56):
+    """The top-left corner of the floating button, in the work area of the main screen: at the edge, the bottom ones a
+    bit up from the bottom (above the player's controls), the top ones the same distance from the top."""
+    x = area.left + 12 if corner in ("bl", "tl") else area.right - S - 12
+    frac = 0.90 if corner in ("br", "bl") else 0.10
+    return x, area.top + int(frac * (area.bottom - area.top)) - S // 2
+
+
 def mini_opacity():
     """How solid the small window is, in percent (the student chooses it with the slider in the window)."""
     try:
@@ -4367,16 +4384,38 @@ def set_mini_opacity(value):
     return {"ok": True, "opacity": pct}
 
 
-def _show_mini(u, hwnd, place=False):
+_MINI_STATE = {"key": None}   # the session (lecture / recording) the window was last placed for
+
+
+def _mini_session_key():
+    s = APP.session
+    return None if s is None else (s.kind, getattr(s, "started", None) or id(s))
+
+
+def _place_mini_by_button(u, hwnd):
+    """The first time the window opens in a session it sits right above the floating button (or below it, for a top
+    corner), on the same side. The student may move the window after that; the button never moves."""
     import ctypes
     from ctypes import wintypes
+    area, r = wintypes.RECT(), wintypes.RECT()
+    if not (u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0) and u.GetWindowRect(hwnd, ctypes.byref(r))):
+        return
+    w, h = r.right - r.left, r.bottom - r.top
+    corner = mini_btn_corner()
+    _bx, by = _mini_btn_xy(area, corner, MiniButton.SIZE)
+    x = area.left + 12 if corner in ("bl", "tl") else area.right - w - 12
+    y = by - 10 - h if corner in ("br", "bl") else by + MiniButton.SIZE + 10
+    x = max(area.left, min(x, area.right - w))
+    y = max(area.top, min(y, area.bottom - h))
+    u.MoveWindow(hwnd, x, y, w, h, True)
+
+
+def _show_mini(u, hwnd, place=False):
     u.ShowWindow(hwnd, 9)   # SW_RESTORE
-    if place:   # first time: the bottom corner of the main screen, small
-        area = wintypes.RECT()
-        r = wintypes.RECT()
-        if u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0) and u.GetWindowRect(hwnd, ctypes.byref(r)):
-            w, h = r.right - r.left, r.bottom - r.top
-            u.MoveWindow(hwnd, area.right - w - 16, area.bottom - h - 16, w, h, True)
+    key = _mini_session_key()
+    if place or key != _MINI_STATE["key"]:   # the first opening in a new session (a lecture, a recording): by the button
+        _place_mini_by_button(u, hwnd)
+        _MINI_STATE["key"] = key
     _mini_alpha(u, hwnd, mini_opacity())
     u.SetWindowPos(hwnd, -1, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0040)   # HWND_TOPMOST, no move/size, show
     u.keybd_event(0x12, 0, 0, 0)   # (a tap on Alt lets this program take the keyboard from the lecture's window)
@@ -4608,7 +4647,7 @@ class MiniButton(threading.Thread):
         g.DeleteObject.argtypes = [wintypes.HANDLE]
         g.SetBkMode.argtypes = [wintypes.HDC, ctypes.c_int]
         g.SetTextColor.argtypes = [wintypes.HDC, wintypes.DWORD]
-        st = {"down": None, "moved": False, "shown": False, "hold": 0.0}
+        st = {"down": None, "moved": False, "shown": False, "hold": 0.0, "corner": ""}
         try:
             pix = ctypes.create_string_buffer(_logo_pixels(S))
         except Exception:
@@ -4623,12 +4662,15 @@ class MiniButton(threading.Thread):
                                         ctypes.c_int, wintypes.UINT, wintypes.UINT, ctypes.c_void_p, ctypes.c_void_p, wintypes.UINT]
 
         def place():
-            # fixed spot (not movable): the right edge, low on the screen but above the player's controls
+            # a fixed spot at the edge of the screen (not movable): the corner the student chose; the bottom ones a bit
+            # up from the bottom (above the player's controls), the top ones the same distance from the top
             area = wintypes.RECT()
             u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0)
-            x = area.right - S - 12
-            y = area.top + int(0.90 * (area.bottom - area.top)) - S // 2
+            corner = mini_btn_corner()
+            x, y = _mini_btn_xy(area, corner, S)
             u.MoveWindow(self.hwnd, x, y, S, S, True)
+            st["corner"] = corner
+
         def wndproc(hwnd, msg, wp, lp):
             if msg == 0x000F:   # WM_PAINT: a green disc with a white "?"
                 ps = PAINT()
@@ -4672,7 +4714,9 @@ class MiniButton(threading.Thread):
                 elif not want and st["shown"]:
                     u.ShowWindow(hwnd, 0)
                     st["shown"] = False
-                if st["shown"]:   # (stays above a full-screen lecture)
+                if st["shown"]:   # (stays above a full-screen lecture; moves when the corner is changed in the settings)
+                    if mini_btn_corner() != st["corner"]:
+                        place()
                     u.SetWindowPos(hwnd, -1, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010)
                 return 0
             return u.DefWindowProcW(hwnd, msg, wp, lp)
@@ -6129,6 +6173,11 @@ class App:
         if a == "mini_button":   # the floating "?" button while the small window is closed
             save_settings(mini_button=bool(d.get("on")))
             return {"ok": True}
+        if a == "mini_btn_corner":   # which corner of the screen the floating button sits in
+            if d.get("corner") not in MINI_CORNERS:
+                return {"ok": False, "error": "פינה לא מוכרת."}
+            save_settings(mini_btn_corner=d.get("corner"))
+            return {"ok": True}
         if a == "mini_auto":   # open the small window itself (not only the button) when a live lecture starts - off by default
             save_settings(mini_open_start=bool(d.get("on")))
             return {"ok": True}
@@ -7072,7 +7121,7 @@ def _app_handler():
                 if p == "/api/mirror":
                     return self._json(dict(mirror_status(), place_ai=load_settings().get("place_ai", True),
                                            mini_auto=bool(load_settings().get("mini_open_start", False)), mini_opacity=mini_opacity(),
-                                           mini_button=load_settings().get("mini_button", True),
+                                           mini_button=load_settings().get("mini_button", True), mini_btn_corner=mini_btn_corner(),
                                            check_updates=load_settings().get("check_updates", True)))
                 if p == "/api/marks":   # the marked moments of a course
                     c = clean_name(q.get("c", [""])[0])
