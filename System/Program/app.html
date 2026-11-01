@@ -1027,7 +1027,18 @@ function drawCaps() {
   const sig = JSON.stringify([c, capWinsAt, view]);
   if (sig === capSig) return;
   capSig = sig;
-  for (const box of [$("#capHome"), $("#capLive")]) if (box && !box.closest("[hidden]")) drawCap(box, c);   // the visible one
+  for (const box of [$("#capHome"), $("#capLive")]) if (box && !box.closest("[hidden]")) (box.id === "capLive" ? drawCapLive : drawCap)(box, c);   // the visible one
+}
+// in the live lecture: only what is photographed now and the pause button; the choices are in ⚙ הגדרות ← צילום וטשטוש
+function drawCapLive(box, c) {
+  box.replaceChildren(); box.classList.toggle("paused", !!c.paused);
+  const [t, sub] = capStatus(c), st = el("p", "capstat"); st.appendChild(el("b", "", t)); if (sub) st.append(" " + sub);
+  box.appendChild(st);
+  const pr = el("div", "row"), pb = el("button", c.paused ? "btn" : "btn ghost small", c.paused ? "▶ המשך הצילום" : "⏸ השהיית הצילום"); pb.type = "button"; pb.onclick = capPause;
+  pr.append(pb); if (c.hotkey) { const k = el("span", "sub2"); k.append("או: "); const kk = el("kbd", "", c.hotkey); kk.dir = "ltr"; k.append(kk); pr.append(k); }
+  box.appendChild(pr);
+  const go = el("button", "btn quiet small", "⚙ שינוי מה מצלמים ומה מטשטשים: הגדרות ← צילום וטשטוש"); go.type = "button"; go.onclick = () => openSettings("cap");
+  box.appendChild(go);
 }
 function drawCap(box, c) {
   box.replaceChildren(); box.classList.toggle("paused", !!c.paused);
