@@ -10,6 +10,7 @@ Hevanti writes down everything said in the lecture, in Hebrew or English, and sa
 - **Formulas and handwriting (2.2, optional, off):** with the same key, each saved slide can be read by Gemini, with formulas as LaTeX.
 - **Smarter screenshots (2.2):** capture the whole screen, one window (a window that pops over it is mosaicked) or a part of the screen; pause with Ctrl+Alt+P; mosaic fixed areas; delete screenshots for good. A video of the lecturer, a clock or a playing clip no longer counts as a "slide change"; the full board is kept before it is erased.
 - **Accessibility (2.2):** text and interface size, reading spacing, high contrast, no motion, screen-reader announcements, keyboard-friendly small window.
+- **New in 2.7:** the how-to video now scrolls through each full answer, and the floating window is more transparent.
 - **New in 2.6:** a new how-to video, demonstrated on a lecture about separation of variables with a question about the material.
 - **New in 2.5:** the lecture review page has a "my marks" tab: every ★ and ? you marked, with what was said just before it and a jump to that moment in the transcript.
 - **New in 2.4:** the lecture review page is rearranged: one-click study tasks (summary, flashcards, mock exam, formula sheet) first, the summary under them, and the free question and the full transcript folded away.
