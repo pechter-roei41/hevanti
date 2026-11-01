@@ -1324,14 +1324,11 @@ class PauseHotkey(threading.Thread):
             mods = 0x0001 | 0x0002 | 0x4000
             pause_ok = user32.RegisterHotKey(None, 0x4856, mods, 0x50)
             mark_ok = user32.RegisterHotKey(None, 0x4857, mods, 0x4D)
-            mini_ok = user32.RegisterHotKey(None, 0x4858, mods, 0x51)
-            if not mini_ok:
-                log("הקיצור " + MINI_HOTKEY + " לחלון השאלות הקטן תפוס בתוכנה אחרת. אפשר לפתוח אותו בכפתור בדף.")
             if not pause_ok:
                 log("הקיצור " + PAUSE_HOTKEY + " להשהיית הצילום תפוס בתוכנה אחרת. אפשר להשהות בכפתור בדף.")
             if not mark_ok:
                 log("הקיצור " + MARK_HOTKEY + " לסימון רגע תפוס בתוכנה אחרת. אפשר לסמן בכפתור בדף.")
-            if not (pause_ok or mark_ok or mini_ok):
+            if not (pause_ok or mark_ok):
                 return
             try:
                 msg = wintypes.MSG()
@@ -1339,12 +1336,10 @@ class PauseHotkey(threading.Thread):
                     while user32.PeekMessageW(ctypes.byref(msg), None, 0x0312, 0x0312, 1):   # WM_HOTKEY
                         if msg.wParam == 0x4857:
                             self.mark()
-                        elif msg.wParam == 0x4858:   # (opening the window takes seconds: not in this loop)
-                            threading.Thread(target=toggle_mini, daemon=True).start()
                         else:
                             self.toggle()
             finally:
-                for hid, ok in ((0x4856, pause_ok), (0x4857, mark_ok), (0x4858, mini_ok)):
+                for hid, ok in ((0x4856, pause_ok), (0x4857, mark_ok)):
                     if ok:
                         user32.UnregisterHotKey(None, hid)
         except Exception:
@@ -1352,6 +1347,32 @@ class PauseHotkey(threading.Thread):
 
     def stop(self):
         self.stop_evt.set()
+
+
+class MiniHotkey(threading.Thread):
+    """Windows: Ctrl+Alt+Q shows / hides the small question window, from any program, whenever Hevanti runs
+    (a live lecture, a recording or a video)."""
+
+    def run(self):
+        if os.name != "nt":
+            return
+        try:
+            import ctypes
+            from ctypes import wintypes
+            user32 = ctypes.WinDLL("user32")
+            user32.RegisterHotKey.argtypes = [wintypes.HWND, ctypes.c_int, wintypes.UINT, wintypes.UINT]
+            user32.PeekMessageW.argtypes = [ctypes.POINTER(wintypes.MSG), wintypes.HWND, wintypes.UINT,
+                                            wintypes.UINT, wintypes.UINT]
+            if not user32.RegisterHotKey(None, 0x4858, 0x0001 | 0x0002 | 0x4000, 0x51):   # Alt+Ctrl+Q
+                log("הקיצור " + MINI_HOTKEY + " לחלון השאלות הקטן תפוס בתוכנה אחרת. אפשר לפתוח אותו בכפתור בדף.")
+                return
+            msg = wintypes.MSG()
+            while True:
+                time.sleep(0.1)
+                while user32.PeekMessageW(ctypes.byref(msg), None, 0x0312, 0x0312, 1):   # WM_HOTKEY
+                    threading.Thread(target=toggle_mini, daemon=True).start()   # (opening takes seconds)
+        except Exception:
+            save_error("mini hotkey")
 
 
 def grey_picture(path):
@@ -4405,11 +4426,52 @@ def toggle_mini(hide_only=False, show_only=False):
         return {"ok": False, "error": "לא הצלחתי לפתוח את החלון הקטן."}
 
 
+def _rec_shot_before(rec, pos):
+    """The newest slide picture of a recording at or before this place (its file name), or ""."""
+    best = ""
+    with rec.lock:
+        for t, kind, v in rec.items():
+            if kind == "shot" and t <= pos + 0.5:
+                best = v
+    return best
+
+
+def _mini_context_rec(rec, q, hint):
+    """A recording: what was said in the 5 minutes before the place the student is at (as the player reports it)."""
+    pos = float(rec.pos or 0.0)
+    with rec.lock:
+        items = [(t, k, v) for t, k, v in rec.items() if pos - 300 <= t <= pos + 0.5]
+        title, dur = rec.stem, rec.duration
+    out = (f'אני צופה בהקלטה של הרצאה: "{title}". אני עכשיו ב-{hms(pos)} מתוך {hms(dur)}.\n'
+           "זה התמלול האוטומטי של 5 הדקות האחרונות (יכולות להיות בו טעויות תמלול):\n\n")
+    shots = [v for _, k, v in items if k == "shot"][-3:]
+    texts = {}
+    for name in shots:
+        try:
+            texts[name] = slide_text(os.path.join(rec.shots_dir, name))[:700].replace("\n", " | ")
+        except Exception:
+            texts[name] = ""
+    n = 0
+    for t, kind, v in items:
+        if kind == "say":
+            out += f"[{hms(t)}] {v}\n"
+        elif kind == "shot":
+            out += f"[{hms(t)}] " + (f"[על השקופית כתוב: {texts[v]}]" if texts.get(v) else "[כאן הופיעה שקופית חדשה]") + "\n"
+        else:
+            out += f"[{hms(t)}] (החלק הזה עוד לא תומלל)\n"
+        n += 1
+    if not n:
+        out += "(עוד אין תמלול לקטע הזה)\n"
+    return out + hint + "\nהשאלה שלי: " + q
+
+
 def mini_context(q):
     """What the small window sends with the question: the last 5 minutes of the live lecture (and what was on the
     slides), the same as the lecture page sends."""
     hint = "\nלענות בעברית (מונחים מקצועיים אפשר באנגלית). מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.\n"
     live = APP.live
+    if live is None and APP.rec is not None:
+        return _mini_context_rec(APP.rec, q, hint)
     if live is None:
         return "(אין עכשיו הרצאה פעילה)\n" + hint + "\nהשאלה שלי: " + q
     yt = bool(getattr(live, "yt", False))
@@ -4451,7 +4513,13 @@ def mini_button_wanted():
     if not load_settings().get("mini_button", True):
         return False
     s = APP.session
-    if s is None or s.done or s.kind != "live" or not s.ready:
+    if s is None or s.done or not s.ready:
+        return False
+    if s.kind == "rec":   # a recording: only while its player page is open
+        rec = APP.rec
+        if rec is None or not rec.page_alive():
+            return False
+    elif s.kind != "live":
         return False
     try:
         u = _mini_user32()
@@ -6156,9 +6224,12 @@ class App:
         kind = "חשוב" if kind == "important" else "לא הבנתי"
         with self.lock:
             s = self.session
+            rec = self.rec
         fn = getattr(s, "mark_fn", None) if s is not None and not s.done and s.ready else None
+        if fn is None and s is not None and s.kind == "rec" and rec is not None and not s.done:
+            return mark_recording(rec, kind)
         if fn is None:
-            return {"ok": False, "error": "אפשר לסמן רגע רק בהרצאה חיה שרצה עכשיו."}
+            return {"ok": False, "error": "אפשר לסמן רגע בהרצאה חיה או בהקלטה שצופים בה."}
         fn(kind)
         return {"ok": True, "kind": kind}
 
@@ -6624,7 +6695,11 @@ def transcript_view(fname):
         ocr_m = os.path.getmtime(os.path.join(d, SLIDES_NAME, OCR_NAME))
     except OSError:
         ocr_m = 0
-    key = (path, st.st_mtime, st.st_size, ocr_m)
+    try:
+        marks_m = os.path.getmtime(os.path.join(d, MARKS_NAME))
+    except OSError:
+        marks_m = 0
+    key = (path, st.st_mtime, st.st_size, ocr_m, marks_m)
     if key in _VIEW_CACHE:
         return {"entry": entry, "lines": _VIEW_CACHE[key]}
     lines, ocr = [], read_ocr(os.path.join(d, SLIDES_NAME)) if ocr_m else {}
@@ -6654,10 +6729,40 @@ def transcript_view(fname):
                 lines.append({"t": t, "c": clock, "note": x.strip("[]")})
             else:
                 lines.append({"t": t, "c": clock, "x": x})
+    if marks_m:   # the marks made in a recording (a live lecture has them in its transcript)
+        for m in read_marks(d):
+            lines.append({"t": float(m["t"]), "c": hms(m["t"]), "note": "סימון: " + str(m.get("kind") or "לא הבנתי")})
+        lines.sort(key=lambda x: x["t"])
     if len(_VIEW_CACHE) > 400:
         _VIEW_CACHE.clear()
     _VIEW_CACHE[key] = lines
     return {"entry": entry, "lines": lines}
+
+
+MARKS_NAME = "סימונים.json"
+
+
+def read_marks(lecture_dir):
+    d = _read_json(os.path.join(lecture_dir, MARKS_NAME)) or {}
+    return [m for m in (d.get("marks") or []) if isinstance(m, dict) and isinstance(m.get("t"), (int, float))]
+
+
+def mark_recording(rec, kind):
+    """Mark the place the student is at in a recording: kept in "סימונים.json" in the lecture's folder."""
+    pos = rec.pos
+    if pos is None:
+        return {"ok": False, "error": "אין עדיין מקום בהקלטה. מפעילים אותה בנגן ואז מסמנים."}
+    marks = read_marks(rec.dir)
+    marks.append({"t": round(float(pos), 1), "kind": kind})
+    try:
+        os.makedirs(rec.dir, exist_ok=True)
+        _write_text(os.path.join(rec.dir, MARKS_NAME), json.dumps({"marks": marks}, ensure_ascii=False))
+    except OSError:
+        save_error("mark recording")
+        return {"ok": False, "error": "לא הצלחתי לשמור את הסימון."}
+    with APP.lock:
+        APP.lib_rev += 1
+    return {"ok": True, "kind": kind}
 
 
 def course_marks(course):
@@ -7066,8 +7171,12 @@ def _app_handler():
             reader = math_reader()
             try:
                 if d.get("where") == "mini":   # the small window: the server knows what was said
-                    d = dict(d, context=mini_context(str(d.get("question") or "")),
-                             where="yt" if getattr(APP.live, "yt", False) else "live")
+                    if APP.live is None and APP.rec is not None:   # a recording: the place the player reports
+                        d = dict(d, context=mini_context(str(d.get("question") or "")), where="rec",
+                                 n=_rec_shot_before(APP.rec, float(APP.rec.pos or 0.0)))
+                    else:
+                        d = dict(d, context=mini_context(str(d.get("question") or "")),
+                                 where="yt" if getattr(APP.live, "yt", False) else "live")
                 body = tutor_body(d)
                 pieces, first, last_err, quota_err = None, "", None, None
                 usage, started, chars, used = {}, time.time(), len(json.dumps(body, ensure_ascii=False)), ""
@@ -7487,7 +7596,8 @@ def main():
         raise RuntimeError("לא הצלחתי לפתוח את האפליקציה (כל הפורטים 8765-8769 תפוסים).")
     APP.url = server.url
     if os.name == "nt":
-        MiniButton(mini_button_wanted, _mini_button_click).start()   # the floating "?" button
+        MiniHotkey(daemon=True).start()   # Ctrl+Alt+Q
+        MiniButton(mini_button_wanted, _mini_button_click).start()   # the floating button
     on_window_close(APP.emergency_close)
     os.makedirs(LIB_DIR, exist_ok=True)
     try:

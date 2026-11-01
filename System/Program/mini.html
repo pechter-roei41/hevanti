@@ -41,14 +41,14 @@ header b{font-size:15px}
  <button class="hb" id="markLost" type="button" title="סימון: לא הבנתי" aria-label="סימון: לא הבנתי">?</button>
  <button class="hb" id="hide" type="button" title="להסתיר (Ctrl+Alt+Q או Esc)" aria-label="להסתיר">—</button>
 </header>
-<div id="note" hidden>אין עכשיו הרצאה פעילה. מתחילים הרצאה באפליקציה, ואז אפשר לשאול כאן.</div>
+<div id="note" hidden>אין עכשיו הרצאה פעילה. מתחילים הרצאה או פותחים הקלטה באפליקציה, ואז אפשר לשאול כאן.</div>
 <div id="box"></div>
 <div id="toast" role="status"></div>
 <script src="/ask.js"></script>
 <script>
 "use strict";
 const $ = s => document.querySelector(s);
-let shot = null, total = 0, live = false;
+let shot = null, total = 0, live = false, kind0 = "";
 function toast(t) {
   const e = $("#toast"); e.textContent = t; e.classList.add("on");
   clearTimeout(toast.h); toast.h = setTimeout(() => e.classList.remove("on"), Math.max(2800, t.length * 50));
@@ -74,10 +74,11 @@ async function getJson(u) { return (await fetch(u, {cache: "no-store"})).json();
 async function pollApp() {
   try {
     const d = await getJson("/api/app"), s = d.session;
-    live = !!(s && !s.done && s.kind === "live");
+    live = !!(s && !s.done && (s.kind === "live" || s.kind === "rec"));   // a live lecture, a video, or a recording being watched
     // "הרצאה חיה - <the course>", e.g. "הרצאה חיה - מכניקת מוצקים"
-    const kind = live ? (s.yt ? "סרטון יוטיוב" : "הרצאה חיה") : "";
+    const kind = live ? (s.kind === "rec" ? "הרצאה מוקלטת" : s.yt ? "סרטון יוטיוב" : "הרצאה חיה") : "";
     $("#lec").textContent = live ? kind + (s.course && s.course !== "ללא קורס" ? " - " + s.course : "") : "אין עכשיו הרצאה פעילה";
+    kind0 = s ? s.kind : "";
     $("#note").hidden = live;
     if (window.BZMAsk) {
       BZMAsk.setConnected(d.connect); BZMAsk.setApps(d.ai_apps);
@@ -86,7 +87,7 @@ async function pollApp() {
   } catch (e) {}
 }
 async function pollLive() {
-  if (!live) { shot = null; total = 0; return; }
+  if (!live || kind0 === "rec") { shot = null; total = 0; return; }   // (a recording: the server finds the slide)
   try {
     const d = await getJson("/api/live?since=" + total);
     if (d.none) { shot = null; total = 0; return; }
