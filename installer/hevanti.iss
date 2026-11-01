@@ -45,12 +45,15 @@ he.OcrTask=קריאת הטקסט שעל השקופיות (Tesseract, חינם - 
 en.OcrTask=Read the text on the slides (Tesseract, free - Windows asks for permission once)
 he.DesktopTask=קיצור דרך בשולחן העבודה
 en.DesktopTask=A shortcut on the desktop
+he.UpdatesTask=בדיקה אוטומטית של גרסה חדשה בכל הפעלה (בקשה ל-GitHub, בלי מידע עליך)
+en.UpdatesTask=Check for a new version when Hevanti starts (a request to GitHub, nothing about you is sent)
 he.RunNow=לפתוח את הבנתי עכשיו
 en.RunNow=Open Hevanti now
 
 [Tasks]
 Name: "desktop"; Description: "{cm:DesktopTask}"
 Name: "ocr"; Description: "{cm:OcrTask}"
+Name: "updates"; Description: "{cm:UpdatesTask}"
 
 [Files]
 Source: "{#Src}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
@@ -64,6 +67,9 @@ Name: "{userprograms}\הבנתי"; Filename: "{app}\python\python.exe"; Paramete
 Name: "{userdesktop}\הבנתי"; Filename: "{app}\python\python.exe"; Parameters: """{app}\System\Program\live_transcribe.py"" --app"; WorkingDir: "{app}"; IconFilename: "{app}\hevanti.ico"; Flags: runminimized; Tasks: desktop
 
 [Run]
+; the update check: the box of the installer decides (it can be changed later in Hevanti: Settings, Privacy)
+Filename: "{app}\python\python.exe"; Parameters: """{app}\System\Program\live_transcribe.py"" --set-update-check off"; Flags: runhidden waituntilterminated; Tasks: not updates
+Filename: "{app}\python\python.exe"; Parameters: """{app}\System\Program\live_transcribe.py"" --set-update-check on"; Flags: runhidden waituntilterminated; Tasks: updates
 Filename: "{app}\System\install_ocr.bat"; Parameters: "nopause"; Flags: runhidden waituntilterminated; Tasks: ocr
 Filename: "{app}\python\python.exe"; Parameters: """{app}\System\Program\live_transcribe.py"" --app"; WorkingDir: "{app}"; Description: "{cm:RunNow}"; Flags: postinstall nowait runminimized skipifsilent
 

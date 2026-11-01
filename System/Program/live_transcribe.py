@@ -8296,6 +8296,10 @@ def uninstall():
 
 
 if __name__ == "__main__":
+    if "--set-update-check" in sys.argv:   # Hevanti-Setup: the "check for updates" box of the installer
+        _i = sys.argv.index("--set-update-check")
+        save_settings(check_updates=sys.argv[_i + 1:_i + 2] != ["off"])
+        sys.exit(0)
     if "--disconnect-ai" in sys.argv:   # Hevanti-Setup's uninstaller: take Hevanti out of the AI apps, quietly
         for _app in AI_APPS:
             try:
