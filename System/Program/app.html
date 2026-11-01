@@ -218,6 +218,35 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .foot{margin-top:26px;color:var(--muted);font-size:14px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 
 /* live + transcript */
+/* the lecture review page: study first, the rest tucked away */
+#vPast{display:grid;gap:14px;align-content:start}
+#vPast .livebar{margin-bottom:0}
+#vPast .card h2{margin:0 0 2px}
+.moremenu{position:relative}
+.moremenu summary{list-style:none;cursor:pointer}
+.moremenu summary::-webkit-details-marker{display:none}
+.moremenu .menu{position:absolute;inset-inline-end:0;top:calc(100% + 6px);z-index:20;min-width:230px;display:grid;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.28)}
+.moremenu .menu button{border:0;background:none;color:var(--fg);text-align:start;font:inherit;font-size:15px;padding:9px 12px;border-radius:8px;cursor:pointer}
+.moremenu .menu button:hover,.moremenu .menu button:focus-visible{background:var(--sunk)}
+.moremenu .menu button[hidden]{display:none}
+.study .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}
+.tile{display:grid;gap:3px;text-align:start;padding:13px 16px;border:1.5px solid var(--line);border-radius:14px;background:var(--bg);color:var(--fg);font:inherit;cursor:pointer}
+.tile b{font-size:17px}
+.tile small{color:var(--muted);font-size:13.5px;line-height:1.4}
+.tile:hover,.tile:focus-visible{border-color:var(--accent)}
+.tile.main{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tile.main small{color:inherit;opacity:.85}
+.tile[hidden]{display:none}
+.study .where{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;font-size:14px;color:var(--muted)}
+.study .where .seg button{font-size:14px;padding:5px 13px}
+.study .sub2{margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--muted)}
+.fold{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.fold>summary{cursor:pointer;list-style:none;display:flex;align-items:baseline;gap:12px;padding:14px 18px;font-weight:700;font-size:17px}
+.fold>summary::-webkit-details-marker{display:none}
+.fold>summary::before{content:"\25C2";color:var(--muted);font-size:13px}
+.fold[open]>summary::before{content:"\25BE"}
+.fold>summary small{color:var(--muted);font-weight:400;font-size:14px}
+.fold>.card,.fold>.tbox{border:0;border-top:1px solid var(--line);border-radius:0 0 var(--r) var(--r)}
 .livebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 .livebar .what{margin-inline-end:auto}
 .livebar .what b{font-size:20px}
@@ -704,41 +733,52 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <button class="btn ghost back" id="pastBack" type="button">→ חזרה</button>
       <div class="what"><b id="pastTitle"></b><small id="pastSub"></small></div>
       <button class="btn" id="pastPlay" type="button" hidden>צפייה בנגן</button>
-      <button class="btn ghost" id="pastCopy" type="button">העתקת כל התמלול</button>
-      <button class="btn quiet" id="pastFile" type="button">פתיחת הקובץ</button>
-      <button class="btn quiet" id="pastMore" type="button" aria-label="עוד פעולות להרצאה">העברה / שם / מחיקה</button>
-      <button class="btn quiet" id="pastDelShots" type="button" title="מוחק את כל תמונות המסך של ההרצאה, לצמיתות. התמלול נשאר.">מחיקת כל צילומי המסך</button>
-      <button class="btn quiet" id="pastMath" type="button" hidden title="שולח ל-Gemini את השקופיות שעוד לא נקראו, כדי לקרוא נוסחאות וכתב יד">קריאת נוסחאות בשקופיות</button>
+      <details class="moremenu" id="pastMenu">
+        <summary class="btn quiet" aria-label="עוד פעולות להרצאה">⋯ עוד</summary>
+        <div class="menu">
+          <button type="button" id="pastCopy">העתקת כל התמלול</button>
+          <button type="button" id="pastFile">פתיחת הקובץ</button>
+          <button type="button" id="pastMore" aria-label="העברה לקורס, שינוי שם או מחיקה">העברה / שם / מחיקה</button>
+          <button type="button" id="pastMath" hidden title="שולח ל-Gemini את השקופיות שעוד לא נקראו, כדי לקרוא נוסחאות וכתב יד">קריאת נוסחאות בשקופיות</button>
+          <button type="button" id="pastDelShots" title="מוחק את כל תמונות המסך של ההרצאה, לצמיתות. התמלול נשאר.">מחיקת כל צילומי המסך</button>
+        </div>
+      </details>
     </div>
-    <div class="card" id="pastSum" hidden style="margin-bottom:14px">
-      <div class="row" style="justify-content:space-between"><h2>סיכום</h2>
-        <div class="row"><button class="btn quiet small" id="sumCopy" type="button" hidden>העתקה</button></div></div>
-      <div id="sumText" class="sumtext"></div>
-    </div>
-    <div class="card study" id="pastStudy" style="margin-bottom:14px">
-      <h2 style="margin:0 0 4px">אחרי ההרצאה: לימוד בלחיצה אחת</h2>
-      <p class="sub" style="margin-top:0">הבנתי שולחת ל-AI שלך את ההרצאה הזו (התמלול והטקסט מהשקופיות) עם המשימה. אחרי הלחיצה הראשונה היא זוכרת לאיזה AI, ובמשימות הבאות שולחת אליו ישר.</p>
-      <div class="row">
-        <button class="btn" type="button" data-study="summary">סיכום ההרצאה</button>
-        <button class="btn" type="button" data-study="cards">כרטיסיות חזרה</button>
-        <button class="btn" type="button" data-study="exam">מבחן דמה</button>
-        <button class="btn ghost" type="button" data-study="formulas">דף נוסחאות</button>
-        <button class="btn ghost" type="button" data-study="marks" id="studyMarks" hidden>הסבר לרגעים שסימנתי</button>
+    <div class="card study" id="pastStudy">
+      <h2>לימוד בלחיצה אחת</h2>
+      <p class="sub">הבנתי שולחת ל-AI את ההרצאה הזו (התמלול והטקסט מהשקופיות) עם המשימה, וזוכרת לאיזה AI.</p>
+      <div class="tiles">
+        <button class="tile main" type="button" data-study="summary"><b>סיכום ההרצאה</b><small>הרעיונות, ההגדרות והנוסחאות</small></button>
+        <button class="tile" type="button" data-study="cards"><b>כרטיסיות חזרה</b><small>שאלה ותשובה קצרה לשינון</small></button>
+        <button class="tile" type="button" data-study="exam"><b>מבחן דמה</b><small>שאלות מהקלה לקשה</small></button>
+        <button class="tile" type="button" data-study="formulas"><b>דף נוסחאות</b><small>כל נוסחה, סימנים ויחידות</small></button>
+        <button class="tile" type="button" data-study="marks" id="studyMarks" hidden><b>הרגעים שסימנתי</b><small>הסבר לכל ★ ו-?</small></button>
       </div>
-      <div class="row" id="studyWhere" hidden style="margin-top:10px">
-        <span class="sub2" style="font-size:14px;color:var(--muted)">איפה לעשות את זה?</span>
+      <div class="where" id="studyWhere" hidden>
+        <span>איפה לעשות את זה?</span>
         <div class="seg" role="group" aria-label="איפה לעשות את המשימה">
           <button type="button" data-w="here">בתוך הבנתי (מכסה חינמית)</button>
           <button type="button" data-w="app">באפליקציית ה-AI שלי (בלי מכסה)</button>
         </div>
       </div>
-      <p class="sub2" id="studyHint" hidden style="margin:6px 0 0;font-size:14px;line-height:1.5;color:var(--muted)"></p>
+      <p class="sub2" id="studyHint" hidden></p>
     </div>
-    <div class="card" id="pastAsk" style="margin-bottom:14px"></div>
-    <div class="tbox">
-      <div class="tools"><input type="search" id="pastFind" placeholder="חיפוש בתמלול" aria-label="חיפוש בתמלול"></div>
-      <ol class="lines" id="pastLines"></ol>
+    <div class="card" id="pastSum" hidden>
+      <div class="row" style="justify-content:space-between"><h2>סיכום</h2>
+        <div class="row"><button class="btn quiet small" id="sumCopy" type="button" hidden>העתקה</button></div></div>
+      <div id="sumText" class="sumtext"></div>
     </div>
+    <details class="fold" id="pastAskFold">
+      <summary>שאלה חופשית ל-AI על ההרצאה<small>גם התשובות למשימות מופיעות כאן</small></summary>
+      <div class="card" id="pastAsk"></div>
+    </details>
+    <details class="fold" id="pastTrFold">
+      <summary>התמלול המלא<small id="pastTrCount"></small></summary>
+      <div class="tbox">
+        <div class="tools"><input type="search" id="pastFind" placeholder="חיפוש בתמלול" aria-label="חיפוש בתמלול"></div>
+        <ol class="lines" id="pastLines"></ol>
+      </div>
+    </details>
   </section>
 
   <!-- COURSE -->
@@ -2295,12 +2335,17 @@ async function openPast(f, at) {
   for (const x of d.lines) frag.appendChild(lineEl(x));
   if (!d.lines.length) frag.appendChild(el("li", "note", "אין שורות בתמלול הזה."));
   box.replaceChildren(frag); box.scrollTop = 0;
+  $("#pastTrCount").textContent = e.lines + " שורות";
+  $("#pastTrFold").open = at != null;   // the transcript opens when the student came to a moment in it
+  $("#pastAskFold").open = false;
   if (at != null) {
     const li = [...box.children].find(x => x._x && x._x.t >= at - 0.5);
     if (li) { li.classList.add("hit"); li.scrollIntoView({block: "center"}); }
   }
 }
 $("#pastMore").addEventListener("click", () => { if (pastData) lectureMenu(pastData.entry); });
+$("#pastMenu .menu").addEventListener("click", () => { $("#pastMenu").open = false; });
+document.addEventListener("click", ev => { const m = $("#pastMenu"); if (m && m.open && !m.contains(ev.target)) m.open = false; });
 let pastSummary = "";
 function drawSummary() {
   const box = $("#pastSum"); if (!box) return;
@@ -2368,15 +2413,17 @@ document.querySelectorAll("[data-study]").forEach(b => b.addEventListener("click
   if (!pastData || !pastAskBox) { toast("ההרצאה עוד נטענת."); return; }
   const k = b.dataset.study;
   if (studyWhere() === "here" && pastAskBox.builtin()) {   // done right here by Gemini; a summary becomes the lecture's summary
-    pastAskBox.askHere(STUDY[k], {task: k, title: b.textContent,
+    $("#pastAskFold").open = true;
+    pastAskBox.askHere(STUDY[k], {task: k, title: b.querySelector("b").textContent,
       onDone: k === "summary" ? t => { pastSummary = t; drawSummary(); } : null});
     $("#pastAsk").scrollIntoView({block: "start", behavior: "smooth"});
     return;
   }
   const ta = pastAskBox.textarea; ta.value = STUDY[k];
   let last = ""; try { last = localStorage.getItem("bzm.ai") || ""; } catch (e) {}
+  if (last) $("#pastAskFold").open = true;
   if (last) ta.dispatchEvent(new KeyboardEvent("keydown", {key: "Enter", ctrlKey: true, bubbles: true, cancelable: true}));   // the AI used last
-  else { $("#pastAsk").scrollIntoView({block: "center"}); ta.focus(); toast("עכשיו לבחור לאיזה AI לשלוח: ChatGPT, Gemini או Claude."); }
+  else { $("#pastAskFold").open = true; $("#pastAsk").scrollIntoView({block: "center"}); ta.focus(); toast("עכשיו לבחור לאיזה AI לשלוח: ChatGPT, Gemini או Claude."); }
 }));
 $("#pastDelShots").addEventListener("click", async () => {
   if (!pastFile) return;
