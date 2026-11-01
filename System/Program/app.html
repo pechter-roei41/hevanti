@@ -92,7 +92,14 @@ h2{font-size:21px;margin:0;text-wrap:balance}
 .libhead h2{margin-inline-end:auto}
 .libhead input{padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg);min-width:0;width:min(280px,100%)}
 .lib{list-style:none;margin:0;padding:0;display:grid;gap:8px}
-.lib .ctag{font-size:13px;color:var(--accent);font-weight:700}
+.lib .ctag{font-size:13px;color:var(--accent);font-weight:700;text-decoration:none}
+.lib a.ctag:hover,.lib a.ctag:focus-visible{text-decoration:underline}
+.sumtext .mx{display:inline-block;direction:ltr;unicode-bidi:isolate;vertical-align:middle}
+.sumtext .mx.d{display:block;text-align:center;margin:4px 0;overflow-x:auto}
+.sumtext math{font-size:1.12em}
+.sumtext .h{font-weight:800;margin-top:10px}
+.sumtext .li{padding-inline-start:6px}
+.sumtext .sp{height:.5em}
 .lib li{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:center}
 .lib .k{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--sunk);color:var(--muted)}
 .lib .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1681,7 +1688,10 @@ function lecItem(e, withCourse) {
   if (e.length) bits.push("אורך " + e.length);
   bits.push(e.lines + " שורות"); if (e.shots) bits.push(e.shots + " צילומים");
   const m = el("div", "m");
-  if (withCourse) { m.appendChild(el("span", "ctag", e.course)); m.append(" · "); }
+  if (withCourse) {   // the course name leads to the course page
+    const ct = el("a", "ctag", e.course); ct.href = "#c=" + encodeURIComponent(e.course); ct.title = "לדף הקורס";
+    m.appendChild(ct); m.append(" · ");
+  }
   m.append(bits.join(" · "));
   const acts = el("div", "acts");
   if (e.kind === "rec" && e.has_media) {
@@ -1691,7 +1701,7 @@ function lecItem(e, withCourse) {
     const p = el("button", "btn small", "המשך צפייה"); p.type = "button"; p.title = "ממשיך מאיפה שעצרת, ומתמלל רק מה שעוד לא תומלל";
     p.onclick = () => startYoutube(e.url, e.lang, e.course); acts.appendChild(p);
   }
-  const o = el("button", "btn ghost small", "תמלול"); o.type = "button"; o.onclick = () => { location.hash = "t=" + encodeURIComponent(e.f); }; acts.appendChild(o);
+  const o = el("button", "btn ghost small", "מעבר על ההרצאה"); o.type = "button"; o.onclick = () => { location.hash = "t=" + encodeURIComponent(e.f); }; acts.appendChild(o);
   const more = el("button", "btn quiet small", "⋯"); more.type = "button"; more.setAttribute("aria-label", "העברה לקורס, שינוי שם או מחיקה: " + e.title);
   more.onclick = () => lectureMenu(e); acts.appendChild(more);
   li.append(k, t, acts, m);
@@ -2295,7 +2305,8 @@ let pastSummary = "";
 function drawSummary() {
   const box = $("#pastSum"); if (!box) return;
   box.hidden = !pastSummary;
-  $("#sumText").replaceChildren(...String(pastSummary || "").split("\n").filter(x => x.trim()).map(x => { const p = el("p", "", x.replace(/^#+\s*/, "").replace(/\*\*/g, "")); p.dir = "auto"; return p; }));
+  if (window.BZMAsk && BZMAsk.render) BZMAsk.render(document, $("#sumText"), String(pastSummary || "").replace(/\n{3,}/g, "\n\n").trim());   // headings, lists, bold and formulas (LaTeX)
+  else $("#sumText").replaceChildren(...String(pastSummary || "").split("\n").filter(x => x.trim()).map(x => { const p = el("p", "", x.replace(/^#+\s*/, "").replace(/\*\*/g, "")); p.dir = "auto"; return p; }));
   $("#sumCopy").hidden = !pastSummary;
 }
 $("#sumCopy").addEventListener("click", async () => { toast((await copyText(pastSummary)) ? "הסיכום הועתק." : "לא הצלחתי להעתיק."); });
@@ -2325,10 +2336,10 @@ if (window.BZMAsk) pastAskBox = BZMAsk.mount($("#pastAsk"), {
   toast});
 // after the lecture: one click = a ready task for this lecture, sent to the AI the student used last
 const STUDY = {
-  summary: "תסכם את ההרצאה הזו: הרעיונות המרכזיים לפי הסדר, ההגדרות והנוסחאות (עם הסבר לכל סימן ויחידות), ובסוף שלושה דברים שחשוב לזכור למבחן. מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול: תתקן לפי ההקשר.",
+  summary: "תסכם את ההרצאה הזו: הרעיונות המרכזיים לפי הסדר, ההגדרות והנוסחאות (עם הסבר לכל סימן ויחידות), ובסוף שלושה דברים שחשוב לזכור למבחן. את כל הנוסחאות תכתוב ב-LaTeX: בתוך שורה בין $...$, ונוסחה חשובה בשורה משלה בין $$...$$. מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול: תתקן לפי ההקשר.",
   cards: "תכין 15 כרטיסיות חזרה מההרצאה הזו: שאלה בצד אחד ותשובה קצרה בצד השני, על המושגים והנוסחאות החשובים. בטבלה, כדי שאוכל להעתיק ל-Anki או ל-Quizlet.",
   exam: "תכין לי מבחן דמה מההרצאה הזו: 6 שאלות מהקלה לקשה, בסגנון מבחן אמיתי. קודם רק השאלות. אחרי שאענה, תבדוק ותסביר כל פתרון צעד אחר צעד.",
-  formulas: "תכין דף נוסחאות מההרצאה הזו: כל נוסחה, מה כל סימן אומר, יחידות, ומתי משתמשים בה.",
+  formulas: "תכין דף נוסחאות מההרצאה הזו: כל נוסחה, מה כל סימן אומר, יחידות, ומתי משתמשים בה. את הנוסחאות תכתוב ב-LaTeX: בתוך שורה בין $...$, ונוסחה בשורה משלה בין $$...$$.",
   marks: "בתמלול יש שורות [סימון: לא הבנתי] ו-[סימון: חשוב] שסימנתי בזמן ההרצאה. לכל \"לא הבנתי\": תסביר בפשטות מה נאמר בדקה-שתיים שלפני הסימון, עם דוגמה. לכל \"חשוב\": תסכם בשורה-שתיים מה נאמר ולמה זה חשוב. לפי הסדר, עם השעה של כל סימון.",
 };
 // Whole-lecture tasks are what uses the free quota most. With a free key the student chooses where they run:

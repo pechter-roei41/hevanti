@@ -4295,6 +4295,7 @@ def _mini_user32():
     u.GetWindowTextW.argtypes = [H, wintypes.LPWSTR, ctypes.c_int]
     u.IsWindowVisible.argtypes = [H]
     u.IsIconic.argtypes = [H]
+    u.IsWindow.argtypes = [H]
     u.ShowWindow.argtypes = [H, ctypes.c_int]
     u.SetForegroundWindow.argtypes = [H]
     u.GetWindowRect.argtypes = [H, ctypes.POINTER(wintypes.RECT)]
@@ -4384,6 +4385,7 @@ def set_mini_opacity(value):
     return {"ok": True, "opacity": pct}
 
 
+_MINI_PROC = {"proc": None}   # the process of the small window (to close it with the tool)
 _MINI_STATE = {"key": None}   # the session (lecture / recording) the window was last placed for
 
 
@@ -4392,22 +4394,33 @@ def _mini_session_key():
     return None if s is None else (s.kind, getattr(s, "started", None) or id(s))
 
 
-def _place_mini_by_button(u, hwnd):
-    """The first time the window opens in a session it sits right above the floating button (or below it, for a top
-    corner), on the same side. The student may move the window after that; the button never moves."""
+def _mini_xy_by_button(u, w, h):
+    """Where a window of this size sits right above the floating button (or below it, for a top corner), on the same
+    side; None when the screen cannot be read."""
     import ctypes
     from ctypes import wintypes
-    area, r = wintypes.RECT(), wintypes.RECT()
-    if not (u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0) and u.GetWindowRect(hwnd, ctypes.byref(r))):
-        return
-    w, h = r.right - r.left, r.bottom - r.top
+    area = wintypes.RECT()
+    if not u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0):
+        return None
     corner = mini_btn_corner()
     _bx, by = _mini_btn_xy(area, corner, MiniButton.SIZE)
     x = area.left + 12 if corner in ("bl", "tl") else area.right - w - 12
     y = by - 10 - h if corner in ("br", "bl") else by + MiniButton.SIZE + 10
-    x = max(area.left, min(x, area.right - w))
-    y = max(area.top, min(y, area.bottom - h))
-    u.MoveWindow(hwnd, x, y, w, h, True)
+    return max(area.left, min(x, area.right - w)), max(area.top, min(y, area.bottom - h))
+
+
+def _place_mini_by_button(u, hwnd):
+    """The first time the window opens in a session it sits right above the floating button. The student may move the
+    window after that; the button never moves."""
+    import ctypes
+    from ctypes import wintypes
+    r = wintypes.RECT()
+    if not u.GetWindowRect(hwnd, ctypes.byref(r)):
+        return
+    w, h = r.right - r.left, r.bottom - r.top
+    xy = _mini_xy_by_button(u, w, h)
+    if xy:
+        u.MoveWindow(hwnd, xy[0], xy[1], w, h, True)
 
 
 def _show_mini(u, hwnd, place=False):
@@ -4448,15 +4461,17 @@ def toggle_mini(hide_only=False, show_only=False):
                 return {"ok": False, "error": "החלון הקטן צריך את Microsoft Edge או את Chrome."}
             prof = os.path.join(DATA_DIR, "mini-profile")
             os.makedirs(prof, exist_ok=True)
-            subprocess.Popen([exe, "--app=" + APP.url + "mini", f"--window-size={MINI_SIZE[0]},{MINI_SIZE[1]}",
-                              "--user-data-dir=" + prof, "--no-first-run", "--no-default-browser-check",
-                              "--disable-extensions", "--disable-sync"])
+            args = [exe, "--app=" + APP.url + "mini", f"--window-size={MINI_SIZE[0]},{MINI_SIZE[1]}"]
+            xy = _mini_xy_by_button(u, MINI_SIZE[0], MINI_SIZE[1])   # it opens in its place at once (not in the middle first)
+            if xy:
+                args.append(f"--window-position={xy[0]},{xy[1]}")
+            _MINI_PROC["proc"] = subprocess.Popen(args + ["--user-data-dir=" + prof, "--no-first-run",
+                                                           "--no-default-browser-check", "--disable-extensions", "--disable-sync"])
             end = time.time() + 15
             while time.time() < end:
-                time.sleep(0.3)
+                time.sleep(0.05)
                 hwnd = _find_mini(u)
                 if hwnd:
-                    time.sleep(0.4)
                     _show_mini(u, hwnd, place=True)
                     return {"ok": True, "shown": True}
         return {"ok": False, "error": "החלון הקטן לא נפתח. אפשר לנסות שוב."}
@@ -4732,8 +4747,11 @@ class MiniButton(threading.Thread):
                 st["shown"], st["hold"] = False, time.time() + 4
                 threading.Thread(target=self.on_click, daemon=True).start()
                 return 0
-            if msg == 0x0113:   # WM_TIMER (four times a second): show / hide as the lecture and the window change
-                want = bool(self.wanted()) and time.time() >= st["hold"]
+            if msg == 0x0113:   # WM_TIMER (ten times a second): show / hide as the lecture and the window change
+                raw = bool(self.wanted())
+                if not raw:   # the window is up: the hold after the click is over (a minimize brings the button back at once)
+                    st["hold"] = 0.0
+                want = raw and time.time() >= st["hold"]
                 if want and not st["shown"]:
                     place()
                     u.ShowWindow(hwnd, 4)   # SW_SHOWNOACTIVATE
@@ -4762,7 +4780,7 @@ class MiniButton(threading.Thread):
         self.hwnd = u.CreateWindowExW(0x8 | 0x80 | 0x80000 | 0x08000000, "HevantiMiniButton", "הבנתי - כפתור שאלות", 0x80000000,
                                       0, 0, S, S, None, None, None, None)
         draw()
-        u.SetTimer(self.hwnd, 1, 250, None)
+        u.SetTimer(self.hwnd, 1, 100, None)
         msg = wintypes.MSG()
         while u.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
             u.TranslateMessage(ctypes.byref(msg))
@@ -5504,6 +5522,7 @@ class Recording:
         self.says = {}            # block -> [(t, text)], also while it is being transcribed
         self.shots = {}           # picture file name -> t
         self.slides_done = media.video is None or not SCREEN_ENABLED
+        self.marks = None         # the student's marks (★ / ?), read from the lecture's folder at the first look
         self.rev = 1              # grows whenever something new is ready (the page asks for it)
         self.phase, self.note, self.error = "start", "", None
         self.model_desc = ""
@@ -5768,6 +5787,9 @@ class Recording:
                   "duration": self.duration, "lang": LANG, "ready": self.ready_ranges(), "resume": self.resume_at,
                   "transcript": self.rel_transcript, "has_video": self.media.video is not None,
                   "plays_video": self.media.path == self.media.video}
+            if self.marks is None:
+                self.marks = read_marks(self.dir)
+            st["marks"] = list(self.marks)   # the moments the student marked (★ / ?), shown on the transcript
             if rev != self.rev:
                 lines = []
                 for t, kind, v in self.items():
@@ -6462,7 +6484,9 @@ class App:
         return {"ok": True, "f": lib_rel(dest)}
 
     def emergency_close(self):
-        """The black window is being closed (X): save what we have, quickly."""
+        """The black window is being closed (X): the app's window and the small window go with it; save what we have,
+        quickly."""
+        close_our_windows(wait=False)   # (taskkill goes on by itself after this program is gone)
         with self.lock:
             s = self.session
         if s is not None:
@@ -6836,6 +6860,8 @@ def mark_recording(rec, kind):
     except OSError:
         save_error("mark recording")
         return {"ok": False, "error": "לא הצלחתי לשמור את הסימון."}
+    with rec.lock:
+        rec.marks = marks
     with APP.lock:
         APP.lib_rev += 1
     return {"ok": True, "kind": kind}
@@ -7361,6 +7387,13 @@ class AppServer:
             daemon_threads = True
             allow_reuse_address = os.name != "nt"  # on Windows this would let two programs share a port
 
+            def handle_error(self, request, client_address):
+                # the browser went away in the middle of an answer (a page closed or reloaded): not an error, and not
+                # something to print in the black window
+                if isinstance(sys.exc_info()[1], (ConnectionError, TimeoutError)):
+                    return
+                super().handle_error(request, client_address)
+
             def server_bind(self):
                 if os.name == "nt" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
                     self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
@@ -7408,9 +7441,125 @@ def console_show():
         pass
 
 
+_APP_WIN = {"hwnd": 0}   # the window of the app (a browser window of its own), so the tool can close it
+
+
+def _default_chromium_exe():
+    """The default browser's program when it is Edge or Chrome, else "" (the app's window then opens with the student's
+    own profile: the same sign-ins and settings as before)."""
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\Shell\Associations\UrlAssociations\https\UserChoice") as k:
+            prog = str(winreg.QueryValueEx(k, "ProgId")[0])
+    except OSError:
+        return ""
+    rel = r"Microsoft\Edge\Application\msedge.exe" if prog.startswith("MSEdge") else \
+        r"Google\Chrome\Application\chrome.exe" if prog.startswith("ChromeHTML") else ""
+    for k in ("ProgramFiles(x86)", "ProgramFiles", "LocalAppData"):
+        p = os.path.join(os.environ.get(k) or "", rel)
+        if rel and os.environ.get(k) and os.path.isfile(p):
+            return p
+    return ""
+
+
+def _chrome_windows(u):
+    """Every visible Edge / Chrome window as {hwnd: title}."""
+    import ctypes
+    from ctypes import wintypes
+    out = {}
+
+    def each(hwnd, _):
+        try:
+            if u.IsWindowVisible(hwnd) and _is_chrome_window(u, hwnd):
+                buf = ctypes.create_unicode_buffer(300)
+                u.GetWindowTextW(hwnd, buf, 300)
+                out[hwnd] = buf.value.strip("‪‫‬‎‏ ")
+        except Exception:
+            pass
+        return True
+    u.EnumWindows(ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)(each), 0)
+    return out
+
+
+def _watch_app_window(u, before):
+    """The window that just opened for the app: found by its title, remembered (the tool closes it, and closes itself
+    when the student closes it)."""
+    end = time.time() + 20
+    while time.time() < end:
+        time.sleep(0.25)
+        for h, title in _chrome_windows(u).items():
+            if h not in before and (title.startswith(PAGE_TITLE) or title.endswith("· הבנתי")):
+                _APP_WIN["hwnd"] = h
+                return
+
+
+def open_app_window(url):
+    """Windows: the app in a window of its own (the default browser, Edge or Chrome, without tabs and address bar, with
+    the student's own profile) and not a tab among the others: the tool knows when it is closed, and closes it when the
+    tool closes."""
+    exe = _default_chromium_exe()
+    if os.name != "nt" or not exe:
+        return False
+    import subprocess
+    try:
+        u = _mini_user32()
+        before = set(_chrome_windows(u))
+        subprocess.Popen([exe, "--app=" + url])
+        threading.Thread(target=_watch_app_window, args=(u, before), daemon=True).start()
+        return True
+    except Exception:
+        save_error("app window")
+        return False
+
+
+def app_window_closed():
+    """True once the student closed the app's window."""
+    h = _APP_WIN["hwnd"]
+    if not h:
+        return False
+    try:
+        if _mini_user32().IsWindow(h):
+            return False
+    except Exception:
+        return False
+    _APP_WIN["hwnd"] = 0
+    return True
+
+
+def close_our_windows(wait=True):
+    """Close the browser windows this program opened (the app and the small question window)."""
+    import subprocess
+    kills = []
+    p = _MINI_PROC.get("proc")
+    if p is not None and p.poll() is None:
+        try:
+            kills.append(subprocess.Popen(["taskkill", "/T", "/F", "/PID", str(p.pid)], stdout=subprocess.DEVNULL,
+                                          stderr=subprocess.DEVNULL, creationflags=0x08000000))
+        except OSError:
+            pass
+    if os.name == "nt":
+        try:
+            import ctypes
+            u = _mini_user32()
+            u.PostMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_size_t, ctypes.c_ssize_t]
+            for hwnd in (_APP_WIN["hwnd"], _find_mini(u)):   # (the small window of an earlier run too)
+                if hwnd:
+                    u.PostMessageW(hwnd, 0x0010, 0, 0)   # WM_CLOSE: the window closes as if the student closed it
+            _APP_WIN["hwnd"] = 0
+        except Exception:
+            pass
+    for k in kills if wait else ():
+        try:
+            k.wait(3)
+        except Exception:
+            pass
+
+
 def open_browser(url):
     if os.environ.get("BZM_NO_BROWSER") == "1":
         return False
+    if open_app_window(url):
+        return True
     import webbrowser
     try:
         return webbrowser.open(url)
@@ -7722,9 +7871,13 @@ def main():
             if idle and time.time() - APP.last_seen > IDLE_EXIT_S:
                 log(f"האפליקציה סגורה ושום דבר לא רץ כבר {max(1, round(IDLE_EXIT_S / 60))} דקות - {PRODUCT} נסגרה. כדי לפתוח שוב: Hevanti.")
                 break
+            if app_window_closed() and idle:   # the app's window was closed with nothing running: the tool closes too
+                log(f"החלון של {PRODUCT} נסגר - {PRODUCT} נסגרת.")
+                break
     except KeyboardInterrupt:
         draft_clear()
         log("עוצר...")
+    close_our_windows()
     APP.stop_session(wait=180)
     server.stop()
     _remove_quietly(APP_FILE)
