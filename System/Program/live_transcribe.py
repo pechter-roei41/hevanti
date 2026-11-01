@@ -4452,6 +4452,31 @@ def mini_button_wanted():
         return True
 
 
+def _logo_pixels(S):
+    """The Hevanti logo (a speech bubble with a check mark) on a round cream button, as bottom-up BGRA bytes for GDI.
+    Drawn 6x larger and shrunk, so the edges are smooth."""
+    from PIL import Image, ImageDraw
+    K = 6
+    N = S * K
+    green, yellow, cream = (31, 122, 85), (247, 212, 76), (246, 243, 233)
+    im = Image.new("RGB", (N, N), cream)
+    d = ImageDraw.Draw(im)
+    d.ellipse([0, 0, N - 1, N - 1], fill=cream, outline=green, width=int(2.4 * K))
+    sc = 0.56 * N / 108
+    ox, oy = N / 2 - 60 * sc, N / 2 - 61 * sc
+
+    def P(x, y):
+        return (ox + x * sc, oy + y * sc)
+    d.rounded_rectangle([P(6, 14), P(114, 90)], radius=14 * sc, fill=green)
+    d.polygon([P(96, 88), P(99, 110), P(74, 88)], fill=green)
+    pts = [P(35, 52), P(51, 68), P(85, 34)]
+    d.line(pts, fill=yellow, width=int(12 * sc), joint="curve")
+    for x, y in pts:
+        d.ellipse([x - 6 * sc, y - 6 * sc, x + 6 * sc, y + 6 * sc], fill=yellow)
+    im = im.resize((S, S), Image.LANCZOS)
+    return im.convert("RGBA").transpose(Image.FLIP_TOP_BOTTOM).tobytes("raw", "BGRA")
+
+
 class MiniButton(threading.Thread):
     SIZE = 56
 
@@ -4506,7 +4531,19 @@ class MiniButton(threading.Thread):
         g.DeleteObject.argtypes = [wintypes.HANDLE]
         g.SetBkMode.argtypes = [wintypes.HDC, ctypes.c_int]
         g.SetTextColor.argtypes = [wintypes.HDC, wintypes.DWORD]
-        st = {"down": None, "moved": False, "shown": False}
+        st = {"down": None, "moved": False, "shown": False, "hold": 0.0}
+        try:
+            pix = ctypes.create_string_buffer(_logo_pixels(S))
+        except Exception:
+            pix = None
+
+        class BMIH(ctypes.Structure):
+            _fields_ = [("size", wintypes.DWORD), ("w", wintypes.LONG), ("h", wintypes.LONG), ("planes", wintypes.WORD),
+                        ("bpp", wintypes.WORD), ("comp", wintypes.DWORD), ("img", wintypes.DWORD), ("xp", wintypes.LONG),
+                        ("yp", wintypes.LONG), ("used", wintypes.DWORD), ("imp", wintypes.DWORD)]
+        bmi = BMIH(ctypes.sizeof(BMIH), S, S, 1, 32, 0, 0, 0, 0, 0, 0)
+        g.SetDIBitsToDevice.argtypes = [wintypes.HDC, ctypes.c_int, ctypes.c_int, wintypes.DWORD, wintypes.DWORD, ctypes.c_int,
+                                        ctypes.c_int, wintypes.UINT, wintypes.UINT, ctypes.c_void_p, ctypes.c_void_p, wintypes.UINT]
 
         def place():
             area, r = wintypes.RECT(), wintypes.RECT()
@@ -4524,6 +4561,10 @@ class MiniButton(threading.Thread):
             if msg == 0x000F:   # WM_PAINT: a green disc with a white "?"
                 ps = PAINT()
                 hdc = u.BeginPaint(hwnd, ctypes.byref(ps))
+                if pix is not None:   # the logo
+                    g.SetDIBitsToDevice(hdc, 0, 0, S, S, 0, 0, 0, S, ctypes.addressof(pix), ctypes.addressof(bmi), 0)
+                    u.EndPaint(hwnd, ctypes.byref(ps))
+                    return 0
                 rc = wintypes.RECT(0, 0, S, S)
                 brush = g.CreateSolidBrush((0x55 << 16) | (0x7A << 8) | 0x1F)   # BGR of #1F7A55
                 u.FillRect(hdc, ctypes.byref(rc), brush)
@@ -4562,11 +4603,13 @@ class MiniButton(threading.Thread):
                     r = wintypes.RECT()
                     u.GetWindowRect(hwnd, ctypes.byref(r))
                     save_settings(mini_btn_pos=[r.left, r.top])
-                else:
+                else:   # a click: the button goes at once (the window takes a moment to open), and stays away a few seconds
+                    u.ShowWindow(hwnd, 0)
+                    st["shown"], st["hold"] = False, time.time() + 4
                     threading.Thread(target=self.on_click, daemon=True).start()
                 return 0
             if msg == 0x0113:   # WM_TIMER (twice a second): show / hide as the lecture and the window change
-                want = bool(self.wanted())
+                want = bool(self.wanted()) and time.time() >= st["hold"]
                 if want and not st["shown"]:
                     place()
                     u.ShowWindow(hwnd, 4)   # SW_SHOWNOACTIVATE
@@ -4594,7 +4637,7 @@ class MiniButton(threading.Thread):
                                       0, 0, S, S, None, None, None, None)
         u.SetLayeredWindowAttributes(self.hwnd, 0, 230, 2)
         u.SetWindowRgn(self.hwnd, g.CreateEllipticRgn(0, 0, S + 1, S + 1), True)
-        u.SetTimer(self.hwnd, 1, 500, None)
+        u.SetTimer(self.hwnd, 1, 250, None)
         msg = wintypes.MSG()
         while u.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
             u.TranslateMessage(ctypes.byref(msg))
