@@ -218,7 +218,10 @@
       try { context = extra.context ? await extra.context() : await opts.context(q || "תסביר בפשטות את מה שנאמר בדקות האחרונות"); }
       catch (e) { context = q; }
       const qa = mk("div", "qa"), ae = mk("div", "a", "חושב..."); qa.append(mk("p", "q", shown), ae);
-      conv.appendChild(qa); convbar.hidden = false; conv.scrollTop = conv.scrollHeight;
+      conv.appendChild(qa); convbar.hidden = false;
+      // the small window shows the newest question at the top (read the answer from its start; scroll for the rest)
+      const follow = () => { if (opts.compact) conv.scrollTop = qa.offsetTop - conv.offsetTop - 4; else conv.scrollTop = conv.scrollHeight; };
+      follow();
       const val = f => { try { return (f && f()) || ""; } catch (e) { return ""; } };
       const body = {context, question: shown, history: hist.slice(-6), task: extra.task || "",
         where: val(opts.where), f: val(opts.lecture), img: val(opts.image), n: val(opts.shotName), at: val(opts.at)};
@@ -234,7 +237,7 @@
         const rd = r.body.getReader(), dec = new TextDecoder();
         for (;;) {
           const {done, value} = await rd.read(); if (done) break;
-          text += dec.decode(value, {stream: true}); renderAnswer(doc, ae, text); conv.scrollTop = conv.scrollHeight;
+          text += dec.decode(value, {stream: true}); renderAnswer(doc, ae, text); if (!opts.compact) follow();
         }
         text += dec.decode(); renderAnswer(doc, ae, text || "(לא התקבלה תשובה)");
         if (text && !text.includes("\n\n⚠ ")) { hist.push({q: shown, a: text}); if (extra.onDone) extra.onDone(text); }
