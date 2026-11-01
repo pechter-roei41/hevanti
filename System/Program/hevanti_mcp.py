@@ -16,7 +16,7 @@ import re
 import sys
 import time
 
-VERSION = "2.1"
+VERSION = "2.2"
 NOW_NAME = "now_watching.txt"
 SLIDES = "שקופיות"
 GLOSSARY = "מילון מונחים.txt"
