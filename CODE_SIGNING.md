@@ -1,28 +1,69 @@
 # Code signing policy
 
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+
+> Status: the project is applying to the SignPath Foundation. Until it is approved, `Hevanti-Setup.exe` is **not** signed
+> and Windows SmartScreen shows a warning ("Windows protected your PC": More info, then Run anyway). This page will be
+> updated when the first signed release is published.
 
 ## What is signed
 
-`Hevanti-Setup.exe`, the Windows installer attached to each [release](https://github.com/pechter-roei41/hevanti/releases). It is built from this repository by the public GitHub Actions workflow [`release.yml`](.github/workflows/release.yml), from the tagged commit only, and is submitted to SignPath from that workflow. Nothing built on a personal computer is signed.
+- `Hevanti-Setup.exe`, the Windows installer of Hevanti (הבנתי), built from the source code in this repository.
+- Product name: `Hevanti`. Product version: the version in `System/Program/live_transcribe.py` (`VERSION`), the same value
+  in every build.
+- Not signed by this project: the Python runtime and the Python packages that are copied into the installer as they
+  are (they are third-party components, included unmodified). `Hevanti.zip` (the same app as a folder) is not signed.
 
-## Team
+## How a release is made
 
-| Role | Who |
-|---|---|
-| Committers and reviewers | [Roei Pechter](https://github.com/pechter-roei41) |
-| Approvers (approve each signing request) | [Roei Pechter](https://github.com/pechter-roei41) |
+1. Changes are committed to this repository (GitHub). A release is a tag `v*` on a commit of the `main` branch.
+2. GitHub Actions (`.github/workflows/release.yml`) builds the program folder and the installer from that commit.
+   The build scripts are in this repository (`installer/`, `tools/`, `.github/workflows/`), so anyone can read how the
+   installer is made.
+3. The installer is sent to SignPath for signing. **An approver approves every signing request by hand.**
+4. The signed installer is attached to the GitHub release.
 
-Every signing request is approved by hand in SignPath. Accounts with access use multi-factor authentication.
+## Team and roles
 
-## Privacy
+| Role | Who | What they do |
+| --- | --- | --- |
+| Author | [Roei Pechter](https://github.com/pechter-roei41) | Writes and commits the code. |
+| Reviewer | [Roei Pechter](https://github.com/pechter-roei41) | Reviews every change from other contributors (pull requests) before it is merged. |
+| Approver | [Roei Pechter](https://github.com/pechter-roei41) | Approves each signing request, after checking that the release was built from this repository. |
 
-Hevanti does not send anything anywhere by itself:
+Hevanti is a one-person project today. If other people join, they are listed here with their roles.
+All team members use multi-factor authentication on GitHub and on SignPath.
 
-- Transcription and slide reading run on the student's computer. Transcripts and slides are saved in the "הקורסים שלי" (My Lectures) folder on that computer.
-- The AI connector (`hevanti_mcp.py`) only reads that folder, and only when the student's own AI app asks it to. What the AI reads goes to that AI's provider, as in any conversation with it.
-- "Sync to the cloud" is off until the student turns it on. When on, it copies each course's transcripts into the student's own Google Drive or OneDrive folder.
-- The app's page loads its fonts from Google Fonts, and YouTube's own player when the student watches a YouTube video in it.
-- Hevanti checks GitHub for a newer release, and downloads the transcription model (from Hugging Face) and, if the student agrees, Tesseract and its language files (from GitHub) the first time they are needed.
+## Privacy policy
 
-This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
+Hevanti runs on your computer. It has no server and no account of its own, and it does not collect statistics.
+The transcript and the slide pictures are saved only on your computer (in your Documents folder).
+
+The program sends information to other computers only in these cases:
+
+| When | What is sent, and to whom |
+| --- | --- |
+| You ask a question ("תשובה כאן", or Enter in the small window) | The question, the last minutes of the transcript and the slide on the screen are sent to Google's Gemini API (`generativelanguage.googleapis.com`), with the Gemini key that you created and saved in the settings. |
+| You turn on "read formulas and handwriting" (off by default) | Each saved slide picture is sent to Google's Gemini API, in the same way. |
+| First lecture, or a new language | The speech-recognition model is downloaded from Hugging Face (`huggingface.co`). Nothing about you is sent. |
+| You open a recording from a link (YouTube, Google Drive, Panopto) | The file is downloaded from the address you gave. The first time, the helper `yt-dlp` may be installed from PyPI (`pypi.org`). |
+| The program starts, if "check for updates" is on (a setting) | A request to GitHub (`api.github.com`) asks which version is the latest. No information about you is sent. |
+| You open a page of the app | The page asks Google Fonts (`fonts.googleapis.com`) for the two fonts it uses. |
+| You choose "copy to ChatGPT / Gemini / Claude" | The question is copied to your clipboard and you paste it yourself. The program opens the AI's website or app, and sends nothing to it. |
+
+Google may use what is sent to the Gemini API according to its own terms; see Google's terms for the free tier
+(the settings page and the guide say this too). The program does not transfer any other information to other networked
+systems.
+
+If you use "cloud sync" (off by default), the transcripts are written to a Google Drive or OneDrive folder on your
+computer, and that service syncs them under its own terms.
+
+## Uninstall
+
+The installer adds an entry in Windows Settings, Apps. Removing it deletes the program. Your lectures, in
+`Documents\הבנתי`, are never deleted by an update or an uninstall.
+
+## Reporting a problem
+
+If you think a signed file is wrong or harmful, write to <pechter.roei@gmail.com> or open an
+[issue](https://github.com/pechter-roei41/hevanti/issues). Reports about a signed release are answered first.
