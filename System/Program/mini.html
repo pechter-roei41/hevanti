@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>הבנתי - שאלה</title>
+<!-- Hevanti (הבנתי) - the small question window (always on top, opened with Ctrl+Alt+Q) - (c) 2026 Roei Pechter. MIT License, see LICENSE.txt -->
+<style>
+:root{
+  --bg:#F6F3E9; --surface:#FFFFFF; --sunk:#ECE7D8; --fg:#17261F; --muted:#56625B; --line:#DDD7C4;
+  --accent:#1F7A55; --accent-ink:#FFFFFF; --accent-soft:#DCEBDF; --rec:#C2412D; --warn-bg:#FBF0DA; --warn-fg:#6B5020;
+  --f-body:"Assistant","Segoe UI","Arial Hebrew",Arial,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#121C17; --surface:#1A2620; --sunk:#22302A; --fg:#E8EFE9; --muted:#9FB0A6; --line:#2E3D35;
+  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#1F3A2E; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.5;display:flex;flex-direction:column}
+button,textarea{font:inherit;color:inherit}
+[hidden]{display:none!important}
+header{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--surface)}
+header b{font-size:15px}
+#lec{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--muted)}
+.hb{border:1px solid var(--line);background:none;border-radius:8px;padding:1px 10px;cursor:pointer;font-size:15px;line-height:1.4}
+.hb:hover{background:var(--accent-soft)}
+#note{margin:8px 10px 0;padding:6px 10px;border-radius:10px;background:var(--warn-bg);color:var(--warn-fg);font-size:13px}
+#box{flex:1;min-height:0;padding:8px 10px 10px}
+#box.askp{display:flex;flex-direction:column;height:100%;gap:8px}
+#box.askp .conv{flex:1;min-height:0;max-height:none}
+#box.askp .head{display:none}
+#box.askp textarea{font-size:16px}
+#toast{position:fixed;inset-inline:10px;bottom:10px;background:var(--fg);color:var(--bg);padding:8px 12px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <b>הבנתי</b><span id="lec">אין עכשיו הרצאה פעילה</span>
+  <button class="hb" id="hide" type="button" title="להסתיר (Ctrl+Alt+Q או Esc)" aria-label="להסתיר">—</button>
+</header>
+<div id="note" hidden>אין עכשיו הרצאה פעילה. מתחילים הרצאה באפליקציה, ואז אפשר לשאול כאן.</div>
+<div id="box"></div>
+<div id="toast" role="status"></div>
+<script src="/ask.js"></script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+let shot = null, total = 0, live = false;
+function toast(t) {
+  const e = $("#toast"); e.textContent = t; e.classList.add("on");
+  clearTimeout(toast.h); toast.h = setTimeout(() => e.classList.remove("on"), Math.max(2800, t.length * 50));
+}
+const hide = () => fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
+  body: JSON.stringify({action: "hide_mini"})}).catch(() => {});
+$("#hide").addEventListener("click", hide);
+let box = null;
+if (window.BZMAsk) box = BZMAsk.mount($("#box"), {compact: true, title: "שאלה", placeholder: "מה לא ברור? (Enter לשליחה)",
+  context: q => q, toast, hasImage: () => !!shot, image: () => shot, where: () => "mini",
+  at: () => new Date().toLocaleTimeString("he-IL")});
+document.addEventListener("keydown", e => { if (e.key === "Escape") hide(); });
+window.addEventListener("focus", () => { if (box) box.focus(); });
+async function getJson(u) { return (await fetch(u, {cache: "no-store"})).json(); }
+async function pollApp() {
+  try {
+    const d = await getJson("/api/app"), s = d.session;
+    live = !!(s && !s.done && s.kind === "live");
+    $("#lec").textContent = live ? (s.title || "הרצאה חיה") : "אין עכשיו הרצאה פעילה";
+    $("#note").hidden = live;
+    if (window.BZMAsk) {
+      BZMAsk.setConnected(d.connect); BZMAsk.setApps(d.ai_apps);
+      BZMAsk.setBuiltin(!!(d.math && d.math.ask)); BZMAsk.setPlan((d.math && d.math.plan) || "");
+    }
+  } catch (e) {}
+}
+async function pollLive() {
+  if (!live) { shot = null; total = 0; return; }
+  try {
+    const d = await getJson("/api/live?since=" + total);
+    if (d.none) { shot = null; total = 0; return; }
+    if (d.yt) { const im = (d.items || []).filter(x => x.img).pop(); if (im) shot = im.img; }
+    else { total = d.total || total; if (d.shot) shot = d.shot; }
+  } catch (e) {}
+}
+pollApp(); setInterval(pollApp, 4000);
+setInterval(pollLive, 3000);
+if (box) box.focus();
+</script>
+</body>
+</html>

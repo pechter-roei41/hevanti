@@ -1111,6 +1111,7 @@ def mask_windows(arr, area, wins=None):
 CAPTURE_MODES = ("screen", "window", "region")
 PAUSE_HOTKEY = "Ctrl+Alt+P"
 MARK_HOTKEY = "Ctrl+Alt+M"    # mark "לא הבנתי" in a live lecture (2.2)
+MINI_HOTKEY = "Ctrl+Alt+Q"    # the small question window: show / hide, over a full-screen lecture too
 SHELL_TITLES = {"program manager", "windows input experience", "microsoft text input application", "settings"}
 
 
@@ -1323,11 +1324,14 @@ class PauseHotkey(threading.Thread):
             mods = 0x0001 | 0x0002 | 0x4000
             pause_ok = user32.RegisterHotKey(None, 0x4856, mods, 0x50)
             mark_ok = user32.RegisterHotKey(None, 0x4857, mods, 0x4D)
+            mini_ok = user32.RegisterHotKey(None, 0x4858, mods, 0x51)
+            if not mini_ok:
+                log("הקיצור " + MINI_HOTKEY + " לחלון השאלות הקטן תפוס בתוכנה אחרת. אפשר לפתוח אותו בכפתור בדף.")
             if not pause_ok:
                 log("הקיצור " + PAUSE_HOTKEY + " להשהיית הצילום תפוס בתוכנה אחרת. אפשר להשהות בכפתור בדף.")
             if not mark_ok:
                 log("הקיצור " + MARK_HOTKEY + " לסימון רגע תפוס בתוכנה אחרת. אפשר לסמן בכפתור בדף.")
-            if not (pause_ok or mark_ok):
+            if not (pause_ok or mark_ok or mini_ok):
                 return
             try:
                 msg = wintypes.MSG()
@@ -1335,10 +1339,12 @@ class PauseHotkey(threading.Thread):
                     while user32.PeekMessageW(ctypes.byref(msg), None, 0x0312, 0x0312, 1):   # WM_HOTKEY
                         if msg.wParam == 0x4857:
                             self.mark()
+                        elif msg.wParam == 0x4858:   # (opening the window takes seconds: not in this loop)
+                            threading.Thread(target=toggle_mini, daemon=True).start()
                         else:
                             self.toggle()
             finally:
-                for hid, ok in ((0x4856, pause_ok), (0x4857, mark_ok)):
+                for hid, ok in ((0x4856, pause_ok), (0x4857, mark_ok), (0x4858, mini_ok)):
                     if ok:
                         user32.UnregisterHotKey(None, hid)
         except Exception:
@@ -4239,6 +4245,156 @@ def mirror_status():
     return {"mirror": load_settings().get("mirror") or "", "found": [{"label": a, "path": b} for a, b in find_cloud_folders()]}
 
 
+# --- the small question window: a window of its own, always on top (a full-screen lecture too) ---
+# Edge (or Chrome) in "app" mode shows our /mini page without tabs or address bar; Windows keeps it on top. It is
+# opened / hidden with Ctrl+Alt+Q (or the button in the page). Its own browser profile keeps it apart from the
+# student's browser, so closing it never closes their tabs.
+MINI_HTML = os.path.join(SCRIPT_DIR, "mini.html")
+MINI_TITLE = "הבנתי - שאלה"
+MINI_SIZE = (430, 600)
+_MINI_LOCK = threading.Lock()
+
+
+def _browser_exe():
+    rel = (r"Microsoft\Edge\Application\msedge.exe", r"Google\Chrome\Application\chrome.exe")
+    for r in rel:
+        for k in ("ProgramFiles(x86)", "ProgramFiles", "LocalAppData"):
+            p = os.path.join(os.environ.get(k) or "", r)
+            if os.environ.get(k) and os.path.isfile(p):
+                return p
+    return ""
+
+
+def _mini_user32():
+    import ctypes
+    from ctypes import wintypes
+    u = ctypes.WinDLL("user32")
+    H = wintypes.HWND
+    u.GetWindowTextW.argtypes = [H, wintypes.LPWSTR, ctypes.c_int]
+    u.IsWindowVisible.argtypes = [H]
+    u.IsIconic.argtypes = [H]
+    u.ShowWindow.argtypes = [H, ctypes.c_int]
+    u.SetForegroundWindow.argtypes = [H]
+    u.GetWindowRect.argtypes = [H, ctypes.POINTER(wintypes.RECT)]
+    u.MoveWindow.argtypes = [H, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.BOOL]
+    u.SetWindowPos.argtypes = [H, H, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
+    return u
+
+
+def _find_mini(u):
+    """The mini window (visible or hidden), or 0."""
+    import ctypes
+    from ctypes import wintypes
+    found = []
+
+    def each(hwnd, _):
+        try:
+            buf = ctypes.create_unicode_buffer(200)
+            u.GetWindowTextW(hwnd, buf, 200)
+            if MINI_TITLE in buf.value:   # (the browser wraps a right-to-left title in direction marks)
+                found.append(hwnd)
+        except Exception:
+            pass
+        return True
+    u.EnumWindows(ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)(each), 0)
+    return found[0] if found else 0
+
+
+def _show_mini(u, hwnd, place=False):
+    import ctypes
+    from ctypes import wintypes
+    u.ShowWindow(hwnd, 9)   # SW_RESTORE
+    if place:   # first time: the bottom corner of the main screen, small
+        area = wintypes.RECT()
+        r = wintypes.RECT()
+        if u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0) and u.GetWindowRect(hwnd, ctypes.byref(r)):
+            w, h = r.right - r.left, r.bottom - r.top
+            u.MoveWindow(hwnd, area.right - w - 16, area.bottom - h - 16, w, h, True)
+    u.SetWindowPos(hwnd, -1, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0040)   # HWND_TOPMOST, no move/size, show
+    u.keybd_event(0x12, 0, 0, 0)   # (a tap on Alt lets this program take the keyboard from the lecture's window)
+    u.keybd_event(0x12, 0, 2, 0)
+    u.SetForegroundWindow(hwnd)
+
+
+def toggle_mini(hide_only=False):
+    """Show the small question window (starting it if needed) or hide it."""
+    if os.name != "nt":
+        return {"ok": False, "error": "החלון הקטן עובד רק ב-Windows."}
+    import subprocess
+    try:
+        u = _mini_user32()
+        with _MINI_LOCK:
+            hwnd = _find_mini(u)
+            if hwnd:
+                if u.IsWindowVisible(hwnd) and not u.IsIconic(hwnd):
+                    u.ShowWindow(hwnd, 0)   # SW_HIDE
+                    return {"ok": True, "shown": False}
+                if hide_only:
+                    return {"ok": True, "shown": False}
+                _show_mini(u, hwnd)
+                return {"ok": True, "shown": True}
+            if hide_only:
+                return {"ok": True, "shown": False}
+            exe = _browser_exe()
+            if not exe or not APP.url:
+                return {"ok": False, "error": "החלון הקטן צריך את Microsoft Edge או את Chrome."}
+            prof = os.path.join(DATA_DIR, "mini-profile")
+            os.makedirs(prof, exist_ok=True)
+            subprocess.Popen([exe, "--app=" + APP.url + "mini", f"--window-size={MINI_SIZE[0]},{MINI_SIZE[1]}",
+                              "--user-data-dir=" + prof, "--no-first-run", "--no-default-browser-check",
+                              "--disable-extensions", "--disable-sync"])
+            end = time.time() + 15
+            while time.time() < end:
+                time.sleep(0.3)
+                hwnd = _find_mini(u)
+                if hwnd:
+                    time.sleep(0.4)
+                    _show_mini(u, hwnd, place=True)
+                    return {"ok": True, "shown": True}
+        return {"ok": False, "error": "החלון הקטן לא נפתח. אפשר לנסות שוב."}
+    except Exception:
+        save_error("mini window")
+        return {"ok": False, "error": "לא הצלחתי לפתוח את החלון הקטן."}
+
+
+def mini_context(q):
+    """What the small window sends with the question: the last 5 minutes of the live lecture (and what was on the
+    slides), the same as the lecture page sends."""
+    hint = "\nלענות בעברית (מונחים מקצועיים אפשר באנגלית). מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.\n"
+    live = APP.live
+    if live is None:
+        return "(אין עכשיו הרצאה פעילה)\n" + hint + "\nהשאלה שלי: " + q
+    yt = bool(getattr(live, "yt", False))
+    with live.lock:
+        if yt:
+            pos = live.clock.now()[0]
+            items, draft = [(t, x) for t, x in live.all if pos - 300 <= t <= pos + 5], ""
+        else:
+            cut = time.time() - 300
+            items, draft = [(t, x) for t, x in live.all if t >= cut], live.draft or ""
+    tag = "[צילום מסך: "
+    shots = [x for _, x in items if x.startswith(tag)][-3:]
+    texts = {}
+    for x in shots:
+        f = safe_shot(x[len(tag):-1])
+        try:
+            texts[x] = slide_text(f)[:700].replace("\n", " | ") if f else ""
+        except Exception:
+            texts[x] = ""
+    out = "אני בהרצאה חיה. זה התמלול האוטומטי של 5 הדקות האחרונות (יכולות להיות בו טעויות תמלול):\n\n"
+    for t, x in items:
+        c = hms(t) if yt else datetime.datetime.fromtimestamp(t).strftime("%H:%M:%S")
+        if x.startswith(tag):
+            out += f"[{c}] " + (f"[על השקופית כתוב: {texts[x]}]" if texts.get(x) else "[כאן הופיעה שקופית או כתיבה חדשה על הלוח]") + "\n"
+        else:
+            out += f"[{c}] {x}\n"
+    if draft:
+        out += f"(ממש עכשיו, עוד לא סופי: {draft})\n"
+    if not items and not draft:
+        out += "(עוד אין תמלול)\n"
+    return out + hint + "\nהשאלה שלי: " + q
+
+
 # --- the AI's window on a third of the screen, beside the lecture ---
 def place_window_left_third(match, timeout=10.0):
     """Windows: move the newest window whose title matches to the left third of the main screen (the lecture
@@ -5656,6 +5812,8 @@ class App:
             with self.lock:
                 self.lib_rev += 1
             return {"ok": True, "terms": len(words)}
+        if a in ("toggle_mini", "hide_mini"):
+            return toggle_mini(hide_only=(a == "hide_mini"))
         if a == "delete_syllabus":
             return delete_syllabus(course)
         if a in ("move_lecture", "rename_lecture", "delete_lecture"):
@@ -6450,6 +6608,8 @@ def _app_handler():
                             return self._send(200, f.read(), "text/javascript; charset=utf-8")
                     except OSError:
                         return self._send(404, b"", "text/javascript")
+                if p == "/mini":   # the small question window (opened by toggle_mini)
+                    return self._page(MINI_HTML)
                 if p == "/player":
                     if APP.rec is None:
                         return self._send(302, b"", "text/plain", {"Location": "/"})
@@ -6567,6 +6727,9 @@ def _app_handler():
                 return self._json({"ok": False, "error": "התשובות בתוך הבנתי לא מוגדרות: בגלגל השיניים (הגדרות) ← מפתח API."}, 400)
             reader = math_reader()
             try:
+                if d.get("where") == "mini":   # the small window: the server knows what was said
+                    d = dict(d, context=mini_context(str(d.get("question") or "")),
+                             where="yt" if getattr(APP.live, "yt", False) else "live")
                 body = tutor_body(d)
                 pieces, first, last_err, quota_err = None, "", None, None
                 usage, started, chars, used = {}, time.time(), len(json.dumps(body, ensure_ascii=False)), ""
