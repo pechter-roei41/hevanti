@@ -734,7 +734,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <div class="what"><b id="pastTitle"></b><small id="pastSub"></small></div>
       <button class="btn" id="pastPlay" type="button" hidden>צפייה בנגן</button>
       <details class="moremenu" id="pastMenu">
-        <summary class="btn quiet" aria-label="עוד פעולות להרצאה">⋯ עוד</summary>
+        <summary class="btn quiet" aria-label="עוד פעולות להרצאה" title="עוד פעולות">⋯</summary>
         <div class="menu">
           <button type="button" id="pastCopy">העתקת כל התמלול</button>
           <button type="button" id="pastFile">פתיחת הקובץ</button>
@@ -769,7 +769,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <div id="sumText" class="sumtext"></div>
     </div>
     <details class="fold" id="pastAskFold">
-      <summary>שאלה חופשית ל-AI על ההרצאה<small>גם התשובות למשימות מופיעות כאן</small></summary>
+      <summary>שאלה חופשית ל-AI על ההרצאה</summary>
       <div class="card" id="pastAsk"></div>
     </details>
     <details class="fold" id="pastTrFold">
@@ -1365,7 +1365,13 @@ const setPanels = {};
   setPanels.cap.appendChild(ml);
   const bl = el("label", "row miniopt"), bc = el("input"); bc.type = "checkbox"; bc.id = "miniBtn";
   bc.addEventListener("change", () => api("/api/cmd", {action: "mini_button", on: bc.checked}));
-  bl.append(bc, el("b", "", "כפתור ? צף על המסך בזמן הרצאה חיה, כשהחלון הקטן סגור (לחיצה עליו פותחת את החלון)"));
+  const bt = el("b"); bt.append("כפתור ");   // (the button looks like the Hevanti logo on a round cream disc)
+  const logo = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  logo.setAttribute("viewBox", "0 0 120 120"); logo.setAttribute("width", "26"); logo.setAttribute("height", "26"); logo.setAttribute("aria-hidden", "true");
+  logo.style.cssText = "vertical-align:middle;margin:-2px 2px";
+  logo.innerHTML = '<circle cx="60" cy="60" r="56" fill="#f6f3e9" stroke="#1f7a55" stroke-width="5"/><g transform="translate(60 60) scale(.56) translate(-60 -61)"><rect x="6" y="14" width="108" height="76" rx="14" fill="#1f7a55"/><path d="M96 88l3 22-25-22z" fill="#1f7a55"/><path d="M35 52l16 16 34-34" fill="none" stroke="#f7d44c" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></g>';
+  bt.append(logo, " צף על המסך בזמן הרצאה חיה, כשהחלון הקטן סגור (לחיצה עליו פותחת את החלון)");
+  bl.append(bc, bt);
   setPanels.cap.appendChild(bl);
   // which corner of the screen the floating button sits in
   const pl = el("div", "row miniopt"), cs = el("div", "seg");
