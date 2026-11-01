@@ -4434,6 +4434,177 @@ def mini_context(q):
     return out + hint + "\nהשאלה שלי: " + q
 
 
+# --- the floating "?" button: a small round button on top of everything while the small window is closed ---
+# Pressing it opens the small question window and the button hides; hiding / minimizing the window brings it back.
+# It is a window of its own (a layered, no-focus popup, so a click never takes the keyboard from the lecture) and can
+# be dragged to a corner. Only while a live lecture runs.
+def mini_button_wanted():
+    if not load_settings().get("mini_button", True):
+        return False
+    s = APP.session
+    if s is None or s.done or s.kind != "live" or not s.ready:
+        return False
+    try:
+        u = _mini_user32()
+        hwnd = _find_mini(u)
+        return not (hwnd and u.IsWindowVisible(hwnd) and not u.IsIconic(hwnd))
+    except Exception:
+        return True
+
+
+class MiniButton(threading.Thread):
+    SIZE = 56
+
+    def __init__(self, wanted, on_click):
+        super().__init__(daemon=True)
+        self.wanted, self.on_click, self.hwnd = wanted, on_click, 0
+
+    def run(self):
+        if os.name != "nt":
+            return
+        try:
+            self._loop()
+        except Exception:
+            save_error("mini button")
+
+    def _loop(self):
+        import ctypes
+        from ctypes import wintypes
+        u, g, S = ctypes.WinDLL("user32"), ctypes.WinDLL("gdi32"), self.SIZE
+        LR = ctypes.c_ssize_t
+        proc_t = ctypes.WINFUNCTYPE(LR, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)
+
+        class WNDCLASS(ctypes.Structure):
+            _fields_ = [("style", wintypes.UINT), ("lpfnWndProc", proc_t), ("cbClsExtra", ctypes.c_int),
+                        ("cbWndExtra", ctypes.c_int), ("hInstance", wintypes.HANDLE), ("hIcon", wintypes.HANDLE),
+                        ("hCursor", wintypes.HANDLE), ("hbrBackground", wintypes.HANDLE),
+                        ("lpszMenuName", wintypes.LPCWSTR), ("lpszClassName", wintypes.LPCWSTR)]
+
+        class PAINT(ctypes.Structure):
+            _fields_ = [("hdc", wintypes.HDC), ("erase", wintypes.BOOL), ("rc", wintypes.RECT), ("r", wintypes.BOOL),
+                        ("i", wintypes.BOOL), ("res", ctypes.c_byte * 32)]
+        u.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+        u.DefWindowProcW.restype = LR
+        u.BeginPaint.argtypes = [wintypes.HWND, ctypes.POINTER(PAINT)]
+        u.BeginPaint.restype = wintypes.HDC
+        u.EndPaint.argtypes = [wintypes.HWND, ctypes.POINTER(PAINT)]
+        u.SetCapture.argtypes = [wintypes.HWND]
+        u.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+        u.MoveWindow.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.BOOL]
+        u.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
+        u.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
+        u.SetTimer.argtypes = [wintypes.HWND, ctypes.c_size_t, wintypes.UINT, ctypes.c_void_p]
+        u.SetLayeredWindowAttributes.argtypes = [wintypes.HWND, wintypes.DWORD, ctypes.c_ubyte, wintypes.DWORD]
+        u.SetWindowRgn.argtypes = [wintypes.HWND, wintypes.HANDLE, wintypes.BOOL]
+        u.FillRect.argtypes = [wintypes.HDC, ctypes.POINTER(wintypes.RECT), wintypes.HANDLE]
+        u.DrawTextW.argtypes = [wintypes.HDC, wintypes.LPCWSTR, ctypes.c_int, ctypes.POINTER(wintypes.RECT), wintypes.UINT]
+        g.CreateSolidBrush.restype = wintypes.HANDLE
+        g.CreateEllipticRgn.restype = wintypes.HANDLE
+        g.CreateFontW.restype = wintypes.HANDLE
+        g.SelectObject.argtypes = [wintypes.HDC, wintypes.HANDLE]
+        g.SelectObject.restype = wintypes.HANDLE
+        g.DeleteObject.argtypes = [wintypes.HANDLE]
+        g.SetBkMode.argtypes = [wintypes.HDC, ctypes.c_int]
+        g.SetTextColor.argtypes = [wintypes.HDC, wintypes.DWORD]
+        st = {"down": None, "moved": False, "shown": False}
+
+        def place():
+            area, r = wintypes.RECT(), wintypes.RECT()
+            u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0)
+            pos = load_settings().get("mini_btn_pos")
+            try:
+                x, y = int(pos[0]), int(pos[1])
+                if not (area.left - S < x < area.right and area.top - S < y < area.bottom):
+                    raise ValueError
+            except (TypeError, ValueError, IndexError):
+                x, y = area.right - S - 14, area.bottom - S - 150
+            u.MoveWindow(self.hwnd, x, y, S, S, True)
+
+        def wndproc(hwnd, msg, wp, lp):
+            if msg == 0x000F:   # WM_PAINT: a green disc with a white "?"
+                ps = PAINT()
+                hdc = u.BeginPaint(hwnd, ctypes.byref(ps))
+                rc = wintypes.RECT(0, 0, S, S)
+                brush = g.CreateSolidBrush((0x55 << 16) | (0x7A << 8) | 0x1F)   # BGR of #1F7A55
+                u.FillRect(hdc, ctypes.byref(rc), brush)
+                font = g.CreateFontW(-34, 0, 0, 0, 700, 0, 0, 0, 1, 0, 0, 4, 0, "Segoe UI")
+                old = g.SelectObject(hdc, font)
+                g.SetBkMode(hdc, 1)
+                g.SetTextColor(hdc, 0xFFFFFF)
+                u.DrawTextW(hdc, "?", -1, ctypes.byref(rc), 0x25)   # center, vcenter, single line
+                g.SelectObject(hdc, old)
+                g.DeleteObject(font)
+                g.DeleteObject(brush)
+                u.EndPaint(hwnd, ctypes.byref(ps))
+                return 0
+            if msg == 0x0021:   # WM_MOUSEACTIVATE: a click does not take the keyboard from the lecture
+                return 3
+            if msg == 0x0201:   # button down: maybe the start of a drag
+                pt = wintypes.POINT()
+                u.GetCursorPos(ctypes.byref(pt))
+                r = wintypes.RECT()
+                u.GetWindowRect(hwnd, ctypes.byref(r))
+                st["down"], st["moved"] = (pt.x, pt.y, r.left, r.top), False
+                u.SetCapture(hwnd)
+                return 0
+            if msg == 0x0200 and st["down"]:   # move while pressed
+                pt = wintypes.POINT()
+                u.GetCursorPos(ctypes.byref(pt))
+                x0, y0, wl, wt = st["down"]
+                if st["moved"] or abs(pt.x - x0) + abs(pt.y - y0) > 6:
+                    st["moved"] = True
+                    u.MoveWindow(hwnd, wl + pt.x - x0, wt + pt.y - y0, S, S, True)
+                return 0
+            if msg == 0x0202 and st["down"]:   # button up: a click, or the end of a drag
+                u.ReleaseCapture()
+                moved, st["down"] = st["moved"], None
+                if moved:
+                    r = wintypes.RECT()
+                    u.GetWindowRect(hwnd, ctypes.byref(r))
+                    save_settings(mini_btn_pos=[r.left, r.top])
+                else:
+                    threading.Thread(target=self.on_click, daemon=True).start()
+                return 0
+            if msg == 0x0113:   # WM_TIMER (twice a second): show / hide as the lecture and the window change
+                want = bool(self.wanted())
+                if want and not st["shown"]:
+                    place()
+                    u.ShowWindow(hwnd, 4)   # SW_SHOWNOACTIVATE
+                    st["shown"] = True
+                elif not want and st["shown"]:
+                    u.ShowWindow(hwnd, 0)
+                    st["shown"] = False
+                if st["shown"]:   # (stays above a full-screen lecture)
+                    u.SetWindowPos(hwnd, -1, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010)
+                return 0
+            return u.DefWindowProcW(hwnd, msg, wp, lp)
+
+        cb = proc_t(wndproc)
+        wc = WNDCLASS()
+        wc.lpfnWndProc, wc.lpszClassName = cb, "HevantiMiniButton"
+        wc.hCursor = u.LoadCursorW(None, ctypes.c_void_p(32649))   # the hand
+        wc.hbrBackground = None
+        u.RegisterClassW.argtypes = [ctypes.POINTER(WNDCLASS)]
+        u.RegisterClassW(ctypes.byref(wc))
+        u.CreateWindowExW.argtypes = [wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD, ctypes.c_int, ctypes.c_int,
+                                      ctypes.c_int, ctypes.c_int, wintypes.HWND, wintypes.HANDLE, wintypes.HANDLE, ctypes.c_void_p]
+        u.CreateWindowExW.restype = wintypes.HWND
+        # WS_EX_TOPMOST | TOOLWINDOW | LAYERED | NOACTIVATE, WS_POPUP
+        self.hwnd = u.CreateWindowExW(0x8 | 0x80 | 0x80000 | 0x08000000, "HevantiMiniButton", "הבנתי - כפתור שאלות", 0x80000000,
+                                      0, 0, S, S, None, None, None, None)
+        u.SetLayeredWindowAttributes(self.hwnd, 0, 230, 2)
+        u.SetWindowRgn(self.hwnd, g.CreateEllipticRgn(0, 0, S + 1, S + 1), True)
+        u.SetTimer(self.hwnd, 1, 500, None)
+        msg = wintypes.MSG()
+        while u.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
+            u.TranslateMessage(ctypes.byref(msg))
+            u.DispatchMessageW(ctypes.byref(msg))
+
+
+def _mini_button_click():
+    toggle_mini(show_only=True)
+
+
 # --- the AI's window on a third of the screen, beside the lecture ---
 def place_window_left_third(match, timeout=10.0):
     """Windows: move the newest window whose title matches to the left third of the main screen (the lecture
@@ -5856,6 +6027,9 @@ class App:
             return toggle_mini(hide_only=(a == "hide_mini"), show_only=(a == "show_mini"))
         if a == "mini_opacity":
             return set_mini_opacity(d.get("value"))
+        if a == "mini_button":   # the floating "?" button while the small window is closed
+            save_settings(mini_button=bool(d.get("on")))
+            return {"ok": True}
         if a == "mini_auto":   # open the small window by itself when a live lecture starts
             save_settings(mini_auto=bool(d.get("on")))
             return {"ok": True}
@@ -6708,6 +6882,7 @@ def _app_handler():
                 if p == "/api/mirror":
                     return self._json(dict(mirror_status(), place_ai=load_settings().get("place_ai", True),
                                            mini_auto=load_settings().get("mini_auto", True), mini_opacity=mini_opacity(),
+                                           mini_button=load_settings().get("mini_button", True),
                                            check_updates=load_settings().get("check_updates", True)))
                 if p == "/api/marks":   # the marked moments of a course
                     c = clean_name(q.get("c", [""])[0])
@@ -7226,6 +7401,8 @@ def main():
     if not server.start():
         raise RuntimeError("לא הצלחתי לפתוח את האפליקציה (כל הפורטים 8765-8769 תפוסים).")
     APP.url = server.url
+    if os.name == "nt":
+        MiniButton(mini_button_wanted, _mini_button_click).start()   # the floating "?" button
     on_window_close(APP.emergency_close)
     os.makedirs(LIB_DIR, exist_ok=True)
     try:
