@@ -222,6 +222,15 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 #vPast{display:grid;gap:14px;align-content:start}
 #vPast .livebar{margin-bottom:0}
 #vPast .card h2{margin:0 0 2px}
+.ppanel{display:grid;gap:14px;align-content:start}
+.ppanel[hidden]{display:none}
+.ptabs{display:flex;gap:8px}
+.ptabs button{font:inherit;font-size:16px;font-weight:700;padding:8px 18px;border:1.5px solid var(--line);border-radius:999px;background:var(--surface);color:var(--fg);cursor:pointer}
+.ptabs button small{font-weight:400;color:var(--muted);margin-inline-start:4px}
+.ptabs button[aria-selected="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.mklist{display:grid;gap:10px;margin-top:12px}
+.mklist .mk .ts{color:var(--muted);font-weight:400;margin-inline-start:10px}
+.mklist .mk .acts{display:flex;gap:8px}
 .moremenu{position:relative}
 .moremenu summary{list-style:none;cursor:pointer}
 .moremenu summary::-webkit-details-marker{display:none}
@@ -744,6 +753,19 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         </div>
       </details>
     </div>
+    <div class="ptabs" id="pastTabs" role="tablist" aria-label="חלקי הדף" hidden>
+      <button type="button" role="tab" data-pt="study" aria-selected="true">לימוד</button>
+      <button type="button" role="tab" data-pt="marks" aria-selected="false">הסימונים שלי <small id="ptMarks"></small></button>
+    </div>
+    <div class="ppanel" id="pastPanelMarks" hidden>
+      <div class="card">
+        <h2>הרגעים שסימנתי</h2>
+        <p class="sub">★ חשוב, ? לא הבנתי. לכל סימון מופיע מה נאמר רגע לפניו. "בתמלול" קופץ אל הרגע הזה.</p>
+        <div class="row"><button class="btn small" id="pastMarksAsk" type="button">הסבר לכל הרגעים (AI)</button></div>
+        <div id="pastMkList" class="mklist"></div>
+      </div>
+    </div>
+    <div class="ppanel" id="pastPanelStudy">
     <div class="card study" id="pastStudy">
       <h2>לימוד בלחיצה אחת</h2>
       <p class="sub">הבנתי שולחת ל-AI את ההרצאה הזו (התמלול והטקסט מהשקופיות) עם המשימה, וזוכרת לאיזה AI.</p>
@@ -779,6 +801,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <ol class="lines" id="pastLines"></ol>
       </div>
     </details>
+    </div>
   </section>
 
   <!-- COURSE -->
@@ -2333,6 +2356,7 @@ async function openPast(f, at) {
   $("#pastDelShots").hidden = !d.lines.some(x => x.img);
   pastHasImgs = d.lines.some(x => x.img); drawMath();
   $("#studyMarks").hidden = !d.lines.some(markOf);
+  drawPastMarks(d.lines);
   drawStudyWhere();
   $("#pastTitle").textContent = e.title;
   $("#pastSub").textContent = [e.course, e.when, langName(e.lang), e.length ? "אורך " + e.length : "", e.lines + " שורות"].filter(Boolean).join(" · ");
@@ -2349,6 +2373,43 @@ async function openPast(f, at) {
     if (li) { li.classList.add("hit"); li.scrollIntoView({block: "center"}); }
   }
 }
+// the marks of this lecture: a tab beside the study tasks, with what was said just before each
+function setPTab(k) {
+  document.querySelectorAll("#pastTabs [data-pt]").forEach(b => b.setAttribute("aria-selected", b.dataset.pt === k ? "true" : "false"));
+  $("#pastPanelStudy").hidden = k !== "study"; $("#pastPanelMarks").hidden = k !== "marks";
+}
+document.querySelectorAll("#pastTabs [data-pt]").forEach(b => b.addEventListener("click", () => setPTab(b.dataset.pt)));
+function drawPastMarks(lines) {
+  const list = [];
+  lines.forEach((x, i) => {
+    const kind = markOf(x); if (!kind) return;
+    const said = [];
+    for (let k = i - 1; k >= Math.max(0, i - 8); k--) {
+      const y = lines[k]; if (!y.x || markOf(y)) continue;
+      said.unshift(y.x);
+      if (said.length >= 3 || said.join(" ").length > 260) break;
+    }
+    list.push({x, kind, said: said.join(" ").slice(0, 300)});
+  });
+  const lost = list.filter(m => m.kind !== "חשוב").length, imp = list.length - lost;
+  $("#pastTabs").hidden = !list.length;
+  $("#ptMarks").textContent = list.length ? "(" + list.length + ")" : "";
+  setPTab("study");
+  $("#pastMkList").replaceChildren(...list.map(m => {
+    const lostM = m.kind !== "חשוב", row = el("div", "mk");
+    const head = el("b", "", m.kind); head.appendChild(el("span", "ts", m.x.c));
+    const go = el("button", "btn ghost small", "בתמלול"); go.type = "button";
+    go.addEventListener("click", () => {
+      setPTab("study"); $("#pastTrFold").open = true;
+      const li = [...$("#pastLines").children].find(y => y._x === m.x);
+      if (li) { li.classList.add("hit"); li.scrollIntoView({block: "center"}); }
+    });
+    row.append(el("span", "ic " + (lostM ? "lost" : "imp"), lostM ? "?" : "★"), head, go,
+      el("span", "sa", m.said ? "לפני הסימון נאמר: " + m.said : "(אין תמלול סמוך)"));
+    return row;
+  }));
+}
+$("#pastMarksAsk").addEventListener("click", () => { setPTab("study"); $("#studyMarks").click(); });
 $("#pastMore").addEventListener("click", () => { if (pastData) lectureMenu(pastData.entry); });
 $("#pastMenu .menu").addEventListener("click", () => { $("#pastMenu").open = false; });
 document.addEventListener("click", ev => { const m = $("#pastMenu"); if (m && m.open && !m.contains(ev.target)) m.open = false; });
