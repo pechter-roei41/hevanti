@@ -7620,7 +7620,10 @@ def initial_action(argv, env):
         return {"kind": "home"}
     if (env.get("LT_MODE") or "").lower() == "video":
         return {"kind": "home", "view": "rec"}
-    return {"kind": "live", "lang": lang}   # start_Hebrew / start_English from 1.3
+    # No arguments (a launch from an old start file, a script, or anything that runs the program without "--app"): the
+    # home screen. Before 2.2 this started a live lecture at once - which photographs the screen and records the sound
+    # without the student asking. A lecture now starts only when the student presses a button in the app.
+    return {"kind": "home"}
 
 
 def main():
