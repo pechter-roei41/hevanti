@@ -16,6 +16,13 @@ AppId={{6B0E2A4C-9F3D-4E21-A7C5-48D1E2B0C9A1}
 AppName=הבנתי (Hevanti)
 AppVersion={#AppVersion}
 AppPublisher=Roei Pechter
+; the file information of Hevanti-Setup.exe: the same product name in every build, the version of the program
+VersionInfoProductName=Hevanti
+VersionInfoProductVersion={#AppVersion}
+VersionInfoVersion={#AppVersion}.0.0
+VersionInfoCompany=Roei Pechter
+VersionInfoDescription=Hevanti Setup
+VersionInfoCopyright=(c) 2026 Roei Pechter. MIT License
 AppPublisherURL=https://github.com/pechter-roei41/hevanti
 AppSupportURL=https://github.com/pechter-roei41/hevanti/issues
 DefaultDirName={localappdata}\Programs\Hevanti
