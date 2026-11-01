@@ -6063,6 +6063,8 @@ class App:
         if a == "mini_auto":   # open the small window by itself when a live lecture starts
             save_settings(mini_auto=bool(d.get("on")))
             return {"ok": True}
+        if a == "rename_course":
+            return self.rename_course(d.get("course"), d.get("name"))
         if a == "delete_syllabus":
             return delete_syllabus(course)
         if a in ("move_lecture", "rename_lecture", "delete_lecture"):
@@ -6223,6 +6225,49 @@ class App:
             self.lib_rev += 1
         return {"ok": True, "where": where}
 
+    def rename_course(self, old, new):
+        """Rename a course: its folder (the lectures, slides, glossary, syllabus and AI files go with it)."""
+        old, new = clean_name(old, NO_COURSE), clean_name(new)
+        if not new:
+            return {"ok": False, "error": "צריך לכתוב שם."}
+        if old == NO_COURSE:
+            return {"ok": False, "error": "\"ללא קורס\" לא משנים לו שם: אפשר להעביר הרצאות לקורס אחר."}
+        if new == old:
+            return {"ok": True, "name": old}
+        src, dest = course_dir(old), course_dir(new)
+        if not os.path.isdir(src):
+            return {"ok": False, "error": "הקורס לא נמצא."}
+        same_name = os.path.normcase(src) == os.path.normcase(dest)   # only upper / lower case changed
+        if os.path.exists(dest) and not same_name:
+            return {"ok": False, "error": "כבר יש קורס בשם הזה."}
+        prefix = os.path.normcase(os.path.abspath(src)) + os.sep
+        with self.lock:
+            s = self.session
+            busy = s is not None and not s.done and bool(s.transcript) and \
+                os.path.normcase(os.path.abspath(s.transcript)).startswith(prefix)
+        if busy:
+            return {"ok": False, "error": "יש הרצאה פתוחה בקורס הזה עכשיו. אפשר לשנות את השם אחרי שעוצרים אותה."}
+        try:
+            if same_name:
+                tmp = src + ".rename"
+                os.replace(src, tmp)
+                os.replace(tmp, dest)
+            else:
+                os.replace(src, dest)
+        except OSError:
+            save_error("rename course")
+            return {"ok": False, "error": "לא הצלחתי (אולי קובץ מהקורס פתוח בתוכנה אחרת)."}
+        if clean_name(load_settings().get("course"), NO_COURSE) == old:
+            save_settings(course=new)
+        try:
+            write_course_ai_files(new)   # (they name the course)
+            if mirror_root():
+                MIRROR.lectures_changed()
+        except Exception:
+            save_error("rename course follow-up")
+        with self.lock:
+            self.lib_rev += 1
+        return {"ok": True, "name": new}
     def change_lecture(self, a, d):
         """Move a lecture to another course, rename it (its folder and its transcript file), or delete it."""
         import shutil

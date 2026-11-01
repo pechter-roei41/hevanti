@@ -748,6 +748,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <h3>קבצים וניהול</h3>
         <div class="cfrow"><div><b>קובץ אחד של כל הקורס</b><small>שומר את התמלולים של כל ההרצאות בקובץ טקסט אחד, כדי להעלות אותו לצ'אט של AI באתר (למשל ChatGPT).</small></div><button class="btn ghost small" id="cExport" type="button">יצירת הקובץ</button></div>
         <div class="cfrow"><div><b>התיקייה במחשב</b><small>פותחת ב-Windows את התיקייה של הקורס: ההרצאות, השקופיות והקובץ הנ"ל.</small></div><button class="btn quiet small" id="cFolder" type="button">פתיחת התיקייה</button></div>
+        <div class="cfrow"><div><b>שינוי שם הקורס</b><small>הקורס, ההרצאות והקבצים שלו נשארים כמו שהם, רק השם מתחלף.</small></div><button class="btn ghost small" id="cRename" type="button">שינוי שם</button></div>
         <div class="cfrow"><div><b>מחיקת הקורס</b><small>מוחק את כל ההרצאות של הקורס. אפשר לשחזר מסל המחזור.</small></div><button class="btn quiet small" id="cDelete" type="button" style="color:var(--danger,#b42318)">מחיקת הקורס</button></div>
       </div>
     </div>
@@ -851,6 +852,12 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <input type="text" id="ncName" placeholder="למשל: סטטיקה של גוף קשיח" maxlength="80">
   <div class="sug" id="ncSug" hidden></div>
   <div class="row"><button class="btn" id="ncOk" type="button">יצירה</button><button class="btn quiet" id="ncNo" type="button">ביטול</button></div>
+</div></div>
+<div class="modal" id="renCourse" hidden role="dialog" aria-modal="true" aria-labelledby="rcT"><div class="card">
+  <h3 id="rcT">שינוי שם הקורס</h3>
+  <label for="rcName">השם החדש</label>
+  <input type="text" id="rcName" maxlength="80">
+  <div class="row"><button class="btn" id="rcOk" type="button">שינוי שם</button><button class="btn quiet" id="rcNo" type="button">ביטול</button></div>
 </div></div>
 <div class="modal" id="lecMenu" hidden role="dialog" aria-modal="true" aria-labelledby="lmT"><div class="card">
   <h3 id="lmT"></h3>
@@ -2066,6 +2073,23 @@ $("#cExport").addEventListener("click", async () => {
   const r = await api("/api/cmd", {action: "export_course", course: courseName});
   toast(r.ok ? "נשמר הקובץ \"" + courseName + " - כל ההרצאות.txt\" (" + r.lectures + " הרצאות). אפשר להעלות אותו לצ'אט." : (r.error || "לא הצלחתי."));
 });
+// renaming the course: the folder gets the new name (its lectures go with it)
+$("#cRename").addEventListener("click", () => { $("#rcName").value = courseName; $("#renCourse").hidden = false; $("#rcName").focus(); $("#rcName").select(); });
+$("#rcNo").addEventListener("click", () => { $("#renCourse").hidden = true; });
+async function doRenameCourse() {
+  const old = courseName, name = $("#rcName").value.trim();
+  if (!name || name === old) { $("#renCourse").hidden = true; return; }
+  const r = await api("/api/cmd", {action: "rename_course", course: old, name});
+  if (!r.ok) { toast(r.error || "לא הצלחתי לשנות את השם."); return; }
+  $("#renCourse").hidden = true;
+  if (curCourse === old) curCourse = r.name;
+  if (libCourse === old) libCourse = r.name;
+  await loadLib(true);
+  toast("שם הקורס שונה ל-\"" + r.name + "\".");
+  if (location.hash === "#c=" + encodeURIComponent(r.name)) openCourse(r.name); else location.hash = "c=" + encodeURIComponent(r.name);
+}
+$("#rcOk").addEventListener("click", doRenameCourse);
+$("#rcName").addEventListener("keydown", e => { if (e.key === "Enter") doRenameCourse(); if (e.key === "Escape") $("#renCourse").hidden = true; });
 $("#cFolder").addEventListener("click", () => api("/api/cmd", {action: "open_folder", what: "course", f: courseName}));
 $("#cDelete").addEventListener("click", async () => {
   const name = courseName, n = libItems.filter(e => e.course === name).length;
