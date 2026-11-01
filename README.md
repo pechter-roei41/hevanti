@@ -73,7 +73,7 @@ Free code signing provided by [SignPath.io](https://about.signpath.io), certific
 
 - What is signed: `Hevanti-Setup.exe`, built from the tagged commit by the public [release workflow](.github/workflows/release.yml). Nothing built on a personal computer is signed.
 - Committers and reviewers: [Roei Pechter](https://github.com/pechter-roei41). Approvers: [Roei Pechter](https://github.com/pechter-roei41).
-- Privacy: this program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. Details: [CODE_SIGNING.md](CODE_SIGNING.md#privacy).
+- Privacy: Hevanti runs on your computer and sends information to other systems only in the cases listed in the [privacy policy](CODE_SIGNING.md#privacy-policy): your question to Google's Gemini with your own key, the model download, the update check and the page fonts.
 
 ## License
 
