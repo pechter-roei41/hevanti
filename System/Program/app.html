@@ -302,6 +302,9 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 .cfrow small{color:var(--muted);font-size:14px;line-height:1.5}
 .optbox2{display:grid;gap:8px;border:1px solid var(--line);border-radius:12px;padding:12px 16px;background:var(--surface)}
 .optbox2.drag{border-color:var(--accent);background:var(--accent-soft)}
+.howvid{max-width:720px;margin:16px 0 0;display:grid;gap:6px}
+.howvid video{width:100%;border-radius:14px;border:1px solid var(--line);background:#000;aspect-ratio:16/9}
+.howvid figcaption{color:var(--muted);font-size:15px}
 .howsteps{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:12px;max-width:720px}
 .howsteps li{display:flex;gap:16px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
 .howsteps .n{flex:none;width:38px;height:38px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:800;font-size:19px}
@@ -804,6 +807,10 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <button class="btn ghost back" type="button" data-home>→ למסך הבית</button>
       <div class="what"><b>איך משתמשים בהבנתי</b><small>חמישה צעדים, בערך דקה לקרוא.</small></div>
     </div>
+    <figure class="howvid">
+      <video controls preload="metadata" poster="/howto.jpg" src="/howto.mp4" aria-label="סרטון הסבר: החלון הצף של הבנתי"></video>
+      <figcaption>סרטון הסבר (83 שניות): החלון הקטן שנשאר מעל ההרצאה, שאלות ותשובות, וסימון רגעים.</figcaption>
+    </figure>
     <ol class="howsteps">
       <li><span class="n">1</span><div><h3>מחברים את התשובות (פעם אחת)</h3><p>בגלגל השיניים <b>⚙ הגדרות ← מפתח API</b> מדביקים מפתח Gemini חינמי. זה לוקח דקה, בלי כרטיס אשראי, ובלי תשלום.</p></div></li>
       <li><span class="n">2</span><div><h3>בוחרים קורס ומה לצלם</h3><p>במסך הבית בוחרים את הקורס. הבנתי מצלמת את כל המסך. אם רוצים רק חלון אחד (למשל הזום) או לטשטש חלקים: <b>⚙ הגדרות ← צילום וטשטוש</b>.</p></div></li>
