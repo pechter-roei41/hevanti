@@ -5843,6 +5843,7 @@ class VideoSlides(threading.Thread):
 # The black window stays open, minimized: while it is on the taskbar the tool is running, and closing
 # it stops everything. Only this computer can open the page.
 APP_HTML = os.path.join(SCRIPT_DIR, "app.html")
+HOWTO_VIDEO = os.path.join(SCRIPT_DIR, "media", "howto-floating.mp4")   # the "איך משתמשים" video (the small window)
 KATEX_JS = os.path.join(SCRIPT_DIR, "katex", "katex.min.js")   # draws the formulas in the answers (MIT, see katex\LICENSE.txt)
 ASK_JS = os.path.join(SCRIPT_DIR, "ask.js")  # the "ask the AI" box (app + player)
 APP_FILE = os.path.join(LOCAL_DIR, "app.json")  # where the running tool listens - a second launch opens it
@@ -6925,6 +6926,15 @@ def _app_handler():
                             return self._send(200, f.read(), "text/javascript; charset=utf-8")
                     except OSError:
                         return self._send(404, b"", "text/javascript")
+                if p == "/howto.jpg":
+                    poster = os.path.join(SCRIPT_DIR, "media", "howto-poster.jpg")
+                    if os.path.isfile(poster):
+                        return self._file(poster, "image/jpeg")
+                    return self._send(404, b"", "text/plain")
+                if p == "/howto.mp4":
+                    if os.path.isfile(HOWTO_VIDEO):
+                        return self._file(HOWTO_VIDEO, "video/mp4")
+                    return self._send(404, b"", "text/plain")
                 if p == "/katex.js":
                     try:
                         with open(KATEX_JS, "rb") as f:
