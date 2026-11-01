@@ -5982,6 +5982,7 @@ class VideoSlides(threading.Thread):
 # it stops everything. Only this computer can open the page.
 APP_HTML = os.path.join(SCRIPT_DIR, "app.html")
 HOWTO_VIDEO = os.path.join(SCRIPT_DIR, "media", "howto.mp4")   # the "איך משתמשים" video
+FONT_FILES = ("SecularOne-Regular.ttf", "Assistant-Variable.ttf")   # the app's fonts (System/Program/fonts, SIL OFL)
 KATEX_JS = os.path.join(SCRIPT_DIR, "katex", "katex.min.js")   # draws the formulas in the answers (MIT, see katex\LICENSE.txt)
 ASK_JS = os.path.join(SCRIPT_DIR, "ask.js")  # the "ask the AI" box (app + player)
 APP_FILE = os.path.join(LOCAL_DIR, "app.json")  # where the running tool listens - a second launch opens it
@@ -7106,6 +7107,12 @@ def _app_handler():
                             return self._send(200, f.read(), "text/javascript; charset=utf-8")
                     except OSError:
                         return self._send(404, b"", "text/javascript")
+                if p.startswith("/fonts/"):
+                    name = urllib.parse.unquote(p[7:])
+                    path = os.path.join(SCRIPT_DIR, "fonts", name)
+                    if name in FONT_FILES and os.path.isfile(path):
+                        return self._file(path, "font/ttf")
+                    return self._send(404, b"", "text/plain")
                 if p == "/howto.jpg":
                     poster = os.path.join(SCRIPT_DIR, "media", "howto-poster.jpg")
                     if os.path.isfile(poster):

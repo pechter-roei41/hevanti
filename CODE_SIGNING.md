@@ -48,7 +48,6 @@ The program sends information to other computers only in these cases:
 | First lecture, or a new language | The speech-recognition model is downloaded from Hugging Face (`huggingface.co`). Nothing about you is sent. |
 | You open a recording from a link (YouTube, Google Drive, Panopto) | The file is downloaded from the address you gave. The first time, the helper `yt-dlp` may be installed from PyPI (`pypi.org`). |
 | The program starts, unless you turned the check off (a box in the installer, or Settings, Privacy) | A request to GitHub (`api.github.com`) asks which version is the latest. No information about you is sent. |
-| You open a page of the app | The page asks Google Fonts (`fonts.googleapis.com`) for the two fonts it uses. |
 | You choose "copy to ChatGPT / Gemini / Claude" | The question is copied to your clipboard and you paste it yourself. The program opens the AI's website or app, and sends nothing to it. |
 
 Google may use what is sent to the Gemini API according to its own terms; see Google's terms for the free tier
