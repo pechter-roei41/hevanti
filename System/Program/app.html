@@ -1294,7 +1294,7 @@ const setPanels = {};
   setPanels.cap.appendChild(ml);
   const bl = el("label", "row miniopt"), bc = el("input"); bc.type = "checkbox"; bc.id = "miniBtn";
   bc.addEventListener("change", () => api("/api/cmd", {action: "mini_button", on: bc.checked}));
-  bl.append(bc, el("b", "", "כפתור ? צף על המסך בזמן הרצאה חיה, כשהחלון הקטן סגור (לחיצה עליו פותחת את החלון, אפשר לגרור אותו)"));
+  bl.append(bc, el("b", "", "כפתור ? צף על המסך בזמן הרצאה חיה, כשהחלון הקטן סגור (לחיצה עליו פותחת את החלון)"));
   setPanels.cap.appendChild(bl);
   // how see-through the small window is (the lecture behind it stays visible)
   const ol = el("label", "row miniopt"), oc = el("input"), ov = el("span", "", "60%"); oc.type = "range"; oc.id = "miniOp";
