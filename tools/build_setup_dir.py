@@ -16,11 +16,13 @@ SKIP_EXT = (".sh",)
 PRIVACY = """הבנתי (Hevanti) - פרטיות / Privacy
 
 התמלול וקריאת השקופיות רצים במחשב שלך. ההרצאות נשמרות בתיקייה "הקורסים שלי" במחשב שלך.
-הבנתי לא שולחת שום דבר בעצמה:
+הבנתי שולחת מידע החוצה רק במקרים האלה:
 - ה-AI שלך (Claude, ChatGPT, Gemini) קורא מההרצאות רק כשמבקשים ממנו, ומה שהוא קורא עובר לחברה שלו כמו כל שיחה איתו.
 - "סנכרון לענן" כבוי עד שמפעילים אותו. כשהוא פועל, התמלולים מועתקים לתיקיית Google Drive / OneDrive שלך.
-- הבנתי בודקת ב-GitHub אם יצאה גרסה חדשה, ומורידה בפעם הראשונה את מודל התמלול (Hugging Face) ואת קריאת השקופיות (GitHub, אם מסכימים).
-  אפשר לכבות את בדיקת העדכונים: "בדיקת עדכונים" בחיבור AI.
+- בדיקת עדכונים: בכל הפעלה הבנתי שואלת את GitHub (api.github.com) אם יצאה גרסה חדשה. לא נשלח שום מידע עליך.
+  אפשר לכבות: בתיבה בהתקנה, או אחר כך בהגדרות, בלשונית "פרטיות".
+- בפעם הראשונה היא מורידה את מודל התמלול (Hugging Face) ואת קריאת השקופיות (GitHub, אם מסכימים).
+- "תשובה כאן" שולחת ל-Google (Gemini, עם המפתח שלך) רק כשאתה שואל. פרטים בהמשך.
 
 בקצרה (גרסה 2.2)
 - מה נשמר: תמלול ההרצאות, צילומי מסך של מה שבחרת לצלם, והטקסט שנקרא מהם.
@@ -51,9 +53,10 @@ instead of the whole screen, pause capturing (button, or Ctrl+Alt+P on Windows),
 screen, and delete screenshots for good. The default still captures the whole main screen.
 
 Transcription and slide reading run on your computer; lectures stay in the "הקורסים שלי" folder.
-This program will not transfer any information to other networked systems unless specifically requested by the user
-or the person installing or operating it. It checks GitHub for a newer release (can be turned off), downloads the
-transcription model from Hugging Face and, if you agree, Tesseract from GitHub. Your AI app reads lectures only when
+Hevanti sends information to other networked systems only in the cases listed in the full policy: your questions to
+Google Gemini (with your own key, only when you ask), the one-time model download from Hugging Face and, if you agree,
+Tesseract from GitHub. It also asks GitHub whether a newer release exists when it starts; nothing about you is sent,
+and you can turn that off in the installer or later in Settings, Privacy. Your AI app reads lectures only when
 you ask it; "sync to the cloud" is off until you turn it on.
 Full policy: https://github.com/pechter-roei41/hevanti/blob/main/CODE_SIGNING.md
 """
