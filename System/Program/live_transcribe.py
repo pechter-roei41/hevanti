@@ -1918,6 +1918,7 @@ class MathReader(threading.Thread):
             return {"on": bool(s.get("on")), "has_key": bool(s.get("key")), "model": self.model,
                     "ask": bool(s.get("key")) and s.get("ask", True) is not False,
                     "plan": s.get("plan") if s.get("plan") in ("free", "paid") else "",
+                    "external": bool(load_settings().get("external_ai", False)),   # the copy-to-ChatGPT/Gemini/Claude buttons: off until chosen in the settings
                     "waiting": self.q.qsize(), "done": self.done, "error": self.error}
 
     def set_error(self, text):
@@ -6290,6 +6291,9 @@ class App:
         if a == "check_updates":
             save_settings(check_updates=bool(d.get("on")))
             return {"ok": True}
+        if a == "external_ai":   # show the buttons that copy a question to another AI (off by default: answers are inside Hevanti)
+            save_settings(external_ai=bool(d.get("on")))
+            return {"ok": True}
         if a in ("connect", "disconnect"):
             out = connect_app(d.get("app"), a == "connect")
             self._connect_at = 0.0
@@ -7219,7 +7223,8 @@ def _app_handler():
                     return self._json(dict(mirror_status(), place_ai=load_settings().get("place_ai", True),
                                            mini_auto=bool(load_settings().get("mini_open_start", False)), mini_opacity=mini_opacity(),
                                            mini_button=load_settings().get("mini_button", True), mini_btn_corner=mini_btn_corner(),
-                                           check_updates=load_settings().get("check_updates", True)))
+                                           check_updates=load_settings().get("check_updates", True),
+                                           external_ai=bool(load_settings().get("external_ai", False))))
                 if p == "/api/marks":   # the marked moments of a course
                     c = clean_name(q.get("c", [""])[0])
                     return self._json({"marks": course_marks(c) if c and os.path.isdir(course_dir(c)) else []})

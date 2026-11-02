@@ -2,7 +2,7 @@
 
 Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
 
-> Status: the project is applying to the SignPath Foundation. Until it is approved, `Hevanti-Setup.exe` is **not** signed
+> Status: the first application to the SignPath Foundation was declined for lack of proof of users; the project will apply again once it has them. Until it is approved, `Hevanti-Setup.exe` is **not** signed
 > and Windows SmartScreen shows a warning ("Windows protected your PC": More info, then Run anyway). This page will be
 > updated when the first signed release is published.
 

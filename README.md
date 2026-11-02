@@ -12,7 +12,7 @@ Everything else supports these two.
 ## Also in Hevanti
 
 - **Live, recorded and YouTube lectures:** Zoom, a broadcast or anything playing on your computer; a file or a link (Drive, Dropbox, OneDrive, Zoom, Panopto through a bookmark); a YouTube video in YouTube's own player. Recordings open in a player synced with the transcript.
-- **Answers inside Hevanti, free:** with the student's own free Gemini API key (Google AI Studio, no credit card). No Hevanti server. The key is stored encrypted (Windows DPAPI). Without a key, a question is copied with the last five minutes to ChatGPT, Gemini or Claude in one click.
+- **Answers inside Hevanti, free:** with the student's own free Gemini API key (Google AI Studio, no credit card). No Hevanti server. The key is stored encrypted (Windows DPAPI). Without a key, a question can be copied with the last five minutes to ChatGPT, Gemini or Claude in one click; with a key, those buttons stay hidden unless you turn them on in Settings, Advanced.
 - **Slides:** a picture of every new slide or board, read offline with [Tesseract](https://github.com/tesseract-ocr/tesseract); optionally, formulas and handwriting read by Gemini as LaTeX. Capture the whole screen, one window or a part of it, pause it, mosaic areas, delete pictures for good.
 - **After the lecture:** one click for a summary, flashcards, a mock exam or a formula sheet. Every question and answer is kept in the lecture's folder (`שאלות ותשובות.md`).
 - **Courses:** a folder per course in "הקורסים שלי", a course page (lectures, marks, exam prep from all the lectures, syllabus and glossary), search across everything that was said, and suggested terms for 55 common courses ([`course_terms.json`](System/Program/course_terms.json)) that improve transcription.
@@ -51,7 +51,7 @@ Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsx
 | `Install.bat`, `System/get_python.ps1`, `System/install_ocr.*` | Windows setup: the packages into Hevanti's own Python, and Tesseract with the Hebrew and English language files |
 | `tools/build_zip.py` | Builds `Hevanti.zip` (with the embeddable Python) |
 | `installer/hevanti.iss`, `tools/build_setup_dir.py` | `Hevanti-Setup.exe` (Inno Setup): per-user, its own Python with the packages inside |
-| `tools/test_*.py` | Tests run on every push (`.github/workflows/tests.yml`) |
+| `tools/test_*.py` | Tests run on every push (`.github/workflows/tests.yml`); `test_core.py` and `test_core_ui.py` cover the core: the marks, the first-time consent, the ask box and the floating window |
 | `DECISIONS.md` | What was decided and why (Hebrew) |
 
 New version: push a tag such as `v2.0-20261014` (same number, new build) or `v2.1`. GitHub Actions builds both ZIPs and attaches them to a release, and the app tells students that an update is available.
@@ -64,7 +64,7 @@ Found a bug? [Open an issue](https://github.com/pechter-roei41/hevanti/issues) w
 
 ## Code signing policy
 
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org) (not applied for yet; until it is approved, the installer is not signed and Windows shows "Windows protected your PC" once).
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org) (the first application was declined for lack of proof of users; the project will apply again once it has them. Until then the installer is not signed and Windows shows "Windows protected your PC" once).
 
 - What is signed: `Hevanti-Setup.exe`, built from the tagged commit by the public [release workflow](.github/workflows/release.yml). Nothing built on a personal computer is signed.
 - Committers and reviewers: [Roei Pechter](https://github.com/pechter-roei41). Approvers: [Roei Pechter](https://github.com/pechter-roei41).

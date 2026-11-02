@@ -655,7 +655,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <p>שאלות והרצאות שלמות ילכו ישר לאפליקציה שלך, בלי מכסה. "תשובה כאן" נשארת אפשרות חינמית נוספת.</p>
         </div>
         <div class="optbox">
-          <h4>3. קריאת נוסחאות וכתב יד (אופציונלי)</h4>
+          <h4>2. קריאת נוסחאות וכתב יד (אופציונלי)</h4>
           <label class="row"><input type="checkbox" id="mathOn"><b>לקרוא נוסחאות וכתב יד בכל שקופית חדשה</b></label>
           <p>הקריאה הרגילה של השקופיות לא מבינה נוסחאות וכתב יד. כשזה פועל, כל שקופית שנשמרת נשלחת ל-Gemini, והוא כותב את הטקסט והנוסחאות (למשל <code dir="ltr">$I = \int r^2\,dm$</code>) לחיפוש, להכנה למבחן ולתשובות.</p>
           <p class="warn">שימו לב: זה שולח כל שקופית ל-Google.</p>
@@ -921,6 +921,13 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <h3 id="askT">שאלה</h3>
   <div class="row"><input id="askIn" type="text" aria-label="תשובה"></div>
   <div class="row"><button class="btn" id="askOk" type="button">אישור</button><button class="btn quiet" id="askNo" type="button">ביטול</button></div>
+</div></div>
+<div class="modal" id="consent" hidden role="dialog" aria-modal="true" aria-labelledby="consT"><div class="card">
+  <h3 id="consT">לפני שמקליטים הרצאה</h3>
+  <p style="margin:0">הבנתי מתמללת את מה שמתנגן במחשב, ושומרת צילומי מסך של שקופיות. בהרבה מוסדות אסור להקליט הרצאה בלי אישור של המרצה, ולכן:</p>
+  <ul style="margin:6px 0;padding-inline-start:20px;line-height:1.6"><li>לבדוק מה הכללים של המוסד שלך.</li><li>לבקש אישור מהמרצה, אם הכללים דורשים.</li><li>להשתמש בזה לעצמך בלבד, ולא להפיץ הקלטות, תמלולים או שקופיות.</li></ul>
+  <label class="row" style="cursor:pointer"><input type="checkbox" id="consCheck"><b>קראתי, ואני אחראי לבדוק ולקבל אישור לפני שאני מקליט</b></label>
+  <div class="row"><button class="btn" id="consOk" type="button" disabled>המשך</button><button class="btn quiet" id="consNo" type="button">ביטול</button></div>
 </div></div>
 <div class="modal" id="confirm" hidden role="dialog" aria-modal="true" aria-labelledby="confT"><div class="card">
   <h3 id="confT"></h3><p id="confP" style="margin:0;color:var(--muted)"></p>
@@ -1383,7 +1390,7 @@ function srSay(text) { if (a11y.say && text) { const s = $("#srLive"); s.textCon
 
 // ---------- settings (the gear): the key, what to photograph, accessibility, connect an AI app, privacy ----------
 // The pieces already exist on the page (with their buttons): they are moved into the tabs once, here.
-const SET_TABS = [["key", "מפתח API (תשובות)"], ["cap", "צילום וטשטוש"], ["a11y", "נגישות"], ["ai", "חיבור AI"], ["priv", "פרטיות"]];
+const SET_TABS = [["key", "מפתח API (תשובות)"], ["cap", "צילום וטשטוש"], ["a11y", "נגישות"], ["ai", "מתקדם"], ["priv", "פרטיות"]];
 const setPanels = {};
 (function buildSettings() {
   const tabs = $("#setTabs"), body = $("#setBody");
@@ -1440,11 +1447,15 @@ const setPanels = {};
   setPanels.priv.insertBefore($("#checkUpd").closest("label"), pb);   // the update check: here (first), not in "AI connection"
   const card = $("#a11y .card");   // accessibility: its choices (not its own title and close button)
   for (const x of [...card.children]) if (x.id !== "a11yT" && !x.querySelector("#a11yClose")) setPanels.a11y.appendChild(x);
-  const ai = setPanels.ai;
-  ai.append(el("p", "", "אם יש לך מנוי ל-Claude או ל-ChatGPT, אפשר לחבר אותם להבנתי: הם קוראים לבד מה נאמר ואת השקופית, ושואלים אותם ישר בחלון שלהם, בלי מכסה ובלי להעתיק."),
-    el("p", "sub", "זה אופציונלי. בלי חיבור, \"תשובה כאן\" והכפתורים שמעתיקים ל-ChatGPT, Gemini ו-Claude עובדים כרגיל."));
-  const row = el("div", "row"), go = el("button", "btn", "פתיחת חיבור AI"); go.type = "button"; go.addEventListener("click", () => { $("#settings").hidden = true; $("#connBtn").click(); });
-  row.appendChild(go); ai.appendChild(row);
+  const ai = setPanels.ai;   // advanced: everything that is not the floating window and the marks
+  ai.append(el("p", "sub", "אלה דברים אופציונליים. בלי אף אחד מהם הבנתי עובדת במלואה: שואלים בחלון הצף, מסמנים ★ ו-?, והתשובות מגיעות בתוך הבנתי."));
+  const exl = el("label", "row miniopt"), exc = el("input"); exc.type = "checkbox"; exc.id = "extAi";
+  exc.addEventListener("change", async () => { await api("/api/cmd", {action: "external_ai", on: exc.checked}); if (window.BZMAsk) BZMAsk.setExternal(exc.checked); try { app = await api("/api/app"); } catch (e) {} drawMath(); });
+  exl.append(exc, el("b", "", "להציג גם כפתורים שמעתיקים את השאלה ל-ChatGPT, Gemini או Claude"));
+  ai.append(exl, el("p", "sub", "ברירת המחדל: התשובות מגיעות רק בתוך הבנתי (מפתח Gemini חינמי). כשזה פועל, תיבת השאלה מציגה גם כפתורים להעתקה, ואפשר להגיד שיש לך מנוי בתשלום כדי שמשימות על הרצאה שלמה ילכו לאפליקציה שלך."));
+  const paid = $("#planPaid").closest(".optbox"); paid.querySelector("h4").textContent = "מנוי בתשלום"; ai.appendChild(paid);
+  const row = el("div", "row"), go = el("button", "btn", "חיבור AI (Claude, ChatGPT, Gemini)"); go.type = "button"; go.addEventListener("click", () => { $("#settings").hidden = true; $("#connBtn").click(); });
+  row.appendChild(go); ai.append(el("h3", "", "חיבור האפליקציה של ה-AI שלך"), el("p", "sub", "אם יש לך מנוי ל-Claude או ל-ChatGPT, אפשר לחבר אותם להבנתי: הם קוראים לבד מה נאמר ואת השקופית. כולל סנכרון לענן (כבוי כברירת מחדל)."), row);
 })();
 function drawCorner(k) { document.querySelectorAll("#miniCorner button").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === k ? "true" : "false")); }
 function openSettings(id) {
@@ -1454,6 +1465,7 @@ function openSettings(id) {
   if (id === "cap") { api("/api/mirror").then(m => { $("#miniAuto").checked = m.mini_auto === true; $("#miniBtn").checked = m.mini_button !== false; drawCorner(m.mini_btn_corner || "br"); const o = m.mini_opacity || 60; $("#miniOp").value = o; $("#miniOp").nextElementSibling.textContent = o + "%"; }).catch(() => {}); capSig = ""; drawCaps(); if (capOf().mode === "window" && !capWinsAt) capLoadWins(); }
   if (id === "key") { mathSig = ""; drawMath(); }
   if (id === "a11y") a11yDraw();
+  if (id === "ai") api("/api/mirror").then(m => { $("#extAi").checked = m.external_ai === true; }).catch(() => {});
   if (id === "priv") api("/api/mirror").then(m => { $("#checkUpd").checked = m.check_updates !== false; }).catch(() => {});
 }
 $("#setBtn").addEventListener("click", () => openSettings("key"));
@@ -1482,7 +1494,7 @@ function route() {
   if (raw.startsWith("rec=")) {   // a recording sent from another tab (the Panopto bookmark): offer it, then home
     const q = new URLSearchParams(raw), src = q.get("rec") || "", name = q.get("name") || "";
     history.replaceState(null, "", location.pathname);
-    if (/^https:\/\//i.test(src)) api("/api/cmd", {action: "offer", source: src, name});   // the regular poll shows the question
+    if (/^https:\/\//i.test(src)) api("/api/cmd", {action: "offer", source: src, name});   // the regular poll shows the question   // the regular poll shows the question
     show("home"); loadLib(true); return;
   }
   show("home");
@@ -1584,7 +1596,7 @@ function render(d) {
   document.documentElement.classList.toggle("plan-paid", !!(d.math && d.math.plan === "paid")); drawConnBar();
   if (view === "past") drawStudyWhere();
   drawSetup();
-  if (window.BZMAsk) { BZMAsk.setBuiltin(!!(d.math && d.math.ask)); BZMAsk.setPlan((d.math && d.math.plan) || ""); }
+  if (window.BZMAsk) { BZMAsk.setBuiltin(!!(d.math && d.math.ask)); BZMAsk.setPlan((d.math && d.math.plan) || ""); BZMAsk.setExternal(!!(d.math && d.math.external)); }
   $("#tutorBar").hidden = !!(d.math && (d.math.has_key || d.math.plan === "paid")) || tutorBarNo;
   if (view === "yt") ytHead(s);
   floatHead(s);
@@ -1621,13 +1633,24 @@ document.querySelectorAll("[data-offer]").forEach(b => b.addEventListener("click
 })();
 
 // ---------- starting ----------
+// the first time (kept in this browser), the student confirms that they checked the institution's rules and the lecturer's permission
+function consentOk() {
+  try { if (localStorage.getItem("bzm.consent") === "1") return Promise.resolve(true); } catch (e) {}
+  return new Promise(res => {
+    const m = $("#consent"), ck = $("#consCheck"), ok = $("#consOk");
+    ck.checked = false; ok.disabled = true; m.hidden = false; ck.focus();
+    const done = v => { m.hidden = true; ck.onchange = ok.onclick = $("#consNo").onclick = null; if (v) { try { localStorage.setItem("bzm.consent", "1"); } catch (e) {} } res(v); };
+    ck.onchange = () => { ok.disabled = !ck.checked; };
+    ok.onclick = () => done(true); $("#consNo").onclick = () => done(false);
+  });
+}
 async function okToReplace() {
   const s = app && app.session;
   if (!s || s.done) return true;
   return confirmBox("לעצור את מה שפועל עכשיו?", sessionName(s) + " ייעצר. מה שכבר תומלל נשמר.");
 }
 document.querySelectorAll("[data-start]").forEach(b => b.addEventListener("click", async () => {
-  if (!(await okToReplace())) return;
+  if (!(await consentOk()) || !(await okToReplace())) return;
   await api("/api/cmd", {action: "start_live", lang: b.dataset.start, course: curCourse || NO_COURSE});
   location.hash = "live";
 }));
@@ -1664,7 +1687,7 @@ function upload(file) {
 }
 function isYoutube(u) { return /^(https?:\/\/)?([\w-]+\.)*(youtube\.com|youtu\.be|youtube-nocookie\.com)\//i.test(String(u || "").trim()); }
 async function startYoutube(url, lang, course) {
-  if (!(await okToReplace())) return;
+  if (!(await consentOk()) || !(await okToReplace())) return;
   const r = await api("/api/cmd", {action: "start_youtube", url, lang, course: course || curCourse || NO_COURSE});
   if (!r.ok) { toast(r.error || "לא הצלחתי לפתוח את הסרטון."); return; }
   $("#recBox").hidden = true; $("#recTile").classList.remove("on"); $("#linkIn").value = ""; choose("", "");
@@ -1672,7 +1695,7 @@ async function startYoutube(url, lang, course) {
 }
 async function startRecording(src, lang, title) {
   if (isYoutube(src)) return startYoutube(src, lang);
-  if (!(await okToReplace())) return;
+  if (!(await consentOk()) || !(await okToReplace())) return;
   wantPlayer = Date.now() / 1000 - 2; shownErr = "";
   await api("/api/cmd", {action: "start_recording", source: src, lang, title: title || "", course: curCourse || NO_COURSE});
   $("#recBox").hidden = true; $("#recTile").classList.remove("on"); $("#linkIn").value = ""; choose("", "");
@@ -2473,16 +2496,17 @@ const STUDY_BIG = 40000;   // characters of transcript from which a task is call
 function studyWhere() {
   const m = (app && app.math) || {};
   if (!m.ask) return "app";
+  if (!m.external) return "here";   // (answers are inside Hevanti unless "external AI" is on in the settings)
   let w = ""; try { w = localStorage.getItem("bzm.studyWhere") || ""; } catch (e) {}
   return w === "here" || w === "app" ? w : (m.plan === "paid" ? "app" : "here");
 }
 function drawStudyWhere() {
   const m = (app && app.math) || {}, box = $("#studyWhere"), hint = $("#studyHint");
-  box.hidden = !m.ask;   // (without a key there is only "the app")
+  box.hidden = !(m.ask && m.external);   // (without a key there is only "the app"; without "external AI" only "here")
   const w = studyWhere();
   box.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.w === w ? "true" : "false"));
   const big = pastData ? pastText().length : 0;
-  hint.hidden = !(m.ask && w === "here" && big >= STUDY_BIG);
+  hint.hidden = !(m.ask && m.external && w === "here" && big >= STUDY_BIG);
   if (!hint.hidden) hint.textContent = "ההרצאה הזו ארוכה (בערך " + Math.round(big / 1000) + " אלף תווים), ומשימה על כולה צורכת חלק גדול מהמכסה החינמית. אם יש לך מנוי ל-ChatGPT, Claude או Gemini, עדיף \"באפליקציית ה-AI שלי\".";
 }
 $("#studyWhere").querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
