@@ -4462,12 +4462,47 @@ def _place_mini_by_button(u, hwnd):
         u.MoveWindow(hwnd, xy[0], xy[1], w, h, True)
 
 
+def _mini_on_a_screen(u, hwnd):
+    """False when the window is on no screen at all (a screen was unplugged, or it was left half out of the screen)."""
+    import ctypes
+    from ctypes import wintypes
+    u.MonitorFromWindow.argtypes = [wintypes.HWND, wintypes.DWORD]
+    u.MonitorFromWindow.restype = wintypes.HANDLE
+    return bool(u.MonitorFromWindow(hwnd, 0))   # MONITOR_DEFAULTTONULL
+
+
 def _show_mini(u, hwnd, place=False):
-    u.ShowWindow(hwnd, 9)   # SW_RESTORE
+    """Bring the window forward. When it has to be placed by the button (the first opening in a session, or its screen
+    is gone) it is moved BEFORE it is shown, so it never appears at its old place and jumps."""
+    import ctypes
+    from ctypes import wintypes
+
+    class WINDOWPLACEMENT(ctypes.Structure):
+        _fields_ = [("length", wintypes.UINT), ("flags", wintypes.UINT), ("showCmd", wintypes.UINT),
+                    ("ptMin", wintypes.POINT), ("ptMax", wintypes.POINT), ("rcNormal", wintypes.RECT)]
     key = _mini_session_key()
-    if place or key != _MINI_STATE["key"]:   # the first opening in a new session (a lecture, a recording): by the button
-        _place_mini_by_button(u, hwnd)
+    iconic = bool(u.IsIconic(hwnd))
+    if not (place or key != _MINI_STATE["key"]):
+        place = not iconic and not _mini_on_a_screen(u, hwnd)
+    else:
+        place = True
+    if place:
         _MINI_STATE["key"] = key
+        if iconic:   # a minimized window: its normal place and size are in the placement, and it is restored right there
+            wp = WINDOWPLACEMENT()
+            wp.length = ctypes.sizeof(WINDOWPLACEMENT)
+            u.GetWindowPlacement.argtypes = [wintypes.HWND, ctypes.POINTER(WINDOWPLACEMENT)]
+            u.SetWindowPlacement.argtypes = [wintypes.HWND, ctypes.POINTER(WINDOWPLACEMENT)]
+            if u.GetWindowPlacement(hwnd, ctypes.byref(wp)):
+                w, h = wp.rcNormal.right - wp.rcNormal.left, wp.rcNormal.bottom - wp.rcNormal.top
+                xy = _mini_xy_by_button(u, w, h)
+                if xy:
+                    wp.rcNormal.left, wp.rcNormal.top, wp.rcNormal.right, wp.rcNormal.bottom = xy[0], xy[1], xy[0] + w, xy[1] + h
+                wp.showCmd = 1   # SW_SHOWNORMAL
+                u.SetWindowPlacement(hwnd, ctypes.byref(wp))
+        else:   # hidden (or just created): moved while it cannot be seen, then shown
+            _place_mini_by_button(u, hwnd)
+    u.ShowWindow(hwnd, 9)   # SW_RESTORE
     _mini_alpha(u, hwnd, mini_opacity())
     u.SetWindowPos(hwnd, -1, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0040)   # HWND_TOPMOST, no move/size, show
     u.keybd_event(0x12, 0, 0, 0)   # (a tap on Alt lets this program take the keyboard from the lecture's window)
