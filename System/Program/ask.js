@@ -32,7 +32,7 @@
 .askp .chips2{display:flex;gap:6px;flex-wrap:wrap}
 .askp .chips2 button{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:2px 11px;font:inherit;font-size:13px;cursor:pointer}
 .askp .chips2 button:hover{border-color:var(--accent)}
-.askp .conv{display:grid;gap:8px;max-height:min(55vh,560px);overflow-y:auto}
+.askp .conv{display:grid;gap:8px;align-content:start;max-height:min(55vh,560px);overflow-y:auto}
 .askp .conv:empty,.askp [hidden]{display:none!important}
 .askp .qa{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
 .askp .qa .q{font-weight:700;margin:0 0 4px;color:var(--accent);font-size:14px}
