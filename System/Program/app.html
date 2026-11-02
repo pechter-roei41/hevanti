@@ -58,6 +58,11 @@ main{max-width:1240px;margin:0 auto;padding:22px 16px 80px}
 h1{font-family:var(--f-display);font-weight:400;font-size:clamp(28px,4.5vw,38px);line-height:1.2;margin:0 0 6px;text-wrap:balance}
 h2{font-size:21px;margin:0;text-wrap:balance}
 .lead{color:var(--muted);margin:0 0 18px}
+.core{list-style:none;padding:0;margin:4px 0 14px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.core li{display:grid;gap:3px;align-content:start;background:var(--accent-soft);border-radius:12px;padding:10px 14px}
+.core b{color:var(--accent);font-size:16px}
+.core span{font-size:14.5px;line-height:1.45}
+@media (max-width:760px){.core{grid-template-columns:minmax(0,1fr)}}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
 
 /* home */
@@ -353,6 +358,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 .howvid{max-width:720px;margin:16px 0 0;display:grid;gap:6px}
 .howvid video{width:100%;border-radius:14px;border:1px solid var(--line);background:#000;aspect-ratio:16/9}
 .howvid figcaption{color:var(--muted);font-size:15px}
+.howcredit{color:var(--muted);font-size:13.5px;line-height:1.5;margin:14px 0 0}
 .chapters{list-style:none;margin:12px 0 0;padding:0;max-width:720px;display:grid;gap:6px}
 .chapters button{width:100%;text-align:start;display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 14px;font:inherit;font-size:16px;cursor:pointer;color:var(--fg)}
 .chapters button:hover{border-color:var(--accent);background:var(--accent-soft)}
@@ -539,7 +545,12 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 <main>
   <!-- HOME -->
   <section id="vHome" aria-label="מסך הבית">
-    <h1>מה עושים עכשיו?</h1>
+    <h1>שואלים תוך כדי ההרצאה, ומסמנים מה לא הבנת</h1>
+    <ol class="core" aria-label="איך הבנתי עובדת">
+      <li><b>1. מתחילים הרצאה</b><span>חיה או מוקלטת, מהכפתורים למטה. הבנתי כותבת כל מה שנאמר.</span></li>
+      <li><b>2. שואלים בחלון הצף</b><span>הכפתור עם הלוגו בקצה המסך (או <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd>) פותח חלון קטן מעל ההרצאה, גם במסך מלא.</span></li>
+      <li><b>3. מסמנים ★ או ?</b><span>"חשוב" או "לא הבנתי" בלחיצה אחת. אחרי ההרצאה חוזרים בדיוק לרגעים האלה.</span></li>
+    </ol>
     <p class="lead">הכל קורה במחשב שלך: כל הרצאה נשמרת בתיקייה "הקורסים שלי", בתיקייה של הקורס.</p>
     <div class="coursebar">
       <label for="courseSel"><b>הקורס:</b></label>
@@ -886,18 +897,20 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     </div>
     <figure class="howvid">
       <video controls preload="metadata" poster="/howto.jpg" src="/howto.mp4" aria-label="סרטון הסבר: איך משתמשים בהבנתי"></video>
-      <figcaption>המפתח, ההרצאה, החלון הקטן שנשאר מעל הכל, הסימונים ודף הקורס. לחיצה על פרק קופצת אליו</figcaption>
+      <figcaption>הלב של הבנתי: החלון הצף שבו שואלים תוך כדי ההרצאה, והסימונים ★ ו-? שמחזירים אותך לרגע שלא הבנת. לחיצה על פרק קופצת אליו.</figcaption>
     </figure>
     <ol class="chapters" id="howChapters" aria-label="פרקי הסרטון">
       <li><button type="button" data-t="4"><b>0:04</b> מדביקים מפתח Gemini חינמי (פעם אחת)</button></li>
       <li><button type="button" data-t="17"><b>0:17</b> בוחרים קורס ומתחילים הרצאה</button></li>
-      <li><button type="button" data-t="25"><b>0:25</b> הכפתור הצף בקצה המסך</button></li>
-      <li><button type="button" data-t="33"><b>0:33</b> פותחים את החלון וכותבים שאלה</button></li>
-      <li><button type="button" data-t="50"><b>0:50</b> התשובה, ושאלות המשך עם נוסחאות</button></li>
-      <li><button type="button" data-t="64"><b>1:04</b> גוללים בשיחה ומסמנים ★ או ?</button></li>
-      <li><button type="button" data-t="75"><b>1:15</b> מסתירים את החלון והכפתור חוזר</button></li>
-      <li><button type="button" data-t="81"><b>1:21</b> דף הקורס: סימונים, הכנה למבחן, סילבוס</button></li>
+      <li><button type="button" data-t="28"><b>0:28</b> הכפתור הצף בקצה המסך</button></li>
+      <li><button type="button" data-t="33"><b>0:33</b> פותחים את החלון הצף וכותבים שאלה</button></li>
+      <li><button type="button" data-t="49"><b>0:49</b> התשובה, עם גלילה עד הסוף</button></li>
+      <li><button type="button" data-t="55"><b>0:55</b> שאלת המשך, עם נוסחאות</button></li>
+      <li><button type="button" data-t="74"><b>1:14</b> מסמנים ★ חשוב או ? לא הבנתי</button></li>
+      <li><button type="button" data-t="80"><b>1:20</b> מסתירים את החלון והכפתור חוזר</button></li>
+      <li><button type="button" data-t="86"><b>1:26</b> אחרי ההרצאה: הרגעים שסימנת בדף הקורס</button></li>
     </ol>
+    <p class="howcredit">ההרצאה בסרטון: <a href="https://www.youtube.com/watch?v=F1_uOZeYLVE" target="_blank" rel="noopener">"פתרון משוואה דיפרנציאלית מסדר ראשון בעזרת הפרדת משתנים"</a> של דביר רוס (Dvir Ross), ברישיון <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY</a>. בסרטון מוצג קטע קצר ממנה, בלי קול, עם החלון של הבנתי מעליה.</p>
     <p class="howfoot">יש הקלטה או סרטון? בבית: <b>הרצאה מוקלטת</b> ← גוררים קובץ או מדביקים קישור.</p>
   </section>
   <details class="log" id="logBox"><summary>הודעות מהכלי</summary><ol id="log"></ol></details>

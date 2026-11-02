@@ -1,35 +1,24 @@
 # Hevanti (הבנתי)
 
-**Everything the lecturer said, and an answer to everything you didn't understand.** A free, open-source lecture companion for students on Windows.
+**Ask during the lecture, mark what you didn't understand.** A free, open-source lecture companion for students on Windows.
 
-Hevanti writes down everything said in the lecture, in Hebrew or English, and saves a picture of every slide and board. You listen instead of copying, and you can ask an AI exactly about the moment you missed.
+Hevanti writes down everything said in the lecture, in Hebrew or English, while it runs on your computer. Its core is two things:
 
-- **Live lecture:** Zoom, a broadcast, or anything playing on your computer. Transcription runs on your computer.
-- **Answers inside Hevanti, free (2.2):** an "answer here" button in every question box. With the student's own free Gemini API key (Google AI Studio, no credit card) Hevanti asks Gemini for you and writes the answer under the question as it arrives, using the last minutes of the lecture and the slide on the screen. No Hevanti server, no cost for the student or for us. The key is stored encrypted (Windows DPAPI). The page talks to Hevanti on your computer, which talks to Google; which Gemini model answers is probed on every start, so a retired or busy model does not break it. Without a key, everything works as before (copy to ChatGPT / Gemini / Claude).
-- **After the lecture (2.2):** one click for a summary, flashcards, a mock exam, a formula sheet, or an explanation of the moments you marked ("לא הבנתי" / "חשוב", also Ctrl+Alt+M). Every question and answer is kept in the lecture's folder (`שאלות ותשובות.md`).
-- **Formulas and handwriting (2.2, optional, off):** with the same key, each saved slide can be read by Gemini, with formulas as LaTeX.
-- **Smarter screenshots (2.2):** capture the whole screen, one window (a window that pops over it is mosaicked) or a part of the screen; pause with Ctrl+Alt+P; mosaic fixed areas; delete screenshots for good. A video of the lecturer, a clock or a playing clip no longer counts as a "slide change"; the full board is kept before it is erased.
-- **Accessibility (2.2):** text and interface size, reading spacing, high contrast, no motion, screen-reader announcements, keyboard-friendly small window.
-- **New in 2.7:** the how-to video now scrolls through each full answer, and the floating window is more transparent.
-- **New in 2.6:** a new how-to video, demonstrated on a lecture about separation of variables with a question about the material.
-- **New in 2.5:** the lecture review page has a "my marks" tab: every ★ and ? you marked, with what was said just before it and a jump to that moment in the transcript.
-- **New in 2.4:** the lecture review page is rearranged: one-click study tasks (summary, flashcards, mock exam, formula sheet) first, the summary under them, and the free question and the full transcript folded away.
-- **New in 2.3:** the small window opens in its place above the button, closing the black window closes everything, the app opens in a window of its own, marks (★ / ?) are shown on the transcript of a recording, the course name leads to the course page, the summary is drawn with LaTeX formulas, and repeated noise is not written into the transcript.
-- **Small question window (2.2):** a floating button (the Hevanti logo) or Ctrl+Alt+Q opens a small always-on-top window, also over a full-screen lecture: ask, press Enter, read the answer (formulas drawn with KaTeX), mark a moment with ★ or ?. Works in a live lecture, a YouTube video and a recording. The course page lists the marks.
-- **Recorded lecture:** a file or a link (Drive, Dropbox, OneDrive, a Zoom recording). A player synced with the transcript.
-- **YouTube video:** plays in YouTube's official player inside Hevanti (no download), and is transcribed while you watch, with the video's timestamps.
-- **Courses:** a folder per course in "הקורסים שלי" (created with the course), a course page with four tabs (lectures, the course's AI, exam prep, glossary), a glossary that improves transcription, and search across everything that was said. Type a course name (for example "סטטיקה של גוף קשיח", rigid-body statics) and Hevanti suggests terms for that course; one click on **+** adds a term to the glossary. Suggestions are per course, not per degree: 55 common courses so far, in [`course_terms.json`](System/Program/course_terms.json).
-- **Better transcription of terms and names:** the course name and its glossary reach the model as *hotwords* with a budget of their own, so the last words said never push them out, and English terms and names read from the slide on the screen join them.
-- **Reading the slides (OCR):** every saved slide is read with [Tesseract](https://github.com/tesseract-ocr/tesseract) (Hebrew and English, offline). Search covers the slides too, their text goes into exam prep and into what is copied for an AI, and a connected AI gets it with the picture.
-- **Panopto recordings:** Panopto needs a sign-in, so a bookmark (dragged once from "הרצאה מוקלטת") runs on the Panopto page where you are signed in, asks Panopto's own `DeliveryInfo.aspx` for the recording's file (as [Panopto-Video-DL](https://github.com/Panopto-Video-DL/Panopto-Video-DL-browser) does) and sends it to Hevanti, which downloads and transcribes it. For your own use only, under your institution's rules.
-- **Exam prep:** a practice exam, a summary, flashcards and a formula sheet from all the lectures of a course (with the slides' text).
-- **Recommended layout:** the lecture on two thirds of the screen, the AI on one third. Hevanti greys out the AI's window and its own windows in its screenshots, so an answer being written is never saved as a "new slide" and your chat stays out of the pictures.
-- **Connect AI:** one button connects Claude for desktop, ChatGPT (Codex) or Gemini (Antigravity CLI, `agy`) to Hevanti through a small MCP server. Then you ask them directly in their own window, for example "What is he saying now?", and they read the last minutes and the slide themselves. The AI sees every course, including courses with no lectures yet.
-- **The AI of each course:** one project per course in each AI, set up once on the course page. Every connector tool takes a `course`, so the AI in a course's project reads only that course. Each course folder holds `AGENTS.md` / `GEMINI.md` / `CLAUDE.md`, so Codex or `agy` opened in the folder knows the course by itself; Claude projects get their instructions with one "copy" click. A saved project link makes the course's AI buttons open that project, and the AI's window moves to the left third of the screen, beside the lecture.
-- **Sync to the cloud (optional, off by default):** for AIs that cannot read your computer (a ChatGPT project, a Gem, Gemini Notebook), each course's "now" file (every ~12 seconds) and all its transcripts are copied into your own Google Drive or OneDrive folder, where those AIs read them through their Drive connection.
-- **Floating window:** a small window that stays on top of the lecture: a question box at the top, then what is being said now, then the latest slide.
-- **Without a connection:** ChatGPT, Gemini or Claude with one click. The question is copied together with the last five minutes, and the AI's desktop app opens if it is installed (found in the Windows Start menu); otherwise its website opens on a third of the screen. Another click brings the same window back, so the conversation goes on.
-- **How to use:** a one-minute animated walkthrough inside the app (the "איך משתמשים?" button), drawn with the app's own parts rather than a video file.
+- **The floating window.** A small button with the Hevanti logo sits at the edge of the screen (or press Ctrl+Alt+Q). It opens a small always-on-top window, also over a full-screen lecture: type a question, press Enter, and the answer is written under it, based on what the lecturer said in the last minutes and the slide on the screen. Formulas are drawn with KaTeX.
+- **The marks.** One click on ★ ("important") or ? ("didn't understand"), also Ctrl+Alt+M, marks the moment without stopping to listen. After the lecture, the "my marks" tab of the lecture and of the course lists every mark with what was said just before it, jumps to that moment in the transcript, and can ask an AI to explain them all.
+
+Everything else supports these two.
+
+## Also in Hevanti
+
+- **Live, recorded and YouTube lectures:** Zoom, a broadcast or anything playing on your computer; a file or a link (Drive, Dropbox, OneDrive, Zoom, Panopto through a bookmark); a YouTube video in YouTube's own player. Recordings open in a player synced with the transcript.
+- **Answers inside Hevanti, free:** with the student's own free Gemini API key (Google AI Studio, no credit card). No Hevanti server. The key is stored encrypted (Windows DPAPI). Without a key, a question is copied with the last five minutes to ChatGPT, Gemini or Claude in one click.
+- **Slides:** a picture of every new slide or board, read offline with [Tesseract](https://github.com/tesseract-ocr/tesseract); optionally, formulas and handwriting read by Gemini as LaTeX. Capture the whole screen, one window or a part of it, pause it, mosaic areas, delete pictures for good.
+- **After the lecture:** one click for a summary, flashcards, a mock exam or a formula sheet. Every question and answer is kept in the lecture's folder (`שאלות ותשובות.md`).
+- **Courses:** a folder per course in "הקורסים שלי", a course page (lectures, marks, exam prep from all the lectures, syllabus and glossary), search across everything that was said, and suggested terms for 55 common courses ([`course_terms.json`](System/Program/course_terms.json)) that improve transcription.
+- **Connect your own AI:** a small MCP server lets Claude for desktop, ChatGPT (Codex) or Gemini (`agy`) read the lecture themselves ("what is he saying now?"). Optional cloud sync copies transcripts to your own Google Drive or OneDrive for AIs that cannot read your computer.
+- **Accessibility:** text and interface size, reading spacing, high contrast, no motion, screen-reader announcements, a keyboard-friendly floating window.
+- **How to use:** a two-minute video inside the app (the "איך משתמשים?" button). What changed in each version: [`System/VERSION.txt`](System/VERSION.txt).
 
 ## Download and install
 
@@ -43,7 +32,7 @@ Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsx
 - Transcripts and screenshots stay on your computer. The app only listens on `127.0.0.1`.
 - There is no Hevanti server. If you turn on Answer here, what you ask (the question, the last minutes of the transcript and the current slide) is sent to Google's Gemini API with your own key; with Formulas and handwriting, every saved slide too. The connector (`hevanti_mcp.py`) only reads files from the "הקורסים שלי" (My Lectures) folder, and only when your AI asks for them. What your AI reads is sent to its provider like any other conversation with it.
 - "Sync to the cloud" is off until you turn it on; then your transcripts are copied to your own Google Drive / OneDrive.
-- **Responsibility:** Hevanti is provided s is, without warranty of any kind (see [LICENSE](LICENSE)). Using it, including recording, transcribing and saving lectures and slides, is entirely the user's responsibility. **Each user must check the rules of their own institution and lecturer before using it.** The author and contributors are not liable for its use. Full policy: [CODE_SIGNING.md](CODE_SIGNING.md#privacy).
+- **Responsibility:** Hevanti is provided as is, without warranty of any kind (see [LICENSE](LICENSE)). Using it, including recording, transcribing and saving lectures and slides, is entirely the user's responsibility. **Each user must check the rules of their own institution and lecturer before using it.** The author and contributors are not liable for its use. Full policy: [CODE_SIGNING.md](CODE_SIGNING.md#privacy).
 
 ## How it is built
 
@@ -53,7 +42,7 @@ Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsx
 | `System/Program/app.html` | The app (opens in the browser) |
 | `System/Program/player.html` | The player for recorded lectures |
 | `System/Program/mini.html` | The small always-on-top question window (Ctrl+Alt+Q) |
-| `System/Program/media/howto.mp4` | The explainer video on the how-to page (key, lecture, small window, marks, course page) |
+| `System/Program/media/howto.mp4` | The explainer video on the how-to page (key, lecture, floating window, marks, course page). The lecture in it is ["פתרון משוואה דיפרנציאלית מסדר ראשון בעזרת הפרדת משתנים"](https://www.youtube.com/watch?v=F1_uOZeYLVE) by Dvir Ross, licensed [CC BY](https://creativecommons.org/licenses/by/3.0/); a short silent excerpt is shown with Hevanti's window over it |
 | `System/Program/fonts/` | The two fonts of the app, Secular One and Assistant (SIL Open Font License, the licences are in the folder) |
 | `System/Program/katex/` | [KaTeX](https://katex.org) (MIT), draws the formulas in the answers |
 | `System/Program/ask.js` | The "ask AI" box |
@@ -75,7 +64,7 @@ Found a bug? [Open an issue](https://github.com/pechter-roei41/hevanti/issues) w
 
 ## Code signing policy
 
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org) (applied for; until approved, Windows shows "Windows protected your PC" once).
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org) (not applied for yet; until it is approved, the installer is not signed and Windows shows "Windows protected your PC" once).
 
 - What is signed: `Hevanti-Setup.exe`, built from the tagged commit by the public [release workflow](.github/workflows/release.yml). Nothing built on a personal computer is signed.
 - Committers and reviewers: [Roei Pechter](https://github.com/pechter-roei41). Approvers: [Roei Pechter](https://github.com/pechter-roei41).
