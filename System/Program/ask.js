@@ -72,9 +72,10 @@
   // builtin: answers inside Hevanti with the student's free Gemini key (set from Hevanti's state)
   // plan: "paid" = the student has a paid ChatGPT / Claude / Gemini plan - questions and whole-lecture tasks go to that
   // AI's app (no quota); "free" = answers inside Hevanti, with the free Gemini quota; "" = not asked yet (asked once)
-  const AI = {connected: {}, apps: {}, courseFn: null, builtin: false, plan: "", planKnown: false};
+  const AI = {connected: {}, apps: {}, courseFn: null, builtin: false, plan: "", planKnown: false, external: false};
   // the default way to ask: inside Hevanti (free key) - unless the student pays for an AI of their own
-  const hereDefault = () => AI.builtin && AI.plan !== "paid";
+  // (the paid-plan choice and the copy buttons exist only when "external AI" is on in the settings)
+  const hereDefault = () => AI.builtin && !(AI.external && AI.plan === "paid");
   const DEF_Q = "תסביר בפשטות את מה שנאמר בדקות האחרונות";
   // an answer as a few simple blocks: "# heading", "- item", **bold** - always as text (never HTML)
   function renderAnswer(doc, box, text) {
@@ -277,11 +278,12 @@
     function refresh() {
       here.hidden = !AI.builtin;
       here.classList.toggle("alt", AI.builtin && !hereDefault());   // a paid plan: the AI apps first, this one second
-      planBox.hidden = !(AI.planKnown && !AI.plan);
-      hint.textContent = hereDefault() ? "\"תשובה כאן\": Gemini עונה בתוך הבנתי, עם מה שנאמר" + (opts.hasImage ? " והשקופית" : "") +
-        ". הכפתורים האחרים מעתיקים את השאלה ל-AI אחר." : COPY_HINT + (AI.builtin ? ' "תשובה כאן" עונה במכסה החינמית.' : "");
+      planBox.hidden = !(AI.external && AI.planKnown && !AI.plan);
+      hint.textContent = !AI.builtin ? "כדי לקבל תשובה כאן, בתוך הבנתי: בהגדרות, \"מפתח API\" (חינם, בערך דקה). עד אז אפשר להעתיק את השאלה ל-AI אחר. " + COPY_HINT
+        : hereDefault() ? "\"תשובה כאן\": Gemini עונה בתוך הבנתי, עם מה שנאמר" + (opts.hasImage ? " והשקופית" : "") + (AI.external ? ". הכפתורים האחרים מעתיקים את השאלה ל-AI אחר." : ".")
+        : COPY_HINT + ' "תשובה כאן" עונה במכסה החינמית.';
       const names = connectedNames();
-      conn.hidden = !names.length || opts.noConnHint;
+      conn.hidden = !names.length || opts.noConnHint || !AI.external;
       conn.replaceChildren();
       if (names.length) {
         conn.append(mk("b", "", names.join(" ו-") + (names.length > 1 ? " מחוברים" : " מחובר") + " להבנתי: "),
@@ -289,7 +291,7 @@
           " (למשל \"" + (opts.example || "מה הוא אמר עכשיו?") + "\"), בלי להעתיק.");
       }
       const l = getLast();
-      for (const a of AIS) buttons[a.id].classList.toggle("last", a.id === l);
+      for (const a of AIS) { buttons[a.id].classList.toggle("last", a.id === l); buttons[a.id].hidden = AI.builtin && !AI.external; }   // with a key, the answer is inside Hevanti
       if (opts.compact) {   // the small window: only "תשובה כאן" (the other buttons only when it is not set up)
         for (const a of AIS) buttons[a.id].hidden = AI.builtin;
         chips.hidden = true; hint.hidden = AI.builtin;
@@ -365,9 +367,13 @@
       if (r && r.ok) setPlan((r.math && r.math.plan) || plan);
     } catch (e) {}
   }
+  function setExternal(on) {
+    on = !!on;
+    if (on !== AI.external) { AI.external = on; for (const b of boxes) b(); }
+  }
   function setBuiltin(on) {
     on = !!on;
     if (on !== AI.builtin) { AI.builtin = on; for (const b of boxes) b(); }
   }
-  window.BZMAsk = {render: renderAnswer, mount, AIS, copyText, setConnected, setApps, addCss, openFor, setCourseFn, setBuiltin, setPlan};
+  window.BZMAsk = {render: renderAnswer, mount, AIS, copyText, setConnected, setApps, addCss, openFor, setCourseFn, setBuiltin, setPlan, setExternal};
 })();
