@@ -394,6 +394,11 @@ async function contextText(q) {
     else out += `[${hms(x.t)}] ${x.x}\n`;
   }
   if (!n) out += "(עוד אין תמלול לקטע הזה)\n";
+  // what was on the slides and the board before those minutes (the newest 12 with text, oldest first): the lecturer may build on it without saying so
+  const before = items.filter(x => x.img && x.t < from).slice(-12), btexts = await Promise.all(before.map(x => slideTextOf(x.img)));
+  let earlier = "", left = 8000;
+  before.forEach((x, i) => { const t = (btexts[i] || "").replace(/\n+/g, " | ").slice(0, 700); if (!t || t.length > left) return; left -= t.length; earlier += `[${hms(x.t)}] ${t}\n`; });
+  if (earlier) out += "\nמה הופיע על השקופיות והלוח קודם בהרצאה (לפני 5 הדקות האחרונות), מהישנה לחדשה. המרצה אולי מתבסס על זה בלי להגיד:\n" + earlier;
   return out + "\nלענות בעברית (מונחים מקצועיים אפשר באנגלית). מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.\n" +
     "\nהשאלה שלי: " + (q || "");
 }

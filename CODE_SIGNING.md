@@ -44,7 +44,7 @@ The program sends information to other computers only in these cases:
 | When | What is sent, and to whom |
 | --- | --- |
 | You ask a question ("תשובה כאן", or Enter in the small window) | The question, the last minutes of the transcript and the slide on the screen are sent to Google's Gemini API (`generativelanguage.googleapis.com`), with the Gemini key that you created and saved in the settings. |
-| You turn on "read formulas and handwriting" (off by default) | Each saved slide picture is sent to Google's Gemini API, in the same way. |
+| You save a Gemini key: "read formulas and handwriting" then starts **on** (you can turn it off in the settings, under the key) | Each new slide picture that is saved is sent to Google's Gemini API, in the same way, so that formulas and handwriting are read. Someone who already had a key before this change keeps the choice they made. Turned off, only the slide that goes with a question is sent. |
 | First lecture, or a new language | The speech-recognition model is downloaded from Hugging Face (`huggingface.co`). Nothing about you is sent. |
 | You open a recording from a link (YouTube, Google Drive, Panopto) | The file is downloaded from the address you gave. The first time, the helper `yt-dlp` may be installed from PyPI (`pypi.org`). |
 | The program starts, unless you turned the check off (a box in the installer, or Settings, Privacy) | A request to GitHub (`api.github.com`) asks which version is the latest. No information about you is sent. |
