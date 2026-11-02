@@ -4433,18 +4433,51 @@ def _mini_session_key():
     return None if s is None else (s.kind, getattr(s, "started", None) or id(s))
 
 
+class _real_pixels:
+    """This thread sees the screen in real pixels (per-monitor DPI aware) while the block runs. The rest of the program
+    is DPI-unaware, so on a scaled screen (125%) its own numbers are smaller than the pixels Edge's window and the
+    floating button use: a window placed with them ends up too far right and down, partly off the screen. `.scale` is
+    the screen's scaling (1.25 at 125%)."""
+
+    def __init__(self, u):
+        self.u, self.old, self.scale = u, None, 1.0
+
+    def __enter__(self):
+        import ctypes
+        try:
+            self.u.SetThreadDpiAwarenessContext.argtypes = [ctypes.c_void_p]
+            self.u.SetThreadDpiAwarenessContext.restype = ctypes.c_void_p
+            self.old = self.u.SetThreadDpiAwarenessContext(ctypes.c_void_p(-4))   # PER_MONITOR_AWARE_V2
+            if self.old:
+                self.scale = max(1.0, self.u.GetDpiForSystem() / 96.0)
+        except Exception:
+            self.old = None
+        return self
+
+    def __exit__(self, *exc):
+        import ctypes
+        if self.old:
+            try:
+                self.u.SetThreadDpiAwarenessContext(ctypes.c_void_p(self.old))
+            except Exception:
+                pass
+        return False
+
+
 def _mini_xy_by_button(u, w, h):
-    """Where a window of this size sits right above the floating button (or below it, for a top corner), on the same
-    side; None when the screen cannot be read."""
+    """Where a window of this size (in real pixels) sits right above the floating button (or below it, for a top
+    corner), on the same side; None when the screen cannot be read. Must run inside `_real_pixels`."""
     import ctypes
     from ctypes import wintypes
     area = wintypes.RECT()
     if not u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0):
         return None
+    sc = max(1.0, u.GetDpiForSystem() / 96.0)
+    S, m = int(round(MiniButton.SIZE * sc)), int(round(12 * sc))
     corner = mini_btn_corner()
-    _bx, by = _mini_btn_xy(area, corner, MiniButton.SIZE)
-    x = area.left + 12 if corner in ("bl", "tl") else area.right - w - 12
-    y = by - 10 - h if corner in ("br", "bl") else by + MiniButton.SIZE + 10
+    _bx, by = _mini_btn_xy(area, corner, S, m)
+    x = area.left + m if corner in ("bl", "tl") else area.right - w - m
+    y = by - m - h if corner in ("br", "bl") else by + S + m
     return max(area.left, min(x, area.right - w)), max(area.top, min(y, area.bottom - h))
 
 
@@ -4453,13 +4486,14 @@ def _place_mini_by_button(u, hwnd):
     window after that; the button never moves."""
     import ctypes
     from ctypes import wintypes
-    r = wintypes.RECT()
-    if not u.GetWindowRect(hwnd, ctypes.byref(r)):
-        return
-    w, h = r.right - r.left, r.bottom - r.top
-    xy = _mini_xy_by_button(u, w, h)
-    if xy:
-        u.MoveWindow(hwnd, xy[0], xy[1], w, h, True)
+    with _real_pixels(u):
+        r = wintypes.RECT()
+        if not u.GetWindowRect(hwnd, ctypes.byref(r)):
+            return
+        w, h = r.right - r.left, r.bottom - r.top
+        xy = _mini_xy_by_button(u, w, h)
+        if xy:
+            u.MoveWindow(hwnd, xy[0], xy[1], w, h, True)
 
 
 def _mini_on_a_screen(u, hwnd):
@@ -4493,13 +4527,14 @@ def _show_mini(u, hwnd, place=False):
             wp.length = ctypes.sizeof(WINDOWPLACEMENT)
             u.GetWindowPlacement.argtypes = [wintypes.HWND, ctypes.POINTER(WINDOWPLACEMENT)]
             u.SetWindowPlacement.argtypes = [wintypes.HWND, ctypes.POINTER(WINDOWPLACEMENT)]
-            if u.GetWindowPlacement(hwnd, ctypes.byref(wp)):
-                w, h = wp.rcNormal.right - wp.rcNormal.left, wp.rcNormal.bottom - wp.rcNormal.top
-                xy = _mini_xy_by_button(u, w, h)
-                if xy:
-                    wp.rcNormal.left, wp.rcNormal.top, wp.rcNormal.right, wp.rcNormal.bottom = xy[0], xy[1], xy[0] + w, xy[1] + h
-                wp.showCmd = 1   # SW_SHOWNORMAL
-                u.SetWindowPlacement(hwnd, ctypes.byref(wp))
+            with _real_pixels(u):
+                if u.GetWindowPlacement(hwnd, ctypes.byref(wp)):
+                    w, h = wp.rcNormal.right - wp.rcNormal.left, wp.rcNormal.bottom - wp.rcNormal.top
+                    xy = _mini_xy_by_button(u, w, h)
+                    if xy:
+                        wp.rcNormal.left, wp.rcNormal.top, wp.rcNormal.right, wp.rcNormal.bottom = xy[0], xy[1], xy[0] + w, xy[1] + h
+                    wp.showCmd = 1   # SW_SHOWNORMAL
+                    u.SetWindowPlacement(hwnd, ctypes.byref(wp))
         else:   # hidden (or just created): moved while it cannot be seen, then shown
             _place_mini_by_button(u, hwnd)
     u.ShowWindow(hwnd, 9)   # SW_RESTORE
@@ -4536,9 +4571,10 @@ def toggle_mini(hide_only=False, show_only=False):
             prof = os.path.join(DATA_DIR, "mini-profile")
             os.makedirs(prof, exist_ok=True)
             args = [exe, "--app=" + APP.url + "mini", f"--window-size={MINI_SIZE[0]},{MINI_SIZE[1]}"]
-            xy = _mini_xy_by_button(u, MINI_SIZE[0], MINI_SIZE[1])   # it opens in its place at once (not in the middle first)
+            with _real_pixels(u) as rp:   # it opens near its place at once (the exact place is set when it is found)
+                xy = _mini_xy_by_button(u, int(round(MINI_SIZE[0] * rp.scale)), int(round(MINI_SIZE[1] * rp.scale)))
             if xy:
-                args.append(f"--window-position={xy[0]},{xy[1]}")
+                args.append(f"--window-position={int(xy[0] / rp.scale)},{int(xy[1] / rp.scale)}")
             _MINI_PROC["proc"] = subprocess.Popen(args + ["--user-data-dir=" + prof, "--no-first-run",
                                                            "--no-default-browser-check", "--disable-extensions", "--disable-sync"])
             end = time.time() + 15

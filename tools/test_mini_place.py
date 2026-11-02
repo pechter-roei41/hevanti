@@ -1,4 +1,4 @@
-"""The small question window opens straight in its place (System/Program/live_transcribe.py): never at its old place
+﻿"""The small question window opens straight in its place (System/Program/live_transcribe.py): never at its old place
 first and then jumping. Windows only, needs Edge or Chrome, and it shows the real window for a few seconds:
   python tools/test_mini_place.py"""
 import ctypes
@@ -69,6 +69,7 @@ def watch(fn, secs=1.0):
     known.discard(mine)
 
     def loop():
+        L._real_pixels(u).__enter__()   # this thread too reads real pixels, like the window itself
         while not stop.is_set():
             def each(hw, _):
                 try:
@@ -96,38 +97,55 @@ def watch(fn, secs=1.0):
 
 def target():
     w, h = L.MINI_SIZE
-    return L._mini_xy_by_button(u, w, h)
+    return L._mini_xy_by_button(u, int(round(w * RP.scale)), int(round(h * RP.scale)))
 
 
+def inside_work_area(rect):
+    a = wintypes.RECT()
+    u.SystemParametersInfoW(0x30, 0, ctypes.byref(a), 0)
+    return rect[0] >= a.left and rect[1] >= a.top and rect[0] + rect[2] <= a.right and rect[1] + rect[3] <= a.bottom
+
+
+RP = L._real_pixels(u)
+RP.__enter__()
+WW, HH = int(round(L.MINI_SIZE[0] * RP.scale)), int(round(L.MINI_SIZE[1] * RP.scale))
+
+
+def near(a, b):
+    return abs(a[0] - b[0]) <= 2 and abs(a[1] - b[1]) <= 2
+
+
+# (the program itself is DPI-unaware: here the test reads the same real pixels the window has)
 try:
     want = target()
     seen = watch(lambda: L.toggle_mini(show_only=True))
-    check("opening: the window is seen only in its place (above the button)", len(seen) == 1 and seen[0][:2] == want, (seen, want))
+    check("opening: the window is seen only in its place (above the button)", len(seen) >= 1 and all(near(s[:2], want) for s in seen), (seen, want))
+    check("opening: the whole window is inside the screen (also at 125% scaling)", len(seen) >= 1 and all(inside_work_area(s) for s in seen), seen)
     h = L._find_mini(u)
     L.toggle_mini(hide_only=True)
     time.sleep(0.4)
-    u.MoveWindow(h, 300, 120, 380, 460, True)
+    u.MoveWindow(h, 300, 120, WW, HH, True)
     time.sleep(0.3)
     seen = watch(lambda: L.toggle_mini(show_only=True))
     check("reopening in the same session: stays where the student left it", seen and seen[0][:2] == (300, 120) and len(seen) == 1, seen)
     L.toggle_mini(hide_only=True)
     time.sleep(0.4)
-    u.MoveWindow(h, 300, 120, 380, 460, True)
+    u.MoveWindow(h, 300, 120, WW, HH, True)
     time.sleep(0.3)
     L._MINI_STATE["key"] = "another session"
     seen = watch(lambda: L.toggle_mini(show_only=True))
-    check("a new session: straight above the button, no jump from the old place", len(seen) == 1 and seen[0][:2] == want, (seen, want))
+    check("a new session: straight above the button, no jump from the old place", len(seen) >= 1 and near(seen[-1][:2], want) and len({s[:2] for s in seen}) == 1, (seen, want))
     L.toggle_mini(hide_only=True)
     time.sleep(0.4)
-    u.MoveWindow(h, 5000, 5000, 380, 460, True)
+    u.MoveWindow(h, 5000, 5000, WW, HH, True)
     time.sleep(0.3)
     seen = watch(lambda: L.toggle_mini(show_only=True))
-    check("left on no screen: pulled back above the button, no jump", len(seen) == 1 and seen[0][:2] == want, (seen, want))
+    check("left on no screen: pulled back above the button, no jump", len(seen) >= 1 and near(seen[-1][:2], want) and len({s[:2] for s in seen}) == 1, (seen, want))
     u.ShowWindow(h, 6)   # minimized
     time.sleep(0.6)
     L._MINI_STATE["key"] = "yet another session"
     seen = watch(lambda: L.toggle_mini(show_only=True))
-    check("minimized, then opened in a new session: restored straight in its place", len(seen) == 1 and seen[0][:2] == want, (seen, want))
+    check("minimized, then opened in a new session: restored straight in its place", len(seen) >= 1 and near(seen[-1][:2], want) and len({s[:2] for s in seen}) == 1, (seen, want))
 finally:
     p = L._MINI_PROC.get("proc")
     if p:
