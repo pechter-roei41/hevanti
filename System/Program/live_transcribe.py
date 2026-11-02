@@ -1915,7 +1915,7 @@ class MathReader(threading.Thread):
     def status(self):
         s = math_settings()
         with self.lock:
-            return {"on": bool(s.get("on")), "has_key": bool(s.get("key")), "model": self.model,
+            return {"on": math_on(s), "has_key": bool(s.get("key")), "model": self.model,
                     "ask": bool(s.get("key")) and s.get("ask", True) is not False,
                     "plan": s.get("plan") if s.get("plan") in ("free", "paid") else "",
                     "external": bool(load_settings().get("external_ai", False)),   # the copy-to-ChatGPT/Gemini/Claude buttons: off until chosen in the settings
@@ -2003,7 +2003,7 @@ class MathReader(threading.Thread):
             path = self.q.get()
             s = math_settings()
             key = read_secret(s.get("key"))
-            if not s.get("on") or not key:
+            if not math_on(s) or not key:
                 continue
             name, sd = os.path.basename(path), os.path.dirname(path)
             if not os.path.isfile(path) or name in read_math(sd):
@@ -2065,9 +2065,15 @@ def math_settings():
     return s if isinstance(s, dict) else {}
 
 
+def math_on(s):
+    """Reading formulas and handwriting (every saved slide goes to Gemini). A NEW key starts with it on (math_set); someone
+    who already had a key keeps what they chose, so an update never starts sending slides by itself."""
+    return bool(s.get("key")) and bool(s.get("on"))
+
+
 def math_add(path):
     s = math_settings()
-    if s.get("on") and s.get("key"):
+    if math_on(s):
         math_reader().q.put(path)
 
 
@@ -2087,8 +2093,10 @@ def math_set(d):
                 math_reader().error = ""
         s["key"] = keep_secret(key)
         if not key:
-            s["on"] = False
-    if "on" in d:   # reading formulas sends every slide: only when turned on by itself, never with the key
+            s.pop("on", None)   # (a new key later starts with the default: on)
+        elif "on" not in s and "on" not in d:
+            s["on"] = True   # a new key: reading formulas and handwriting is on by default (turned off in Settings, and it says so there)
+    if "on" in d:
         s["on"] = bool(d.get("on")) and bool(s.get("key"))
     if "ask" in d:
         s["ask"] = bool(d.get("ask"))
@@ -4477,7 +4485,9 @@ def _mini_xy_by_button(u, w, h):
     corner = mini_btn_corner()
     _bx, by = _mini_btn_xy(area, corner, S, m)
     x = area.left + m if corner in ("bl", "tl") else area.right - w - m
-    y = by - m - h if corner in ("br", "bl") else by + S + m
+    # the button is gone while the window is open, so a bottom window sits at the bottom of the screen (the same margin
+    # as at the side), a top one at the top
+    y = area.bottom - m - h if corner in ("br", "bl") else area.top + m
     return max(area.left, min(x, area.right - w)), max(area.top, min(y, area.bottom - h))
 
 
@@ -4600,6 +4610,19 @@ def _rec_shot_before(rec, pos):
     return best
 
 
+def _earlier_slides_text(pairs):
+    """pairs: [(time label, slide text)] of the slides shown BEFORE the minutes that are sent, oldest first. The newest 12
+    that have text, at most ~8000 characters: the lecturer often builds on something shown earlier without saying so."""
+    body, left = "", 8000
+    for label, text in pairs[-12:]:
+        t = (text or "").replace("\n", " | ")[:700]
+        if t and len(t) <= left:
+            left -= len(t)
+            body += f"[{label}] {t}\n"
+    return ("\nמה הופיע על השקופיות והלוח קודם בהרצאה (לפני 5 הדקות האחרונות), מהישנה לחדשה. המרצה אולי מתבסס על זה בלי להגיד:\n"
+            + body) if body else ""
+
+
 def _mini_context_rec(rec, q, hint):
     """A recording: what was said in the 5 minutes before the place the student is at (as the player reports it)."""
     pos = float(rec.pos or 0.0)
@@ -4626,6 +4649,9 @@ def _mini_context_rec(rec, q, hint):
         n += 1
     if not n:
         out += "(עוד אין תמלול לקטע הזה)\n"
+    with rec.lock:
+        before = [(t, v) for t, k, v in rec.items() if k == "shot" and t < pos - 300][-12:]
+    out += _earlier_slides_text([(hms(t), slide_text(os.path.join(rec.shots_dir, v))) for t, v in before])
     return out + hint + "\nהשאלה שלי: " + q
 
 
@@ -4666,6 +4692,14 @@ def mini_context(q):
         out += f"(ממש עכשיו, עוד לא סופי: {draft})\n"
     if not items and not draft:
         out += "(עוד אין תמלול)\n"
+    with live.lock:
+        lo = (pos - 300) if yt else (time.time() - 300)
+        older = [(t, x) for t, x in live.all if t < lo and x.startswith(tag)][-12:]
+    pairs = []
+    for t, x in older:
+        f = safe_shot(x[len(tag):-1])
+        pairs.append((hms(t) if yt else datetime.datetime.fromtimestamp(t).strftime("%H:%M:%S"), slide_text(f) if f else ""))
+    out += _earlier_slides_text(pairs)
     return out + hint + "\nהשאלה שלי: " + q
 
 
@@ -4813,9 +4847,9 @@ class MiniButton(threading.Thread):
         g.SelectObject.restype = wintypes.HANDLE
         g.DeleteObject.argtypes = [wintypes.HANDLE]
         g.DeleteDC.argtypes = [wintypes.HDC]
-        st = {"down": None, "shown": False, "hold": 0.0, "corner": ""}
+        st = {"down": None, "shown": False, "hold": 0.0, "corner": "", "pulsed": None, "pulse_until": 0.0, "pulse_on": False}
 
-        def draw():
+        def draw(alpha=235):
             """Put the picture on the window (per-pixel alpha: a smooth round edge, and the corners are see-through)."""
             data = _logo_rgba(S)
             screen = u.GetDC(None)
@@ -4826,7 +4860,7 @@ class MiniButton(threading.Thread):
             ctypes.memmove(bits, data, len(data))
             old = g.SelectObject(mdc, hbm)
             size, src = wintypes.SIZE(S, S), wintypes.POINT(0, 0)
-            blend = BLEND(0, 0, 235, 1)   # AC_SRC_OVER, a little see-through overall, AC_SRC_ALPHA
+            blend = BLEND(0, 0, alpha, 1)   # AC_SRC_OVER, a little see-through overall, AC_SRC_ALPHA
             u.UpdateLayeredWindow(self.hwnd, screen, None, ctypes.byref(size), mdc, ctypes.byref(src), 0, ctypes.byref(blend), 2)
             g.SelectObject(mdc, old)
             g.DeleteObject(hbm)
@@ -4866,9 +4900,16 @@ class MiniButton(threading.Thread):
                     place()
                     u.ShowWindow(hwnd, 4)   # SW_SHOWNOACTIVATE
                     st["shown"] = True
+                    key = _mini_session_key()
+                    if key is not None and key != st["pulsed"]:   # the first time in each lecture: it blinks for a few seconds
+                        st["pulsed"], st["pulse_until"] = key, time.time() + 3.6
                 elif not want and st["shown"]:
                     u.ShowWindow(hwnd, 0)
                     st["shown"] = False
+                if st["shown"] and (time.time() < st["pulse_until"] or st["pulse_on"]):
+                    left = st["pulse_until"] - time.time()
+                    st["pulse_on"] = left > 0
+                    draw(235 if left <= 0 else (235 if int(left * 2.5) % 2 else 70))
                 if st["shown"]:   # (stays above a full-screen lecture; moves when the corner is changed in the settings)
                     if mini_btn_corner() != st["corner"]:
                         place()
@@ -6168,6 +6209,7 @@ class App:
         self.models = {}
         self.device = ""        # "GPU" / "CPU" once a model is loaded
         self.last_seen = time.time()
+        self.page_seen = time.time()   # the last time the Hevanti page itself (not the small window) asked for something
         self.quit_evt = threading.Event()
         self.url = None
         self.lib_rev = 0
@@ -6275,6 +6317,12 @@ class App:
     def command(self, d):
         a = d.get("action")
         course = clean_name(d.get("course"), NO_COURSE)
+        if a in ("start_live", "start_youtube", "start_recording", "open_recording"):
+            with self.lock:
+                old = self.session
+            if old is not None and old.stop.is_set() and not old.done:   # still writing the last seconds of the one that was stopped
+                return {"ok": False, "stopping": True,
+                        "error": "הבנתי עוד מסיימת לתמלל את ההרצאה הקודמת. אפשר להתחיל חדשה ברגע שהיא מסיימת (כמה שניות)."}
         if a == "start_live":
             save_settings(course=course)
             self.start("live", d.get("lang"), run_live, d.get("lang"), course, course=course)
@@ -6427,6 +6475,16 @@ class App:
             return {"ok": True}
         if a == "quit":
             self.quit_evt.set()
+            return {"ok": True}
+        if a == "tab_closed":   # the Hevanti tab was closed: Hevanti closes completely, unless a page comes back (a reload, another tab)
+            t0 = time.time()
+
+            def later():
+                time.sleep(8)
+                if self.page_seen < t0:
+                    log("הטאב של הבנתי נסגר - הבנתי נסגרת.")
+                    self.quit_evt.set()
+            threading.Thread(target=later, daemon=True).start()
             return {"ok": True}
         return {"ok": False, "error": "פקודה לא מוכרת"}
 
@@ -7275,6 +7333,8 @@ def _app_handler():
                     return self._page(PLAYER_HTML)
                 if p.startswith("/api/"):
                     APP.seen()
+                    if q.get("w", [""])[0] == "app":   # the Hevanti page itself (not the small window, which polls too)
+                        APP.page_seen = time.time()
                 if p == "/api/app":
                     return self._json(APP.state(qint("notes")))
                 if p == "/api/live":

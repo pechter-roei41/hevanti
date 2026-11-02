@@ -545,13 +545,6 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 <main>
   <!-- HOME -->
   <section id="vHome" aria-label="מסך הבית">
-    <h1>שואלים תוך כדי ההרצאה, ומסמנים מה לא הבנת</h1>
-    <ol class="core" aria-label="איך הבנתי עובדת">
-      <li><b>1. מתחילים הרצאה</b><span>חיה או מוקלטת, מהכפתורים למטה. הבנתי כותבת כל מה שנאמר.</span></li>
-      <li><b>2. שואלים בחלון הצף</b><span>הכפתור עם הלוגו בקצה המסך (או <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd>) פותח חלון קטן מעל ההרצאה, גם במסך מלא.</span></li>
-      <li><b>3. מסמנים ★ או ?</b><span>"חשוב" או "לא הבנתי" בלחיצה אחת. אחרי ההרצאה חוזרים בדיוק לרגעים האלה.</span></li>
-    </ol>
-    <p class="lead">הכל קורה במחשב שלך: כל הרצאה נשמרת בתיקייה "הקורסים שלי", בתיקייה של הקורס.</p>
     <div class="coursebar">
       <label for="courseSel"><b>הקורס:</b></label>
       <select id="courseSel"></select>
@@ -572,7 +565,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <ol class="setup">
         <li id="stKey">
           <div class="row"><b>1. תשובות בתוך הבנתי, בחינם</b><span class="stdone">✓ מוכן</span></div>
-          <p class="sub" style="margin:0">הבנתי שואלת את Gemini של Google בשבילך. לשם כך צריך "מפתח": קוד חינמי, בלי כרטיס אשראי.</p>
+          <p class="sub" style="margin:0">הבנתי שואלת את Gemini של Google בשבילך. לשם כך צריך "מפתח": קוד חינמי, בלי כרטיס אשראי. עם המפתח, כל שקופית שנשמרת נשלחת ל-Gemini גם כדי לקרוא נוסחאות וכתב יד (אפשר לכבות בהגדרות).</p>
           <div class="row"><a class="btn small" id="setupOpen" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">פתיחת Google ליצירת המפתח</a><span class="sub2" style="font-size:14px;color:var(--muted)">שם: Create API key, ואז Copy key.</span></div>
           <div class="row"><input type="password" id="setupKey" placeholder="להדביק כאן את המפתח (Ctrl+V)" autocomplete="off" aria-label="מפתח Gemini" dir="ltr"><button class="btn small" id="setupKeySave" type="button">שמירה ובדיקה</button></div>
           <p class="capstat" id="setupKeyStat" style="margin:0;color:var(--muted)"></p>
@@ -655,10 +648,10 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <p>שאלות והרצאות שלמות ילכו ישר לאפליקציה שלך, בלי מכסה. "תשובה כאן" נשארת אפשרות חינמית נוספת.</p>
         </div>
         <div class="optbox">
-          <h4>2. קריאת נוסחאות וכתב יד (אופציונלי)</h4>
+          <h4>2. קריאת נוסחאות וכתב יד</h4>
           <label class="row"><input type="checkbox" id="mathOn"><b>לקרוא נוסחאות וכתב יד בכל שקופית חדשה</b></label>
           <p>הקריאה הרגילה של השקופיות לא מבינה נוסחאות וכתב יד. כשזה פועל, כל שקופית שנשמרת נשלחת ל-Gemini, והוא כותב את הטקסט והנוסחאות (למשל <code dir="ltr">$I = \int r^2\,dm$</code>) לחיפוש, להכנה למבחן ולתשובות.</p>
-          <p class="warn">שימו לב: זה שולח כל שקופית ל-Google.</p>
+          <p class="warn">שימו לב: זה פועל מעצמו כשמוסיפים מפתח, ושולח כל שקופית שנשמרת ל-Google. אפשר לכבות כאן בכל רגע.</p>
         </div>
         <div class="optbox">
           <h4>פרטיות ומכסה</h4>
@@ -673,7 +666,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <li><b>מה נשמר:</b> התמלול של ההרצאות, צילומי המסך של מה שבחרת לצלם, והטקסט שנקרא מהם.</li>
         <li><b>איפה:</b> רק במחשב שלך, בתיקייה "הקורסים שלי". אין חשבון ואין שרת של הבנתי. אם התיקייה נמצאת בתוך OneDrive או Google Drive (למשל Documents שמסונכרן), התוכנה של הענן מעתיקה אותה לחשבון שלך שם.</li>
         <li><b>מה נשלח ל-AI:</b> רק כשלוחצים על כפתור "שאלה ל-AI" או על אחת המשימות (סיכום, כרטיסיות, מבחן), או כשמבקשים מ-AI מחובר. אז הטקסט, והתמונה אם מצרפים אותה, עוברים לחברה של אותו AI. בלי זה, שום דבר לא יוצא מהמחשב.</li>
-        <li><b>מה עוד עובר ברשת:</b> בדיקת גרסה חדשה ב-GitHub (אפשר לכבות בתיבה שלמעלה), הורדה חד-פעמית של מודל התמלול (Hugging Face) ושל קריאת השקופיות (GitHub). ורק אם הגדרת "AI מובנה בחינם": בלחיצה על "תשובה כאן" נשלחים ל-Google השאלה, הדקות האחרונות והשקופית; ועם "קריאת נוסחאות וכתב יד" גם כל שקופית שנשמרת.</li>
+        <li><b>מה עוד עובר ברשת:</b> בדיקת גרסה חדשה ב-GitHub (אפשר לכבות בתיבה שלמעלה), הורדה חד-פעמית של מודל התמלול (Hugging Face) ושל קריאת השקופיות (GitHub). ורק אם הגדרת "AI מובנה בחינם": בלחיצה על "תשובה כאן" נשלחים ל-Google השאלה, הדקות האחרונות והשקופית; ובנוסף, כי "קריאת נוסחאות וכתב יד" פועלת כברירת מחדל כשיש מפתח (אפשר לכבות בהגדרות), גם כל שקופית שנשמרת. עם השאלה נשלח גם הטקסט של השקופיות הקודמות בהרצאה.</li>
         <li><b>מה בשליטתך:</b> לבחור חלון אחד או חלק מהמסך במקום כל המסך, להשהות את הצילום (גם עם <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd>), לטשטש אזורים קבועים, ולמחוק צילומים לצמיתות.</li>
         <li><b>אחריות:</b> הבנתי ניתנת כמו שהיא, בלי אחריות מכל סוג. השימוש בה, כולל הקלטה, תמלול ושמירה של הרצאות ושקופיות, הוא באחריות המשתמש בלבד. <b>לפני שמשתמשים, כל משתמש צריך לבדוק מה הנהלים והכללים במוסד שלו ואצל המרצה.</b> רועי פכטר ומפתחי הכלי אינם אחראים לשימוש בה.</li>
       </ul>
@@ -928,6 +921,13 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <ul style="margin:6px 0;padding-inline-start:20px;line-height:1.6"><li>לבדוק מה הכללים של המוסד שלך.</li><li>לבקש אישור מהמרצה, אם הכללים דורשים.</li><li>להשתמש בזה לעצמך בלבד, ולא להפיץ הקלטות, תמלולים או שקופיות.</li></ul>
   <label class="row" style="cursor:pointer"><input type="checkbox" id="consCheck"><b>קראתי, ואני אחראי לבדוק ולקבל אישור לפני שאני מקליט</b></label>
   <div class="row"><button class="btn" id="consOk" type="button" disabled>המשך</button><button class="btn quiet" id="consNo" type="button">ביטול</button></div>
+</div></div>
+<div class="modal" id="liveTip" hidden role="dialog" aria-modal="true" aria-labelledby="liveTipT"><div class="card">
+  <h3 id="liveTipT">ההרצאה פועלת, והבנתי כותבת אותה ברקע</h3>
+  <p style="margin:0">אפשר לעבור עכשיו לחלון ההרצאה (זום, דפדפן או נגן) ולהגדיל אותו <b>למסך מלא</b>. הבנתי ממשיכה לעבוד גם אז.</p>
+  <ul style="margin:6px 0;padding-inline-start:20px;line-height:1.6"><li><b>לשאול:</b> הכפתור עם הלוגו בקצה המסך, או <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd>. חלון קטן נפתח מעל ההרצאה, גם במסך מלא.</li><li><b>לסמן:</b> לא הבנת משהו? לוחצים על <b>?</b> בחלון הצף וחוזרים לזה אחרי ההרצאה. ככה גם עם <b>★</b>: לוחצים כשמשהו חשוב, וחוזרים אליו אחר כך.</li></ul>
+  <label class="row" style="cursor:pointer"><input type="checkbox" id="liveTipNo"><b>אל תציג שוב</b></label>
+  <div class="row"><button class="btn" id="liveTipOk" type="button">הבנתי</button></div>
 </div></div>
 <div class="modal" id="confirm" hidden role="dialog" aria-modal="true" aria-labelledby="confT"><div class="card">
   <h3 id="confT"></h3><p id="confP" style="margin:0;color:var(--muted)"></p>
@@ -1452,7 +1452,11 @@ const setPanels = {};
   const exl = el("label", "row miniopt"), exc = el("input"); exc.type = "checkbox"; exc.id = "extAi";
   exc.addEventListener("change", async () => { await api("/api/cmd", {action: "external_ai", on: exc.checked}); if (window.BZMAsk) BZMAsk.setExternal(exc.checked); try { app = await api("/api/app"); } catch (e) {} drawMath(); });
   exl.append(exc, el("b", "", "להציג גם כפתורים שמעתיקים את השאלה ל-ChatGPT, Gemini או Claude"));
-  ai.append(exl, el("p", "sub", "ברירת המחדל: התשובות מגיעות רק בתוך הבנתי (מפתח Gemini חינמי). כשזה פועל, תיבת השאלה מציגה גם כפתורים להעתקה, ואפשר להגיד שיש לך מנוי בתשלום כדי שמשימות על הרצאה שלמה ילכו לאפליקציה שלך."));
+  const qwl = el("label", "row miniopt"), qwc = el("input"); qwc.type = "checkbox"; qwc.id = "quitWarn";
+  try { qwc.checked = localStorage.getItem("bzm.noQuitWarn") !== "1"; } catch (e) { qwc.checked = true; }
+  qwc.addEventListener("change", () => { try { if (qwc.checked) localStorage.removeItem("bzm.noQuitWarn"); else localStorage.setItem("bzm.noQuitWarn", "1"); } catch (e) {} });
+  qwl.append(qwc, el("b", "", "לשאול אותי לפני שסוגרים את הטאב באמצע הרצאה חיה"));
+  ai.append(qwl, exl, el("p", "sub", "ברירת המחדל: התשובות מגיעות רק בתוך הבנתי (מפתח Gemini חינמי). כשזה פועל, תיבת השאלה מציגה גם כפתורים להעתקה, ואפשר להגיד שיש לך מנוי בתשלום כדי שמשימות על הרצאה שלמה ילכו לאפליקציה שלך."));
   const paid = $("#planPaid").closest(".optbox"); paid.querySelector("h4").textContent = "מנוי בתשלום"; ai.appendChild(paid);
   const row = el("div", "row"), go = el("button", "btn", "חיבור AI (Claude, ChatGPT, Gemini)"); go.type = "button"; go.addEventListener("click", () => { $("#settings").hidden = true; $("#connBtn").click(); });
   row.appendChild(go); ai.append(el("h3", "", "חיבור האפליקציה של ה-AI שלך"), el("p", "sub", "אם יש לך מנוי ל-Claude או ל-ChatGPT, אפשר לחבר אותם להבנתי: הם קוראים לבד מה נאמר ואת השקופית. כולל סנכרון לענן (כבוי כברירת מחדל)."), row);
@@ -1511,7 +1515,7 @@ $("#pastBack").addEventListener("click", () => { location.hash = backTo; });
 // ---------- the app state ----------
 async function poll() {
   try {
-    const d = await api("/api/app?notes=" + notesSince);
+    const d = await api("/api/app?w=app&notes=" + notesSince);
     fails = 0; $("#gone").hidden = true;
     app = d; render(d); if (window.BZMAsk) BZMAsk.setApps(d.ai_apps);
     autoMini(d.session);
@@ -1538,6 +1542,13 @@ function sessionName(s) {
   if (s.yt) return "סרטון יוטיוב" + (s.title && s.title !== "סרטון יוטיוב" ? ": " + s.title : "") + c;
   return (s.kind === "live" ? "הרצאה חיה ב" + langName(s.lang) : "הקלטה: " + (s.title || "")) + c;
 }
+// a live lecture has started: say once that the lecture can go full screen while Hevanti works in the background
+function liveTip(s) {
+  if (!s || s.done || s.kind !== "live" || s.yt || !s.ready) return;
+  try { if (localStorage.getItem("bzm.noLiveTip") === "1" || sessionStorage.getItem("bzm.tipFor") === String(s.started)) return; sessionStorage.setItem("bzm.tipFor", String(s.started)); } catch (e) {}
+  const m = $("#liveTip"), no = $("#liveTipNo"); no.checked = false; m.hidden = false; $("#liveTipOk").focus();
+  $("#liveTipOk").onclick = () => { m.hidden = true; if (no.checked) { try { localStorage.setItem("bzm.noLiveTip", "1"); } catch (e) {} } };
+}
 function render(d) {
   $("#ver").textContent = "גרסה " + d.version + " (" + d.date + ")";
   if (!curCourse && d.course) { curCourse = d.course; drawCourseSel(); }
@@ -1553,6 +1564,7 @@ function render(d) {
   else if (active && s.kind === "live") { pill.className = "pill live"; pill.textContent = s.ready ? (s.stopping ? "עוצר..." : "מקליט") : "מתחיל..."; }
   else if (active) { pill.className = "pill"; pill.textContent = s.ready ? "הקלטה פתוחה" : "מכין הקלטה..."; }
   else { pill.className = "pill"; pill.textContent = "מוכן"; }
+  liveTip(s);
   const dp = $("#devPill"); dp.hidden = !d.device; dp.textContent = d.device === "GPU" ? "כרטיס מסך" : "מעבד";
   // what is running (home)
   const rb = $("#runBanner");
@@ -1647,11 +1659,29 @@ function consentOk() {
 async function okToReplace() {
   const s = app && app.session;
   if (!s || s.done) return true;
-  return confirmBox("לעצור את מה שפועל עכשיו?", sessionName(s) + " ייעצר. מה שכבר תומלל נשמר.");
+  if (s.stopping) return waitStopped();   // already stopped, still writing its last seconds
+  if (!(await confirmBox("לעצור את מה שפועל עכשיו?", sessionName(s) + " ייעצר. מה שכבר תומלל נשמר."))) return false;
+  await api("/api/cmd", {action: "stop"});
+  return waitStopped();
+}
+// a new lecture cannot start while the one that was stopped is still being transcribed to its end: wait for it (the page says so)
+async function waitStopped() {
+  const end = Date.now() + 120000;
+  toast("מסיימת לתמלל את ההרצאה הקודמת... רגע");
+  while (Date.now() < end) {
+    try { app = await api("/api/app?w=app&notes=" + notesSince); } catch (e) {}
+    const s = app && app.session;
+    if (!s || s.done) return true;
+    await new Promise(r => setTimeout(r, 400));
+    if (Date.now() % 3000 < 400) toast("מסיימת לתמלל את ההרצאה הקודמת... רגע");
+  }
+  toast("ההרצאה הקודמת עוד מסיימת. לנסות שוב בעוד רגע.");
+  return false;
 }
 document.querySelectorAll("[data-start]").forEach(b => b.addEventListener("click", async () => {
   if (!(await consentOk()) || !(await okToReplace())) return;
-  await api("/api/cmd", {action: "start_live", lang: b.dataset.start, course: curCourse || NO_COURSE});
+  const r = await api("/api/cmd", {action: "start_live", lang: b.dataset.start, course: curCourse || NO_COURSE});
+  if (!r.ok) { toast(r.error || "לא הצלחתי להתחיל."); return; }
   location.hash = "live";
 }));
 function openRec() { $("#recBox").hidden = false; $("#recTile").classList.add("on"); $("#linkIn").focus(); }
@@ -2362,7 +2392,20 @@ async function minutesText(items, from, to, slidePlaceholder) {
     const tx = x.img ? byImg.get(x) : null;
     out += `[${x.c}] ` + (x.img ? (tx ? "[על השקופית כתוב: " + tx.replace(/\n+/g, " | ").slice(0, 700) + "]" : slidePlaceholder) : x.x) + "\n";
   }
-  return {out, n: pick.length};
+  return {out: out + await earlierSlides(items, from), n: pick.length};
+}
+// what was on the slides and the board BEFORE those minutes: a lecturer often builds on something shown earlier without saying so.
+// Only their text (not pictures), the newest 12 that have any, oldest first, at most ~8000 characters.
+async function earlierSlides(items, before) {
+  const shots = items.filter(x => x.img && x.t < before).slice(-12);
+  const texts = await Promise.all(shots.map(x => slideTextOf(x.img)));
+  let body = "", left = 8000;
+  shots.forEach((x, i) => {
+    const t = (texts[i] || "").replace(/\n+/g, " | ").slice(0, 700);
+    if (!t || t.length > left) return;
+    left -= t.length; body += `[${x.c}] ${t}\n`;
+  });
+  return body ? "\nמה הופיע על השקופיות והלוח קודם בהרצאה (לפני 5 הדקות האחרונות), מהישנה לחדשה. המרצה אולי מתבסס על זה בלי להגיד:\n" + body : "";
 }
 async function liveContext(q) {
   const now = Date.now() / 1000, from = now - 300;
@@ -2570,7 +2613,7 @@ function ytProblem(text, link) {
 async function ytOpen() {
   // the state may still show the session from before (the video was just started): ask again for a moment
   for (let i = 0; i < 15 && !(app && app.session && app.session.yt); i++) {
-    try { const d = await api("/api/app?notes=" + notesSince); app = d; render(d); if (window.BZMAsk) BZMAsk.setApps(d.ai_apps); } catch (e) {}
+    try { const d = await api("/api/app?w=app&notes=" + notesSince); app = d; render(d); if (window.BZMAsk) BZMAsk.setApps(d.ai_apps); } catch (e) {}
     if (app && app.session && app.session.yt) break;
     await new Promise(r => setTimeout(r, 300));
   }
@@ -2713,6 +2756,18 @@ async function ytContext(q) {
 if (window.BZMAsk) BZMAsk.mount($("#ytAsk"), {context: ytContext, toast, hasImage: () => !!ytShot, imageName: "השקופית", example: "מה הוא הסביר עכשיו?",
   image: () => ytShot, where: () => "yt", at: () => hms(ytPos())});
 window.addEventListener("pagehide", () => { if (view === "yt") { try { ytPlayer.pauseVideo(); } catch (e) {} ytReport(true); } });
+// closing the Hevanti tab closes Hevanti completely (the floating window and button too). The program waits a few seconds
+// first: a reload, or another Hevanti tab, keeps it open.
+window.addEventListener("pagehide", () => {
+  try { fetch("/api/cmd", {method: "POST", keepalive: true, headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify({action: "tab_closed"})}); } catch (e) {}
+});
+// ... and in the middle of a live lecture the browser asks first. (Its question is the browser's own: no text of ours and no
+// checkbox can be put in it, so "do not ask again" is a setting: Settings, Advanced.)
+function quitWarnOff() { try { return localStorage.getItem("bzm.noQuitWarn") === "1"; } catch (e) { return false; } }
+window.addEventListener("beforeunload", e => {
+  const s = app && app.session;
+  if (s && !s.done && s.kind === "live" && !quitWarnOff()) { e.preventDefault(); e.returnValue = "יש עכשיו הרצאה חיה. לצאת?"; return e.returnValue; }
+});
 
 // ---------- the floating window: a small window that stays on top of everything, next to the lecture ----------
 // (Document Picture-in-Picture, in Chrome and Edge. Its page is about:blank - addresses must be full.) It shows what was just said, the newest slide and the
