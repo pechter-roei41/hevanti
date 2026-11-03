@@ -1595,6 +1595,55 @@ def slide_terms(text):
     return list(dict.fromkeys(out))[:15]
 
 
+_OCR_STATS = {}   # slide path -> how sure Tesseract was (see ocr_stats); filled by OcrWorker.read, used by MathReader
+
+
+def ocr_stats(tsv):
+    """From Tesseract's TSV: how many words it found, their average confidence, and the share that it was unsure of."""
+    confs = []
+    for ln in str(tsv or "").splitlines()[1:]:
+        p = ln.split("\t")
+        if len(p) >= 12 and p[0] == "5" and p[11].strip():
+            try:
+                c = float(p[10])
+            except ValueError:
+                continue
+            if c >= 0:
+                confs.append(c)
+    n = len(confs)
+    return {"words": n, "mean": (sum(confs) / n) if n else 0.0, "low": (sum(c < 55 for c in confs) / n) if n else 0.0}
+
+
+_MATH_SIGNS = re.compile(r"[=<>^∑∫√≤≥≠±×÷∂∞∈∀∃→]|\\frac|\b[A-Za-z]\s*\(\s*[A-Za-z0-9]\s*\)|\b\d\s*[A-Za-z]\b|\w_\w")
+
+
+def slide_needs_ai(text, stats, ink):
+    """Does a slide look like it has formulas or handwriting - what Tesseract cannot read, and Gemini can? Clean printed
+    text (words Tesseract is sure of, no formula signs) is already read well: no need to spend Gemini's free quota.
+    text: Tesseract's text, stats: ocr_stats, ink: the share of the picture that is writing/drawing (0..1)."""
+    words, mean, low = stats.get("words", 0), stats.get("mean", 0.0), stats.get("low", 0.0)
+    if words == 0 and ink < 0.01:
+        return False   # a blank screen
+    # Only a slide that is clearly plain text is kept at home. The numbers come from 124 real slides (formula slides,
+    # plain text slides, and screens with no lecture content): looser rules lost formulas, because many slides with
+    # formulas are mostly picture or text, and Tesseract reads the text around them with confidence.
+    clean = words >= 25 and mean >= 82 and low <= 0.12 and ink <= 0.30
+    return not (clean and len(_MATH_SIGNS.findall(text or "")) <= 1)
+
+
+def ink_fraction(path):
+    """The share of the picture that differs from its background (writing, drawing, video). 1.0 when it cannot tell."""
+    try:
+        from PIL import Image
+        im = Image.open(path).convert("L")
+        im.thumbnail((320, 320))
+        px = list(im.getdata())
+        bg = sorted(px)[len(px) // 2]
+        return sum(abs(v - bg) > 40 for v in px) / max(1, len(px))
+    except Exception:
+        return 1.0
+
+
 def read_ocr(slides_dir):
     try:
         with open(os.path.join(slides_dir, OCR_NAME), encoding="utf-8") as f:
@@ -1645,7 +1694,26 @@ class OcrWorker(threading.Thread):
 
     def read(self, path):
         import subprocess
+        import tempfile
         extra, langs = self.cfg
+        try:   # the text and, from the same pass, how sure Tesseract was (_OCR_STATS: does this slide need Gemini?)
+            with tempfile.TemporaryDirectory() as td:
+                base = os.path.join(td, "o")
+                r = subprocess.run([self.exe, path, base, "-l", langs, "--psm", "3", *extra, "txt", "tsv"],
+                                   capture_output=True, timeout=120, **_quiet_proc())
+                if r.returncode == 0:
+                    with open(base + ".txt", "rb") as f:
+                        text = clean_ocr(f.read().decode("utf-8", "replace"))
+                    try:
+                        with open(base + ".tsv", "rb") as f:
+                            _OCR_STATS[path] = ocr_stats(f.read().decode("utf-8", "replace"))
+                        while len(_OCR_STATS) > 200:
+                            _OCR_STATS.pop(next(iter(_OCR_STATS)), None)
+                    except OSError:
+                        pass
+                    return text
+        except (OSError, subprocess.SubprocessError):
+            pass
         r = subprocess.run([self.exe, path, "stdout", "-l", langs, "--psm", "3", *extra], capture_output=True,
                            timeout=120, **_quiet_proc())
         return clean_ocr(r.stdout.decode("utf-8", "replace")) if r.returncode == 0 else None
@@ -1897,7 +1965,7 @@ def gemini_models(key):
     return names
 
 
-def gemini_read(img_path, key, model):
+def gemini_read(img_path, key, model, usage=None):
     import base64
     with open(img_path, "rb") as f:
         data = base64.b64encode(f.read()).decode("ascii")
@@ -1906,6 +1974,8 @@ def gemini_read(img_path, key, model):
         "contents": [{"role": "user", "parts": [{"inline_data": {"mime_type": mime, "data": data}},
                                                  {"text": MATH_PROMPT}]}],
         "generationConfig": {"temperature": 0}})
+    if usage is not None:
+        usage.update(d.get("usageMetadata") or {})
     cands = d.get("candidates") or []
     parts = ((cands[0].get("content") or {}).get("parts") or []) if cands else []
     text = "".join(p.get("text", "") for p in parts if isinstance(p, dict)).strip()
@@ -1920,7 +1990,7 @@ class MathReader(threading.Thread):
         super().__init__(daemon=True)
         self.q = queue.Queue()
         self.lock = threading.Lock()
-        self.model, self.error, self.done = "", "", 0
+        self.model, self.error, self.done, self.skipped = "", "", 0, 0
         self.order = []   # the models to try, the one that answered first (see probe)
         self.cool = {}    # model -> (until, the quota error): said "quota" a moment ago - not asked again until then
         self.quota_err, self.quota_until = None, 0.0   # probe found every model out of quota (not "no model")
@@ -1932,7 +2002,8 @@ class MathReader(threading.Thread):
                     "ask": bool(s.get("key")) and s.get("ask", True) is not False,
                     "plan": s.get("plan") if s.get("plan") in ("free", "paid") else "",
                     "external": bool(load_settings().get("external_ai", False)),   # the copy-to-ChatGPT/Gemini/Claude buttons: off until chosen in the settings
-                    "waiting": self.q.qsize(), "done": self.done, "error": self.error}
+                    "waiting": self.q.qsize(), "done": self.done, "skipped": self.skipped, "error": self.error,
+                    "today": usage_today()}
 
     def set_error(self, text):
         with self.lock:
@@ -1984,10 +2055,14 @@ class MathReader(threading.Thread):
                 self.quota_err = None
         return self.model
 
-    def models_to_try(self, key):
+    def models_to_try(self, key, prefer_lite=False):
+        """prefer_lite: reading slides goes to the light model first - it has a quota of its own, so the questions
+        (which want the stronger model) are not left without one."""
         self.ensure_model(key)
         with self.lock:
             now, order = time.time(), list(self.order or [self.model])
+            if prefer_lite:
+                order = [m for m in order if "lite" in m] + [m for m in order if "lite" not in m]
             ready = [m for m in order if self.cool.get(m, (0,))[0] <= now]
             if order and not ready:   # every model said "quota" a moment ago: do not ask Google again yet
                 until, err = min((self.cool[m] for m in order), key=lambda c: c[0])
@@ -2010,6 +2085,24 @@ class MathReader(threading.Thread):
             self.model, self.error = model, ""
             self.cool.pop(model, None)
 
+    def worth_sending(self, path):
+        """Only a slide that looks like it has formulas or handwriting goes to Gemini (the student can ask for every
+        slide in the settings). When Tesseract is not there to tell, every slide goes, as before."""
+        if load_settings().get("math_every_slide", False):
+            return True
+        w = _OCR if "_OCR" in globals() else None
+        if w is None or w.ready is False:
+            return True
+        end = time.time() + 90   # (Tesseract reads it in a few seconds, in the order the slides were saved)
+        while time.time() < end and path not in _OCR_STATS:
+            if os.path.basename(path) in read_ocr(os.path.dirname(path)):
+                break   # read, but without the numbers (the old way): decide from the text alone
+            time.sleep(0.5)
+        stats = _OCR_STATS.pop(path, None)
+        if stats is None:
+            return True   # no answer in time: better to read it than to lose its formulas
+        return slide_needs_ai(slide_text(path), stats, ink_fraction(path))
+
     def run(self):
         last = 0.0
         while True:
@@ -2021,20 +2114,27 @@ class MathReader(threading.Thread):
             name, sd = os.path.basename(path), os.path.dirname(path)
             if not os.path.isfile(path) or name in read_math(sd):
                 continue
+            if not self.worth_sending(path):   # clean printed text: Tesseract has it already, no need to spend quota
+                log_tokens("", None, 0, True, time.time(), kind="skip")
+                with self.lock:
+                    self.skipped += 1
+                continue
             for _ in range(4):
                 time.sleep(max(0.0, MATH_GAP_S - (time.time() - last)))
                 last = time.time()
                 try:
-                    text, model = None, ""
-                    for model in self.models_to_try(key):   # a busy / retired model: the next one
+                    text, model, usage, t0 = None, "", {}, time.time()
+                    for model in self.models_to_try(key, prefer_lite=True):   # a busy / retired model: the next one
                         try:
-                            text = gemini_read(path, key, model)
+                            text = gemini_read(path, key, model, usage)
                             self.worked(model)
+                            log_tokens(model, usage, os.path.getsize(path) if os.path.isfile(path) else 0, True, t0, kind="read")
                             break
                         except MathError as e:
                             if not e.other:
                                 raise
                             self.failed(model, e)
+                            log_tokens(model, None, 0, False, t0, e.kind == "quota", kind="read")
                     if text is None:
                         raise MathError("Gemini עמוס כרגע בכל המודלים. ממשיך לבד אחר כך.", 60)
                     if os.path.isfile(path):   # (not deleted meanwhile)
@@ -2156,15 +2256,48 @@ def ask_on():
     return bool(s.get("key")) and s.get("ask", True) is not False
 
 
-TOKENS_MAX = 512 * 1024
+TOKENS_MAX = 1024 * 1024   # (about 6000 lines; the newest 3000 are kept - today's counts come from them)
 
 
-def log_tokens(model, usage, body_chars, ok, started, quota=False):
-    """For the developer only: one JSON line per question (model, tokens, size, seconds). Never shown in the app,
-    never holds the question or the answer, never raises."""
+_USAGE = {"at": 0.0, "day": "", "data": {}}
+
+
+def usage_today():
+    """How much of Gemini's free quota this computer used today (by the computer's clock): the questions, the slides
+    read, the slides that were not sent, and how many times Google said "quota". Counts only - from tokens.jsonl."""
+    now, day = time.time(), time.strftime("%Y-%m-%d")
+    if day == _USAGE["day"] and now - _USAGE["at"] < 10:
+        return _USAGE["data"]
+    out = {"asks": 0, "reads": 0, "skipped": 0, "failed": 0, "quota": 0}
+    try:
+        with open(os.path.join(LOCAL_DIR, "tokens.jsonl"), encoding="utf-8") as f:
+            for ln in f:
+                if not ln.startswith('{"t": "' + day):
+                    continue
+                try:
+                    r = json.loads(ln)
+                except ValueError:
+                    continue
+                k = r.get("kind", "ask")
+                if k == "skip":
+                    out["skipped"] += 1
+                elif r.get("ok"):
+                    out["reads" if k == "read" else "asks"] += 1
+                else:
+                    out["failed"] += 1
+                    out["quota"] += bool(r.get("quota"))
+    except OSError:
+        pass
+    _USAGE.update(at=now, day=day, data=out)
+    return out
+
+
+def log_tokens(model, usage, body_chars, ok, started, quota=False, kind="ask"):
+    """For the developer, and the counts of today in the settings: one JSON line per question or slide read (model,
+    tokens, size, seconds; kind: ask / read / skip). Never holds the question, the answer or the slide; never raises."""
     try:
         u = usage or {}
-        row = {"t": time.strftime("%Y-%m-%d %H:%M:%S"), "model": model, "ok": bool(ok), "quota": bool(quota),
+        row = {"t": time.strftime("%Y-%m-%d %H:%M:%S"), "kind": kind, "model": model, "ok": bool(ok), "quota": bool(quota),
                "sec": round(time.time() - started, 1), "chars": body_chars,
                "prompt": u.get("promptTokenCount"), "out": u.get("candidatesTokenCount"),
                "thoughts": u.get("thoughtsTokenCount"), "total": u.get("totalTokenCount")}
@@ -2172,7 +2305,7 @@ def log_tokens(model, usage, body_chars, ok, started, quota=False):
         os.makedirs(LOCAL_DIR, exist_ok=True)
         if os.path.isfile(TOKENS_FILE) and os.path.getsize(TOKENS_FILE) > TOKENS_MAX:
             with open(TOKENS_FILE, encoding="utf-8") as f:
-                keep = f.readlines()[-500:]
+                keep = f.readlines()[-3000:]
             with open(TOKENS_FILE, "w", encoding="utf-8") as f:
                 f.writelines(keep)
         with open(TOKENS_FILE, "a", encoding="utf-8") as f:
@@ -6423,6 +6556,9 @@ class App:
         if a == "check_updates":
             save_settings(check_updates=bool(d.get("on")))
             return {"ok": True}
+        if a == "math_every":   # send every slide to Gemini, also the ones that look like plain printed text (off by default)
+            save_settings(math_every_slide=bool(d.get("on")))
+            return {"ok": True}
         if a == "fast_model":   # the smaller, faster transcription model (takes effect from the next lecture)
             save_settings(fast_model=bool(d.get("on")))
             return {"ok": True}
@@ -7372,7 +7508,7 @@ def _app_handler():
                                            mini_auto=bool(load_settings().get("mini_open_start", False)), mini_opacity=mini_opacity(),
                                            mini_button=load_settings().get("mini_button", True), mini_btn_corner=mini_btn_corner(),
                                            check_updates=load_settings().get("check_updates", True),
-                                           fast_model=fast_model(),
+                                           fast_model=fast_model(), math_every=bool(load_settings().get("math_every_slide", False)),
                                            external_ai=bool(load_settings().get("external_ai", False))))
                 if p == "/api/marks":   # the marked moments of a course
                     c = clean_name(q.get("c", [""])[0])

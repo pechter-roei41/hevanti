@@ -6,6 +6,7 @@ import os
 import sys
 import tempfile
 import threading
+import time
 import urllib.request
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -139,6 +140,27 @@ check("transcription model: ...and in English", L.MODELS == [L.FAST_MODEL], L.MO
 post({"action": "fast_model", "on": False})
 L.set_language("he")
 check("transcription model: ...and back to the full one", "ivrit-ai/whisper-large-v3-turbo-ct2" in L.MODELS[0], L.MODELS)
+tsv = "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n" + \
+    "".join(f"5\t1\t1\t1\t1\t{i}\t0\t0\t1\t1\t{c}\tw{i}\n" for i, c in enumerate([96, 92, 90, 20, 30]))
+st = L.ocr_stats(tsv)
+check("slides: Tesseract's confidences are summed up", st["words"] == 5 and abs(st["mean"] - 65.6) < 0.1 and st["low"] == 0.4, st)
+clean = {"words": 40, "mean": 92.0, "low": 0.03}
+check("slides: clean printed text is not sent to Gemini", L.slide_needs_ai("Introduction\nThe course covers limits and series", clean, 0.2) is False)
+check("slides: a formula is sent", L.slide_needs_ai("f(z) = u + iv\nu_x = v_y", clean, 0.2) is True)
+check("slides: handwriting (Tesseract is unsure) is sent", L.slide_needs_ai("x 1 l", {"words": 12, "mean": 48.0, "low": 0.6}, 0.1) is True)
+check("slides: a board with almost no text is sent", L.slide_needs_ai("", {"words": 0, "mean": 0.0, "low": 0.0}, 0.05) is True)
+check("slides: an empty screen is not sent", L.slide_needs_ai("", {"words": 0, "mean": 0.0, "low": 0.0}, 0.0) is False)
+rd = L.MathReader()
+rd.order, rd.model = ["gemini-3.6-flash", "gemini-flash-latest", "gemini-flash-lite-latest"], "gemini-3.6-flash"
+check("reading goes to the light model first; questions keep the strong one first",
+      rd.models_to_try("k", prefer_lite=True)[0] == "gemini-flash-lite-latest" and rd.models_to_try("k")[0] == "gemini-3.6-flash")
+L.log_tokens("gemini-flash-lite-latest", {"totalTokenCount": 9}, 10, True, time.time(), kind="read")
+L.log_tokens("", None, 0, True, time.time(), kind="skip")
+L.log_tokens("gemini-3.6-flash", {"totalTokenCount": 9}, 10, True, time.time())
+L.log_tokens("gemini-3.6-flash", None, 10, False, time.time(), True)
+L._USAGE["at"] = 0
+ut = L.usage_today()
+check("today's counts: questions, slides read, slides not sent, quota", ut == {"asks": 1, "reads": 1, "skipped": 1, "failed": 1, "quota": 1}, ut)
 check("a command without the page's header is refused (another site cannot drive Hevanti)", refused)
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")

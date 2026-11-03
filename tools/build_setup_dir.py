@@ -38,7 +38,7 @@ PRIVACY = """הבנתי (Hevanti) - פרטיות / Privacy
   "Answer here" (your own Gemini key): each click sends the question, the recent transcript and the current slide to Google.
 - "קריאת נוסחאות וכתב יד" (פועלת כברירת מחדל כשמוסיפים מפתח Gemini; אפשר לכבות בהגדרות): כשהיא פועלת, כל תמונת שקופית שנשמרת נשלחת ל-Google.
   בתוכנית החינמית Google עשויה להשתמש בהן לשיפור המוצרים שלה. המפתח נשמר מוצפן (Windows DPAPI).
-  "Formula reading" (on by default once you save your own Gemini key; can be turned off in Settings): every saved slide picture is sent to Google.
+  "Formula reading" (on by default once you save your own Gemini key; can be turned off in Settings): slide pictures that are not clearly plain printed text (formulas, handwriting, pictures) are sent to Google (plain printed text is read on your computer).
 
 אחריות: הבנתי ניתנת כמו שהיא, בלי אחריות מכל סוג. השימוש בה הוא באחריות המשתמש בלבד. לפני שמשתמשים, כל משתמש צריך
 לבדוק מה הנהלים והכללים במוסד שלו ואצל המרצה. רועי פכטר ומפתחי הכלי אינם אחראים לשימוש בה.
