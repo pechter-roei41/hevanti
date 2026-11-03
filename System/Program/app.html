@@ -565,7 +565,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <ol class="setup">
         <li id="stKey">
           <div class="row"><b>1. תשובות בתוך הבנתי, בחינם</b><span class="stdone">✓ מוכן</span></div>
-          <p class="sub" style="margin:0">הבנתי שואלת את Gemini של Google בשבילך. לשם כך צריך "מפתח": קוד חינמי, בלי כרטיס אשראי. עם המפתח, כל שקופית שנשמרת נשלחת ל-Gemini גם כדי לקרוא נוסחאות וכתב יד (אפשר לכבות בהגדרות).</p>
+          <p class="sub" style="margin:0">הבנתי שואלת את Gemini של Google בשבילך. לשם כך צריך "מפתח": קוד חינמי, בלי כרטיס אשראי. עם המפתח, שקופיות שאינן טקסט מודפס ברור (נוסחאות, כתב יד, תמונות) נשלחות ל-Gemini כדי לקרוא אותן (אפשר לכבות בהגדרות).</p>
           <div class="row"><a class="btn small" id="setupOpen" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">פתיחת Google ליצירת המפתח</a><span class="sub2" style="font-size:14px;color:var(--muted)">שם: Create API key, ואז Copy key.</span></div>
           <div class="row"><input type="password" id="setupKey" placeholder="להדביק כאן את המפתח (Ctrl+V)" autocomplete="off" aria-label="מפתח Gemini" dir="ltr"><button class="btn small" id="setupKeySave" type="button">שמירה ובדיקה</button></div>
           <p class="capstat" id="setupKeyStat" style="margin:0;color:var(--muted)"></p>
@@ -650,8 +650,8 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <div class="optbox">
           <h4>2. קריאת נוסחאות וכתב יד</h4>
           <label class="row"><input type="checkbox" id="mathOn"><b>לקרוא נוסחאות וכתב יד בכל שקופית חדשה</b></label>
-          <p>הקריאה הרגילה של השקופיות לא מבינה נוסחאות וכתב יד. כשזה פועל, כל שקופית שנשמרת נשלחת ל-Gemini, והוא כותב את הטקסט והנוסחאות (למשל <code dir="ltr">$I = \int r^2\,dm$</code>) לחיפוש, להכנה למבחן ולתשובות.</p>
-          <p class="warn">שימו לב: זה פועל מעצמו כשמוסיפים מפתח, ושולח כל שקופית שנשמרת ל-Google. אפשר לכבות כאן בכל רגע.</p>
+          <p>הקריאה הרגילה של השקופיות לא מבינה נוסחאות וכתב יד. כשזה פועל, שקופית שאינה טקסט מודפס ברור (נוסחה, כתב יד, תמונה) נשלחת ל-Gemini (טקסט מודפס ברור נקרא במחשב, בלי לשלוח), והוא כותב את הטקסט והנוסחאות (למשל <code dir="ltr">$I = \int r^2\,dm$</code>) לחיפוש, להכנה למבחן ולתשובות.</p>
+          <p class="warn">שימו לב: זה פועל מעצמו כשמוסיפים מפתח, ושולח ל-Google שקופיות שאינן טקסט מודפס ברור (נוסחאות, כתב יד, תמונות). אפשר לכבות כאן בכל רגע.</p>
         </div>
         <div class="optbox">
           <h4>פרטיות ומכסה</h4>
@@ -666,7 +666,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <li><b>מה נשמר:</b> התמלול של ההרצאות, צילומי המסך של מה שבחרת לצלם, והטקסט שנקרא מהם.</li>
         <li><b>איפה:</b> רק במחשב שלך, בתיקייה "הקורסים שלי". אין חשבון ואין שרת של הבנתי. אם התיקייה נמצאת בתוך OneDrive או Google Drive (למשל Documents שמסונכרן), התוכנה של הענן מעתיקה אותה לחשבון שלך שם.</li>
         <li><b>מה נשלח ל-AI:</b> רק כשלוחצים על כפתור "שאלה ל-AI" או על אחת המשימות (סיכום, כרטיסיות, מבחן), או כשמבקשים מ-AI מחובר. אז הטקסט, והתמונה אם מצרפים אותה, עוברים לחברה של אותו AI. בלי זה, שום דבר לא יוצא מהמחשב.</li>
-        <li><b>מה עוד עובר ברשת:</b> בדיקת גרסה חדשה ב-GitHub (אפשר לכבות בתיבה שלמעלה), הורדה חד-פעמית של מודל התמלול (Hugging Face) ושל קריאת השקופיות (GitHub). ורק אם הגדרת "AI מובנה בחינם": בלחיצה על "תשובה כאן" נשלחים ל-Google השאלה, הדקות האחרונות והשקופית; ובנוסף, כי "קריאת נוסחאות וכתב יד" פועלת כברירת מחדל כשיש מפתח (אפשר לכבות בהגדרות), גם כל שקופית שנשמרת. עם השאלה נשלח גם הטקסט של השקופיות הקודמות בהרצאה.</li>
+        <li><b>מה עוד עובר ברשת:</b> בדיקת גרסה חדשה ב-GitHub (אפשר לכבות בתיבה שלמעלה), הורדה חד-פעמית של מודל התמלול (Hugging Face) ושל קריאת השקופיות (GitHub). ורק אם הגדרת "AI מובנה בחינם": בלחיצה על "תשובה כאן" נשלחים ל-Google השאלה, הדקות האחרונות והשקופית; ובנוסף, כי "קריאת נוסחאות וכתב יד" פועלת כברירת מחדל כשיש מפתח (אפשר לכבות בהגדרות), גם שקופיות שאינן טקסט מודפס ברור. עם השאלה נשלח גם הטקסט של השקופיות הקודמות בהרצאה.</li>
         <li><b>מה בשליטתך:</b> לבחור חלון אחד או חלק מהמסך במקום כל המסך, להשהות את הצילום (גם עם <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd>), לטשטש אזורים קבועים, ולמחוק צילומים לצמיתות.</li>
         <li><b>אחריות:</b> הבנתי ניתנת כמו שהיא, בלי אחריות מכל סוג. השימוש בה, כולל הקלטה, תמלול ושמירה של הרצאות ושקופיות, הוא באחריות המשתמש בלבד. <b>לפני שמשתמשים, כל משתמש צריך לבדוק מה הנהלים והכללים במוסד שלו ואצל המרצה.</b> רועי פכטר ומפתחי הכלי אינם אחראים לשימוש בה.</li>
       </ul>
@@ -1282,7 +1282,8 @@ function drawMath() {
   $("#planPaid").checked = m.plan === "paid";
   $("#mathSum").textContent = m.has_key ? "· " + [m.ask ? "תשובות פועלות" : "תשובות כבויות", m.on ? "נוסחאות פועל" : ""].filter(Boolean).join(", ") : (m.plan === "paid" ? "· יש מנוי: שאלות הולכות לאפליקציית ה-AI" : "· לא מוגדר");
   $("#mathStat").textContent = (m.has_key ? "המפתח שמור" + (m.model ? " (" + m.model + ")" : "") + "." +
-    (m.on ? " נוסחאות: נקראו בהפעלה הזו " + (m.done || 0) + " שקופיות" + (m.waiting ? ", ממתינות " + m.waiting : "") + "." : "") : "עוד אין מפתח.") + (m.error ? " " + m.error : "") + (mathMsg ? " " + mathMsg : "");
+    (m.on ? " נוסחאות: נקראו בהפעלה הזו " + (m.done || 0) + " שקופיות" + (m.skipped ? " (עוד " + m.skipped + " לא נשלחו: טקסט מודפס ברור)" : "") + (m.waiting ? ", ממתינות " + m.waiting : "") + "." : "") +
+    (m.today ? " היום, לפי שעון המחשב: " + m.today.asks + " שאלות, " + m.today.reads + " שקופיות שנקראו ב-Gemini" + (m.today.quota ? ", והגעת למכסה " + m.today.quota + " פעמים" : "") + "." : "") : "עוד אין מפתח.") + (m.error ? " " + m.error : "") + (mathMsg ? " " + mathMsg : "");
   $("#pastMath").hidden = !(m.on && pastHasImgs);
 }
 async function mathSend(d, okText) {
@@ -1462,7 +1463,10 @@ const setPanels = {};
     toast(r.ok ? (fmc.checked ? "מההרצאה הבאה: תמלול במודל קטן ומהיר (בפעם הראשונה יורדת בערך חצי GB)." : "מההרצאה הבאה: חוזרים למודל המלא.") : "לא הצלחתי לשמור.");
   });
   fml.append(fmc, el("b", "", "תמלול מהיר וקטן יותר (למחשב בלי כרטיס מסך של NVIDIA)"));
-  ai.append(qwl, fml, el("p", "sub", "אם התמלול מפגר אחרי המרצה, אפשר להפעיל את זה: המודל קטן וכמה פעמים מהיר יותר על המעבד, אבל פחות מדויק, במיוחד בעברית ובמונחים מקצועיים. חל מההרצאה הבאה."), exl, el("p", "sub", "ברירת המחדל: התשובות מגיעות רק בתוך הבנתי (מפתח Gemini חינמי). כשזה פועל, תיבת השאלה מציגה גם כפתורים להעתקה, ואפשר להגיד שיש לך מנוי בתשלום כדי שמשימות על הרצאה שלמה ילכו לאפליקציה שלך."));
+  const mel = el("label", "row miniopt"), mec = el("input"); mec.type = "checkbox"; mec.id = "mathEvery";
+  mec.addEventListener("change", async () => { const r = await api("/api/cmd", {action: "math_every", on: mec.checked}); toast(r.ok ? (mec.checked ? "מעכשיו כל שקופית נשלחת ל-Gemini לקריאה." : "מעכשיו שקופיות עם טקסט מודפס ברור לא נשלחות ל-Gemini.") : "לא הצלחתי לשמור."); });
+  mel.append(mec, el("b", "", "לשלוח ל-Gemini כל שקופית, גם כזו שנראית כטקסט רגיל (מבזבז מכסה)"));
+  ai.append(qwl, mel, el("p", "sub", "כשקריאת הנוסחאות פועלת, שקופית של טקסט מודפס ברור נקראת במחשב ולא נשלחת. כל השאר (נוסחאות, כתב יד, תמונות) נשלח."), fml, el("p", "sub", "אם התמלול מפגר אחרי המרצה, אפשר להפעיל את זה: המודל קטן וכמה פעמים מהיר יותר על המעבד, אבל פחות מדויק, במיוחד בעברית ובמונחים מקצועיים. חל מההרצאה הבאה."), exl, el("p", "sub", "ברירת המחדל: התשובות מגיעות רק בתוך הבנתי (מפתח Gemini חינמי). כשזה פועל, תיבת השאלה מציגה גם כפתורים להעתקה, ואפשר להגיד שיש לך מנוי בתשלום כדי שמשימות על הרצאה שלמה ילכו לאפליקציה שלך."));
   const paid = $("#planPaid").closest(".optbox"); paid.querySelector("h4").textContent = "מנוי בתשלום"; ai.appendChild(paid);
   const row = el("div", "row"), go = el("button", "btn", "חיבור AI (Claude, ChatGPT, Gemini)"); go.type = "button"; go.addEventListener("click", () => { $("#settings").hidden = true; $("#connBtn").click(); });
   row.appendChild(go); ai.append(el("h3", "", "חיבור האפליקציה של ה-AI שלך"), el("p", "sub", "אם יש לך מנוי ל-Claude או ל-ChatGPT, אפשר לחבר אותם להבנתי: הם קוראים לבד מה נאמר ואת השקופית. כולל סנכרון לענן (כבוי כברירת מחדל)."), row);
@@ -1475,7 +1479,7 @@ function openSettings(id) {
   if (id === "cap") { api("/api/mirror").then(m => { $("#miniAuto").checked = m.mini_auto === true; $("#miniBtn").checked = m.mini_button !== false; drawCorner(m.mini_btn_corner || "br"); const o = m.mini_opacity || 60; $("#miniOp").value = o; $("#miniOp").nextElementSibling.textContent = o + "%"; }).catch(() => {}); capSig = ""; drawCaps(); if (capOf().mode === "window" && !capWinsAt) capLoadWins(); }
   if (id === "key") { mathSig = ""; drawMath(); }
   if (id === "a11y") a11yDraw();
-  if (id === "ai") api("/api/mirror").then(m => { $("#extAi").checked = m.external_ai === true; $("#fastModel").checked = m.fast_model === true; }).catch(() => {});
+  if (id === "ai") api("/api/mirror").then(m => { $("#extAi").checked = m.external_ai === true; $("#fastModel").checked = m.fast_model === true; $("#mathEvery").checked = m.math_every === true; }).catch(() => {});
   if (id === "priv") api("/api/mirror").then(m => { $("#checkUpd").checked = m.check_updates !== false; }).catch(() => {});
 }
 $("#setBtn").addEventListener("click", () => openSettings("key"));
