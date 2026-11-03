@@ -25,7 +25,7 @@ Everything else supports these two.
 **Windows:** download `Hevanti-Setup.exe` from the [latest release](https://github.com/pechter-roei41/hevanti/releases/latest) and run it. It installs for your user only (no administrator), with its own Python and every package inside; your lectures are kept in `Documents\הבנתי`. The same app as a folder: `Hevanti.zip` - extract it, double-click `Install`, then `Hevanti`.
 
 
-**Virus scan:** [`Hevanti-Setup.exe` 2.7 on VirusTotal](https://www.virustotal.com/gui/file/62bb23c8eca70ec5417f2fd25e5e40cca5b628add894972142d787e6ad925d83/detection): none of the 67 engines that scanned it flagged it (0 malicious, 0 suspicious; 6 could not process the file type and 2 timed out). SHA-256: `62bb23c8eca70ec5417f2fd25e5e40cca5b628add894972142d787e6ad925d83`. The installer is not signed yet, so Windows may still show "Windows protected your PC" once. A scan describes one exact file; later releases are scanned again.
+**Virus scan:** [`Hevanti-Setup.exe` 2.10 on VirusTotal](https://www.virustotal.com/gui/file/d0ff70d455d65493815d328eeb56486892ebb950556d05517db851b9bafc5a04/detection): none of the 62 engines that scanned it flagged it as malicious (6 could not process the file type and 6 timed out). SHA-256: `d0ff70d455d65493815d328eeb56486892ebb950556d05517db851b9bafc5a04`. The installer is not signed yet, so Windows may still show "Windows protected your PC" once. A scan describes one exact file; later releases are scanned again.
 
 Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD)
 
