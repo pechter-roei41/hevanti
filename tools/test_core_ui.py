@@ -131,6 +131,13 @@ with sync_playwright() as p:
     mini.click("#markLost")
     mini.wait_for_timeout(300)
     check("floating window: '?' sends a mark to Hevanti", any(m.get("action") in ("mark", "mark_moment") or "mark" in str(m.get("action")) for m in marked), marked)
+    # an AI chosen in the floating window: the window goes away (it stays on top, the AI would open behind it)
+    marked.clear()
+    mini.evaluate("BZMAsk.setBuiltin(false)")
+    mini.fill("textarea", "מה זה?")
+    mini.click("button[data-ai=gemini]")
+    mini.wait_for_timeout(1500)
+    check("floating window: choosing Gemini hides the floating window", any(m.get("action") == "hide_mini" for m in marked), marked)
     check("floating window: no script errors", errs == [], errs)
     b.close()
 

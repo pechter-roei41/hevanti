@@ -298,7 +298,19 @@
       }
     }
     boxes.push(refresh);
+    // The small window stays on top of everything, so the AI that was just opened would open behind it:
+    // the small window goes away (its button comes back) and the AI's window stays.
+    function leaveMini() {
+      if (!opts.compact) return;
+      setTimeout(() => { fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
+        body: JSON.stringify({action: "hide_mini"})}).catch(() => {}); }, 500);
+    }
     async function sendQ(a, q, extra) {   // true when the question was copied (and the AI opened)
+      const ok = await sendQ0(a, q, extra);
+      if (ok) leaveMini();
+      return ok;
+    }
+    async function sendQ0(a, q, extra) {
       let text = "";
       try { text = extra && extra.context ? await extra.context() : await opts.context(q); } catch (e) { text = q; }   // (may read the slides' text first)
       const ok = await copyText(text, opts.win);
