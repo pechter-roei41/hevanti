@@ -130,6 +130,15 @@ try:
     refused = False
 except urllib.error.HTTPError as e:
     refused = e.code in (400, 403)
+check("transcription model: the full one by default", json.loads(get("/api/mirror")[1])["fast_model"] is False and "small" not in L.MODELS, L.MODELS)
+post({"action": "fast_model", "on": True})
+L.set_language("he")
+check("transcription model: 'fast' in the settings chooses the small one (Hebrew)", json.loads(get("/api/mirror")[1])["fast_model"] is True and L.MODELS == [L.FAST_MODEL], L.MODELS)
+L.set_language("en")
+check("transcription model: ...and in English", L.MODELS == [L.FAST_MODEL], L.MODELS)
+post({"action": "fast_model", "on": False})
+L.set_language("he")
+check("transcription model: ...and back to the full one", "ivrit-ai/whisper-large-v3-turbo-ct2" in L.MODELS[0], L.MODELS)
 check("a command without the page's header is refused (another site cannot drive Hevanti)", refused)
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
