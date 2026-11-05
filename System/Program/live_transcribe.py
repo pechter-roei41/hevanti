@@ -2759,32 +2759,14 @@ class LiveNow(threading.Thread):
             if text != self.draft:
                 self.draft, self.dirty = text, True
 
-    tail_fn = None   # set by the live loop when there are no drafts (no GPU): transcribes what was not transcribed yet
-
-    def fresh_tail(self, timeout=20.0):
-        """A question was asked: without a GPU there is no draft of what is being said, so the last 10-20 seconds
-        (heard, not transcribed yet) are transcribed now and become the draft - "what did he just say?" is about them.
-        Returns that text ("" when there is nothing new, or it took too long)."""
-        fn = self.tail_fn
-        if fn is None:
-            return self.draft
-        # How long it would take here: the piece being transcribed, then what waits. Too slow on this computer: do not
-        # make the student wait for nothing - answer now, and the question says the last seconds may be missing.
-        if self.load and (self.pending_s + MAX_CHUNK_S) * self.load > timeout:
-            self.tail_slow = True
+    def missing_note(self):
+        """Without a draft (no GPU), the last seconds - heard, not transcribed yet: the transcript is written in pieces of
+        10-18 s - are not in what a question gets. The answer comes at once (transcribing them would make the student
+        wait 8-20 s on a CPU, measured 5.11.2026), and Gemini is told they may be missing. "" when nothing is missing."""
+        if self.draft or getattr(self, "yt", False) or self.pending_s < 3:
             return ""
-        out = []
-        th = threading.Thread(target=lambda: out.append(fn()), daemon=True)
-        th.start()
-        th.join(timeout)
-        self.tail_slow = not out   # (too slow on this computer: the question says the last seconds may be missing)
-        text = out[0] if out and out[0] else ""
-        if text:
-            self.set_draft(text)
-        return text
-
-    tail_slow = False
-    load = 0.0   # seconds of work per second of lecture, on this computer (from the live loop)
+        return (f"(שימו לב: מה שנאמר ב-{int(self.pending_s)} השניות האחרונות עוד לא תומלל, "
+                "אז יכול להיות שהמשפט האחרון חסר כאן. אם השאלה עליו, לומר את זה בקצרה.)\n")
 
     def text(self):
         def clock(t):
@@ -4925,9 +4907,8 @@ def mini_context(q):
             out += f"[{c}] {x}\n"
     if draft:
         out += f"(ממש עכשיו, עוד לא סופי: {draft})\n"
-    elif not yt and live.pending_s >= 3 and (live.tail_fn is None or live.tail_slow):
-        out += (f"(שימו לב: מה שנאמר ב-{int(live.pending_s)} השניות האחרונות עוד לא תומלל, "
-                "אז יכול להיות שהמשפט האחרון חסר כאן)\n")
+    elif not yt:
+        out += live.missing_note()
     if not items and not draft:
         out += "(עוד אין תמלול)\n"
     with live.lock:
@@ -7721,14 +7702,12 @@ def _app_handler():
                         d = dict(d, context=mini_context(str(d.get("question") or "")), where="rec",
                                  n=_rec_shot_before(APP.rec, float(APP.rec.pos or 0.0)))
                     else:
-                        if APP.live is not None:
-                            APP.live.fresh_tail()   # (no GPU: the last seconds, not transcribed yet, become the draft)
                         d = dict(d, context=mini_context(str(d.get("question") or "")),
                                  where="yt" if getattr(APP.live, "yt", False) else "live")
-                elif d.get("where") == "live" and APP.live is not None and not getattr(APP.live, "yt", False):
-                    tail = APP.live.fresh_tail()   # the page built its context from what it had: add the last seconds
-                    if tail and tail not in str(d.get("context") or ""):
-                        d = dict(d, context=str(d.get("context") or "") + f"\n(ממש עכשיו, עוד לא סופי: {tail})")
+                elif d.get("where") == "live" and APP.live is not None:
+                    note = APP.live.missing_note()   # (the page built the context: say what it cannot have)
+                    if note:
+                        d = dict(d, context=str(d.get("context") or "") + "\n" + note)
                 body = tutor_body(d)
                 pieces, first, last_err, quota_err = None, "", None, None
                 usage, started, chars, used = {}, time.time(), len(json.dumps(body, ensure_ascii=False)), ""
@@ -8523,6 +8502,8 @@ def run_live(sess, lang, course=""):
     inflight = []  # the sound being transcribed right now - done again if Ctrl+C stops it in the middle
     state = {"prev_text": "", "fast": False, "calm": 0, "fast_count": 0, "warned_at": 0.0,
              "draft_at": 0.0, "draft_cost": 0.0, "load": 0.0, "lag": 0.0, "batch_ok": True}
+    # (GPU only. Tried on the CPU, 5.11.2026: the CPU went from 51% to 68% busy, the real text got slower, and a
+    # question found no draft anyway - on the CPU a draft costs as much as a whole piece. See LiveNow.missing_note.)
     drafts_on = DRAFTS and on_gpu and not yt
     saved_at = [time.time()]
 
@@ -8539,25 +8520,6 @@ def run_live(sess, lang, course=""):
                 now_file.set_draft(text)
         except Exception:
             pass  # a draft is optional; the final text still comes
-
-    def unheard_text():
-        """What was heard but is not in the transcript yet: what waits for the next piece and what arrived meanwhile
-        (all of it: a gap would cut the sentence in two). Called from another thread, when a question is asked. The piece being transcribed
-        right now is left out: there is one model, so this waits for it anyway, and its text is written by then."""
-        try:
-            parts = list(blocks) + [to_mono(d2, ch) for g2, _, d2 in list(q.queue) if g2 == audio.gen]
-            if not parts:
-                return ""
-            buf = np.concatenate(parts)[-int((max_s + 4) * sr):]
-            if len(buf) < sr or rms(buf) < SILENCE_RMS:
-                return ""
-            return transcribe(model, 1, resample(buf, sr), state["prev_text"])
-        except Exception:
-            save_error("unheard text")
-            return ""
-
-    if not drafts_on and not yt:
-        now_file.tail_fn = unheard_text
 
     def draft_fits():
         """A draft only when the GPU has time to spare - it must never make the real text late."""
@@ -8605,7 +8567,6 @@ def run_live(sess, lang, course=""):
         text = transcribe(model, 1 if state["fast"] else beam, resample(chunk, chunk_sr), state["prev_text"])
         busy = (time.time() - t1) / (len(chunk) / chunk_sr)  # share of the time the real text needs
         state["load"] = busy if state["load"] == 0 else 0.5 * state["load"] + 0.5 * busy
-        now_file.load = state["load"]
         lag = time.time() - (heard_until or chunk_t + len(chunk) / chunk_sr)
         state["lag"] = now_file.lag = lag
         track_lag(lag)

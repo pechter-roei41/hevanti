@@ -157,15 +157,16 @@ L.save_settings(math=s0 or {})
 import datetime  # noqa: E402
 ln = L.LiveNow("a/b.txt", datetime.datetime.now(), course=C)
 ln.add(time.time() - 20, "מה שכבר נכתב")
-ln.pending_s, ln.tail_fn = 14.0, (lambda: "המשפט האחרון")
-check("no GPU, a question: the last seconds are transcribed and become the draft", ln.fresh_tail() == "המשפט האחרון" and ln.draft == "המשפט האחרון")
-ln.set_draft("")
-ln.load = 2.0   # a computer much slower than the lecture
-t = time.time()
-check("...too slow here: no waiting", ln.fresh_tail() == "" and time.time() - t < 1 and ln.tail_slow)
+ln.pending_s = 14.0   # no GPU: 14 s heard, not transcribed yet, and no draft of them
 old_live, L.APP.live = L.APP.live, ln
 ctx = L.mini_context("מה הוא אמר עכשיו?")
-check("...and Gemini is told that the last seconds may be missing", "עוד לא תומלל" in ctx and "מה שכבר נכתב" in ctx, ctx[-300:])
+check("no GPU, a question: Gemini is told the last 14 seconds may be missing", "14 השניות האחרונות עוד לא תומלל" in ctx and "מה שכבר נכתב" in ctx, ctx[-300:])
+ln.set_draft("המשפט האחרון")   # with a draft (a GPU): it is there, no note
+ctx = L.mini_context("מה הוא אמר עכשיו?")
+check("...with a draft: the draft, and no note", "ממש עכשיו, עוד לא סופי: המשפט האחרון" in ctx and "עוד לא תומלל" not in ctx, ctx[-300:])
+ln.set_draft("")
+ln.pending_s = 1.0
+check("...nothing missing: no note", ln.missing_note() == "")
 L.APP.live = old_live
 L.set_language("he")
 check("transcription model: Hebrew uses the Hebrew-tuned one (no small model: its Hebrew is poor)", "ivrit-ai/whisper-large-v3-turbo-ct2" in L.MODELS[0] and "small" not in L.MODELS, L.MODELS)
