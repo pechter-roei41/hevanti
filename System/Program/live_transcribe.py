@@ -5318,6 +5318,59 @@ def save_error_text(context, text):
         pass
 
 
+def _ram_gb():
+    try:
+        import ctypes
+
+        class MEM(ctypes.Structure):
+            _fields_ = [("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong), ("ullTotalPhys", ctypes.c_ulonglong),
+                        ("ullAvailPhys", ctypes.c_ulonglong), ("ullTotalPageFile", ctypes.c_ulonglong),
+                        ("ullAvailPageFile", ctypes.c_ulonglong), ("ullTotalVirtual", ctypes.c_ulonglong),
+                        ("ullAvailVirtual", ctypes.c_ulonglong), ("ullAvailExtendedVirtual", ctypes.c_ulonglong)]
+        m = MEM()
+        m.dwLength = ctypes.sizeof(MEM)
+        ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(m))
+        return round(m.ullTotalPhys / 2 ** 30)
+    except Exception:
+        return None
+
+
+def diag_text():
+    """"Report a problem": what the student copies into a report themselves - the version, the computer, what is
+    turned on, and the newest errors. Never the key, a transcript or a question; the user's own folder name is hidden."""
+    import platform
+    s, m = load_settings(), math_settings()
+    u = usage_today()
+    ram = _ram_gb()
+    lines = [
+        f"הבנתי {VERSION} ({VERSION_DATE})",
+        f"Windows: {platform.platform()}",
+        f"מעבד: {os.environ.get('PROCESSOR_IDENTIFIER') or platform.processor() or '?'} · {os.cpu_count()} ליבות" +
+        (f" · {ram}GB זיכרון" if ram else ""),
+        f"תמלול: {({'GPU': 'כרטיס מסך', 'CPU': 'מעבד'}).get(APP.device, 'המודל עוד לא נטען') if 'APP' in globals() and APP else '?'}",
+        f"דפדפן: {os.path.basename(_browser_exe() or '') or 'לא נמצא'}",
+        f"מפתח Gemini: {'יש' if m.get('key') else 'אין'} · קריאת נוסחאות: {'פועלת' if math_on(m) else 'כבויה'}",
+        f"צילום: {(s.get('capture') or {}).get('mode') or 'screen'}",
+        f"Gemini היום: {u['asks']} שאלות, {u['reads']} שקופיות, {u['quota']} פעמים מכסה",
+    ]
+    tail = ""
+    try:
+        with open(ERROR_LOG, encoding="utf-8", errors="replace") as f:
+            tail = f.read()[-5000:]
+        cut = tail.find("\n--- ")
+        tail = tail[cut + 1:] if cut > 0 else tail
+    except OSError:
+        pass
+    text = "\n".join(lines) + "\n\nשגיאות אחרונות:\n" + (tail.strip() or "(אין)")
+    home, user = os.path.expanduser("~"), os.environ.get("USERNAME") or ""
+    for a, b in ((home, "%USERPROFILE%"), (home.replace("\\", "/"), "%USERPROFILE%")):
+        if a and len(a) > 3:
+            text = text.replace(a, b)
+    if len(user) >= 3:
+        text = text.replace(user, "<user>")
+    return text
+
+
 class Media:
     """A recording on this computer: what the page plays, where the slides come from, what is transcribed."""
 
@@ -7516,6 +7569,8 @@ def _app_handler():
                                            check_updates=load_settings().get("check_updates", True),
                                            math_every=bool(load_settings().get("math_every_slide", False)),
                                            external_ai=bool(load_settings().get("external_ai", False))))
+                if p == "/api/diag":   # "report a problem": shown to the student, who copies it into a report
+                    return self._json({"text": diag_text(), "issues": f"https://github.com/{GITHUB_REPO}/issues/new"})
                 if p == "/api/marks":   # the marked moments of a course
                     c = clean_name(q.get("c", [""])[0])
                     return self._json({"marks": course_marks(c) if c and os.path.isdir(course_dir(c)) else []})

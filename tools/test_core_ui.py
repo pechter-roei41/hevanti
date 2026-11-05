@@ -119,6 +119,18 @@ with sync_playwright() as p:
     pg.evaluate("BZMAsk.setExternal(false)")
     check("ask box: the paid-plan question is not asked while it is off", pg.evaluate("BZMAsk.setPlan(''); __d.querySelector('.plan').hidden"))
 
+    # ---- report a problem ----
+    pg = page()
+    perr = []
+    pg.on("pageerror", lambda e: perr.append(str(e)))
+    pg.click("#repBtn")
+    pg.wait_for_function("document.querySelector('#repText').value.includes('Windows')", timeout=8000)
+    rep = pg.evaluate("document.querySelector('#repText').value")
+    check("report a problem: the details are shown, with a place to say what happened", pg.is_visible("#report") and rep.startswith("מה קרה") and "הבנתי " in rep, rep[:200])
+    check("report a problem: the GitHub button opens a new issue", pg.evaluate("document.querySelector('#repGit').href").endswith("/issues/new"))
+    pg.click("#repClose")
+    check("report a problem: closes, no script errors", not pg.is_visible("#report") and perr == [], perr)
+
     # ---- the floating window ----
     mini = b.new_context(viewport={"width": 420, "height": 760}, locale="he-IL").new_page()
     errs = []

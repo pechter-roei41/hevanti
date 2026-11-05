@@ -677,6 +677,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <button class="btn ghost small" id="connBtn" type="button" data-conn-open>חיבור AI</button>
       <button class="btn quiet small" type="button" data-how>איך משתמשים (הדגמה)</button>
       <a href="https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD" target="_blank" rel="noopener">המדריך (הסבר מלא ועדכונים, באינטרנט)</a>
+      <button class="btn quiet small" id="repBtn" type="button">דיווח על תקלה</button>
       <span id="ver"></span>
     </div>
   </section>
@@ -903,6 +904,14 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <label class="row" style="cursor:pointer"><input type="checkbox" id="liveTipNo"><b>אל תציג שוב</b></label>
   <div class="row"><button class="btn" id="liveTipOk" type="button">הבנתי</button></div>
 </div></div>
+<div class="modal" id="report" hidden role="dialog" aria-modal="true" aria-labelledby="repT"><div class="card wide">
+  <h3 id="repT">דיווח על תקלה</h3>
+  <p class="sub" style="margin:0">אלה הפרטים שעוזרים להבין מה קרה: הגרסה, המחשב ומה פועל, והשגיאות האחרונות. <b>שום דבר לא נשלח לבד</b>, ואין כאן את המפתח, תמלולים או שאלות. אפשר למחוק או להוסיף מה שרוצים. כתבו למעלה מה קרה, מה עשיתם רגע לפני ומה ציפיתם שיקרה.</p>
+  <label for="repText" class="sub" style="display:block;margin:0">מה נכנס לדיווח</label>
+  <textarea class="gloss" id="repText" dir="auto" spellcheck="false" style="min-height:220px;font-size:13px"></textarea>
+  <div class="row"><button class="btn" id="repCopy" type="button">העתקה</button><a class="btn ghost" id="repGit" href="#" target="_blank" rel="noopener">פתיחת דיווח ב-GitHub</a><button class="btn quiet" id="repClose" type="button" style="margin-inline-start:auto">סגירה</button></div>
+  <p class="sub" style="margin:0">ב-GitHub: מדביקים (Ctrl+V) ושולחים (צריך חשבון GitHub). אפשר גם לשלוח את הטקסט למי שנתן לכם את הבנתי.</p>
+</div></div>
 <div class="modal" id="confirm" hidden role="dialog" aria-modal="true" aria-labelledby="confT"><div class="card">
   <h3 id="confT"></h3><p id="confP" style="margin:0;color:var(--muted)"></p>
   <div class="row"><button class="btn" id="confOk" type="button">כן</button><button class="btn quiet" id="confNo" type="button">ביטול</button></div>
@@ -1074,6 +1083,18 @@ async function copyText(t) {
   try { await navigator.clipboard.writeText(t); return true; }
   catch (e) { const ta = el("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand("copy"); } catch (e2) {} ta.remove(); return ok; }
 }
+// "report a problem": the details are shown, the student copies them into a report (nothing is sent by Hevanti)
+async function openReport() {
+  $("#repText").value = "טוען..."; $("#report").hidden = false;
+  let d; try { d = await api("/api/diag"); } catch (e) { d = {text: "לא הצלחתי לקרוא את הפרטים מהבנתי.", issues: "https://github.com/pechter-roei41/hevanti/issues/new"}; }
+  $("#repText").value = "מה קרה: \n\n---\n" + d.text;
+  $("#repGit").href = d.issues;
+  $("#repText").focus(); $("#repText").setSelectionRange(9, 9);
+}
+$("#repBtn").addEventListener("click", openReport);
+$("#repCopy").addEventListener("click", async () => toast((await copyText($("#repText").value)) ? "הועתק. עכשיו להדביק (Ctrl+V) בדיווח." : "לא הצלחתי להעתיק. לסמן את הטקסט ולהעתיק ידנית."));
+$("#repGit").addEventListener("click", () => { copyText($("#repText").value); });
+$("#repClose").addEventListener("click", () => { $("#report").hidden = true; });
 async function copyImage(src) {
   try {
     const im = new Image(); im.src = src; await im.decode();
