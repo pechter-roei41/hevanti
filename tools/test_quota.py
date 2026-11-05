@@ -179,7 +179,19 @@ check("day quota: the rest is still at most a minute", bool(reader.cool) and all
 MODE["stream"] = "ok"
 reader.cool.clear()
 
+# today's check is kept: a new start (a new reader) does not ask Google again; another key does
+HITS["gen"] = 0
+fresh = L.MathReader()
+check("today's check is kept: the next start does not ask Google", fresh.restore("AQ.fake") and fresh.model and HITS["gen"] == 0, (fresh.model, HITS["gen"]))
+check("...and asks at most 4 models when it does check", len(fresh.order) <= 4, fresh.order)
+check("another key: checked again", L.MathReader().restore("another key") is False)
+# every model of today's check failing in a row (not the quota): the check is stale - a new one is made
+for m in list(fresh.order):
+    fresh.failed(m, L.MathError("busy", other=True))
+check("all of today's models failed: a new check next time", fresh.model == "" and L.probe_cache_read("AQ.fake") is None, (fresh.model, L.probe_cache_read("AQ.fake")))
+
 # "no model answers" because of the quota is not "no model": the same quota answer, and no more asking meanwhile
+L.probe_cache_drop()
 reader.model, reader.order, reader.quota_err = "", [], None
 MODE["gen"] = "quota-min"
 HITS["gen"] = 0
