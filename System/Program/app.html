@@ -1431,16 +1431,10 @@ const setPanels = {};
   try { qwc.checked = localStorage.getItem("bzm.noQuitWarn") !== "1"; } catch (e) { qwc.checked = true; }
   qwc.addEventListener("change", () => { try { if (qwc.checked) localStorage.removeItem("bzm.noQuitWarn"); else localStorage.setItem("bzm.noQuitWarn", "1"); } catch (e) {} });
   qwl.append(qwc, el("b", "", "לשאול אותי לפני שסוגרים את הטאב באמצע הרצאה חיה"));
-  const fml = el("label", "row miniopt"), fmc = el("input"); fmc.type = "checkbox"; fmc.id = "fastModel";
-  fmc.addEventListener("change", async () => {
-    const r = await api("/api/cmd", {action: "fast_model", on: fmc.checked});
-    toast(r.ok ? (fmc.checked ? "מההרצאה הבאה: תמלול במודל קטן ומהיר (בפעם הראשונה יורדת בערך חצי GB)." : "מההרצאה הבאה: חוזרים למודל המלא.") : "לא הצלחתי לשמור.");
-  });
-  fml.append(fmc, el("b", "", "תמלול מהיר וקטן יותר (למחשב בלי כרטיס מסך של NVIDIA)"));
   const mel = el("label", "row miniopt"), mec = el("input"); mec.type = "checkbox"; mec.id = "mathEvery";
   mec.addEventListener("change", async () => { const r = await api("/api/cmd", {action: "math_every", on: mec.checked}); toast(r.ok ? (mec.checked ? "מעכשיו כל שקופית נשלחת ל-Gemini לקריאה." : "מעכשיו שקופיות עם טקסט מודפס ברור לא נשלחות ל-Gemini.") : "לא הצלחתי לשמור."); });
   mel.append(mec, el("b", "", "לשלוח ל-Gemini כל שקופית, גם כזו שנראית כטקסט רגיל (מבזבז מכסה)"));
-  ai.append(qwl, mel, el("p", "sub", "כשקריאת הנוסחאות פועלת, שקופית של טקסט מודפס ברור נקראת במחשב ולא נשלחת. כל השאר (נוסחאות, כתב יד, תמונות) נשלח."), fml, el("p", "sub", "אם התמלול מפגר אחרי המרצה, אפשר להפעיל את זה: המודל קטן וכמה פעמים מהיר יותר על המעבד, אבל פחות מדויק, במיוחד בעברית ובמונחים מקצועיים. חל מההרצאה הבאה."), exl, el("p", "sub", "ברירת המחדל: התשובות מגיעות רק בתוך הבנתי (מפתח Gemini חינמי). כשזה פועל, תיבת השאלה מציגה גם כפתורים להעתקה, ואפשר להגיד שיש לך מנוי בתשלום כדי שמשימות על הרצאה שלמה ילכו לאפליקציה שלך."));
+  ai.append(qwl, mel, el("p", "sub", "כשקריאת הנוסחאות פועלת, שקופית של טקסט מודפס ברור נקראת במחשב ולא נשלחת. כל השאר (נוסחאות, כתב יד, תמונות) נשלח."), exl, el("p", "sub", "ברירת המחדל: התשובות מגיעות רק בתוך הבנתי (מפתח Gemini חינמי). כשזה פועל, תיבת השאלה מציגה גם כפתורים להעתקה, ואפשר להגיד שיש לך מנוי בתשלום כדי שמשימות על הרצאה שלמה ילכו לאפליקציה שלך."));
   const paid = $("#planPaid").closest(".optbox"); paid.querySelector("h4").textContent = "מנוי בתשלום"; ai.appendChild(paid);
   const row = el("div", "row"), go = el("button", "btn", "חיבור AI (Claude, ChatGPT, Gemini)"); go.type = "button"; go.addEventListener("click", () => { $("#settings").hidden = true; $("#connBtn").click(); });
   row.appendChild(go); ai.append(el("h3", "", "חיבור האפליקציה של ה-AI שלך"), el("p", "sub", "אם יש לך מנוי ל-Claude או ל-ChatGPT, אפשר לחבר אותם להבנתי: הם קוראים לבד מה נאמר ואת השקופית. כולל סנכרון לענן (כבוי כברירת מחדל)."), row);
@@ -1453,7 +1447,7 @@ function openSettings(id) {
   if (id === "cap") { api("/api/mirror").then(m => { $("#miniAuto").checked = m.mini_auto === true; $("#miniBtn").checked = m.mini_button !== false; drawCorner(m.mini_btn_corner || "br"); const o = m.mini_opacity || 60; $("#miniOp").value = o; $("#miniOp").nextElementSibling.textContent = o + "%"; }).catch(() => {}); capSig = ""; drawCaps(); if (capOf().mode === "window" && !capWinsAt) capLoadWins(); }
   if (id === "key") { mathSig = ""; drawMath(); }
   if (id === "a11y") a11yDraw();
-  if (id === "ai") api("/api/mirror").then(m => { $("#extAi").checked = m.external_ai === true; $("#fastModel").checked = m.fast_model === true; $("#mathEvery").checked = m.math_every === true; }).catch(() => {});
+  if (id === "ai") api("/api/mirror").then(m => { $("#extAi").checked = m.external_ai === true; $("#mathEvery").checked = m.math_every === true; }).catch(() => {});
   if (id === "priv") api("/api/mirror").then(m => { $("#checkUpd").checked = m.check_updates !== false; }).catch(() => {});
 }
 $("#setBtn").addEventListener("click", () => openSettings("key"));
