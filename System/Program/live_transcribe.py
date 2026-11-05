@@ -251,23 +251,10 @@ def prompt_now(batched=False):
     return PROMPT + (" מונחים בקורס: " if LANG == "he" else " Terms: ") + TERMS + "."
 
 
-FAST_MODEL = "small"   # Whisper small (multilingual, about 0.5 GB): several times faster than large-v3-turbo on the CPU
-
-
-def fast_model():
-    """The student chose the smaller, faster transcription model (settings; off by default)."""
-    try:
-        return bool(load_settings().get("fast_model", False))
-    except Exception:   # (the settings code comes later in this file: not there yet while it is being loaded)
-        return False
-
-
 def set_language(lang):
     global LANG, MODELS, PROMPT
     LANG = "en" if str(lang).strip().lower() == "en" else "he"
-    if fast_model() and not os.environ.get("LT_MODEL"):
-        MODELS = [FAST_MODEL]   # a smaller, faster model: for a computer without an NVIDIA card (the quality is lower)
-    elif LANG == "en":
+    if LANG == "en":
         MODELS = [os.environ.get("LT_MODEL", "large-v3-turbo")]  # multilingual Whisper, strong in English
     else:
         MODELS = [
@@ -6559,9 +6546,6 @@ class App:
         if a == "math_every":   # send every slide to Gemini, also the ones that look like plain printed text (off by default)
             save_settings(math_every_slide=bool(d.get("on")))
             return {"ok": True}
-        if a == "fast_model":   # the smaller, faster transcription model (takes effect from the next lecture)
-            save_settings(fast_model=bool(d.get("on")))
-            return {"ok": True}
         if a == "external_ai":   # show the buttons that copy a question to another AI (off by default: answers are inside Hevanti)
             save_settings(external_ai=bool(d.get("on")))
             return {"ok": True}
@@ -6865,9 +6849,8 @@ def get_model(lang, stub_av):
     global _PIPE, _PIPE_REC
     with APP.model_lock:
         set_language(lang)
-        key = LANG + ("/fast" if fast_model() else "")   # (the choice in the settings may change between two lectures)
-        if key in APP.models:
-            return APP.models[key]
+        if LANG in APP.models:
+            return APP.models[LANG]
         if APP.models:  # one model at a time (each takes 1-3 GB)
             APP.models.clear()
             _PIPE = _PIPE_REC = None
@@ -6889,7 +6872,7 @@ def get_model(lang, stub_av):
                 faulthandler.cancel_dump_traceback_later()
                 dump.close()
         _remove_quietly(STUCK_LOG)   # loaded: nothing to report
-        APP.models[key] = m
+        APP.models[LANG] = m
         APP.device = "GPU" if m[2].endswith("GPU") else "CPU"
         return m
 
@@ -7508,7 +7491,7 @@ def _app_handler():
                                            mini_auto=bool(load_settings().get("mini_open_start", False)), mini_opacity=mini_opacity(),
                                            mini_button=load_settings().get("mini_button", True), mini_btn_corner=mini_btn_corner(),
                                            check_updates=load_settings().get("check_updates", True),
-                                           fast_model=fast_model(), math_every=bool(load_settings().get("math_every_slide", False)),
+                                           math_every=bool(load_settings().get("math_every_slide", False)),
                                            external_ai=bool(load_settings().get("external_ai", False))))
                 if p == "/api/marks":   # the marked moments of a course
                     c = clean_name(q.get("c", [""])[0])
