@@ -131,6 +131,16 @@ try:
     refused = False
 except urllib.error.HTTPError as e:
     refused = e.code in (400, 403)
+check("the floating window's browser profile is on this computer (LOCALAPPDATA), not in Documents",
+      L.mini_profile_dir().startswith(os.environ["LOCALAPPDATA"]) and not L.mini_profile_dir().startswith(L.DATA_DIR))
+old = os.path.join(L.DATA_DIR, "mini-profile")
+os.makedirs(os.path.join(old, "Default"), exist_ok=True)
+open(os.path.join(old, "Default", "Cookies"), "w").close()
+held = open(os.path.join(old, "lockfile"), "w")   # its browser is still running
+if os.name == "nt":
+    check("the old profile in Documents is kept while its browser is running", L.drop_old_mini_profile() is False and os.path.isdir(old))
+held.close()
+check("...and deleted once it is not", L.drop_old_mini_profile() is True and not os.path.isdir(old))
 L.set_language("he")
 check("transcription model: Hebrew uses the Hebrew-tuned one (no small model: its Hebrew is poor)", "ivrit-ai/whisper-large-v3-turbo-ct2" in L.MODELS[0] and "small" not in L.MODELS, L.MODELS)
 L.set_language("en")

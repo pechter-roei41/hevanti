@@ -4688,6 +4688,29 @@ def _show_mini(u, hwnd, place=False):
     u.SetForegroundWindow(hwnd)
 
 
+def mini_profile_dir():
+    """The small window's own browser profile: on this computer only. Never in Documents, which may be synced to
+    OneDrive - a browser profile is hundreds of MB, and keeps the cookies of the AI sites opened from the window."""
+    return os.path.join(LOCAL_DIR, "mini-profile")
+
+
+def drop_old_mini_profile():
+    """Up to 2.10 that profile was in Documents\\הבנתי: delete it - unless its browser is still running (the
+    profile's lockfile cannot be removed then; tried again at the next start)."""
+    old = os.path.join(DATA_DIR, "mini-profile")
+    if not os.path.isdir(old) or os.path.normcase(os.path.abspath(old)) == os.path.normcase(os.path.abspath(mini_profile_dir())):
+        return False
+    try:
+        lock = os.path.join(old, "lockfile")
+        if os.path.exists(lock):
+            os.remove(lock)
+    except OSError:
+        return False
+    import shutil
+    shutil.rmtree(old, ignore_errors=True)
+    return not os.path.isdir(old)
+
+
 def toggle_mini(hide_only=False, show_only=False):
     """Show the small question window (starting it if needed) or hide it. show_only: never hides (the lecture
     just started: bring it forward, whether it is open or not)."""
@@ -4711,7 +4734,7 @@ def toggle_mini(hide_only=False, show_only=False):
             exe = _browser_exe()
             if not exe or not APP.url:
                 return {"ok": False, "error": "החלון הקטן צריך את Microsoft Edge או את Chrome."}
-            prof = os.path.join(DATA_DIR, "mini-profile")
+            prof = mini_profile_dir()
             os.makedirs(prof, exist_ok=True)
             args = [exe, "--app=" + APP.url + "mini", f"--window-size={MINI_SIZE[0]},{MINI_SIZE[1]}"]
             with _real_pixels(u) as rp:   # it opens near its place at once (the exact place is set when it is found)
@@ -8156,6 +8179,7 @@ def main():
     threading.Thread(target=write_all_course_ai_files, daemon=True).start()   # also courses made before 2.1
     MIRROR.start()
     threading.Thread(target=ocr_backfill, daemon=True).start()
+    threading.Thread(target=drop_old_mini_profile, daemon=True).start()   # (it moved out of Documents in 2.11)
     with _AI_APPS_LOCK:
         _AI_APPS["busy"] = True
     threading.Thread(target=refresh_ai_apps, daemon=True).start()
