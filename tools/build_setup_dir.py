@@ -24,7 +24,7 @@ PRIVACY = """הבנתי (Hevanti) - פרטיות / Privacy
 - בפעם הראשונה היא מורידה את מודל התמלול (Hugging Face) ואת קריאת השקופיות (GitHub, אם מסכימים).
 - "תשובה כאן" שולחת ל-Google (Gemini, עם המפתח שלך) רק כשאתה שואל. פרטים בהמשך.
 
-בקצרה (גרסה 2.10)
+בקצרה (גרסה 2.11)
 - מה נשמר: תמלול ההרצאות, צילומי מסך של מה שבחרת לצלם, והטקסט שנקרא מהם.
 - איפה: רק במחשב שלך. אין חשבון ואין שרת של הבנתי. אם "הקורסים שלי" נמצאת בתוך OneDrive או Google Drive
   (למשל Documents שמסונכרן), התוכנה של הענן מעתיקה אותה לחשבון שלך שם, כולל צילומי המסך.
@@ -45,7 +45,7 @@ PRIVACY = """הבנתי (Hevanti) - פרטיות / Privacy
 Responsibility: Hevanti is provided "as is", without warranty of any kind. Use is entirely the user's responsibility.
 Each user must check the rules of their own institution and lecturer before using it. The author and contributors are not liable.
 
-Short version (2.10): what is kept - transcripts, screenshots of what you chose to capture, and the text read from them,
+Short version (2.11): what is kept - transcripts, screenshots of what you chose to capture, and the text read from them,
 all on your computer. No account, no server of ours. If the "הקורסים שלי" folder sits inside OneDrive / Google Drive,
 that service copies it to your account there. Text (and a picture, if you attach it) goes to an AI company only when
 you press an "ask AI" / study-task button or ask a connected AI. You can capture one window or part of the screen
