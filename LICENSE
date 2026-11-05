@@ -37,6 +37,8 @@ SOFTWARE.
   - faster-whisper (SYSTRAN) - MIT
   - מודל העברית ivrit-ai/whisper-large-v3-turbo-ct2 (ivrit.ai) - Apache 2.0
   - מודל Whisper large-v3-turbo (OpenAI) - MIT
+  - sherpa-onnx (k2-fsa) - Apache 2.0
+  - מודל הטיוטה המהירה ivrit-ai/zipformer2-66m-streaming-he (ivrit.ai, Yakov Kolani) - CC-BY-4.0
   - yt-dlp (להורדה מאתרי וידאו כמו הקלטות זום) - Unlicense
   - numpy, mss, Pillow, PyAudioWPatch, CTranslate2 ועוד - לפי הרישיונות שלהם
   - ספריות NVIDIA (cuBLAS, cuDNN) - לפי תנאי השימוש של NVIDIA

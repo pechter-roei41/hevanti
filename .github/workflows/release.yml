@@ -67,8 +67,8 @@ jobs:
         run: |
           $py = "build/app/python/python.exe"
           & $py build/app/python/get-pip.py --no-warn-script-location
-          & $py -m pip install "faster-whisper>=1.1" pyaudiowpatch numpy mss pillow comtypes --no-warn-script-location
-          & $py -c "import faster_whisper, pyaudiowpatch, numpy, mss, PIL, comtypes; print('packages OK')"
+          & $py -m pip install "faster-whisper>=1.1" pyaudiowpatch numpy mss pillow comtypes sherpa-onnx --no-warn-script-location
+          & $py -c "import faster_whisper, pyaudiowpatch, numpy, mss, PIL, comtypes, sherpa_onnx; print('packages OK')"
           & $py -m py_compile build/app/System/Program/live_transcribe.py build/app/System/Program/hevanti_mcp.py
           Remove-Item build/app/python/get-pip.py
       - name: Inno Setup
