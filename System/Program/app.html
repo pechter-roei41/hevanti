@@ -520,7 +520,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <ul style="margin:10px 0 0;padding-inline-start:20px;display:grid;gap:6px;line-height:1.6">
         <li><b>מה נשמר:</b> התמלול של ההרצאות, צילומי המסך של מה שבחרת לצלם, והטקסט שנקרא מהם.</li>
         <li><b>איפה:</b> רק במחשב שלך, בתיקייה "הקורסים שלי". אין חשבון ואין שרת של הבנתי. אם התיקייה נמצאת בתוך OneDrive או Google Drive (למשל Documents שמסונכרן), התוכנה של הענן מעתיקה אותה לחשבון שלך שם.</li>
-        <li><b>מה נשלח ל-AI:</b> רק כשלוחצים על כפתור "שאלה ל-AI" או על אחת המשימות (סיכום, כרטיסיות, מבחן), או כשמבקשים מ-AI מחובר. אז הטקסט, והתמונה אם מצרפים אותה, עוברים לחברה של אותו AI. בלי זה, שום דבר לא יוצא מהמחשב.</li>
+        <li><b>מה נשלח ל-AI:</b> רק כשלוחצים על כפתור "שאלה ל-AI" או על אחת המשימות (סיכום, מבחן דמה, דף נוסחאות), או כשמבקשים מ-AI מחובר. אז הטקסט, והתמונה אם מצרפים אותה, עוברים לחברה של אותו AI. בלי זה, שום דבר לא יוצא מהמחשב.</li>
         <li><b>מה עוד עובר ברשת:</b> בדיקת גרסה חדשה ב-GitHub (אפשר לכבות בתיבה שלמעלה), הורדה חד-פעמית של מודל התמלול (Hugging Face) ושל קריאת השקופיות (GitHub). ורק אם הגדרת "AI מובנה בחינם": בלחיצה על "תשובה כאן" נשלחים ל-Google השאלה, הדקות האחרונות והשקופית; ובנוסף, כי "קריאת נוסחאות וכתב יד" פועלת כברירת מחדל כשיש מפתח (אפשר לכבות בהגדרות), גם שקופיות שאינן טקסט מודפס ברור. עם השאלה נשלח גם הטקסט של השקופיות הקודמות בהרצאה.</li>
         <li><b>מה בשליטתך:</b> לבחור חלון אחד או חלק מהמסך במקום כל המסך, להשהות את הצילום (גם עם <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd>), לטשטש אזורים קבועים, ולמחוק צילומים לצמיתות.</li>
         <li><b>אחריות:</b> הבנתי ניתנת כמו שהיא, בלי אחריות מכל סוג. השימוש בה, כולל הקלטה, תמלול ושמירה של הרצאות ושקופיות, הוא באחריות המשתמש בלבד. <b>לפני שמשתמשים, כל משתמש צריך לבדוק מה הנהלים והכללים במוסד שלו ואצל המרצה.</b> רועי פכטר ומפתחי הכלי אינם אחראים לשימוש בה.</li>
@@ -549,8 +549,8 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     </div>
     <div class="ended" id="liveEnded" hidden></div>
     <div class="card study" id="liveStudy" hidden><h2 style="margin:0 0 6px">ההרצאה נשמרה. מה עושים איתה?</h2>
-      <p class="sub" style="margin-top:0">לחיצה אחת: הבנתי שולחת ל-AI שלך את ההרצאה הזו עם המשימה (סיכום, כרטיסיות או מבחן דמה).</p>
-      <div class="row"><button class="btn" id="liveStudyGo" type="button">סיכום, כרטיסיות ומבחן דמה ←</button></div></div>
+      <p class="sub" style="margin-top:0">לחיצה אחת: הבנתי שולחת ל-AI שלך את ההרצאה הזו עם המשימה (סיכום, מבחן דמה או דף נוסחאות).</p>
+      <div class="row"><button class="btn" id="liveStudyGo" type="button">סיכום, מבחן דמה ודף נוסחאות ←</button></div></div>
     <div class="split">
       <div class="tbox">
         <div class="tools"><input type="search" id="liveFind" placeholder="חיפוש בתמלול" aria-label="חיפוש בתמלול"><button class="btn ghost small" id="liveFollow" type="button" hidden>לסוף</button></div>
@@ -631,7 +631,6 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <p class="sub">הבנתי שולחת ל-AI את ההרצאה הזו (התמלול והטקסט מהשקופיות) עם המשימה, וזוכרת לאיזה AI.</p>
       <div class="tiles">
         <button class="tile main" type="button" data-study="summary"><b>סיכום ההרצאה</b><small>הרעיונות, ההגדרות והנוסחאות</small></button>
-        <button class="tile" type="button" data-study="cards"><b>כרטיסיות חזרה</b><small>שאלה ותשובה קצרה לשינון</small></button>
         <button class="tile" type="button" data-study="exam"><b>מבחן דמה</b><small>שאלות מהקלה לקשה</small></button>
         <button class="tile" type="button" data-study="formulas"><b>דף נוסחאות</b><small>כל נוסחה, סימנים ויחידות</small></button>
         <button class="tile" type="button" data-study="marks" id="studyMarks" hidden><b>הרגעים שסימנתי</b><small>הסבר לכל ★ ו-?</small></button>
@@ -2249,7 +2248,6 @@ if (window.BZMAsk) pastAskBox = BZMAsk.mount($("#pastAsk"), {
 // after the lecture: one click = a ready task for this lecture, sent to the AI the student used last
 const STUDY = {
   summary: "תסכם את ההרצאה הזו: הרעיונות המרכזיים לפי הסדר, ההגדרות והנוסחאות (עם הסבר לכל סימן ויחידות), ובסוף שלושה דברים שחשוב לזכור למבחן. את כל הנוסחאות תכתוב ב-LaTeX: בתוך שורה בין $...$, ונוסחה חשובה בשורה משלה בין $$...$$. מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול: תתקן לפי ההקשר.",
-  cards: "תכין 15 כרטיסיות חזרה מההרצאה הזו: שאלה בצד אחד ותשובה קצרה בצד השני, על המושגים והנוסחאות החשובים. בטבלה, כדי שאוכל להעתיק ל-Anki או ל-Quizlet.",
   exam: "תכין לי מבחן דמה מההרצאה הזו: 6 שאלות מהקלה לקשה, בסגנון מבחן אמיתי. קודם רק השאלות. אחרי שאענה, תבדוק ותסביר כל פתרון צעד אחר צעד.",
   formulas: "תכין דף נוסחאות מההרצאה הזו: כל נוסחה, מה כל סימן אומר, יחידות, ומתי משתמשים בה. את הנוסחאות תכתוב ב-LaTeX: בתוך שורה בין $...$, ונוסחה בשורה משלה בין $$...$$.",
   marks: "בתמלול יש שורות [סימון: לא הבנתי] ו-[סימון: חשוב] שסימנתי בזמן ההרצאה. לכל \"לא הבנתי\": תסביר בפשטות מה נאמר בדקה-שתיים שלפני הסימון, עם דוגמה. לכל \"חשוב\": תסכם בשורה-שתיים מה נאמר ולמה זה חשוב. לפי הסדר, עם השעה של כל סימון.",
