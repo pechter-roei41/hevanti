@@ -1015,6 +1015,83 @@ def transcribe_batch(model, beam, audio16, prev_text):
             raise
 
 
+# ---------- a quick draft without a GPU (2.11): what is being said right now ----------
+# The transcript is written in pieces of 10-18 s, and Whisper on the CPU is too slow to also draft what is being said
+# (a draft costs a whole piece: Whisper always works on 30 s). So a question in the floating window ("what did he just
+# say?") was missing the last seconds. ivrit.ai's streaming Zipformer (66M, sherpa-onnx) drafts them as they come:
+# measured 5.11.2026 with Whisper running alongside - an update every 0.25 s took 0-72 ms, Whisper was not slower,
+# +3% CPU, +170 MB. Hebrew only; only the draft - the transcript is still Whisper's.
+ZIP_REPO, ZIP_REV = "ivrit-ai/zipformer2-66m-streaming-he", "ee769a2a13b887f91572eec349458bfb0fe79e7a"   # (a fixed version)
+ZIP_FILES = ("encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt")
+QUICK_DRAFT = os.environ.get("LT_QUICK_DRAFT", "1") != "0"
+
+
+def zip_dir():
+    return os.path.join(MODEL_DIR, "zipformer-he")
+
+
+def zip_ready():
+    return os.path.exists(os.path.join(zip_dir(), ".complete"))
+
+
+def zip_download():
+    """The Zipformer (about 70 MB), once. Returns True when it is there."""
+    if zip_ready():
+        return True
+    try:
+        os.makedirs(zip_dir(), exist_ok=True)
+        log("מוריד את מודל הטיוטה המהירה (כ-70MB, פעם אחת).")
+        for f in ZIP_FILES:
+            path = os.path.join(zip_dir(), f)
+            if not os.path.exists(path):
+                _fetch_small(ZIP_REPO, ZIP_REV, "sherpa-onnx/" + f, path)
+        with open(os.path.join(zip_dir(), ".complete"), "w", encoding="utf-8") as fm:
+            json.dump({"repo": ZIP_REPO, "revision": ZIP_REV}, fm)
+        return True
+    except Exception:
+        save_error("quick draft download")
+        return False
+
+
+class QuickDraft:
+    """A streaming draft of what is being said: fed the sound as it arrives, restarted at every piece Whisper takes."""
+
+    def __init__(self):
+        import sherpa_onnx
+        d = zip_dir()
+        self.r = sherpa_onnx.OnlineRecognizer.from_transducer(
+            tokens=os.path.join(d, "tokens.txt"), encoder=os.path.join(d, "encoder.int8.onnx"),
+            decoder=os.path.join(d, "decoder.int8.onnx"), joiner=os.path.join(d, "joiner.int8.onnx"),
+            model_type="zipformer2", num_threads=2)
+        self.s = self.r.create_stream()
+
+    def restart(self, audio16=None):
+        self.s = self.r.create_stream()
+        if audio16 is not None and len(audio16):
+            self.feed(audio16)
+
+    def feed(self, audio16):
+        self.s.accept_waveform(TARGET_SR, audio16)
+        while self.r.is_ready(self.s):
+            self.r.decode_stream(self.s)
+
+    def text(self):
+        res = self.r.get_result(self.s)
+        return str(res if isinstance(res, str) else getattr(res, "text", "")).strip()
+
+
+def start_quick_draft(slot):
+    """In the background, so the lecture starts at once: the package (once), the model (once), then slot[0]."""
+    def go():
+        try:
+            _ensure_packages([("sherpa_onnx", "sherpa-onnx")], "לטיוטה מהירה")
+            if zip_download():
+                slot[0] = QuickDraft()
+        except Exception:
+            save_error("quick draft")   # no draft: a question says the last seconds may be missing (missing_note)
+    threading.Thread(target=go, daemon=True).start()
+
+
 # ---------- screen snapshots ----------
 def _ensure_packages(pairs, what="לצילום מסך"):
     """Install missing pure-Python helpers (mss, Pillow, comtypes) on first run."""
@@ -2759,12 +2836,14 @@ class LiveNow(threading.Thread):
             if text != self.draft:
                 self.draft, self.dirty = text, True
 
+    quick_on = False   # the quick draft (Zipformer, no GPU) is running in this lecture
+
     def missing_note(self):
         """Without a draft (no GPU), the last seconds - heard, not transcribed yet: the transcript is written in pieces of
         10-18 s - are not in what a question gets. The answer comes at once (transcribing them would make the student
         wait 8-20 s on a CPU, measured 5.11.2026), and Gemini is told they may be missing. "" when nothing is missing."""
-        if self.draft or getattr(self, "yt", False) or self.pending_s < 3:
-            return ""
+        if self.draft or self.quick_on or getattr(self, "yt", False) or self.pending_s < 3:
+            return ""   # (with the quick draft running, no draft means nothing was said)
         return (f"(שימו לב: מה שנאמר ב-{int(self.pending_s)} השניות האחרונות עוד לא תומלל, "
                 "אז יכול להיות שהמשפט האחרון חסר כאן. אם השאלה עליו, לומר את זה בקצרה.)\n")
 
@@ -8506,6 +8585,34 @@ def run_live(sess, lang, course=""):
     # question found no draft anyway - on the CPU a draft costs as much as a whole piece. See LiveNow.missing_note.)
     drafts_on = DRAFTS and on_gpu and not yt
     saved_at = [time.time()]
+    # No GPU, a Hebrew lecture: the quick draft (Zipformer) instead - ready in the background (slot[0]); until then,
+    # or if it cannot be had, a question says the last seconds may be missing.
+    quick = [None, False, 0.0, ""]   # [the engine, fed since the last piece?, last shown, last text]
+    if QUICK_DRAFT and DRAFTS and not on_gpu and not yt and LANG == "he":
+        start_quick_draft(quick)
+
+    def quick_draft(a16=None, restart=False):
+        """Feed the quick draft (the new sound, or everything waiting after a piece was taken) and show what it has."""
+        qd = quick[0]
+        if qd is None:
+            return
+        try:
+            if restart or not quick[1]:   # a new piece starts, or the engine just became ready: from what is waiting
+                qd.restart(resample(np.concatenate(blocks), sr) if blocks else None)
+                quick[1], quick[2] = True, 0.0
+                now_file.quick_on = True
+            elif a16 is not None:
+                qd.feed(a16)
+            if time.time() - quick[2] >= 0.5:
+                quick[2] = time.time()
+                text = qd.text()
+                if text != quick[3]:
+                    quick[3] = text
+                    now_file.set_draft(text)
+        except Exception:
+            quick[0] = None   # a problem with it: no more drafts this lecture (the transcript is not touched)
+            now_file.quick_on = False
+            save_error("quick draft")
 
     def draft(buf, buf_sr):
         """Quick draft of the piece that is still being heard (GPU only, never written to the transcript)."""
@@ -8751,6 +8858,8 @@ def run_live(sess, lang, course=""):
             blocks.append(a)
             n += len(a)
             now_file.pending_s = n / sr
+            if quick[0] is not None:
+                quick_draft(resample(a, sr))
             if n < max_s * sr:
                 if drafts_on and n >= DRAFT_MIN_S * sr and q.qsize() < 8 and draft_fits():
                     state["draft_at"] = time.time()
@@ -8785,8 +8894,12 @@ def run_live(sess, lang, course=""):
             blocks, n, t0 = [rest], len(rest), t0 + cut / sr
 
             inflight[:] = [(chunk, chunk_t, sr)]
+            # (while Whisper works on this piece the quick draft still has it, with what came after: nothing is missing)
             handle_chunk(chunk, chunk_t, sr, heard_until=t + len(a) / sr)
             inflight.clear()
+            if quick[0] is not None:   # the piece is in the transcript now: the draft goes on from what is left
+                quick[3] = ""
+                quick_draft(restart=True)
             last_loop = time.time()  # transcribing can take a while - that is not "sleep"
     except KeyboardInterrupt:
         finish_tail()
@@ -8815,7 +8928,7 @@ def run_live(sess, lang, course=""):
 
 # ---------- uninstall (uninstall.bat) ----------
 TOOL_PKGS = ["faster-whisper", "ctranslate2", "pyaudiowpatch", "mss", "nvidia-cublas-cu12", "nvidia-cudnn-cu12",
-             "yt-dlp", "yt-dlp-ejs", "deno"]
+             "yt-dlp", "yt-dlp-ejs", "deno", "sherpa-onnx", "sherpa-onnx-core"]
 SHARED_PKGS = ["onnxruntime", "av", "tokenizers", "huggingface-hub", "pillow", "comtypes"]
 
 

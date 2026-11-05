@@ -26,7 +26,7 @@ echo Using: %PY%
 %PY% -m pip --version >nul 2>&1
 if errorlevel 1 if exist "%PYDIR%\get-pip.py" %PY% "%PYDIR%\get-pip.py" --no-warn-script-location
 %PY% -m pip install --upgrade pip --no-warn-script-location
-%PY% -m pip install "faster-whisper>=1.1" pyaudiowpatch numpy mss pillow comtypes --no-warn-script-location
+%PY% -m pip install "faster-whisper>=1.1" pyaudiowpatch numpy mss pillow comtypes sherpa-onnx --no-warn-script-location
 if errorlevel 1 ( echo. & echo INSTALL FAILED - send a screenshot of this window to Hevanti support & pause & exit /b 1 )
 echo.
 echo Reading the text on the slides ^(optional, free^): Windows will ask for permission once.
