@@ -5156,35 +5156,6 @@ def open_ai_app_placed(app):
     return ok
 
 
-def open_course_terminal(course):
-    """A command window inside the course folder running Gemini (Antigravity CLI, agy), on the left third."""
-    d = course_dir(course)
-    if not os.path.isdir(d):
-        return {"ok": False, "error": "הקורס לא נמצא."}
-    import shutil
-    import subprocess
-    title = f"Gemini - {clean_name(course)}"
-    tool = "agy" if shutil.which("agy") else "gemini" if shutil.which("gemini") else None
-    try:
-        if os.name == "nt":
-            lit = d.replace("'", "''")
-            missing = ("Write-Host 'Antigravity CLI (agy) is not installed yet. Install once:'; "
-                       "Write-Host 'irm https://antigravity.google/cli/install.ps1 | iex'")
-            ps = (f"$Host.UI.RawUI.WindowTitle = '{title.replace(chr(39), chr(39) * 2)}'; "
-                  f"Set-Location -LiteralPath '{lit}'; " + (tool if tool else missing))
-            subprocess.Popen(["cmd", "/c", "start", "", "powershell", "-NoExit", "-NoProfile", "-Command", ps],
-                             creationflags=0x08000000)
-            if load_settings().get("place_ai", True):
-                threading.Thread(target=place_window_left_third, args=(lambda t: t.startswith(title),),
-                                 daemon=True).start()
-        else:
-            return {"ok": False, "error": "לא נתמך במחשב הזה."}
-    except OSError:
-        save_error("open course terminal")
-        return {"ok": False, "error": "לא הצלחתי לפתוח חלון פקודות."}
-    return {"ok": True, "tool": tool or "", "folder": d}
-
-
 def course_ai_info(course):
     """Everything the course page shows about the course's AI."""
     return {"links": course_ai_links(course), "folder": course_dir(course),
@@ -6607,10 +6578,6 @@ class App:
             return self.delete_course(clean_name(d.get("course"), NO_COURSE))
         if a == "open_ai_app":
             return {"ok": open_ai_app_placed(d.get("app"))}
-        if a == "course_ai_link":
-            return set_course_ai_link(course, str(d.get("app") or ""), d.get("url"))
-        if a == "open_course_terminal":
-            return open_course_terminal(course)
         if a == "set_mirror":
             return set_mirror(d.get("path"))
         if a == "place_ai":
