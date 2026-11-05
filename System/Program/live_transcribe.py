@@ -1977,7 +1977,7 @@ class MathReader(threading.Thread):
         super().__init__(daemon=True)
         self.q = queue.Queue()
         self.lock = threading.Lock()
-        self.model, self.error, self.done, self.skipped = "", "", 0, 0
+        self.model, self.error, self.done, self.skipped, self.misses = "", "", 0, 0, 0
         self.order = []   # the models to try, the one that answered first (see probe)
         self.cool = {}    # model -> (until, the quota error): said "quota" a moment ago - not asked again until then
         self.quota_err, self.quota_until = None, 0.0   # probe found every model out of quota (not "no model")
@@ -1996,8 +1996,17 @@ class MathReader(threading.Thread):
         with self.lock:
             self.error = text
 
+    def restore(self, key):
+        """Today's check, kept from an earlier start (the same key): no need to ask Google again."""
+        c = probe_cache_read(key)
+        if not c:
+            return False
+        with self.lock:
+            self.order, self.model, self.quota_err, self.misses = list(c["order"]), c["order"][0], None, 0
+        return True
+
     def ensure_model(self, key):
-        if not self.model:
+        if not self.model and not self.restore(key):
             if self.quota_err is not None and time.time() < self.quota_until:   # (do not spend more quota to ask again)
                 raise MathError(str(self.quota_err), int(self.quota_until - time.time()) + 1, kind="quota")
             self.probe(key)
@@ -2009,9 +2018,12 @@ class MathReader(threading.Thread):
 
     def probe(self, key):
         """Which models answer right now: a one-word question to the best few at once (models are retired, busy or
-        slow from day to day). The ones that answered, best first, then the rest - the order to try them in."""
+        slow from day to day). The ones that answered, best first, then the rest - the order to try them in.
+        Four models (each question costs one request of the day's quota): the best three flash and the best light one
+        (which reads the slides). Kept for the day (probe_cache_write), so the next start does not ask again."""
         from concurrent.futures import ThreadPoolExecutor
-        cands = gemini_candidates(gemini_models(key))[:8]
+        allc = gemini_candidates(gemini_models(key))
+        cands = [m for m in allc if "lite" not in m][:3] + [m for m in allc if "lite" in m][:1]
         body = {"contents": [{"role": "user", "parts": [{"text": "Answer with one word: OK"}]}]}
 
         quota = []
@@ -2034,12 +2046,14 @@ class MathReader(threading.Thread):
         fast = [m for m in cands if m in good and good[m] <= max(2 * best, best + 4)]
         order = fast + sorted((m for m in good if m not in fast), key=good.get) + [m for m in cands if m not in good]
         with self.lock:
-            self.order = order
+            self.order, self.misses = order, 0
             self.model = order[0] if order and order[0] in good else ""
             if not self.model and quota:   # nothing answered, and the reason is the quota: say so
                 self.quota_err, self.quota_until = quota[0], time.time() + min(quota[0].wait or 60, 60)
             else:
                 self.quota_err = None
+        if self.model:
+            probe_cache_write(key, order)
         return self.model
 
     def models_to_try(self, key, prefer_lite=False):
@@ -2066,10 +2080,15 @@ class MathReader(threading.Thread):
                 self.model = self.order[0]
             if err is not None and err.kind == "quota":   # (at most a minute: a wrong guess must not lock a live lecture)
                 self.cool[model] = (time.time() + min(err.wait or 60, 60), err)
+            elif err is not None:   # busy / retired / slow: when every model failed in a row, today's check is stale
+                self.misses += 1
+                if self.misses >= max(1, len(self.order)):
+                    self.model, self.misses = "", 0
+                    probe_cache_drop()
 
     def worked(self, model):
         with self.lock:
-            self.model, self.error = model, ""
+            self.model, self.error, self.misses = model, "", 0
             self.cool.pop(model, None)
 
     def worth_sending(self, path):
@@ -2145,12 +2164,45 @@ class MathReader(threading.Thread):
 _MATH = []
 
 
+def _probe_cache_path():
+    return os.path.join(LOCAL_DIR, "gemini_models.json")
+
+
+def _key_mark(key):
+    import hashlib
+    return hashlib.sha256(str(key).encode("utf-8")).hexdigest()[:12]   # (to know it is the same key; not the key)
+
+
+def probe_cache_read(key):
+    try:
+        with open(_probe_cache_path(), encoding="utf-8") as f:
+            c = json.load(f)
+        if c.get("day") == time.strftime("%Y-%m-%d") and c.get("key") == _key_mark(key) and c.get("order"):
+            return c
+    except (OSError, ValueError, AttributeError):
+        pass
+    return None
+
+
+def probe_cache_write(key, order):
+    try:
+        os.makedirs(LOCAL_DIR, exist_ok=True)
+        with open(_probe_cache_path(), "w", encoding="utf-8") as f:
+            json.dump({"day": time.strftime("%Y-%m-%d"), "key": _key_mark(key), "order": list(order)}, f)
+    except OSError:
+        pass
+
+
+def probe_cache_drop():
+    _remove_quietly(_probe_cache_path())
+
+
 def math_reader():
     if not _MATH:
         _MATH.append(MathReader())
         _MATH[0].start()
         key = read_secret(math_settings().get("key"))
-        if key:   # which Gemini models answer today - before the first question, so it is answered at once
+        if key and not _MATH[0].restore(key):   # which models answer today - before the first question (once a day)
             def probe():
                 try:
                     _MATH[0].probe(key)
@@ -2706,6 +2758,33 @@ class LiveNow(threading.Thread):
         with self.lock:
             if text != self.draft:
                 self.draft, self.dirty = text, True
+
+    tail_fn = None   # set by the live loop when there are no drafts (no GPU): transcribes what was not transcribed yet
+
+    def fresh_tail(self, timeout=20.0):
+        """A question was asked: without a GPU there is no draft of what is being said, so the last 10-20 seconds
+        (heard, not transcribed yet) are transcribed now and become the draft - "what did he just say?" is about them.
+        Returns that text ("" when there is nothing new, or it took too long)."""
+        fn = self.tail_fn
+        if fn is None:
+            return self.draft
+        # How long it would take here: the piece being transcribed, then what waits. Too slow on this computer: do not
+        # make the student wait for nothing - answer now, and the question says the last seconds may be missing.
+        if self.load and (self.pending_s + MAX_CHUNK_S) * self.load > timeout:
+            self.tail_slow = True
+            return ""
+        out = []
+        th = threading.Thread(target=lambda: out.append(fn()), daemon=True)
+        th.start()
+        th.join(timeout)
+        self.tail_slow = not out   # (too slow on this computer: the question says the last seconds may be missing)
+        text = out[0] if out and out[0] else ""
+        if text:
+            self.set_draft(text)
+        return text
+
+    tail_slow = False
+    load = 0.0   # seconds of work per second of lecture, on this computer (from the live loop)
 
     def text(self):
         def clock(t):
@@ -4846,6 +4925,9 @@ def mini_context(q):
             out += f"[{c}] {x}\n"
     if draft:
         out += f"(ממש עכשיו, עוד לא סופי: {draft})\n"
+    elif not yt and live.pending_s >= 3 and (live.tail_fn is None or live.tail_slow):
+        out += (f"(שימו לב: מה שנאמר ב-{int(live.pending_s)} השניות האחרונות עוד לא תומלל, "
+                "אז יכול להיות שהמשפט האחרון חסר כאן)\n")
     if not items and not draft:
         out += "(עוד אין תמלול)\n"
     with live.lock:
@@ -7639,8 +7721,14 @@ def _app_handler():
                         d = dict(d, context=mini_context(str(d.get("question") or "")), where="rec",
                                  n=_rec_shot_before(APP.rec, float(APP.rec.pos or 0.0)))
                     else:
+                        if APP.live is not None:
+                            APP.live.fresh_tail()   # (no GPU: the last seconds, not transcribed yet, become the draft)
                         d = dict(d, context=mini_context(str(d.get("question") or "")),
                                  where="yt" if getattr(APP.live, "yt", False) else "live")
+                elif d.get("where") == "live" and APP.live is not None and not getattr(APP.live, "yt", False):
+                    tail = APP.live.fresh_tail()   # the page built its context from what it had: add the last seconds
+                    if tail and tail not in str(d.get("context") or ""):
+                        d = dict(d, context=str(d.get("context") or "") + f"\n(ממש עכשיו, עוד לא סופי: {tail})")
                 body = tutor_body(d)
                 pieces, first, last_err, quota_err = None, "", None, None
                 usage, started, chars, used = {}, time.time(), len(json.dumps(body, ensure_ascii=False)), ""
@@ -8452,6 +8540,25 @@ def run_live(sess, lang, course=""):
         except Exception:
             pass  # a draft is optional; the final text still comes
 
+    def unheard_text():
+        """What was heard but is not in the transcript yet: what waits for the next piece and what arrived meanwhile
+        (all of it: a gap would cut the sentence in two). Called from another thread, when a question is asked. The piece being transcribed
+        right now is left out: there is one model, so this waits for it anyway, and its text is written by then."""
+        try:
+            parts = list(blocks) + [to_mono(d2, ch) for g2, _, d2 in list(q.queue) if g2 == audio.gen]
+            if not parts:
+                return ""
+            buf = np.concatenate(parts)[-int((max_s + 4) * sr):]
+            if len(buf) < sr or rms(buf) < SILENCE_RMS:
+                return ""
+            return transcribe(model, 1, resample(buf, sr), state["prev_text"])
+        except Exception:
+            save_error("unheard text")
+            return ""
+
+    if not drafts_on and not yt:
+        now_file.tail_fn = unheard_text
+
     def draft_fits():
         """A draft only when the GPU has time to spare - it must never make the real text late."""
         return (not state["fast"] and state["load"] < DRAFT_MAX_LOAD and state["lag"] < FAST_OFF_LAG_S
@@ -8498,6 +8605,7 @@ def run_live(sess, lang, course=""):
         text = transcribe(model, 1 if state["fast"] else beam, resample(chunk, chunk_sr), state["prev_text"])
         busy = (time.time() - t1) / (len(chunk) / chunk_sr)  # share of the time the real text needs
         state["load"] = busy if state["load"] == 0 else 0.5 * state["load"] + 0.5 * busy
+        now_file.load = state["load"]
         lag = time.time() - (heard_until or chunk_t + len(chunk) / chunk_sr)
         state["lag"] = now_file.lag = lag
         track_lag(lag)

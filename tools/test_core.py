@@ -154,6 +154,19 @@ check("report a problem: never the key", "AIzaTOPSECRET123" not in txt and "plai
 check("report a problem: the user's own folder name is hidden", home not in txt and "%USERPROFILE%" in txt, txt[-200:])
 check("report a problem: the link opens a new GitHub issue", diag["issues"].endswith("/issues/new"))
 L.save_settings(math=s0 or {})
+import datetime  # noqa: E402
+ln = L.LiveNow("a/b.txt", datetime.datetime.now(), course=C)
+ln.add(time.time() - 20, "מה שכבר נכתב")
+ln.pending_s, ln.tail_fn = 14.0, (lambda: "המשפט האחרון")
+check("no GPU, a question: the last seconds are transcribed and become the draft", ln.fresh_tail() == "המשפט האחרון" and ln.draft == "המשפט האחרון")
+ln.set_draft("")
+ln.load = 2.0   # a computer much slower than the lecture
+t = time.time()
+check("...too slow here: no waiting", ln.fresh_tail() == "" and time.time() - t < 1 and ln.tail_slow)
+old_live, L.APP.live = L.APP.live, ln
+ctx = L.mini_context("מה הוא אמר עכשיו?")
+check("...and Gemini is told that the last seconds may be missing", "עוד לא תומלל" in ctx and "מה שכבר נכתב" in ctx, ctx[-300:])
+L.APP.live = old_live
 L.set_language("he")
 check("transcription model: Hebrew uses the Hebrew-tuned one (no small model: its Hebrew is poor)", "ivrit-ai/whisper-large-v3-turbo-ct2" in L.MODELS[0] and "small" not in L.MODELS, L.MODELS)
 L.set_language("en")
