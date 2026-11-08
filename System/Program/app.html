@@ -1421,8 +1421,8 @@ function liveTip(s) {
   $("#liveTipOk").onclick = () => { m.hidden = true; if (no.checked) { try { localStorage.setItem("bzm.noLiveTip", "1"); } catch (e) {} } };
 }
 function render(d) {
-  $("#ver").textContent = "גרסה " + d.version + " (" + d.date + ")";
-  $("#verTop").textContent = "· גרסה " + d.version;
+  $("#ver").textContent = "גרסת בטא " + d.version + " (" + d.date + ")"; $("#ver").title = "גרסת בטא: עדיין בבדיקה, ועלולות להיות תקלות. אם משהו לא עובד, יש \"דיווח על תקלה\" בתחתית מסך הבית.";
+  $("#verTop").textContent = "· בטא " + d.version; $("#verTop").title = "גרסת בטא: עדיין בבדיקה, ועלולות להיות תקלות. אם משהו לא עובד, יש \"דיווח על תקלה\" בתחתית מסך הבית.";
   if (!curCourse && d.course) { curCourse = d.course; drawCourseSel(); }
   const up = d.update;
   $("#updBar").hidden = !up;

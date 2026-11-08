@@ -146,6 +146,8 @@ with sync_playwright() as p:
     pg = page()
     perr = []
     pg.on("pageerror", lambda e: perr.append(str(e)))
+    top, foot = pg.evaluate("document.querySelector('#verTop').textContent"), pg.evaluate("document.querySelector('#ver').textContent")
+    check("beta: the header and the footer say it is a beta, with the version", top.startswith("· בטא ") and "בטא" in foot and L.VERSION in top and L.VERSION in foot, (top, foot))
     pg.click("#repBtn")
     pg.wait_for_function("document.querySelector('#repText').value.includes('Windows')", timeout=8000)
     rep = pg.evaluate("document.querySelector('#repText').value")

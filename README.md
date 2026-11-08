@@ -2,6 +2,8 @@
 
 **Ask during the lecture, mark what you didn't understand.** A free, open-source lecture companion for students on Windows.
 
+> **Beta.** Hevanti is still being tested, and things may change or break. If something does not work, use "Report a problem" at the bottom of the home screen (or open an [issue](https://github.com/pechter-roei41/hevanti/issues)).
+
 Hevanti writes down everything said in the lecture, in Hebrew or English, while it runs on your computer. Its core is two things:
 
 - **The floating window.** A small button with the Hevanti logo sits at the edge of the screen (or press Ctrl+Alt+Q). It opens a small always-on-top window, also over a full-screen lecture: type a question, press Enter, and the answer is written under it, based on what the lecturer said in the last minutes and the slide on the screen. Formulas are drawn with KaTeX.
