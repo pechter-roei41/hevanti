@@ -111,8 +111,23 @@ d = json.loads(body)
 check("/api/marks returns the course's marks", st == 200 and len(d["marks"]) == 3, d)
 check("/api/marks for a missing course: empty, not an error", json.loads(get("/api/marks?c=" + urllib.parse.quote("אין"))[1])["marks"] == [])
 st, body = get("/mini")
-check("the floating window is served, with the two mark buttons and the question box",
-      st == 200 and b"markImp" in body and b"markLost" in body and b"BZMAsk" in body)
+check("the floating window is served, with the ★ button (no '?') and the question box",
+      st == 200 and b"markImp" in body and b"markLost" not in body and b"BZMAsk" in body)
+st, body = get("/")
+check("the app page has the ★ button and no 'לא הבנתי' button", st == 200 and b'id="markImp"' in body and b'id="markLost"' not in body)
+# only ★ is made now: whatever kind an older page sends, a live lecture gets "חשוב"
+got_kinds = []
+
+
+class FakeSession:
+    done, ready, kind, mark_fn = False, True, "live", staticmethod(lambda k: got_kinds.append(k))
+
+
+old_session = L.APP.session
+L.APP.session = FakeSession()
+r1, r2 = post({"action": "mark", "kind": "lost"}), post({"action": "mark", "kind": "important"})
+L.APP.session = old_session
+check("a mark of an older page ('lost') is a ★ too, and so is 'important'", got_kinds == ["חשוב", "חשוב"] and r1["ok"] and r2["ok"], (got_kinds, r1, r2))
 st, body = get("/ask.js")
 check("the ask box script is served", st == 200 and b"setExternal" in body)
 app = json.loads(get("/api/app")[1])

@@ -162,12 +162,31 @@ with sync_playwright() as p:
     mini.on("pageerror", lambda e: errs.append(str(e)))
     mini.goto(url + "/mini")
     mini.wait_for_timeout(1200)
-    check("floating window: the question box and both marks", mini.is_visible("textarea") and mini.is_visible("#markImp") and mini.is_visible("#markLost"))
+    check("floating window: the question box and the ★ mark (no '?')", mini.is_visible("textarea") and mini.is_visible("#markImp") and mini.query_selector("#markLost") is None)
     marked = []
-    mini.route("**/api/cmd", lambda r: (marked.append(json.loads(r.request.post_data or "{}")), r.fulfill(status=200, content_type="application/json", body=json.dumps({"ok": True, "kind": "lost"})))[1])
-    mini.click("#markLost")
+    mini.route("**/api/cmd", lambda r: (marked.append(json.loads(r.request.post_data or "{}")), r.fulfill(status=200, content_type="application/json", body=json.dumps({"ok": True, "kind": "חשוב"})))[1])
+    mini.click("#markImp")
     mini.wait_for_timeout(300)
-    check("floating window: '?' sends a mark to Hevanti", any(m.get("action") in ("mark", "mark_moment") or "mark" in str(m.get("action")) for m in marked), marked)
+    check("floating window: ★ sends an 'important' mark to Hevanti", any(m.get("action") == "mark" and m.get("kind") == "important" for m in marked), marked)
+    # the first key of a question asks Hevanti for a picture of the screen of that moment - once per question
+    marked.clear()
+    mini.fill("textarea", "מ")
+    mini.wait_for_timeout(200)
+    mini.fill("textarea", "מה זה")
+    mini.wait_for_timeout(300)
+    check("floating window: the first key of a question asks for a picture (once)", [m.get("action") for m in marked].count("snap_question") == 1, marked)
+    mini.fill("textarea", "")
+    # "what I missed": three buttons, each a ready question over the last 3 / 7 / 15 minutes
+    asked = []
+    mini.route("**/api/ask", lambda r: (asked.append(json.loads(r.request.post_data or "{}")), r.fulfill(status=200, content_type="text/plain", body="סיכום"))[1])
+    mini.evaluate("BZMAsk.setBuiltin(true); document.querySelector('#miss').hidden = false")
+    check("floating window: three 'what I missed' buttons", mini.evaluate("[...document.querySelectorAll('#miss button')].map(b => b.dataset.m).join()") == "3,7,15")
+    for n in (3, 7, 15):
+        mini.click(f"#miss button[data-m='{n}']")
+        mini.wait_for_timeout(600)
+    check("floating window: each sends its minutes, from the small window, with a ready question",
+          [a.get("minutes") for a in asked] == [3, 7, 15] and all(a.get("where") == "mini" and "פספסתי" in a.get("question", "") for a in asked), asked)
+    check("floating window: a ready question does not ask for a picture of its own", [m.get("action") for m in marked].count("snap_question") == 1, marked)
     # an AI chosen in the floating window: the window goes away (it stays on top, the AI would open behind it)
     marked.clear()
     mini.evaluate("BZMAsk.setBuiltin(false)")

@@ -274,7 +274,8 @@ SCREEN_BIG_FRAC = 0.15   # >=15% of the screen changed = new slide / page
 SCREEN_BIG_GAP_S = 5     #   ...save at most every 5 s
 SCREEN_SMALL_FRAC = 0.03 # >=3% changed = new writing, small change
 SCREEN_SMALL_GAP_S = 30  #   ...save at most every 30 s (avoids saving every frame of a video)
-YT_SETTLE_S = 1.2        # a video: wait this long after a change before saving (a seek is reported by then)
+SNAP_GAP_S = 8           # a picture when a question begins: at most this often (see ScreenWatcher.request_snapshot)
+YT_SETTLE_S = 1.2       # a video: wait this long after a change before saving (a seek is reported by then)
 # ------------------------------------------
 
 try:
@@ -1225,7 +1226,7 @@ def mask_windows(arr, area, wins=None):
 # A mosaic (big blocks), not a soft blur: a soft blur can be sharpened back into text.
 CAPTURE_MODES = ("screen", "window", "region")
 PAUSE_HOTKEY = "Ctrl+Alt+P"
-MARK_HOTKEY = "Ctrl+Alt+M"    # mark "לא הבנתי" in a live lecture (2.2)
+MARK_HOTKEY = "Ctrl+Alt+M"    # mark ★ in a live lecture (2.2; only ★ since 2.13 - "לא הבנתי" marks of older lectures are still read)
 MINI_HOTKEY = "Ctrl+Alt+Q"    # the small question window: show / hide, over a full-screen lecture too
 SHELL_TITLES = {"program manager", "windows input experience", "microsoft text input application", "settings"}
 
@@ -1417,8 +1418,8 @@ class PauseHotkey(threading.Thread):
             pass
 
     def mark(self):
-        r = APP.mark_moment("lost")
-        log("סומן: לא הבנתי. אחרי ההרצאה אפשר לבקש מה-AI הסבר לכל הרגעים שסימנת." if r.get("ok") else r.get("error", ""))
+        r = APP.mark_moment("important")
+        log("סומן ★. אחרי ההרצאה אפשר לבקש מה-AI הסבר לכל הרגעים שסימנת." if r.get("ok") else r.get("error", ""))
         try:
             import winsound
             winsound.Beep(800, 90)
@@ -2558,13 +2559,16 @@ class SlideJudge:
     half minute all lecture long. Now, on a small (1/16) grey copy of each look (every 3 s):
     - spots that keep changing between looks (a video of the lecturer, a clock, a playing clip) are learned and
       ignored - only the "calm" part of the screen counts;
-    - a new slide/page (15%+ of the calm part changed) is saved once it has settled (no half-drawn transition);
+    - a new slide/page (15%+ of the calm part changed) is saved only when it is STABLE: it has not moved for STABLE
+      looks in a row (about 6 s) - not in the middle of a transition, an animation or a page being scrolled. A slide
+      that stays on the screen only a moment is not a slide to keep (and one that never settles is saved when it does);
     - writing on the board (3-15%) is saved when the writer pauses (two still looks), at most every 45 s;
     - and the board just BEFORE it changes (erased, or the next slide) is saved too, if it had writing not saved yet -
       the most complete version of the board;
     - a picture like one of the last 8 saved (going back and forth between slides) is not saved again."""
     BIG, SMALL, SAME, STILL = 0.15, 0.03, 0.02, 0.005
-    PREV = 0.01           # the board before it changes is kept from 1% of new writing (one more line counts)
+    STABLE = 2            # a new slide is saved after this many calm looks in a row (2 x 3 s; before 2.13: one)
+    PREV = 0.01          # the board before it changes is kept from 1% of new writing (one more line counts)
     WRITE_GAP_S = 45      # writing: at most one picture this often
     VIDEO_GAP_S = 60      # most of the screen is a video: at most one picture a minute
 
@@ -2623,7 +2627,7 @@ class SlideJudge:
                 self.recent.append(prev_small)
                 self.saved, self.prev_kept = prev_small, True
                 since = self._diff(small, self.saved, calm, n)
-            if self.still >= 1 and since >= self.BIG:
+            if self.still >= self.STABLE and since >= self.BIG:
                 if any(self._diff(small, r, calm, n) < self.SAME for r in self.recent):
                     self.saved = small   # back to a slide that was already saved
                 else:
@@ -2642,6 +2646,19 @@ class SlideJudge:
         self.prev_kept = True
         return out
 
+    def snapshot(self, small, now):
+        """A question is being typed: this moment is worth a picture of its own (what the student is looking at while
+        asking - maybe not yet stable, or writing too small to count). False when it is the picture saved last."""
+        if self.saved is not None and self.saved.shape == small.shape and \
+                self._diff(small, self.saved, np.ones(small.shape, bool), small.size) < self.SAME:
+            return False
+        self.last = small
+        if self.motion is None or self.motion.shape != small.shape:
+            self.motion = np.zeros(small.shape, np.float32)
+        self.prev_since = 0.0
+        self._keep(small, now, [])
+        return True
+
 
 class ScreenWatcher(threading.Thread):
     """Saves into the lecture's "שקופיות" folder. The transcript says "שקופיות/<file>" (the lecture folder can
@@ -2656,8 +2673,21 @@ class ScreenWatcher(threading.Thread):
         self.write_line = write_line
         self.on_shot = on_shot
         self.stop_evt = threading.Event()
+        self.wake = threading.Event()   # a snapshot was asked for (or stop): look now, not in 3 s
+        self.snap_at = 0.0              # when a question began (a live lecture: the picture of that moment is kept); 0 once taken
+        self.snap_asked = 0.0           # the last time one was asked for (not more often than SNAP_GAP_S)
         self.count = 0
         self.mask_ok = True   # paint over the AI's and Hevanti's own windows (see mask_windows)
+
+    def request_snapshot(self):
+        """The student began to type a question: keep a picture of this moment (at the next look - at once)."""
+        self.snap_at = self.snap_asked = time.time()
+        self.wake.set()
+
+    def _idle(self):
+        """Wait for the next look - or for a snapshot request or the end."""
+        self.wake.wait(SCREEN_CHECK_S)
+        self.wake.clear()
 
     def run(self):
         try:
@@ -2685,14 +2715,14 @@ class ScreenWatcher(threading.Thread):
                     try:
                         paused, mode, want, box, blur = cap.snapshot()
                         if paused:   # the student paused it: nothing is looked at, nothing is saved
-                            resume = True
-                            self.stop_evt.wait(SCREEN_CHECK_S)
+                            resume, self.snap_at = True, 0.0
+                            self._idle()
                             continue
                         area, cover = mon, []
                         if self.region_fn is not None:
                             r = self.region_fn()
                             if r is None:
-                                self.stop_evt.wait(SCREEN_CHECK_S)
+                                self._idle()
                                 continue
                             area = mon if r == "screen" else r
                         elif mode != "screen":
@@ -2701,7 +2731,7 @@ class ScreenWatcher(threading.Thread):
                             if area is None:   # the window is not on the screen / nothing chosen yet: no picture
                                 prev, before = None, None
                                 judge.reset()
-                                self.stop_evt.wait(SCREEN_CHECK_S)
+                                self._idle()
                                 continue
                         shot = sct.grab(area)
                         arr = np.frombuffer(shot.bgra, dtype=np.uint8).reshape(shot.height, shot.width, 4)
@@ -2725,16 +2755,23 @@ class ScreenWatcher(threading.Thread):
                         if resume:   # after a pause: only a new starting point - what was on screen then is not saved
                             prev, resume, before = small, False, None
                             judge.start_from(small)
-                            self.stop_evt.wait(SCREEN_CHECK_S)
+                            self._idle()
                             continue
                         if self.region_fn is None:   # a live lecture: SlideJudge decides
+                            if self.snap_at and now - self.snap_at < 10:   # a question is being typed: this moment too
+                                self.snap_at = 0.0
+                                if judge.snapshot(small, now):
+                                    self._save(shot, Image, mss.tools, now, pixels)
+                                    before = (shot, now, pixels)
+                                    self._idle()
+                                    continue
                             for which in judge.look(small, now):
                                 if which == "prev" and before is not None:
                                     self._save(before[0], Image, mss.tools, before[1], before[2])
                                 elif which == "cur":
                                     self._save(shot, Image, mss.tools, now, pixels)
                             before = (shot, now, pixels)
-                            self.stop_evt.wait(SCREEN_CHECK_S)
+                            self._idle()
                             continue
                         frac = changed_fraction(small, prev)
                         gap = now - last_save
@@ -2743,20 +2780,25 @@ class ScreenWatcher(threading.Thread):
                             if self.region_fn is not None:
                                 # a video: the change may be a jump to another part (seek) that the page reports
                                 # a moment later - look again then, and save only if this part still needs it
+                                small0 = small
                                 self.stop_evt.wait(YT_SETTLE_S)
                                 r2 = self.region_fn()
                                 if r2 is None:
                                     prev = small    # a part that already has its slides: not a new one
-                                    self.stop_evt.wait(SCREEN_CHECK_S)
+                                    self._idle()
                                     continue
                                 shot = sct.grab(mon if r2 == "screen" else r2)
                                 arr = np.frombuffer(shot.bgra, dtype=np.uint8).reshape(shot.height, shot.width, 4)
                                 small, now = arr[::16, ::16, :3].astype(np.int16).mean(axis=2), time.time()
+                                if changed_fraction(small, small0) >= SCREEN_SMALL_FRAC:
+                                    # still moving (a transition, a page being scrolled): not stable yet - the next look tries again
+                                    self._idle()
+                                    continue
                             self._save(shot, Image, mss.tools, now, pixels)
                             prev, last_save = small, now
                     except Exception as e:
                         log(f"צילום מסך נכשל פעם אחת ({e.__class__.__name__})")
-                    self.stop_evt.wait(SCREEN_CHECK_S)
+                    self._idle()
                 # the lecture ended in the middle of writing: keep the last board too
                 if self.region_fn is None and before is not None and not cap.snapshot()[0] \
                         and judge.prev_since >= SlideJudge.PREV and not judge.prev_kept:
@@ -2793,6 +2835,7 @@ class ScreenWatcher(threading.Thread):
 
     def stop(self):
         self.stop_evt.set()
+        self.wake.set()
 
 
 # ---------- now_watching.txt: what is happening right now, for the AI ----------
@@ -4929,7 +4972,17 @@ def _rec_shot_before(rec, pos):
     return best
 
 
-def _earlier_slides_text(pairs):
+ASK_MINUTES = 5   # what a question in the small window is sent with: the last 5 minutes (the "what I missed" buttons: 3, 7, 15)
+MISSED_MINUTES = (3, 7, 15)
+
+
+def missed_question(minutes):
+    """The ready question of the "what I missed" buttons of the small window."""
+    return (f"פספסתי את {minutes} הדקות האחרונות של ההרצאה. תסכם לי מה נאמר בהן: הרעיון המרכזי, הגדרות ומושגים חדשים, "
+            "מה היה על השקף או הלוח, ומה חשוב שאבין כדי להמשיך לעקוב עכשיו. קצר וברור, לפי הסדר - אני באמצע ההרצאה.")
+
+
+def _earlier_slides_text(pairs, minutes=ASK_MINUTES):
     """pairs: [(time label, slide text)] of the slides shown BEFORE the minutes that are sent, oldest first. The newest 12
     that have text, at most ~8000 characters: the lecturer often builds on something shown earlier without saying so."""
     body, left = "", 8000
@@ -4938,18 +4991,19 @@ def _earlier_slides_text(pairs):
         if t and len(t) <= left:
             left -= len(t)
             body += f"[{label}] {t}\n"
-    return ("\nמה הופיע על השקופיות והלוח קודם בהרצאה (לפני 5 הדקות האחרונות), מהישנה לחדשה. המרצה אולי מתבסס על זה בלי להגיד:\n"
+    return (f"\nמה הופיע על השקופיות והלוח קודם בהרצאה (לפני {minutes} הדקות האחרונות), מהישנה לחדשה. המרצה אולי מתבסס על זה בלי להגיד:\n"
             + body) if body else ""
 
 
-def _mini_context_rec(rec, q, hint):
+def _mini_context_rec(rec, q, hint, minutes=ASK_MINUTES):
     """A recording: what was said in the 5 minutes before the place the student is at (as the player reports it)."""
     pos = float(rec.pos or 0.0)
+    span = minutes * 60
     with rec.lock:
-        items = [(t, k, v) for t, k, v in rec.items() if pos - 300 <= t <= pos + 0.5]
+        items = [(t, k, v) for t, k, v in rec.items() if pos - span <= t <= pos + 0.5]
         title, dur = rec.stem, rec.duration
     out = (f'אני צופה בהקלטה של הרצאה: "{title}". אני עכשיו ב-{hms(pos)} מתוך {hms(dur)}.\n'
-           "זה התמלול האוטומטי של 5 הדקות האחרונות (יכולות להיות בו טעויות תמלול):\n\n")
+           f"זה התמלול האוטומטי של {minutes} הדקות האחרונות (יכולות להיות בו טעויות תמלול):\n\n")
     shots = [v for _, k, v in items if k == "shot"][-3:]
     texts = {}
     for name in shots:
@@ -4969,27 +5023,28 @@ def _mini_context_rec(rec, q, hint):
     if not n:
         out += "(עוד אין תמלול לקטע הזה)\n"
     with rec.lock:
-        before = [(t, v) for t, k, v in rec.items() if k == "shot" and t < pos - 300][-12:]
-    out += _earlier_slides_text([(hms(t), slide_text(os.path.join(rec.shots_dir, v))) for t, v in before])
+        before = [(t, v) for t, k, v in rec.items() if k == "shot" and t < pos - span][-12:]
+    out += _earlier_slides_text([(hms(t), slide_text(os.path.join(rec.shots_dir, v))) for t, v in before], minutes)
     return out + hint + "\nהשאלה שלי: " + q
 
 
-def mini_context(q):
+def mini_context(q, minutes=ASK_MINUTES):
     """What the small window sends with the question: the last 5 minutes of the live lecture (and what was on the
-    slides), the same as the lecture page sends."""
+    slides), the same as the lecture page sends. The "what I missed" buttons: the last 3, 7 or 15 minutes."""
     hint = "\nלענות בעברית (מונחים מקצועיים אפשר באנגלית). מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.\n"
     live = APP.live
+    span = minutes * 60
     if live is None and APP.rec is not None:
-        return _mini_context_rec(APP.rec, q, hint)
+        return _mini_context_rec(APP.rec, q, hint, minutes)
     if live is None:
         return "(אין עכשיו הרצאה פעילה)\n" + hint + "\nהשאלה שלי: " + q
     yt = bool(getattr(live, "yt", False))
     with live.lock:
         if yt:
             pos = live.clock.now()[0]
-            items, draft = [(t, x) for t, x in live.all if pos - 300 <= t <= pos + 5], ""
+            items, draft = [(t, x) for t, x in live.all if pos - span <= t <= pos + 5], ""
         else:
-            cut = time.time() - 300
+            cut = time.time() - span
             items, draft = [(t, x) for t, x in live.all if t >= cut], live.draft or ""
     tag = "[צילום מסך: "
     shots = [x for _, x in items if x.startswith(tag)][-3:]
@@ -5000,7 +5055,7 @@ def mini_context(q):
             texts[x] = slide_text(f)[:700].replace("\n", " | ") if f else ""
         except Exception:
             texts[x] = ""
-    out = "אני בהרצאה חיה. זה התמלול האוטומטי של 5 הדקות האחרונות (יכולות להיות בו טעויות תמלול):\n\n"
+    out = f"אני בהרצאה חיה. זה התמלול האוטומטי של {minutes} הדקות האחרונות (יכולות להיות בו טעויות תמלול):\n\n"
     for t, x in items:
         c = hms(t) if yt else datetime.datetime.fromtimestamp(t).strftime("%H:%M:%S")
         if x.startswith(tag):
@@ -5014,13 +5069,13 @@ def mini_context(q):
     if not items and not draft:
         out += "(עוד אין תמלול)\n"
     with live.lock:
-        lo = (pos - 300) if yt else (time.time() - 300)
+        lo = (pos - span) if yt else (time.time() - span)
         older = [(t, x) for t, x in live.all if t < lo and x.startswith(tag)][-12:]
     pairs = []
     for t, x in older:
         f = safe_shot(x[len(tag):-1])
         pairs.append((hms(t) if yt else datetime.datetime.fromtimestamp(t).strftime("%H:%M:%S"), slide_text(f) if f else ""))
-    out += _earlier_slides_text(pairs)
+    out += _earlier_slides_text(pairs, minutes)
     return out + hint + "\nהשאלה שלי: " + q
 
 
@@ -6468,6 +6523,7 @@ class VideoSlides(threading.Thread):
             if keyonly:
                 vs.codec_context.skip_frame = "NONKEY"
             ref, last_save, last_look, t = None, -1e9, -1e9, 0.0
+            cand = None   # (picture, small look, time): a change waits one look and is saved only if it is the same then - stable
             for fr in c.decode(vs):
                 if self.stop_evt.is_set():
                     break
@@ -6479,15 +6535,24 @@ class VideoSlides(threading.Thread):
                 last_look = t
                 small = fr.reformat(width=max(1, fr.width // 16), height=max(1, fr.height // 16),
                                     format="gray").to_ndarray().astype(np.int16)
+                if cand is not None:
+                    if changed_fraction(small, cand[1]) < SCREEN_SMALL_FRAC:   # the same one look later: a stable slide
+                        self._save_slide(*cand)
+                        ref, last_save = cand[1], cand[2]
+                    cand = None   # (otherwise it was a transition or an animation: not a slide)
                 frac = changed_fraction(small, ref)
                 gap = t - last_save
                 if (frac >= SCREEN_BIG_FRAC and gap >= SCREEN_BIG_GAP_S) or \
                    (frac >= SCREEN_SMALL_FRAC and gap >= SCREEN_SMALL_GAP_S):
-                    name = hms(t).replace(":", "-") + ".jpg"
-                    fr.to_image().save(os.path.join(self.rec.shots_dir, name), "JPEG", quality=80)
-                    ref, last_save = small, t
-                    self.rec.add_shot(t, name)
-                    ocr_add(os.path.join(self.rec.shots_dir, name), words_to_model=False)
+                    cand = (fr.to_image(), small, t)
+            if cand is not None and not self.stop_evt.is_set():   # the last look of the video: nothing comes after it to move
+                self._save_slide(*cand)
+
+    def _save_slide(self, img, small, t):
+        name = hms(t).replace(":", "-") + ".jpg"
+        img.save(os.path.join(self.rec.shots_dir, name), "JPEG", quality=80)
+        self.rec.add_shot(t, name)
+        ocr_add(os.path.join(self.rec.shots_dir, name), words_to_model=False)
 
     def stop(self):
         self.stop_evt.set()
@@ -6779,6 +6844,16 @@ class App:
         if a == "capture_pause":
             cap = capture_control()
             return {"ok": True, "paused": cap.set_paused(d["on"] if "on" in d else not cap.paused)}
+        if a == "snap_question":   # the student began to type a question: a picture of this moment (a live lecture)
+            with self.lock:
+                s = self.session
+            w = getattr(s, "watcher", None) if s is not None and not s.done and s.kind == "live" else None
+            if w is None or getattr(w, "region_fn", None) is not None:   # (a YouTube video: the page that asks sends its picture)
+                return {"ok": False}
+            if time.time() - w.snap_asked < SNAP_GAP_S:   # one picture per question: not for every key
+                return {"ok": True, "skipped": True}
+            w.request_snapshot()
+            return {"ok": True}
         if a == "capture_windows":
             return {"ok": True, "windows": window_choices()}
         if a == "capture_preview":
@@ -6833,8 +6908,9 @@ class App:
         return {"ok": False, "error": "פקודה לא מוכרת"}
 
     def mark_moment(self, kind):
-        """Mark this moment of the live lecture: "לא הבנתי" (lost) or "חשוב" (important)."""
-        kind = "חשוב" if kind == "important" else "לא הבנתי"
+        """Mark this moment of the live lecture with ★ ("חשוב" in the files). Only ★ is made now; `kind` is accepted
+        for an older page that still sends "lost" - it too becomes ★."""
+        kind = "חשוב"
         with self.lock:
             s = self.session
             rec = self.rec
@@ -7800,11 +7876,17 @@ def _app_handler():
             reader = math_reader()
             try:
                 if d.get("where") == "mini":   # the small window: the server knows what was said
+                    try:   # "what I missed" (3 / 7 / 15 minutes): a ready question over more minutes than the usual 5
+                        minutes = int(d.get("minutes") or 0)
+                    except (TypeError, ValueError):
+                        minutes = 0
+                    minutes = min(minutes, 30) if minutes > 0 else 0
+                    question = missed_question(minutes) if minutes else str(d.get("question") or "")
                     if APP.live is None and APP.rec is not None:   # a recording: the place the player reports
-                        d = dict(d, context=mini_context(str(d.get("question") or "")), where="rec",
+                        d = dict(d, context=mini_context(question, minutes or ASK_MINUTES), where="rec", question=question,
                                  n=_rec_shot_before(APP.rec, float(APP.rec.pos or 0.0)))
                     else:
-                        d = dict(d, context=mini_context(str(d.get("question") or "")),
+                        d = dict(d, context=mini_context(question, minutes or ASK_MINUTES), question=question,
                                  where="yt" if getattr(APP.live, "yt", False) else "live")
                 elif d.get("where") == "live" and APP.live is not None:
                     note = APP.live.missing_note()   # (the page built the context: say what it cannot have)
@@ -8551,14 +8633,15 @@ def run_live(sess, lang, course=""):
         log("צילום מסך כבוי - רק תמלול")
     if not yt:
         def mark(kind):
-            """The student marked this moment ("לא הבנתי" / "חשוב"): a line in the transcript - the AI sees it too."""
+            """The student marked this moment (★ = "חשוב"): a line in the transcript - the AI sees it too."""
             t = time.time()
             text = f"[סימון: {kind}]"
             write_line(f"[{datetime.datetime.fromtimestamp(t):%H:%M:%S} | "
                        f"+{datetime.timedelta(seconds=int(max(0, t - start.timestamp())))}] {text}")
             now_file.add(t, text)
         sess.mark_fn = mark
-    hotkey = PauseHotkey()   # Ctrl+Alt+P: pause the pictures, Ctrl+Alt+M: mark "לא הבנתי"
+    sess.watcher = watcher   # a question begun in the small window / the page asks it for a picture (App.command: snap_question)
+    hotkey = PauseHotkey()   # Ctrl+Alt+P: pause the pictures, Ctrl+Alt+M: mark ★
     hotkey.start()
     sess.hotkey = hotkey
     ended = [False]

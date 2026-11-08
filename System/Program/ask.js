@@ -213,7 +213,7 @@
     newBtn.addEventListener("click", () => { hist.length = 0; conv.replaceChildren(); convbar.hidden = true; });
     convbar.append(newBtn, mk("span", "hint", "התשובות נשמרות בתיקיית ההרצאה, ב\"שאלות ותשובות.md\"."));
     const hist = [];
-    let busy = false, ctl = null;
+    let busy = false, ctl = null, typing = false;   // typing: a question was begun (and its picture asked for)
     function setBusy(on) {
       busy = on; here.textContent = on ? "■ עצירה" : "תשובה כאן"; here.classList.toggle("stop", on);
     }
@@ -234,6 +234,7 @@
     async function askHere(q, extra) {
       extra = extra || {};
       if (busy) { opts.toast("עוד עונה על השאלה הקודמת."); return; }
+      typing = false;   // (the next question's first key takes a picture again)
       q = String(q || "").trim();
       const shown = extra.title || q || "תסביר בפשטות את מה שנאמר עכשיו";
       let context = "";
@@ -245,7 +246,7 @@
       const follow = () => { if (opts.compact) conv.scrollTop = qa.offsetTop - conv.offsetTop - 4; else conv.scrollTop = conv.scrollHeight; };
       follow();
       const val = f => { try { return (f && f()) || ""; } catch (e) { return ""; } };
-      const body = {context, question: shown, history: hist.slice(-6), task: extra.task || "",
+      const body = {context, question: shown, history: hist.slice(-6), task: extra.task || "", minutes: extra.minutes || 0,
         where: val(opts.where), f: val(opts.lecture), img: val(opts.image), n: val(opts.shotName), at: val(opts.at)};
       setBusy(true); ctl = new AbortController();
       let text = "";
@@ -338,13 +339,22 @@
         : "הועתק ונפתח " + a.name + " בשליש המסך. להדביק (Ctrl+V) ולשלוח.") + img);
       return true;
     }
-    async function send(a) { const q = ta.value.trim(); if (await sendQ(a, q)) ta.value = ""; }
+    async function send(a) { const q = ta.value.trim(); if (await sendQ(a, q)) { ta.value = ""; typing = false; } }
     for (const a of AIS) {
       const bt = mk("button", "", a.name); bt.type = "button"; bt.dataset.ai = a.id;
       bt.title = "מעתיק את השאלה עם ההקשר ופותח את " + a.name + " (האפליקציה אם היא מותקנת, אחרת האתר)";
       bt.addEventListener("click", () => send(a));
       buttons[a.id] = bt; row.appendChild(bt);
     }
+    // The first key of a question: Hevanti keeps a picture of the screen of this moment (a live lecture) - the slide the
+    // question is about may not have been saved yet, or the lecturer may move on while one types.
+    ta.addEventListener("input", () => {
+      if (!ta.value.trim()) { typing = false; return; }
+      if (typing) return;
+      typing = true;
+      fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
+        body: JSON.stringify({action: "snap_question"})}).catch(() => {});
+    });
     ta.addEventListener("keydown", e => {
       // Enter sends (Shift+Enter is a new line); Ctrl+Enter sends too
       if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
@@ -357,7 +367,9 @@
     refresh();
     // like a chat: the conversation first (it grows downward), the box to write in under it
     box.append(head, planBox, conn, conv, convbar, ta, row, chips, hint);
-    return {focus: () => ta.focus(), textarea: ta, refresh, askHere, builtin: hereDefault};
+    // a question made ready (a button of the page): for the built-in answer straight away, otherwise written in the box
+    function ask(q, extra) { if (hereDefault()) askHere(q, extra); else { ta.value = q; ta.focus(); } }
+    return {focus: () => ta.focus(), textarea: ta, refresh, askHere, ask, builtin: hereDefault};
   }
   // open an AI for the course page's "פתיחה בשליש": the course's project link, the connected app, or the site
   async function openFor(id, link) {

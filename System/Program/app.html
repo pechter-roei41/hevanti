@@ -550,8 +550,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="livebar">
       <button class="btn ghost back" type="button" data-home>→ למסך הבית</button>
       <div class="what"><b id="liveWhat">הרצאה חיה</b><small id="liveSub">טוען...</small></div>
-      <button class="btn ghost" id="markLost" type="button" title="מסמן את הרגע הזה בתמלול. אחרי ההרצאה ה-AI יסביר את כל הרגעים שסימנת. גם Ctrl+Alt+M מכל תוכנה.">❓ לא הבנתי</button>
-      <button class="btn ghost" id="markImp" type="button" title="מסמן את הרגע הזה בתמלול כחשוב">⭐ חשוב</button>
+      <button class="btn ghost" id="markImp" type="button" title="מסמן את הרגע הזה בתמלול. אחרי ההרצאה ה-AI יסביר את כל הרגעים שסימנת. גם Ctrl+Alt+M מכל תוכנה.">⭐ סימון</button>
       <button class="btn" type="button" data-float title="חלון קטן לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">חלון שאלות קטן</button>
       <button class="btn ghost" id="liveStop" type="button">עצירה</button>
     </div>
@@ -628,7 +627,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="ppanel" id="pastPanelMarks" hidden>
       <div class="card">
         <h2>הרגעים שסימנתי</h2>
-        <p class="sub">★ חשוב, ? לא הבנתי. לכל סימון מופיע מה נאמר רגע לפניו. "בתמלול" קופץ אל הרגע הזה.</p>
+        <p class="sub">★ רגע שסימנת (בהרצאות ישנות יכול להופיע גם ? "לא הבנתי"). לכל סימון מופיע מה נאמר רגע לפניו. "בתמלול" קופץ אל הרגע הזה.</p>
         <div class="row"><button class="btn small" id="pastMarksAsk" type="button">הסבר לכל הרגעים (AI)</button></div>
         <div id="pastMkList" class="mklist"></div>
       </div>
@@ -695,7 +694,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     </div>
     <div class="cpanel card" data-cp="marks" hidden>
       <h2>הרגעים שסימנתי</h2>
-      <p class="sub">בחלון השאלות הקטן, ★ מסמן "חשוב" ו-? מסמן "לא הבנתי". כאן יש את כל הסימונים מכל ההרצאות של הקורס. לחיצה על "פתיחה" מפתחת את ההרצאה בדיוק ברגע הזה.</p>
+      <p class="sub">בחלון השאלות הקטן, ★ מסמן את הרגע (גם Ctrl+Alt+M מכל תוכנה). כאן יש את כל הסימונים מכל ההרצאות של הקורס. לחיצה על "פתיחה" מפתחת את ההרצאה בדיוק ברגע הזה.</p>
       <div class="row"><button class="btn small" id="marksAsk" type="button" hidden>הסבר לכל הרגעים (AI)</button></div>
       <div class="mklist" id="mkList"></div>
       <div id="cAsk"></div>
@@ -736,7 +735,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <li><button type="button" data-t="33"><b>0:33</b> פותחים את החלון הצף וכותבים שאלה</button></li>
       <li><button type="button" data-t="49"><b>0:49</b> התשובה, עם גלילה עד הסוף</button></li>
       <li><button type="button" data-t="55"><b>0:55</b> שאלת המשך, עם נוסחאות</button></li>
-      <li><button type="button" data-t="74"><b>1:14</b> מסמנים ★ חשוב או ? לא הבנתי</button></li>
+      <li><button type="button" data-t="74"><b>1:14</b> מסמנים ★ רגע חשוב</button></li>
       <li><button type="button" data-t="80"><b>1:20</b> מסתירים את החלון והכפתור חוזר</button></li>
       <li><button type="button" data-t="86"><b>1:26</b> אחרי ההרצאה: הרגעים שסימנת בדף הקורס</button></li>
     </ol>
@@ -840,7 +839,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <label><input type="checkbox" id="a11yContrast"><span><b>ניגודיות גבוהה.</b> טקסט משני כהה כמו הראשי, מסגרות עבות וסימון בולט של המקום במקלדת.</span></label>
   <label><input type="checkbox" id="a11yStill"><span><b>בלי אנימציות ותנועה.</b></span></label>
   <label><input type="checkbox" id="a11ySay"><span><b>הקראת שורות חדשות לקורא מסך</b> (NVDA, JAWS, Narrator) בזמן הרצאה חיה.</span></label>
-  <p class="sub" style="margin:0"><b>כתוביות גדולות:</b> בחלון הצף, הכפתור "כתוביות". <b>קיצורים מכל תוכנה</b> (Windows): <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd> השהיית הצילום, <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>M</kbd> סימון "לא הבנתי".</p>
+  <p class="sub" style="margin:0"><b>כתוביות גדולות:</b> בחלון הצף, הכפתור "כתוביות". <b>קיצורים מכל תוכנה</b> (Windows): <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd> השהיית הצילום, <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>M</kbd> סימון ★.</p>
   <div class="row"><button class="btn" id="a11yClose" type="button">סגירה</button></div>
 </div></div>
 <div class="sr-only" id="srLive" aria-live="polite"></div>
@@ -1212,12 +1211,11 @@ $("#pastMath").addEventListener("click", async () => {
   toast(r.queued ? "נשלחו " + r.queued + " שקופיות לקריאה. זה לוקח בערך " + Math.max(1, Math.round(r.queued * 7 / 60)) + " דקות. אחר כך לפתוח שוב את ההרצאה." : "כל השקופיות כבר נקראו.");
 });
 
-// ---------- marking a moment in a live lecture: "לא הבנתי" / "חשוב" (also Ctrl+Alt+M) ----------
+// ---------- marking a moment in a live lecture: ★ (also Ctrl+Alt+M). Only ★ now: older "? לא הבנתי" marks are still read ----------
 async function markMoment(kind, say) {
-  let r; try { r = await api("/api/cmd", {action: "mark", kind}); } catch (e) { r = {ok: false}; }
-  (say || toast)(r.ok ? (kind === "important" ? "סומן כחשוב." : "סומן: לא הבנתי. אחרי ההרצאה: \"הסבר לרגעים שסימנתי\".") : (r.error || "לא הצלחתי לסמן."));
+  let r; try { r = await api("/api/cmd", {action: "mark", kind: "important"}); } catch (e) { r = {ok: false}; }
+  (say || toast)(r.ok ? "★ סומן. אחרי ההרצאה: \"הסבר לרגעים שסימנתי\"." : (r.error || "לא הצלחתי לסמן."));
 }
-$("#markLost").addEventListener("click", () => markMoment("lost"));
 $("#markImp").addEventListener("click", () => markMoment("important"));
 const MARK_RE = /^\[סימון: (.+)\]$/;
 // a marked moment: live lines bring it as text "[סימון: ...]", a saved lecture as a note "סימון: ..."
@@ -1896,7 +1894,7 @@ document.querySelectorAll("#cTabs [data-ct]").forEach(b =>
   b.addEventListener("click", () => setCTab(b.dataset.ct)));
 function drawGlCount() { const n = $("#glossIn").value.split(/\n+/).filter(x => x.trim()).length; $("#ctGl").textContent = n ? n + " מונחים" : "עוד ריק"; }
 $("#glossIn").addEventListener("input", drawGlCount);
-// the marked moments of the course ("לא הבנתי" and "חשוב", set in the small window or with Ctrl+Alt+M)
+// the marked moments of the course (★, set in the small window or with Ctrl+Alt+M; older lectures may also hold "לא הבנתי" marks)
 let courseMarks = [];
 async function drawMarks(name) {
   let r; try { r = await api("/api/marks?c=" + encodeURIComponent(name)); } catch (e) { r = {marks: []}; }
@@ -1906,7 +1904,7 @@ async function drawMarks(name) {
   $("#ctMarks").textContent = courseMarks.length ? (lost ? lost + " ? " : "") + (imp ? imp + " ★" : "") : "עוד אין";
   $("#marksAsk").hidden = !courseMarks.length;
   const box = $("#mkList");
-  if (!courseMarks.length) { box.replaceChildren(el("p", "sub", "עוד לא סימנת רגעים. בהרצאה חיה, ★ ו-? בחלון השאלות הקטן מסמנים את הרגע (גם Ctrl+Alt+M ל-\"לא הבנתי\").")); return; }
+  if (!courseMarks.length) { box.replaceChildren(el("p", "sub", "עוד לא סימנת רגעים. בהרצאה חיה, ★ בחלון השאלות הקטן מסמן את הרגע (גם Ctrl+Alt+M).")); return; }
   box.replaceChildren(...courseMarks.map(m => {
     const lostM = m.kind !== "חשוב", row = el("div", "mk");
     const ic = el("span", "ic " + (lostM ? "lost" : "imp"), lostM ? "?" : "★");
@@ -1919,7 +1917,7 @@ async function drawMarks(name) {
 $("#marksAsk").addEventListener("click", () => {
   if (!courseAsk || !courseMarks.length) return;
   const list = courseMarks.map(m => "- [" + m.kind + "] " + m.title + ", " + m.c + (m.said ? ": " + m.said : "")).join("\n");
-  courseAsk.textarea.value = "אלה הרגעים שסימנתי בקורס:\n" + list + "\n\nלכל \"לא הבנתי\": תסביר בפשטות מה נאמר ברגע הזה, עם דוגמה. לכל \"חשוב\": תסכם בשורה-שתיים למה זה חשוב. לפי הסדר.";
+  courseAsk.textarea.value = "אלה הרגעים שסימנתי בקורס:\n" + list + "\n\nלכל רגע: תסביר בפשטות מה נאמר בו, עם דוגמה, ולמה זה חשוב (בשורה-שתיים). לפי הסדר.";
   courseAsk.focus();
 });
 // the syllabus: uploaded once, read by Gemini (its terms and names go to the glossary: the transcription writes them correctly)
@@ -2031,7 +2029,7 @@ function renderLiveHead(s) {
   if (!s || s.kind !== "live") return;
   $("#liveWhat").textContent = sessionName(s);
   $("#liveStop").hidden = s.done;
-  $("#markLost").hidden = $("#markImp").hidden = s.done || !s.ready || !!s.yt;
+  $("#markImp").hidden = s.done || !s.ready || !!s.yt;
   if (s.error) { $("#liveSub").textContent = "נעצר בגלל שגיאה"; }
 }
 function lineEl(x) {
@@ -2268,7 +2266,7 @@ const STUDY = {
   summary: "תסכם את ההרצאה הזו: הרעיונות המרכזיים לפי הסדר, ההגדרות והנוסחאות (עם הסבר לכל סימן ויחידות), ובסוף שלושה דברים שחשוב לזכור למבחן. את כל הנוסחאות תכתוב ב-LaTeX: בתוך שורה בין $...$, ונוסחה חשובה בשורה משלה בין $$...$$. מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול: תתקן לפי ההקשר.",
   exam: "תכין לי מבחן דמה מההרצאה הזו: 6 שאלות מהקלה לקשה, בסגנון מבחן אמיתי. קודם רק השאלות. אחרי שאענה, תבדוק ותסביר כל פתרון צעד אחר צעד.",
   formulas: "תכין דף נוסחאות מההרצאה הזו: כל נוסחה, מה כל סימן אומר, יחידות, ומתי משתמשים בה. את הנוסחאות תכתוב ב-LaTeX: בתוך שורה בין $...$, ונוסחה בשורה משלה בין $$...$$.",
-  marks: "בתמלול יש שורות [סימון: לא הבנתי] ו-[סימון: חשוב] שסימנתי בזמן ההרצאה. לכל \"לא הבנתי\": תסביר בפשטות מה נאמר בדקה-שתיים שלפני הסימון, עם דוגמה. לכל \"חשוב\": תסכם בשורה-שתיים מה נאמר ולמה זה חשוב. לפי הסדר, עם השעה של כל סימון.",
+  marks: "בתמלול יש שורות [סימון: חשוב] (★) שסימנתי בזמן ההרצאה (בהרצאות ישנות גם [סימון: לא הבנתי]). לכל סימון: תסביר בפשטות מה נאמר בדקה-שתיים שלפני הסימון, עם דוגמה, ולמה זה חשוב. לפי הסדר, עם השעה של כל סימון.",
 };
 // Whole-lecture tasks are what uses the free quota most. With a free key the student chooses where they run:
 // inside Hevanti (the free Gemini quota) or in their own AI app (no quota). A paid plan starts on the app.
@@ -2528,8 +2526,8 @@ async function openFloat() {
   const capBtn = d.createElement("button"); capBtn.type = "button"; capBtn.className = "pbtn"; capBtn.textContent = "כתוביות";
   capBtn.title = "כתוביות גדולות: רק השורות האחרונות, באותיות גדולות. לחיצה נוספת מחזירה";
   capBtn.addEventListener("click", () => a11ySet("caps", !a11y.caps));
-  const markBtn = d.createElement("button"); markBtn.type = "button"; markBtn.className = "pbtn"; markBtn.textContent = "❓ לא הבנתי";
-  markBtn.title = "מסמן את הרגע הזה בתמלול (גם Ctrl+Alt+M)"; markBtn.addEventListener("click", () => markMoment("lost", pipToast));
+  const markBtn = d.createElement("button"); markBtn.type = "button"; markBtn.className = "pbtn"; markBtn.textContent = "⭐ סימון";
+  markBtn.title = "מסמן את הרגע הזה בתמלול (גם Ctrl+Alt+M)"; markBtn.addEventListener("click", () => markMoment("important", pipToast));
   markBtn.hidden = !!(app && app.session && app.session.yt);
   head.append(markBtn, capBtn);
   a11yApply(d, true); d.body.classList.toggle("caps", !!a11y.caps);

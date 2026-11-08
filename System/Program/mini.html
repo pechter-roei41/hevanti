@@ -29,6 +29,9 @@ header b{font-size:15px}
 #lec{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:700;color:var(--fg)}
 .hb{border:1px solid var(--line);background:none;border-radius:8px;padding:1px 10px;cursor:pointer;font-size:15px;line-height:1.4}
 .hb:hover{background:var(--accent-soft)}
+.miss{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 10px 0;font-size:13px;color:var(--muted)}
+.miss button{border:1px solid var(--accent);background:none;color:var(--accent);border-radius:999px;padding:1px 11px;cursor:pointer;font-size:13px;font-weight:600}
+.miss button:hover{background:var(--accent-soft)}
 #note{margin:8px 10px 0;padding:6px 10px;border-radius:10px;background:var(--warn-bg);color:var(--warn-fg);font-size:13px}
 #box{flex:1;min-height:0;padding:8px 10px 10px}
 #box.askp{display:flex;flex-direction:column;height:100%;gap:8px}
@@ -42,11 +45,16 @@ header b{font-size:15px}
 <body>
 <header>
   <span id="lec">אין עכשיו הרצאה פעילה</span>
- <button class="hb" id="markImp" type="button" title="סימון: חשוב" aria-label="סימון: חשוב">★</button>
- <button class="hb" id="markLost" type="button" title="סימון: לא הבנתי" aria-label="סימון: לא הבנתי">?</button>
+ <button class="hb" id="markImp" type="button" title="סימון ★ של הרגע הזה (Ctrl+Alt+M)" aria-label="סימון ★ של הרגע הזה">★</button>
  <button class="hb" id="hide" type="button" title="להסתיר (Ctrl+Alt+Q או Esc)" aria-label="להסתיר">—</button>
 </header>
 <div id="note" hidden>אין עכשיו הרצאה פעילה. מתחילים הרצאה או פותחים הקלטה באפליקציה, ואז אפשר לשאול כאן.</div>
+<div class="miss" id="miss" role="group" aria-label="מה פספסתי" hidden>
+  <span>מה פספסתי:</span>
+  <button type="button" data-m="3" title="סיכום של 3 הדקות האחרונות">3 דק'</button>
+  <button type="button" data-m="7" title="סיכום של 7 הדקות האחרונות">7 דק'</button>
+  <button type="button" data-m="15" title="סיכום של 15 הדקות האחרונות">15 דק'</button>
+</div>
 <div id="box"></div>
 <div id="toast" role="status"></div>
 <script src="/ask.js"></script>
@@ -61,18 +69,23 @@ function toast(t) {
 const hide = () => fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
   body: JSON.stringify({action: "hide_mini"})}).catch(() => {});
 $("#hide").addEventListener("click", hide);
-// mark this moment of the lecture (the course page then lists it): ★ important, ? did not understand
-async function mark(kind) {
+// mark this moment of the lecture with ★ (the course page then lists it)
+async function mark() {
   let r; try { r = await (await fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
-    body: JSON.stringify({action: "mark", kind})})).json(); } catch (e) { r = {ok: false}; }
-  toast(r.ok ? (kind === "important" ? "★ סומן כחשוב" : "? סומן: לא הבנתי") : (r.error || "לא הצלחתי לסמן."));
+    body: JSON.stringify({action: "mark", kind: "important"})})).json(); } catch (e) { r = {ok: false}; }
+  toast(r.ok ? "★ סומן" : (r.error || "לא הצלחתי לסמן."));
 }
-$("#markImp").addEventListener("click", () => mark("important"));
-$("#markLost").addEventListener("click", () => mark("lost"));
+$("#markImp").addEventListener("click", () => mark());
 let box = null;
 if (window.BZMAsk) box = BZMAsk.mount($("#box"), {compact: true, title: "שאלה", placeholder: "מה לא ברור? (Enter לשליחה)",
   context: q => q, toast, hasImage: () => !!shot, image: () => shot, where: () => "mini",
   at: () => new Date().toLocaleTimeString("he-IL")});
+// "what I missed": a ready question about the last 3 / 7 / 15 minutes (Hevanti sends them with it; see missed_question)
+for (const b of document.querySelectorAll("#miss button")) b.addEventListener("click", () => {
+  const n = +b.dataset.m;
+  if (box) box.ask("פספסתי את " + n + " הדקות האחרונות של ההרצאה. תסכם לי מה נאמר בהן ומה חשוב להבין כדי להמשיך לעקוב.",
+    {title: "מה פספסתי ב-" + n + " הדקות האחרונות?", minutes: n});
+});
 document.addEventListener("keydown", e => { if (e.key === "Escape") hide(); });
 window.addEventListener("focus", () => { if (box) box.focus(); });
 async function getJson(u) { return (await fetch(u, {cache: "no-store"})).json(); }
@@ -85,6 +98,7 @@ async function pollApp() {
     $("#lec").textContent = live ? kind + (s.course && s.course !== "ללא קורס" ? " - " + s.course : "") : "אין עכשיו הרצאה פעילה";
     kind0 = s ? s.kind : "";
     $("#note").hidden = live;
+    $("#miss").hidden = !live;
     if (window.BZMAsk) {
       BZMAsk.setConnected(d.connect); BZMAsk.setApps(d.ai_apps);
       BZMAsk.setBuiltin(!!(d.math && d.math.ask)); BZMAsk.setPlan((d.math && d.math.plan) || ""); BZMAsk.setExternal(!!(d.math && d.math.external));
