@@ -420,7 +420,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <p class="sub" style="margin-top:0">אחרי זה כל הרצאה היא לחיצה אחת, ואפשר לשאול שאלות תוך כדי.</p>
       <ol class="setup">
         <li id="stKey">
-          <div class="row"><b>1. תשובות בתוך הבנתי, בחינם</b><span class="stdone">✓ מוכן</span></div>
+          <div class="row"><b>1. תשובות בתוך הבנתי</b><span class="stdone">✓ מוכן</span></div>
           <p class="sub" style="margin:0">הבנתי שואלת את Gemini של Google בשבילך. לשם כך צריך "מפתח": קוד חינמי, בלי כרטיס אשראי. עם המפתח, שקופיות שאינן טקסט מודפס ברור (נוסחאות, כתב יד, תמונות) נשלחות ל-Gemini כדי לקרוא אותן (אפשר לכבות בהגדרות).</p>
           <div class="row"><a class="btn small" id="setupOpen" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">פתיחת Google ליצירת המפתח</a><span class="sub2" style="font-size:14px;color:var(--muted)">שם: Create API key, ואז Copy key.</span></div>
           <div class="row"><input type="password" id="setupKey" placeholder="להדביק כאן את המפתח (Ctrl+V)" autocomplete="off" aria-label="מפתח Gemini" dir="ltr"><button class="btn small" id="setupKeySave" type="button">שמירה ובדיקה</button></div>
@@ -432,7 +432,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="connbar" id="howBar" hidden><span><b>פעם ראשונה בהבנתי?</b> הדגמה של דקה מראה הכל: בחירת חלון, הרצאה חיה, שאלה ותשובה, ולימוד אחרי ההרצאה.</span><button class="btn small" type="button" data-how>לצפייה בהדגמה</button><button class="btn quiet small" id="howNo" type="button">לא עכשיו</button></div>
     <div class="connbar" id="connBar" hidden><span><b>יש לך מנוי?</b> מחברים פעם אחת את Claude או ChatGPT למחשב להבנתי, ואז שואלים אותם ישר בחלון שלהם, בלי מכסה ובלי להעתיק: הם קוראים לבד מה נאמר ואת השקופית.</span><button class="btn small" type="button" data-conn-open>חיבור AI</button></div>
 
-    <div class="connbar" id="tutorBar" hidden><span><b>חדש: תשובות בתוך הבנתי, תוך כדי ההרצאה ובחינם.</b> שואלים "מה הוא אמר עכשיו?" ו-Gemini עונה כאן, עם מה שנאמר והשקופית. צריך פעם אחת מפתח חינמי של Google (דקה).</span><button class="btn small" id="tutorGo" type="button">להגדרה</button><button class="btn quiet small" id="tutorNo" type="button">לא עכשיו</button></div>
+    <div class="connbar" id="tutorBar" hidden><span><b>חדש: תשובות בתוך הבנתי, תוך כדי ההרצאה.</b> שואלים "מה הוא אמר עכשיו?" ו-Gemini עונה כאן, עם מה שנאמר והשקופית. צריך פעם אחת מפתח חינמי של Google (דקה).</span><button class="btn small" id="tutorGo" type="button">להגדרה</button><button class="btn quiet small" id="tutorNo" type="button">לא עכשיו</button></div>
 
     <div class="card capcard" id="capHome"></div>
 
@@ -486,11 +486,11 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <ol class="hits" id="hits" hidden></ol>
 
     <details class="card" id="mathBox" style="margin-top:18px">
-      <summary><b>AI מובנה בחינם (Gemini): תשובות בתוך הבנתי וקריאת נוסחאות</b> <span class="sub2" id="mathSum" style="color:var(--muted)"></span></summary>
+      <summary><b>AI מובנה (Gemini): תשובות בתוך הבנתי וקריאת נוסחאות</b> <span class="sub2" id="mathSum" style="color:var(--muted)"></span></summary>
       <div style="display:grid;gap:12px;margin-top:10px">
         <div class="optbox">
-          <h4>1. מפתח Gemini ותשובות בתוך הבנתי (חינם)</h4>
-          <p>הבנתי עונה בעצמה על שאלות, בעזרת Gemini של Google. לשם כך צריך "מפתח": קוד חינמי, בלי כרטיס אשראי, ובלי תשלום לך ולהבנתי.</p>
+          <h4>1. מפתח Gemini ותשובות בתוך הבנתי</h4>
+          <p>הבנתי עונה בעצמה על שאלות, בעזרת Gemini של Google. לשם כך צריך "מפתח": קוד חינמי של Google, בלי כרטיס אשראי.</p>
           <ol><li>נכנסים ל-<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> עם חשבון Google רגיל.</li><li>לוחצים <b>Create API key</b>, ואז <b>Copy key</b>.</li><li>מדביקים כאן ולוחצים <b>"שמירה ובדיקה"</b>. המפתח נשמר מוצפן, רק במחשב הזה.</li></ol>
           <div class="row"><input type="password" id="mathKey" placeholder="המפתח של Gemini (מתחיל ב-AQ. או ב-AIza)" autocomplete="off" aria-label="מפתח Gemini" dir="ltr"><button class="btn small" id="mathSave" type="button">שמירה ובדיקה</button></div>
           <label class="row"><input type="checkbox" id="askOn"><b>להפעיל "תשובה כאן" בכל תיבת שאלה</b></label>
@@ -529,7 +529,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <li><b>מה נשמר:</b> התמלול של ההרצאות, צילומי המסך של מה שבחרת לצלם, והטקסט שנקרא מהם.</li>
         <li><b>איפה:</b> רק במחשב שלך, בתיקייה "הקורסים שלי". אין חשבון ואין שרת של הבנתי. אם התיקייה נמצאת בתוך OneDrive או Google Drive (למשל Documents שמסונכרן), התוכנה של הענן מעתיקה אותה לחשבון שלך שם.</li>
         <li><b>מה נשלח ל-AI:</b> רק כשלוחצים על כפתור "שאלה ל-AI" או על אחת המשימות (סיכום, מבחן דמה, דף נוסחאות), או כשמבקשים מ-AI מחובר. אז הטקסט, והתמונה אם מצרפים אותה, עוברים לחברה של אותו AI. בלי זה, שום דבר לא יוצא מהמחשב.</li>
-        <li><b>מה עוד עובר ברשת:</b> בדיקת גרסה חדשה ב-GitHub (אפשר לכבות בתיבה שלמעלה), הורדה חד-פעמית של מודל התמלול (Hugging Face) ושל קריאת השקופיות (GitHub). ורק אם הגדרת "AI מובנה בחינם": בלחיצה על "תשובה כאן" נשלחים ל-Google השאלה, הדקות האחרונות והשקופית; ובנוסף, כי "קריאת נוסחאות וכתב יד" פועלת כברירת מחדל כשיש מפתח (אפשר לכבות בהגדרות), גם שקופיות שאינן טקסט מודפס ברור. עם השאלה נשלח גם הטקסט של השקופיות הקודמות בהרצאה.</li>
+        <li><b>מה עוד עובר ברשת:</b> בדיקת גרסה חדשה ב-GitHub (אפשר לכבות בתיבה שלמעלה), הורדה חד-פעמית של מודל התמלול (Hugging Face) ושל קריאת השקופיות (GitHub). ורק אם הגדרת "AI מובנה": בלחיצה על "תשובה כאן" נשלחים ל-Google השאלה, הדקות האחרונות והשקופית; ובנוסף, כי "קריאת נוסחאות וכתב יד" פועלת כברירת מחדל כשיש מפתח (אפשר לכבות בהגדרות), גם שקופיות שאינן טקסט מודפס ברור. עם השאלה נשלח גם הטקסט של השקופיות הקודמות בהרצאה.</li>
         <li><b>מה בשליטתך:</b> לבחור חלון אחד או חלק מהמסך במקום כל המסך, להשהות את הצילום (גם עם <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd>), לטשטש אזורים קבועים, ולמחוק צילומים לצמיתות.</li>
         <li><b>אחריות:</b> הבנתי ניתנת כמו שהיא, בלי אחריות מכל סוג. השימוש בה, כולל הקלטה, תמלול ושמירה של הרצאות ושקופיות, הוא באחריות המשתמש בלבד. <b>לפני שמשתמשים, כל משתמש צריך לבדוק מה הנהלים והכללים במוסד שלו ואצל המרצה.</b> רועי פכטר ומפתחי הכלי אינם אחראים לשימוש בה.</li>
       </ul>

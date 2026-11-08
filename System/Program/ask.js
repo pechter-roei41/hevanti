@@ -279,7 +279,7 @@
       here.hidden = !AI.builtin;
       here.classList.toggle("alt", AI.builtin && !hereDefault());   // a paid plan: the AI apps first, this one second
       planBox.hidden = !(AI.external && AI.planKnown && !AI.plan);
-      hint.textContent = !AI.builtin ? "כדי לקבל תשובה כאן, בתוך הבנתי: בהגדרות, \"מפתח API\" (חינם, בערך דקה). עד אז אפשר להעתיק את השאלה ל-AI אחר. " + COPY_HINT
+      hint.textContent = !AI.builtin ? "כדי לקבל תשובה כאן, בתוך הבנתי: בהגדרות, \"מפתח API\" (בערך דקה). עד אז אפשר להעתיק את השאלה ל-AI אחר. " + COPY_HINT
         : hereDefault() ? "\"תשובה כאן\": Gemini עונה בתוך הבנתי, עם מה שנאמר" + (opts.hasImage ? " והשקופית" : "") + (AI.external ? ". הכפתורים האחרים מעתיקים את השאלה ל-AI אחר." : ".")
         : COPY_HINT + ' "תשובה כאן" עונה במכסה החינמית.';
       const names = connectedNames();

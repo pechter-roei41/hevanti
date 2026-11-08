@@ -1,6 +1,6 @@
 # Hevanti (הבנתי)
 
-**Ask during the lecture, mark what you didn't understand.** A free, open-source lecture companion for students on Windows.
+**Ask during the lecture, mark what you didn't understand.** An open-source lecture companion for students on Windows.
 
 > **Beta.** Hevanti is still being tested, and things may change or break. If something does not work, use "Report a problem" at the bottom of the home screen (or open an [issue](https://github.com/pechter-roei41/hevanti/issues)).
 
@@ -14,7 +14,7 @@ Everything else supports these two.
 ## Also in Hevanti
 
 - **Live, recorded and YouTube lectures:** Zoom, a broadcast or anything playing on your computer; a file or a link (Drive, Dropbox, OneDrive, Zoom, Panopto through a bookmark); a YouTube video in YouTube's own player. Recordings open in a player synced with the transcript.
-- **Answers inside Hevanti, free:** with the student's own free Gemini API key (Google AI Studio, no credit card). No Hevanti server. The key is stored encrypted (Windows DPAPI). Without a key, a question can be copied with the last five minutes to ChatGPT, Gemini or Claude in one click; with a key, those buttons stay hidden unless you turn them on in Settings, Advanced.
+- **Answers inside Hevanti:** with the student's own free Gemini API key (Google AI Studio, no credit card). No Hevanti server. The key is stored encrypted (Windows DPAPI). Without a key, a question can be copied with the last five minutes to ChatGPT, Gemini or Claude in one click; with a key, those buttons stay hidden unless you turn them on in Settings, Advanced.
 - **Slides:** a picture of every new slide or board, read offline with [Tesseract](https://github.com/tesseract-ocr/tesseract); with your own Gemini key, formulas and handwriting are read by Gemini as LaTeX (on by default once a key is saved; slides that are not clearly plain printed text (formulas, handwriting, pictures) are sent to Google - plain printed text is read on your computer; it can be turned off in Settings). Capture the whole screen, one window or a part of it, pause it, mosaic areas, delete pictures for good.
 - **After the lecture:** one click for a summary, a mock exam or a formula sheet (and an explanation of the moments you marked). Every question and answer is kept in the lecture's folder (`שאלות ותשובות.md`).
 - **Courses:** a folder per course in "הקורסים שלי", a course page (lectures, marks, and the syllabus and glossary that improve transcription: the course name and its terms are given to the model as hotwords), search across everything that was said, and suggested terms for 55 common courses ([`course_terms.json`](System/Program/course_terms.json)) that improve transcription.
