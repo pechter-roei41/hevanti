@@ -12,7 +12,7 @@ try:
     from faster_whisper.audio import decode_audio
 except ImportError:
     print("skipped: PyAV / faster-whisper not installed")
-    sys.exit(0)
+    sys.exit(1 if os.environ.get("GITHUB_ACTIONS") else 0)   # (on CI the packages are installed: a missing one is a failure)
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.environ["BZM_DATA_DIR"] = tempfile.mkdtemp()

@@ -43,3 +43,9 @@ jobs:
         run: python tools/test_stop.py
       - name: Recordings from Panopto
         run: python tools/test_panopto.py
+      - name: The live lecture loop - what is cut, written and kept; the device that disconnects; falling behind; the GPU (no model, no sound card)
+        run: python tools/test_live_loop.py
+      - name: Reading a recording with a new PyAV
+        run: |
+          python -m pip install av faster-whisper
+          python tools/test_av.py
