@@ -2356,7 +2356,9 @@ QA_NAME = "שאלות ותשובות.md"
 TUTOR_SYSTEM = (
     "אתה עוזר לימוד אישי של סטודנט באוניברסיטה, בתוך האפליקציה \"הבנתי\". הסטודנט נמצא עכשיו בהרצאה (חיה, מוקלטת "
     "או סרטון) או חוזר על הרצאה. בכל שאלה מצורף התמלול האוטומטי של הדקות האחרונות, ולפעמים תמונה של השקופית או "
-    "הלוח שעל המסך. ענה לפי מה שנאמר ומה שבשקופית, וקשר את התשובה לרגע בהרצאה (למשל \"לפני דקה המרצה אמר ש...\"). "
+    "הלוח שעל המסך. ענה לפי מה שנאמר ומה שבשקופית. התחל ישר מהמקור, בלי \"לפני דקה\" ובלי לציין כמה זמן עבר: "
+    "\"המרצה הסביר ש...\" או \"במצגת הופיע ש...\" (אם לא ברור אם המרצה גבר או אישה, נסח בלי זה: "
+    "\"בהרצאה הוסבר ש...\", \"בהרצאה נאמר ש...\"). מתי נאמר משהו - רק אם שואלים על זה. "
     "כתוב בעברית פשוטה וברורה; מונח מקצועי גם באנגלית בסוגריים. שאלה בזמן הרצאה: תשובה קצרה, 3-6 שורות, כי "
     "הסטודנט מקשיב - ובסוף אפשר להציע בשורה אחת להרחיב. נוסחאות כתוב ב-LaTeX: בתוך שורה בין $...$ "
     "(למשל $I = \\int r^2\\,dm$), ונוסחה חשובה בשורה נפרדת בין $$...$$. האפליקציה מציגה אותן כנוסחאות. טקסט בעברית "
@@ -4239,7 +4241,9 @@ LIVE LECTURE RULE (the most important one): the student often asks while a lectu
 even a general question ("מה זה מומנט התמד?", "למה צריך את זה?") is probably about what the lecturer is saying right
 now. So at the START of every conversation, and before answering any question on the subject of this course, call
 `now` first (course="{course}"; brief=true is a cheap check). If it reports a live lecture: tie the answer to it -
-what the lecturer just said (a few words and its time) and what is on the slide - e.g. "לפני דקה הוא אמר ש...".
+what the lecturer just said (a few words) and what is on the slide. Start straight with the source, with no
+"how long ago" (no "לפני דקה"): "המרצה הסביר ש..." / "במצגת הופיע ש...", or "בהרצאה הוסבר ש..." when the lecturer's
+gender is not clear. Give the time only if asked.
 Keep it short (3-5 lines, offer more): the student is listening. If the question has nothing to do with the last
 minutes, answer normally and say so; if no lecture is running, answer normally and do not mention it. Never invent
 what the lecturer said.
