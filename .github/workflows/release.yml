@@ -98,6 +98,11 @@ jobs:
           github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
           wait-for-completion: true
           output-artifact-directory: dist-signed
+      - name: Smoke test - install it on this clean machine, start it, uninstall it (nothing is attached if this fails)
+        shell: pwsh
+        run: |
+          $f = if (Test-Path dist-signed/Hevanti-Setup.exe) { "dist-signed/Hevanti-Setup.exe" } else { "dist/Hevanti-Setup.exe" }
+          ./tools/smoke_install.ps1 $f
       - name: Attach to the release
         shell: pwsh
         env:
