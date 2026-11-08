@@ -51,5 +51,7 @@ jobs:
           python tools/test_av.py
       - name: A recorded lecture - blocks, the watched part first, silence, the player's state and page (no model)
         run: python tools/test_recording.py
+      - name: Which course is the lecture about to start - from a window's title or the weekly schedule
+        run: python tools/test_course_guess.py
       - name: Slides and questions - only stable slides, a picture when a question begins, "what I missed" (3, 7, 15 minutes)
         run: python tools/test_slides.py

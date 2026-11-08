@@ -2367,6 +2367,9 @@ TUTOR_SYSTEM = (
     "הלוח שעל המסך. ענה לפי מה שנאמר ומה שבשקופית. התחל ישר מהמקור, בלי \"לפני דקה\" ובלי לציין כמה זמן עבר: "
     "\"המרצה הסביר ש...\" או \"במצגת הופיע ש...\" (אם לא ברור אם המרצה גבר או אישה, נסח בלי זה: "
     "\"בהרצאה הוסבר ש...\", \"בהרצאה נאמר ש...\"). מתי נאמר משהו - רק אם שואלים על זה. "
+    "מקורות: בסוף משפט שמסתמך על שורה בתמלול, הוסף את השעה של אותה שורה כפי שהיא כתובה בתמלול, בסוגריים מרובעים "
+    "(למשל [00:20:44] או [11:04:05]) - עד שלושה מקורות בתשובה, ורק שעות שבאמת מופיעות בתמלול שנשלח אליך. לעולם אל "
+    "תכתוב שעה שלא מופיעה שם, ואל תחשב כמה זמן עבר. תשובה מהידע הכללי או מהשקופית - בלי שעה. "
     "כתוב בעברית פשוטה וברורה; מונח מקצועי גם באנגלית בסוגריים. שאלה בזמן הרצאה: תשובה קצרה, 3-6 שורות, כי "
     "הסטודנט מקשיב - ובסוף אפשר להציע בשורה אחת להרחיב. נוסחאות כתוב ב-LaTeX: בתוך שורה בין $...$ "
     "(למשל $I = \\int r^2\\,dm$), ונוסחה חשובה בשורה נפרדת בין $$...$$. האפליקציה מציגה אותן כנוסחאות. טקסט בעברית "
@@ -6844,6 +6847,12 @@ class App:
         if a == "capture_pause":
             cap = capture_control()
             return {"ok": True, "paused": cap.set_paused(d["on"] if "on" in d else not cap.paused)}
+        if a == "guess_course":   # a suggestion for the course of the lecture about to start (the page may select it)
+            try:
+                return {"ok": True, **guess_course()}
+            except Exception:
+                save_error("guess course")
+                return {"ok": False}
         if a == "snap_question":   # the student began to type a question: a picture of this moment (a live lecture)
             with self.lock:
                 s = self.session
@@ -7368,6 +7377,90 @@ def courses_info(items=None):
         out.append({"name": c, "lectures": len(mine), "terms": len(read_glossary(c)),
                     "last": max((e["mtime"] for e in mine), default=0)})
     return out
+
+
+# ---- which course is this lecture? (suggested before it starts: the name of a window on the screen, or the weekly schedule) ----
+COURSE_STOP = {"של", "עם", "את", "על", "או", "קורס", "הרצאה", "מבוא", "תרגול", "שיעור", "the", "and", "for", "intro", "course", "lecture"}
+HEB_DAYS = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]   # datetime.weekday(): Monday is 0
+
+
+def _course_stems(name):
+    """The words of a course's name that tell it from others, without a one-letter prefix (ל/ב/ה/ו...) - for matching a title."""
+    out = []
+    for w in re.findall(r"[\w'\"]+", str(name).lower()):
+        w = w.strip("'\"")
+        if len(w) >= 3 and w not in COURSE_STOP:
+            out.append(w[1:] if len(w) >= 5 and w[0] in "והלבכמש" else w)
+    return out
+
+
+def guess_by_title(titles, courses):
+    """The course whose name is in the title of a window on the screen: (course, title) - or None when no course, or two
+    courses equally, fit. A name of 1-2 words: all of them; longer: at least two."""
+    best, ranked = None, []
+    for c in courses:
+        stems = _course_stems(c)
+        if not stems:
+            continue
+        need = len(stems) if len(stems) <= 2 else 2
+        for t in titles:
+            tl = str(t).lower()
+            found = sum(1 for s in stems if s in tl)
+            full = str(c).lower() in tl
+            if full or found >= need:
+                ranked.append(((2.0 if full else found / len(stems), found), c, t))
+    if not ranked:
+        return None
+    ranked.sort(key=lambda r: r[0], reverse=True)
+    top = ranked[0]
+    if any(r[1] != top[1] and r[0][0] == top[0][0] for r in ranked):   # two courses fit as well: no guess
+        return None
+    best = top
+    return best[1], best[2]
+
+
+def guess_by_schedule(entries, now):
+    """The course that was held at about this time on this day of the week in earlier weeks (at least twice, and more
+    than any other course): (course, how many times) - or None."""
+    votes = {}
+    mins = now.hour * 60 + now.minute
+    for e in entries:
+        if e.get("kind") != "live" or e.get("course") in (None, NO_COURSE):
+            continue
+        try:
+            dt = datetime.datetime.strptime(str(e.get("when")), "%Y-%m-%d %H:%M")
+        except ValueError:
+            continue
+        if dt.date() >= now.date() or dt.weekday() != now.weekday():
+            continue
+        if abs(dt.hour * 60 + dt.minute - mins) <= 60:
+            votes[e["course"]] = votes.get(e["course"], 0) + 1
+    ranked = sorted(votes.items(), key=lambda kv: kv[1], reverse=True)
+    if ranked and ranked[0][1] >= 2 and (len(ranked) == 1 or ranked[0][1] > ranked[1][1]):
+        return ranked[0]
+    return None
+
+
+def guess_course(titles=None, now=None, entries=None, courses=None):
+    """A suggestion for the course of the lecture about to start: {"course", "why": "title"|"schedule", "detail"} or {}.
+    The window titles first (what is on the screen now), then the schedule. Never changes anything by itself."""
+    courses = [c for c in (course_names() if courses is None else courses) if c != NO_COURSE]
+    if not courses:
+        return {}
+    if titles is None:
+        try:
+            titles = [w["title"] for w in window_choices()]
+        except Exception:
+            titles = []
+    g = guess_by_title(titles, courses)
+    if g:
+        return {"course": g[0], "why": "title", "detail": g[1][:80]}
+    now = now or datetime.datetime.now()
+    g = guess_by_schedule(library() if entries is None else entries, now)
+    if g and g[0] in courses:
+        return {"course": g[0], "why": "schedule",
+                "detail": f"{g[1]} הרצאות קודמות ב{('יום ' + HEB_DAYS[now.weekday()])} בסביבות {now:%H}:00"}
+    return {}
 
 
 _VIEW_CACHE = {}

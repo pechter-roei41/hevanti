@@ -405,6 +405,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <label for="courseSel"><b>הקורס:</b></label>
       <select id="courseSel"></select>
       <button class="btn ghost small" id="courseOpen" type="button">דף הקורס ←</button>
+      <small class="sub" id="courseAuto" role="status" hidden></small>
     </div>
 
     <div class="running" id="runBanner" hidden>
@@ -1211,6 +1212,8 @@ $("#pastMath").addEventListener("click", async () => {
   toast(r.queued ? "נשלחו " + r.queued + " שקופיות לקריאה. זה לוקח בערך " + Math.max(1, Math.round(r.queued * 7 / 60)) + " דקות. אחר כך לפתוח שוב את ההרצאה." : "כל השקופיות כבר נקראו.");
 });
 
+// A mark is made a moment AFTER the lecturer said it: opening a mark starts this many seconds before it
+const MARK_LEAD_S = 8;
 // ---------- marking a moment in a live lecture: ★ (also Ctrl+Alt+M). Only ★ now: older "? לא הבנתי" marks are still read ----------
 async function markMoment(kind, say) {
   let r; try { r = await api("/api/cmd", {action: "mark", kind: "important"}); } catch (e) { r = {ok: false}; }
@@ -1657,8 +1660,21 @@ function drawCourseSel() {
 $("#courseSel").addEventListener("change", () => {
   const v = $("#courseSel").value;
   if (v === "__new") { $("#courseSel").value = curCourse; newCourse(name => { curCourse = name; loadLib(true); }); return; }
-  curCourse = v; drawCourseSel(); api("/api/cmd", {action: "set_course", course: v});
+  curCourse = v; courseTouched = true; $("#courseAuto").hidden = true; drawCourseSel(); api("/api/cmd", {action: "set_course", course: v});
 });
+// The course of the lecture about to start, guessed (the name of a window on the screen, or the weekly schedule): it is selected
+// here, with the reason beside it, until the student chooses a course himself. Nothing starts by itself.
+let courseTouched = false;
+async function autoCourse() {
+  if (courseTouched || view !== "home" || !courses.length || (app && app.session && !app.session.done)) return;
+  let r; try { r = await api("/api/cmd", {action: "guess_course"}); } catch (e) { return; }
+  const note = $("#courseAuto");
+  if (!r || !r.ok || !r.course || !courses.some(c => c.name === r.course)) { note.hidden = true; return; }
+  if (r.course !== curCourse) { curCourse = r.course; drawCourseSel(); }
+  note.textContent = r.why === "title" ? "נבחר לפי החלון: " + r.detail : "נבחר לפי המערכת השבועית (" + r.detail + ")";
+  note.hidden = false;
+}
+setTimeout(autoCourse, 1500); setInterval(autoCourse, 15000);
 $("#courseOpen").addEventListener("click", () => { location.hash = "c=" + encodeURIComponent(curCourse); });
 function drawTabs() {
   const box = $("#libTabs"); box.replaceChildren();
@@ -1909,7 +1925,7 @@ async function drawMarks(name) {
     const lostM = m.kind !== "חשוב", row = el("div", "mk");
     const ic = el("span", "ic " + (lostM ? "lost" : "imp"), lostM ? "?" : "★");
     const open = el("button", "btn ghost small", "פתיחה ברגע הזה"); open.type = "button";
-    open.addEventListener("click", () => { location.hash = "t=" + encodeURIComponent(m.f) + "&at=" + m.t; });
+    open.addEventListener("click", () => { location.hash = "t=" + encodeURIComponent(m.f) + "&at=" + Math.max(0, m.t - MARK_LEAD_S); });
     row.append(ic, el("b", "", m.kind + " · " + m.title + " · " + m.c), open, el("span", "sa", m.said ? "לפני הסימון נאמר: " + m.said : "(אין תמלול סמוך)"));
     return row;
   }));
@@ -2216,7 +2232,9 @@ function drawPastMarks(lines) {
     const go = el("button", "btn ghost small", "בתמלול"); go.type = "button";
     go.addEventListener("click", () => {
       setPTab("study"); $("#pastTrFold").open = true;
-      const li = [...$("#pastLines").children].find(y => y._x === m.x);
+      // from a few seconds BEFORE the mark (it is made after the lecturer said it)
+      const from = Math.max(0, m.x.t - MARK_LEAD_S), kids = [...$("#pastLines").children];
+      const li = kids.filter(y => y._x && y._x.t <= from).pop() || kids.find(y => y._x === m.x);
       if (li) { li.classList.add("hit"); li.scrollIntoView({block: "center"}); }
     });
     row.append(el("span", "ic " + (lostM ? "lost" : "imp"), lostM ? "?" : "★"), head, go,
@@ -2260,6 +2278,15 @@ if (window.BZMAsk) pastAskBox = BZMAsk.mount($("#pastAsk"), {
   example: "תסביר לי את ההרצאה הזו", where: () => "past", lecture: () => pastFile,
   chips: ["מה הרעיון המרכזי של ההרצאה?", "תסביר את החלק הכי קשה", "תן תרגיל לדוגמה עם פתרון"],
   context: q => (pastData ? pastText() : "") + ANSWER_HINT + "\nהשאלה שלי: " + q,
+  // a source in an answer ("[00:20:44]"): the transcript opens at that line
+  onSource: label => {
+    $("#pastTrFold").open = true;
+    const box = $("#pastLines");
+    const li = [...box.children].find(y => y._x && y._x.c === label);
+    if (!li) { toast("לא מצאתי את השורה הזו בתמלול."); return; }
+    box.querySelectorAll(".hit").forEach(y => y.classList.remove("hit"));
+    li.classList.add("hit"); li.scrollIntoView({block: "center"});
+  },
   toast});
 // after the lecture: one click = a ready task for this lecture, sent to the AI the student used last
 const STUDY = {

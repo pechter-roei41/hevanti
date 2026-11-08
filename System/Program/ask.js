@@ -54,6 +54,9 @@
 .askp .qa .q{justify-self:start;max-width:88%;margin:0;padding:7px 13px;border-radius:16px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:calc(14.5px * var(--tx, 1));line-height:1.5}
 .askp .qa .a{justify-self:end;max-width:96%;padding:8px 13px;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
 .askp .qa.err .a{border-color:var(--rec)}
+.askp .src{display:inline-block;border:1px solid var(--line);background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:0 8px;margin-inline:2px;font:inherit;font-size:.82em;line-height:1.5;direction:ltr;unicode-bidi:isolate;white-space:nowrap}
+.askp button.src{cursor:pointer;border-color:var(--accent)}
+.askp button.src:hover{background:var(--accent);color:var(--accent-ink)}
 .askp .mx{display:inline-block;direction:ltr;unicode-bidi:isolate;vertical-align:middle}
 .askp .mx.d{display:block;text-align:center;margin:4px 0;overflow-x:auto}
 .askp math{font-size:1.12em}
@@ -77,8 +80,30 @@
   // (the paid-plan choice and the copy buttons exist only when "external AI" is on in the settings)
   const hereDefault = () => AI.builtin && !(AI.external && AI.plan === "paid");
   const DEF_Q = "תסביר בפשטות את מה שנאמר בדקות האחרונות";
+  // The sources of an answer: a time in square brackets, as in the transcript ("[00:20:44]"). It becomes a chip; where the page can
+  // open the transcript at that line (src.go), and the time really is one of those that were sent with the question
+  // (src.known), a click goes there. A time the AI made up stays plain text - it is never a link to nowhere.
+  const TIME_RE = /(\[\d{1,2}:\d{2}(?::\d{2})?\])/;
+  const normT = s => s.split(":").map(x => x.padStart(2, "0")).join(":");
+  function timesIn(text) {
+    const known = new Set();
+    for (const m of String(text || "").matchAll(/\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g)) known.add(normT(m[1]));
+    return known;
+  }
+  function appendRich(doc, p, str, src) {
+    for (const piece of str.split(TIME_RE)) {
+      const m = /^\[(\d{1,2}:\d{2}(?::\d{2})?)\]$/.exec(piece);
+      if (!m) { if (piece) p.appendChild(doc.createTextNode(piece)); continue; }
+      const label = normT(m[1]), ok = !!(src && src.go && (!src.known || src.known.has(label)));
+      const b = doc.createElement(ok ? "button" : "span");
+      b.className = "src"; b.textContent = "⏱ " + label;
+      if (ok) { b.type = "button"; b.title = "לפתוח בתמלול ברגע הזה"; b.addEventListener("click", () => src.go(label)); }
+      else b.title = "הזמן בתמלול";
+      p.appendChild(b);
+    }
+  }
   // an answer as a few simple blocks: "# heading", "- item", **bold** - always as text (never HTML)
-  function renderAnswer(doc, box, text) {
+  function renderAnswer(doc, box, text, src) {
     box.replaceChildren();
     text = String(text).replace(/\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]/g, m => m.replace(/\n+/g, " "));   // a formula over several lines is one
     for (let line of text.split("\n")) {
@@ -93,7 +118,7 @@
         if (im) { p.appendChild(mathNode(doc, im[1].trim(), false)); continue; }
         for (const part of seg.split(/(\*\*[^*]+\*\*)/)) {
           if (/^\*\*[^*]+\*\*$/.test(part)) { const b = doc.createElement("b"); b.textContent = part.slice(2, -2); p.appendChild(b); }
-          else if (part) p.appendChild(doc.createTextNode(part.replace(/(^|[\s(])\*([^*\s][^*]*?)\*(?=$|[\s.,:;!?)])/g, "$1$2")));   // *italic* -> plain
+          else if (part) appendRich(doc, p, part.replace(/(^|[\s(])\*([^*\s][^*]*?)\*(?=$|[\s.,:;!?)])/g, "$1$2"), src);   // *italic* -> plain
         }
       }
       box.appendChild(p);
@@ -169,7 +194,8 @@
     }
   }
   // opts: context(question) -> the text for an AI site; toast(text); hasImage() -> true when there is a
-  //       screenshot/slide the person may want to add; win: the window the box lives in (the floating window)
+  //       screenshot/slide the person may want to add; win: the window the box lives in (the floating window);
+  //       onSource(label) -> open the transcript at the line with that time label (the sources in an answer)
   function mount(box, opts) {
     const doc = box.ownerDocument || document;
     addCss(doc);
@@ -240,6 +266,8 @@
       let context = "";
       try { context = extra.context ? await extra.context() : await opts.context(q || "תסביר בפשטות את מה שנאמר בדקות האחרונות"); }
       catch (e) { context = q; }
+      // the sources in the answer: clickable only where the page can open the transcript, and only for times that were sent
+      const known = timesIn(context), src = {go: opts.onSource || null, known: known.size ? known : null};
       const qa = mk("div", "qa"), ae = mk("div", "a", "חושב..."); qa.append(mk("p", "q", shown), ae);
       conv.appendChild(qa); convbar.hidden = false;
       // the small window shows the newest question at the top (read the answer from its start; scroll for the rest)
@@ -260,12 +288,12 @@
         const rd = r.body.getReader(), dec = new TextDecoder();
         for (;;) {
           const {done, value} = await rd.read(); if (done) break;
-          text += dec.decode(value, {stream: true}); renderAnswer(doc, ae, text); if (!opts.compact) follow();
+          text += dec.decode(value, {stream: true}); renderAnswer(doc, ae, text, src); if (!opts.compact) follow();
         }
-        text += dec.decode(); renderAnswer(doc, ae, text || "(לא התקבלה תשובה)");
+        text += dec.decode(); renderAnswer(doc, ae, text || "(לא התקבלה תשובה)", src);
         if (text && !text.includes("\n\n⚠ ")) { hist.push({q: shown, a: text}); if (extra.onDone) extra.onDone(text); }
       } catch (e) {
-        if (e.name === "AbortError") renderAnswer(doc, ae, (text ? text + "\n" : "") + "(נעצר)");
+        if (e.name === "AbortError") renderAnswer(doc, ae, (text ? text + "\n" : "") + "(נעצר)", src);
         else {
           qa.classList.add("err"); ae.textContent = e.message || "לא הצלחתי לקבל תשובה.";
           if (e.quota) offerElsewhere(qa, q || DEF_Q, extra, e.wait);   // the free quota is used up

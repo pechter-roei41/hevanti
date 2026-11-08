@@ -82,11 +82,75 @@ with sync_playwright() as p:
     pg.wait_for_timeout(300)
     check("marks tab: 'in the transcript' opens it at the moment", pg.evaluate(
         "[!document.querySelector('#pastPanelStudy').hidden, document.querySelector('#pastTrFold').open, !!document.querySelector('#pastLines li.hit')]") == [True, True, True])
+    check("marks tab: ...and from a few seconds BEFORE the mark (a mark is made after the lecturer said it)",
+          pg.evaluate("[MARK_LEAD_S, document.querySelector('#pastLines li.hit')._x.t]") == [8, 10], pg.evaluate("document.querySelector('#pastLines li.hit')._x.t"))
     check("marks tab: no script errors", pg.errs == [], pg.errs)
+    # the course page's list of marks opens the lecture a few seconds before the mark
+    pg = page()
+    pg.route("**/api/marks*", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(
+        {"marks": [{"f": "c/t", "title": "הרצאה", "when": "x", "t": 20, "c": "00:20", "kind": "חשוב", "said": "משהו"}]})))
+    pg.evaluate("courseName = 'קורס'; drawMarks('קורס')")
+    pg.wait_for_timeout(500)
+    pg.evaluate("document.querySelector('#mkList .mk button').click()")   # (the course page is not the one on view: a script click)
+    pg.wait_for_timeout(200)
+    check("course marks: 'open at this moment' is 8 seconds before the mark", pg.evaluate("location.hash").endswith("&at=12"), pg.evaluate("location.hash"))
     pg = page({"entry": entry, "lines": no_marks, "summary": ""})
     pg.evaluate("openPast('c/t')")
     pg.wait_for_timeout(800)
     check("marks tab: hidden when there are no marks", pg.evaluate("document.querySelector('#pastTabs').hidden"))
+
+    # ---- the sources of an answer: times in square brackets become chips; a click only for a time that was sent ----
+    pg = page()
+    r = pg.evaluate("""() => {
+      const out = {}, t = document.createElement('div'); document.body.appendChild(t); window.__go = [];
+      BZMAsk.render(document, t, "הסבר [00:20:44] ועוד [00:99:99] וגם [1:05] ו**בולד** כאן.", {go: l => window.__go.push(l), known: new Set(["00:20:44", "01:05"])});
+      out.buttons = [...t.querySelectorAll('button.src')].map(b => b.textContent);
+      out.plain = [...t.querySelectorAll('span.src')].map(b => b.textContent);
+      t.querySelector('button.src').click(); out.went = window.__go.slice();
+      const u = document.createElement('div'); document.body.appendChild(u);
+      BZMAsk.render(document, u, "ללא עמוד תמלול [00:20:44].");
+      out.noGo = [u.querySelectorAll('button.src').length, u.querySelectorAll('span.src').length, u.textContent];
+      return out; }""")
+    check("sources: a time that was sent is a button, a made-up time is only text", r["buttons"] == ["⏱ 00:20:44", "⏱ 01:05"] and r["plain"] == ["⏱ 00:99:99"], r)
+    check("sources: a click goes to that line of the transcript", r["went"] == ["00:20:44"], r)
+    check("sources: a page that cannot open the transcript (the floating window): chips, not buttons", r["noGo"][0] == 0 and r["noGo"][1] == 1, r)
+
+    # ---- the course of the lecture about to start: guessed, selected, with the reason; until the student chooses ----
+    L.create_course("אלגברה לינארית")
+    L.create_course("פיזיקה")
+    pg = page()
+    guess = {"ok": True, "course": "פיזיקה", "why": "title", "detail": "Zoom - פיזיקה 1"}
+
+    def cmd(route):
+        body = json.loads(route.request.post_data or "{}")
+        if body.get("action") == "guess_course":
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(guess))
+        else:
+            route.continue_()
+    pg.route("**/api/cmd", cmd)
+    pg.evaluate("autoCourse()")
+    pg.wait_for_timeout(600)
+    check("course guess: selected, with the reason beside it", pg.evaluate("document.querySelector('#courseSel').value") == "פיזיקה"
+          and "נבחר לפי החלון" in pg.evaluate("document.querySelector('#courseAuto').textContent") and pg.is_visible("#courseAuto"),
+          pg.evaluate("[document.querySelector('#courseSel').value, document.querySelector('#courseAuto').textContent]"))
+    pg.select_option("#courseSel", "אלגברה לינארית")
+    pg.wait_for_timeout(300)
+    pg.evaluate("autoCourse()")
+    pg.wait_for_timeout(600)
+    check("course guess: after the student chooses a course, it is never changed again", pg.evaluate("document.querySelector('#courseSel').value") == "אלגברה לינארית"
+          and not pg.is_visible("#courseAuto"), pg.evaluate("document.querySelector('#courseSel').value"))
+    guess = {"ok": True, "course": "פיזיקה", "why": "schedule", "detail": "2 הרצאות קודמות ביום ראשון בסביבות 11:00"}
+    pg = page()
+    pg.route("**/api/cmd", cmd)
+    pg.evaluate("autoCourse()")
+    pg.wait_for_timeout(600)
+    check("course guess: by the weekly schedule it says so", "המערכת השבועית" in pg.evaluate("document.querySelector('#courseAuto').textContent"), pg.evaluate("document.querySelector('#courseAuto').textContent"))
+    guess = {"ok": True}
+    pg = page()
+    pg.route("**/api/cmd", cmd)
+    pg.evaluate("autoCourse()")
+    pg.wait_for_timeout(500)
+    check("course guess: no guess, no note and nothing changed", not pg.is_visible("#courseAuto"))
 
     # ---- the first-time consent before a lecture starts ----
     pg = page()

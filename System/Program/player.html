@@ -251,6 +251,7 @@ function render(lines) {
   highlight(true);
   if (keepT != null) { const i = indexAt(keepT); if (els[i]) list.scrollTop = els[i].offsetTop - 8; }
 }
+const MARK_LEAD_S = 8;   // (the same as in the app: opening a mark starts this many seconds before it)
 // the moments the student marked (★ important / ? lost) sit on the transcript line that was playing at that time
 function drawMarks() {
   els.forEach(li => {
@@ -266,7 +267,9 @@ function drawMarks() {
     li.classList.add(imp ? "mk-imp" : "mk-lost");
     const b = document.createElement("span");
     b.className = "mk " + (imp ? "imp" : "lost"); b.textContent = imp ? "★" : "?";
-    b.title = imp ? "סימנת: חשוב" : "סימנת: לא הבנתי";
+    b.title = (imp ? "סימנת: חשוב" : "סימנת: לא הבנתי") + ". לחיצה: מתחיל " + MARK_LEAD_S + " שניות לפני";
+    // a mark is made a moment after the lecturer said it: clicking it plays from a few seconds before
+    b.addEventListener("click", ev => { ev.stopPropagation(); seek(Math.max(0, m.t - MARK_LEAD_S)); });
     li.querySelector(".ts").prepend(b);
   }
 }
@@ -414,7 +417,9 @@ let askBox = null;
 if (window.BZMAsk) {
   askBox = BZMAsk.mount($("#askBox"), {context: contextText, toast: t => toast(t, 4200),
     hasImage: () => !!shotNow, imageName: "השקופית", example: "מה הוא הסביר בדקה הזו?",
-    shotName: () => shotNow, where: () => "rec"});
+    shotName: () => shotNow, where: () => "rec",
+    // a source in an answer ("[00:20:44]"): the recording jumps there
+    onSource: label => { const p = label.split(":").map(Number); seek(p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p[0] * 60 + p[1]); }});
   fetch("/api/app", {cache: "no-store"}).then(r => r.json()).then(d => {
     BZMAsk.setConnected(d.connect); BZMAsk.setApps(d.ai_apps); BZMAsk.setBuiltin(!!(d.math && d.math.ask)); BZMAsk.setPlan((d.math && d.math.plan) || ""); BZMAsk.setExternal(!!(d.math && d.math.external));
   }).catch(() => {});

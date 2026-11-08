@@ -185,6 +185,8 @@ check("...nothing missing: no note", ln.missing_note() == "")
 L.APP.live = old_live
 s1 = L.load_settings().get("math")
 check("own instructions: none by default - the answers use only the fixed ones", L.tutor_system() == L.TUTOR_SYSTEM)
+check("the answers carry their sources: the time of the transcript line, in brackets, only a time that was sent",
+      "מקורות" in L.TUTOR_SYSTEM and "[00:20:44]" in L.TUTOR_SYSTEM and "אל תכתוב שעה שלא מופיעה" in L.TUTOR_SYSTEM and "לפני דקה" in L.TUTOR_SYSTEM)
 r = L.math_set({"notes": "  תענה בשורה אחת.\n\nבלי נוסחאות.  "})
 check("own instructions: saved (spaces tidied) and shown to the page", r["ok"] and r["math"]["notes"] == "תענה בשורה אחת. בלי נוסחאות.", r.get("math"))
 sys_text = L.tutor_body({"question": "מה זה?"})["systemInstruction"]["parts"][0]["text"]

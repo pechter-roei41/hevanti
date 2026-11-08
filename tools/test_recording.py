@@ -214,6 +214,7 @@ if sync_playwright:
             pg.wait_for_timeout(500)
             shown = pg.evaluate("[...document.querySelectorAll('#lines li:not(.empty)')].filter(x => x.offsetParent !== null).length")
             check("...a search shows only the lines with the word", 1 <= shown < n, (shown, n))
+            check("...a mark opens 8 seconds before it", pg.evaluate("MARK_LEAD_S") == 8)
             check("...no script errors", errs == [], errs)
             b.close()
 
