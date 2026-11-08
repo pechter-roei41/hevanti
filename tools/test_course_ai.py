@@ -153,6 +153,7 @@ os.makedirs(os.path.join(tmp, "appdata", "Claude"))
 with open(os.path.join(tmp, "appdata", "Claude", "claude_desktop_config.json"), "w", encoding="utf-8") as f:
     json.dump({"mcpServers": {"hevanti": {"command": "py", "args": ["x.py", "--lib", old_lib]}}}, f)
 saved_env, L.INSTALLED = os.environ.pop("BZM_DATA_DIR"), True
+real_documents, L._documents = L._documents, lambda: os.path.join(tmp, "documents")   # (not this computer's real Documents)
 os.environ["LOCALAPPDATA"] = os.path.join(tmp, "local2")
 d = L._data_dir()
 check("installed after the ZIP: keeps the ZIP's lectures", d == os.path.dirname(old_lib), d)
@@ -161,6 +162,7 @@ os.environ["LOCALAPPDATA"] = os.path.join(tmp, "local3")
 os.rename(old_lib, old_lib + "x")
 check("installed, nothing before: Documents\\הבנתי", L._data_dir().endswith("הבנתי"), L._data_dir())
 os.environ["BZM_DATA_DIR"] = saved_env
+L._documents = real_documents
 
 # the folder's old name "ההרצאות שלי" is renamed to "הקורסים שלי" once, with everything in it
 dd = os.path.join(tmp, "rename")
