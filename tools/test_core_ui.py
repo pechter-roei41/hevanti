@@ -119,6 +119,29 @@ with sync_playwright() as p:
     pg.evaluate("BZMAsk.setExternal(false)")
     check("ask box: the paid-plan question is not asked while it is off", pg.evaluate("BZMAsk.setPlan(''); __d.querySelector('.plan').hidden"))
 
+    # ---- own instructions for the answers (Settings) ----
+    L.save_settings(math={"key": L.keep_secret("AQ.fake"), "ask": True})
+    pg = page()
+    pg.evaluate("openSettings('key')")
+    pg.wait_for_timeout(500)
+    check("own instructions: the field is there, and open once a key is saved", pg.is_visible("#notesIn") and not pg.evaluate("document.querySelector('#notesIn').disabled"))
+    pg.click("[data-note]")
+    typed = pg.evaluate("document.querySelector('#notesIn').value")
+    check("own instructions: an example adds its text", typed != "" and pg.evaluate("document.querySelector('#notesCount').textContent") == f"{len(typed)}/500", typed)
+    pg.click("#notesSave")
+    pg.wait_for_timeout(600)
+    check("own instructions: saved by Hevanti", L.math_settings().get("notes") == typed.strip(), (typed, L.math_settings().get("notes")))
+    pg.reload()
+    pg.wait_for_timeout(1200)
+    pg.evaluate("openSettings('key')")
+    pg.wait_for_timeout(400)
+    check("own instructions: still there after a reload", pg.evaluate("document.querySelector('#notesIn').value") == typed.strip())
+    check("own instructions: no script errors", pg.errs == [], pg.errs)
+    L.save_settings(math={})
+    pg = page()
+    pg.evaluate("openSettings('key')")
+    check("own instructions: without a key the field is closed", pg.evaluate("document.querySelector('#notesIn').disabled"))
+
     # ---- report a problem ----
     pg = page()
     perr = []

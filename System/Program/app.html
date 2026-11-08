@@ -209,6 +209,7 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .moremenu .menu button:hover,.moremenu .menu button:focus-visible{background:var(--sunk)}
 .moremenu .menu button[hidden]{display:none}
 .study .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}
+.linkish{border:0;background:none;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
 .tile{display:grid;gap:3px;text-align:start;padding:13px 16px;border:1.5px solid var(--line);border-radius:14px;background:var(--bg);color:var(--fg);font:inherit;cursor:pointer}
 .tile b{font-size:17px}
 .tile small{color:var(--muted);font-size:13.5px;line-height:1.4}
@@ -498,12 +499,19 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <div class="row"><button class="btn ghost small" id="mathForget" type="button" hidden>מחיקת המפתח</button></div>
         </div>
         <div class="optbox">
-          <h4>2. יש לי מנוי בתשלום</h4>
+          <h4>2. הוראות אישיות לתשובות</h4>
+          <p>מה שכתוב כאן נוסף להוראות של הבנתי בכל "תשובה כאן": אורך, שפה, איך להסביר. למשל: <button class="linkish" type="button" data-note="תענה בשורה או שתיים.">שורה או שתיים</button> <button class="linkish" type="button" data-note="תסביר כמו למתחיל, עם דוגמה.">כמו למתחיל</button> <button class="linkish" type="button" data-note="תענה באנגלית.">באנגלית</button> <button class="linkish" type="button" data-note="בלי נוסחאות, רק במילים.">בלי נוסחאות</button>. נוסחאות נכתבות ב-LaTeX כברירת מחדל, ואפשר לשנות גם את זה. הבנתי תמיד לא תמציא מה המרצה אמר.</p>
+          <textarea id="notesIn" maxlength="500" rows="3" dir="auto" placeholder="למשל: תענה בעברית פשוטה, עד 4 שורות, ותוסיף דוגמה אם יש." aria-label="הוראות אישיות לתשובות" style="width:100%;box-sizing:border-box;font:inherit;font-size:15px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px"></textarea>
+          <div class="row"><button class="btn small" id="notesSave" type="button">שמירה</button><span class="sub" id="notesCount" style="color:var(--muted)">0/500</span></div>
+          <p class="warn">הטקסט נשלח ל-Google עם כל שאלה. לא לכתוב כאן מידע אישי.</p>
+        </div>
+        <div class="optbox">
+          <h4>3. יש לי מנוי בתשלום</h4>
           <label class="row"><input type="checkbox" id="planPaid"><b>יש לי מנוי ל-ChatGPT, Claude או Gemini</b></label>
           <p>שאלות והרצאות שלמות ילכו ישר לאפליקציה שלך, בלי מכסה. "תשובה כאן" נשארת אפשרות חינמית נוספת.</p>
         </div>
         <div class="optbox">
-          <h4>2. קריאת נוסחאות וכתב יד</h4>
+          <h4>4. קריאת נוסחאות וכתב יד</h4>
           <label class="row"><input type="checkbox" id="mathOn"><b>לקרוא נוסחאות וכתב יד בכל שקופית חדשה</b></label>
           <p>הקריאה הרגילה של השקופיות לא מבינה נוסחאות וכתב יד. כשזה פועל, שקופית שאינה טקסט מודפס ברור (נוסחה, כתב יד, תמונה) נשלחת ל-Gemini (טקסט מודפס ברור נקרא במחשב, בלי לשלוח), והוא כותב את הטקסט והנוסחאות (למשל <code dir="ltr">$I = \int r^2\,dm$</code>) לחיפוש, לסיכומים ולתשובות.</p>
           <p class="warn">שימו לב: זה פועל מעצמו כשמוסיפים מפתח, ושולח ל-Google שקופיות שאינן טקסט מודפס ברור (נוסחאות, כתב יד, תמונות). אפשר לכבות כאן בכל רגע.</p>
@@ -1128,6 +1136,8 @@ function drawMath() {
   mathSig = sig;
   $("#mathOn").checked = !!m.on; $("#mathOn").disabled = !m.has_key; $("#mathForget").hidden = !m.has_key;
   $("#askOn").checked = !!m.ask; $("#askOn").disabled = !m.has_key;
+  if (document.activeElement !== $("#notesIn") && $("#notesIn").value !== (m.notes || "")) { $("#notesIn").value = m.notes || ""; notesCount(); }
+  $("#notesIn").disabled = $("#notesSave").disabled = !m.has_key;
   $("#planPaid").checked = m.plan === "paid";
   $("#mathSum").textContent = m.has_key ? "· " + [m.ask ? "תשובות פועלות" : "תשובות כבויות", m.on ? "נוסחאות פועל" : ""].filter(Boolean).join(", ") : (m.plan === "paid" ? "· יש מנוי: שאלות הולכות לאפליקציית ה-AI" : "· לא מוגדר");
   $("#mathStat").textContent = (m.has_key ? "המפתח שמור" + (m.model ? " (" + m.model + ")" : "") + "." +
@@ -1141,6 +1151,14 @@ async function mathSend(d, okText) {
   toast(r.ok ? okText : (r.error || "לא הצלחתי."));
   return r;
 }
+// the student's own instructions for the answers
+function notesCount() { $("#notesCount").textContent = $("#notesIn").value.length + "/500"; }
+$("#notesIn").addEventListener("input", notesCount);
+document.querySelectorAll("[data-note]").forEach(b => b.addEventListener("click", () => {
+  const t = $("#notesIn"); t.value = (t.value.trim() + " " + b.dataset.note).trim().slice(0, 500); notesCount(); t.focus();
+}));
+$("#notesSave").addEventListener("click", () => mathSend({notes: $("#notesIn").value},
+  $("#notesIn").value.trim() ? "ההוראות נשמרו. הן חלות מהשאלה הבאה." : "ההוראות האישיות נמחקו."));
 $("#mathSave").addEventListener("click", async () => {
   const k = $("#mathKey").value.trim(); if (!k) { toast("צריך להדביק את המפתח."); return; }
   $("#mathSave").disabled = true; mathMsg = ""; $("#mathStat").textContent = "בודק את המפתח... (עד כחצי דקה)";

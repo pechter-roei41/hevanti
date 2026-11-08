@@ -2065,6 +2065,7 @@ class MathReader(threading.Thread):
             return {"on": math_on(s), "has_key": bool(s.get("key")), "model": self.model,
                     "ask": bool(s.get("key")) and s.get("ask", True) is not False,
                     "plan": s.get("plan") if s.get("plan") in ("free", "paid") else "",
+                    "notes": str(s.get("notes") or ""),
                     "external": bool(load_settings().get("external_ai", False)),   # the copy-to-ChatGPT/Gemini/Claude buttons: off until chosen in the settings
                     "waiting": self.q.qsize(), "done": self.done, "skipped": self.skipped, "error": self.error,
                     "today": usage_today()}
@@ -2331,6 +2332,12 @@ def math_set(d):
         s["ask"] = bool(d.get("ask"))
     if "plan" in d:   # "paid": the student has a paid ChatGPT / Claude / Gemini plan - questions and tasks go to its app
         s["plan"] = d.get("plan") if d.get("plan") in ("free", "paid") else ""
+    if "notes" in d:   # the student's own instructions for the answers (see tutor_system)
+        notes = " ".join(str(d.get("notes") or "").split())[:NOTES_MAX]
+        if notes:
+            s["notes"] = notes
+        else:
+            s.pop("notes", None)
     save_settings(math=s)
     return {"ok": True, "math": math_reader().status()}
 
@@ -2367,6 +2374,18 @@ TUTOR_SYSTEM = (
     "זו שיחה: הודעה קצרה כמו \"כן\", \"תרחיב\", \"עוד\" או \"תן דוגמה\" מתייחסת לתשובה האחרונה שלך או להצעה שבסופה. "
     "ענה על זה ישירות, והוסף משהו חדש במקום לחזור על מה שכבר אמרת.")
 TUTOR_TASK = " זו משימת לימוד על הרצאה שלמה: התשובה יכולה להיות ארוכה, מסודרת בכותרות קצרות ורשימות."
+NOTES_MAX = 500   # characters of the student's own instructions (each question carries them)
+
+
+def tutor_system(task=False):
+    """The fixed instructions, then the student's own ("Settings": how long, what language, how to explain). They may
+    change the style, the length and the language - not the rule of never inventing what the lecturer said."""
+    text = TUTOR_SYSTEM + (TUTOR_TASK if task else "")
+    notes = str(math_settings().get("notes") or "").strip()[:NOTES_MAX]
+    if notes:
+        text += ("\n\nהוראות אישיות של הסטודנט לתשובות (לפיהן לנסח, לקצר או להאריך ובאיזו שפה; הן לא מבטלות את הכלל "
+                 "שלעולם לא ממציאים מה המרצה אמר): " + notes)
+    return text
 
 
 def ask_on():
@@ -2497,7 +2516,7 @@ def tutor_body(d):
                                           "data": base64.b64encode(f.read()).decode("ascii")}})
     parts.append({"text": str(d.get("context") or d.get("question") or "")[:1500000]})
     contents.append({"role": "user", "parts": parts})
-    return {"systemInstruction": {"parts": [{"text": TUTOR_SYSTEM + (TUTOR_TASK if d.get("task") else "")}]},
+    return {"systemInstruction": {"parts": [{"text": tutor_system(bool(d.get("task")))}]},
             "contents": contents, "generationConfig": {"temperature": 0.3}}
 
 

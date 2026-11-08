@@ -168,6 +168,19 @@ ln.set_draft("")
 ln.pending_s = 1.0
 check("...nothing missing: no note", ln.missing_note() == "")
 L.APP.live = old_live
+s1 = L.load_settings().get("math")
+check("own instructions: none by default - the answers use only the fixed ones", L.tutor_system() == L.TUTOR_SYSTEM)
+r = L.math_set({"notes": "  תענה בשורה אחת.\n\nבלי נוסחאות.  "})
+check("own instructions: saved (spaces tidied) and shown to the page", r["ok"] and r["math"]["notes"] == "תענה בשורה אחת. בלי נוסחאות.", r.get("math"))
+sys_text = L.tutor_body({"question": "מה זה?"})["systemInstruction"]["parts"][0]["text"]
+check("own instructions: added after the fixed ones, which stay (including never inventing what was said)",
+      sys_text.startswith(L.TUTOR_SYSTEM) and sys_text.endswith("תענה בשורה אחת. בלי נוסחאות.") and "לעולם אל תמציא" in sys_text and "לא מבטלות את הכלל" in sys_text, sys_text[-200:])
+check("own instructions: with a task for a whole lecture too", L.tutor_system(True).startswith(L.TUTOR_SYSTEM + L.TUTOR_TASK))
+L.math_set({"notes": "א" * 900})
+check("own instructions: at most 500 characters", len(L.math_settings()["notes"]) == L.NOTES_MAX == 500)
+r = L.math_set({"notes": "   "})
+check("own instructions: an empty text removes them", "notes" not in L.math_settings() and r["math"]["notes"] == "" and L.tutor_system() == L.TUTOR_SYSTEM)
+L.save_settings(math=s1 or {})
 L.set_language("he")
 check("transcription model: Hebrew uses the Hebrew-tuned one (no small model: its Hebrew is poor)", "ivrit-ai/whisper-large-v3-turbo-ct2" in L.MODELS[0] and "small" not in L.MODELS, L.MODELS)
 L.set_language("en")
