@@ -5394,6 +5394,12 @@ def load_settings():
         return {}
 
 
+def ui_theme():
+    """"light", "dark", or "" (follow Windows) - the button in the app's top bar."""
+    t = load_settings().get("theme")
+    return t if t in ("light", "dark") else ""
+
+
 def save_settings(**kw):
     d = load_settings()
     d.update(kw)
@@ -6612,7 +6618,7 @@ class App:
                     "screens": SCREEN_ENABLED, "capture": capture_control().public(), "math": math_reader().status(),
                     "product": PRODUCT, "migrated": self.migrated,
                     "course": load_settings().get("course") or "", "connect": self.connect_info(),
-                    "ai_apps": ai_apps_status(), "update": self.update}
+                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme()}
 
     def connect_info(self):
         """Which AI apps are connected (reading two small config files - at most every few seconds)."""
@@ -6770,6 +6776,10 @@ class App:
         if a == "math_every":   # send every slide to Gemini, also the ones that look like plain printed text (off by default)
             save_settings(math_every_slide=bool(d.get("on")))
             return {"ok": True}
+        if a == "ui_theme":   # light / dark, chosen in the app's top bar ("" = like Windows); the small window and the player follow it
+            t = d.get("theme") if d.get("theme") in ("light", "dark") else ""
+            save_settings(theme=t)
+            return {"ok": True, "theme": t}
         if a == "external_ai":   # show the buttons that copy a question to another AI (off by default: answers are inside Hevanti)
             save_settings(external_ai=bool(d.get("on")))
             return {"ok": True}

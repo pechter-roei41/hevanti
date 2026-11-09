@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>הבנתי</title>
+<script>/* light / dark as chosen in the app (kept here too, so the window opens in it at once) */
+function bzmTheme(t) { if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
+  try { if (t) localStorage.setItem("bzm.theme", t); else localStorage.removeItem("bzm.theme"); } catch (e) {} }
+try { bzmTheme(localStorage.getItem("bzm.theme") || ""); } catch (e) {}</script>
 <!-- Hevanti (הבנתי) - the small question window (always on top, opened with Ctrl+Alt+Q) - (c) 2026 Roei Pechter. MIT License, see LICENSE.txt -->
 <style>
 /* the two fonts of the app come with the program (System/Program/fonts, SIL Open Font License): nothing is loaded from the internet */
@@ -16,9 +20,13 @@
   --accent:#1F7A55; --accent-ink:#FFFFFF; --accent-soft:#DCEBDF; --rec:#C2412D; --warn-bg:#FBF0DA; --warn-fg:#6B5020;
   --f-body:"Assistant","Segoe UI","Arial Hebrew",Arial,system-ui,sans-serif;
 }
-@media (prefers-color-scheme: dark){:root{
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#121C17; --surface:#1A2620; --sunk:#22302A; --fg:#E8EFE9; --muted:#9FB0A6; --line:#2E3D35;
   --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#1F3A2E; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121C17; --surface:#1A2620; --sunk:#22302A; --fg:#E8EFE9; --muted:#9FB0A6; --line:#2E3D35;
+  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#1F3A2E; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; color-scheme:dark}
+:root[data-theme="light"]{color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.5;display:flex;flex-direction:column}
@@ -92,6 +100,7 @@ async function getJson(u) { return (await fetch(u, {cache: "no-store"})).json();
 async function pollApp() {
   try {
     const d = await getJson("/api/app"), s = d.session;
+    if ("theme" in d && (d.theme || "") !== (document.documentElement.dataset.theme || "")) bzmTheme(d.theme || "");
     live = !!(s && !s.done && (s.kind === "live" || s.kind === "rec"));   // a live lecture, a video, or a recording being watched
     // "הרצאה חיה - <the course>", e.g. "הרצאה חיה - מכניקת מוצקים"
     const kind = live ? (s.kind === "rec" ? "הרצאה מוקלטת" : s.yt ? "סרטון יוטיוב" : "הרצאה חיה") : "";

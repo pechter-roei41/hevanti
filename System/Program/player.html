@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>הבנתי · הנגן</title>
+<script>/* light / dark as chosen in the app's top bar */
+function bzmTheme(t) { if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
+  try { if (t) localStorage.setItem("bzm.theme", t); else localStorage.removeItem("bzm.theme"); } catch (e) {} }
+try { bzmTheme(localStorage.getItem("bzm.theme") || ""); } catch (e) {}
+addEventListener("storage", e => { if (e.key === "bzm.theme") bzmTheme(e.newValue || ""); });</script>
 <style>
 /* the two fonts of the app come with the program (System/Program/fonts, SIL Open Font License): nothing is loaded from the internet */
 @font-face{font-family:"Secular One";src:url("/fonts/SecularOne-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
@@ -18,10 +23,15 @@
   --f-body:"Assistant","Segoe UI","Arial Hebrew",Arial,system-ui,sans-serif; --f-display:"Secular One","Assistant",sans-serif;
   --f-mono:Consolas,"Cascadia Mono",ui-monospace,monospace;
 }
-@media (prefers-color-scheme: dark){:root{
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#121C17; --surface:#1A2620; --sunk:#22302A; --fg:#E8EFE9; --muted:#9FB0A6; --line:#2E3D35;
   --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#1F3A2E; --mark:#E8C547; --ready:#5BC79A; --notready:#33443B;
   --now:#3D3816; --now-ink:#FFF6CF; --warn-bg:#3A3122; --warn-fg:#EBD08E; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121C17; --surface:#1A2620; --sunk:#22302A; --fg:#E8EFE9; --muted:#9FB0A6; --line:#2E3D35;
+  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#1F3A2E; --mark:#E8C547; --ready:#5BC79A; --notready:#33443B;
+  --now:#3D3816; --now-ink:#FFF6CF; --warn-bg:#3A3122; --warn-fg:#EBD08E; color-scheme:dark}
+:root[data-theme="light"]{color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:17px;line-height:1.6;display:flex;flex-direction:column}
@@ -421,6 +431,7 @@ if (window.BZMAsk) {
     // a source in an answer ("[00:20:44]"): the recording jumps there
     onSource: label => { const p = label.split(":").map(Number); seek(p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p[0] * 60 + p[1]); }});
   fetch("/api/app", {cache: "no-store"}).then(r => r.json()).then(d => {
+    if ("theme" in d) bzmTheme(d.theme || "");
     BZMAsk.setConnected(d.connect); BZMAsk.setApps(d.ai_apps); BZMAsk.setBuiltin(!!(d.math && d.math.ask)); BZMAsk.setPlan((d.math && d.math.plan) || ""); BZMAsk.setExternal(!!(d.math && d.math.external));
   }).catch(() => {});
 }

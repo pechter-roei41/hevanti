@@ -211,7 +211,7 @@ with sync_playwright() as p:
     perr = []
     pg.on("pageerror", lambda e: perr.append(str(e)))
     top, foot = pg.evaluate("document.querySelector('#verTop').textContent"), pg.evaluate("document.querySelector('#ver').textContent")
-    check("beta: the header and the footer say it is a beta, with the version", top.startswith("· בטא ") and "בטא" in foot and L.VERSION in top and L.VERSION in foot, (top, foot))
+    check("beta: the header and the footer say it is a beta, with the version", top.startswith("בטא ") and "בטא" in foot and L.VERSION in top and L.VERSION in foot, (top, foot))
     pg.click("#repBtn")
     pg.wait_for_function("document.querySelector('#repText').value.includes('Windows')", timeout=8000)
     rep = pg.evaluate("document.querySelector('#repText').value")
@@ -219,6 +219,41 @@ with sync_playwright() as p:
     check("report a problem: the GitHub button opens a new issue", pg.evaluate("document.querySelector('#repGit').href").endswith("/issues/new"))
     pg.click("#repClose")
     check("report a problem: closes, no script errors", not pg.is_visible("#report") and perr == [], perr)
+
+    # ---- the top bar (2.14): tabs, the settings page, the guide, light / dark ----
+    pg = page()
+    cur = "[...document.querySelectorAll('[data-nav][aria-current=page]')].map(a => a.dataset.nav)"
+    check("top bar: four tabs, home is the current one", pg.evaluate("[...document.querySelectorAll('[data-nav]')].map(a => a.textContent.trim())")
+          == ["בית", "הקורסים שלי", "איך משתמשים", "הגדרות"] and pg.evaluate(cur) == ["home"], pg.evaluate(cur))
+    check("home: only starting a lecture (the course list is its own tab)", pg.is_visible("[data-start=he]") and not pg.is_visible("#lib"))
+    pg.click("[data-nav=courses]")
+    pg.wait_for_timeout(500)
+    check("tab 'my courses': the courses and the search", pg.is_visible("#lib") and pg.is_visible("#libFind") and pg.evaluate(cur) == ["courses"], pg.evaluate(cur))
+    pg.click("[data-nav=settings]")
+    pg.wait_for_timeout(500)
+    check("tab 'settings': a page with its menu, not a popup", pg.is_visible("#vSettings") and pg.is_visible("#settab-cap") and pg.is_visible("#set-key")
+          and pg.evaluate(cur) == ["settings"])
+    pg.click("#settab-cap")
+    check("settings: the menu switches the part", pg.is_visible("#set-cap") and not pg.is_visible("#set-key"))
+    pg.go_back()
+    pg.wait_for_timeout(400)
+    check("settings: Back returns to the page before", pg.is_visible("#lib"), pg.evaluate("location.hash"))
+    pg.click("[data-nav=how]")
+    pg.wait_for_timeout(400)
+    check("tab 'how to use': the video and the guide, inside the app", pg.is_visible("#vHow video") and pg.is_visible("#g-key") and pg.is_visible("#g-fix"))
+    before = pg.evaluate("matchMedia('(prefers-color-scheme: dark)').matches")
+    pg.click("#themeBtn")
+    pg.wait_for_timeout(400)
+    want = "light" if before else "dark"
+    check("light/dark: the button switches, and Hevanti keeps the choice", pg.evaluate("document.documentElement.dataset.theme") == want
+          and L.ui_theme() == want and pg.evaluate("getComputedStyle(document.body).backgroundColor") != "", (pg.evaluate("document.documentElement.dataset.theme"), L.ui_theme()))
+    mini0 = b.new_context(viewport={"width": 420, "height": 600}, locale="he-IL").new_page()
+    mini0.goto(url + "/mini")
+    mini0.wait_for_timeout(1500)
+    check("light/dark: the floating window follows it", mini0.evaluate("document.documentElement.dataset.theme") == want, mini0.evaluate("document.documentElement.dataset.theme"))
+    mini0.context.close()
+    L.save_settings(theme="")
+    check("top bar: no script errors", pg.errs == [], pg.errs)
 
     # ---- the floating window ----
     mini = b.new_context(viewport={"width": 420, "height": 760}, locale="he-IL").new_page()
