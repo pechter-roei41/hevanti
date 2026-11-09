@@ -4827,7 +4827,6 @@ def _place_mini_by_button(u, hwnd):
 
 def _mini_on_a_screen(u, hwnd):
     """False when the window is on no screen at all (a screen was unplugged, or it was left half out of the screen)."""
-    import ctypes
     from ctypes import wintypes
     u.MonitorFromWindow.argtypes = [wintypes.HWND, wintypes.DWORD]
     u.MonitorFromWindow.restype = wintypes.HANDLE
