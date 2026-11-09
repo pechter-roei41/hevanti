@@ -278,7 +278,7 @@
       const body = {context, question: shown, history: hist.slice(-6), task: extra.task || "", minutes: extra.minutes || 0,
         where: val(opts.where), f: val(opts.lecture), img: val(opts.image), n: val(opts.shotName), at: val(opts.at)};
       setBusy(true); ctl = new AbortController();
-      let text = "";
+      let text = "", firstChunk = false;
       try {
         const r = await fetch("/api/ask", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
           body: JSON.stringify(body), signal: ctl.signal});
@@ -289,9 +289,10 @@
         const rd = r.body.getReader(), dec = new TextDecoder();
         for (;;) {
           const {done, value} = await rd.read(); if (done) break;
-          text += dec.decode(value, {stream: true}); renderAnswer(doc, ae, text, src); if (!opts.compact) follow();
+          text += dec.decode(value, {stream: true}); renderAnswer(doc, ae, text, src); if (!opts.compact || !firstChunk) follow(); firstChunk = true;   // (the small window: once, so the question stays at the top of the pane and the answer reads from its start)
         }
         text += dec.decode(); renderAnswer(doc, ae, text || "(לא התקבלה תשובה)", src);
+        if (opts.compact) follow();
         if (text && !text.includes("\n\n⚠ ")) { hist.push({q: shown, a: text}); if (extra.onDone) extra.onDone(text); }
       } catch (e) {
         if (e.name === "AbortError") renderAnswer(doc, ae, (text ? text + "\n" : "") + "(נעצר)", src);
