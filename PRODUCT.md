@@ -23,7 +23,7 @@ Success is measured by study time saved, number of users, and being a project wo
 
 ## Positioning
 
-Free and open source (MIT), with no Hevanti server and no AI of its own. Transcripts and slides stay on the student's computer. Answers inside Hevanti come from the student's own free Gemini API key; without a key, the question plus the last five minutes can be copied to ChatGPT, Gemini or Claude. A small MCP server lets the student's own AI read the lecture directly.
+Free and open source (MIT), with no Hevanti server and no model of its own. The AI inside Hevanti is Google's Gemini, called with the student's own free API key (Google AI Studio, no credit card): when the student asks, Hevanti sends the question, the last minutes of the transcript and the current slide to Gemini and shows the answer under the question; it also reads formulas and handwriting on slides through Gemini. The key is stored encrypted on the student's computer. Transcripts and slides otherwise stay on the student's computer. Without a key, the question plus the last five minutes can be copied to ChatGPT, Gemini or Claude. A small MCP server lets the student's own AI app read the lecture directly.
 
 ## Operating Context
 
@@ -33,7 +33,7 @@ During a live lecture the student is listening, so interactions must be quick an
 
 - Must work on an average student laptop; no local AI model by default.
 - Transcription runs on the CPU by default and is much faster and keeps pace with long lectures on an NVIDIA graphics card. Hevanti detects the card at start-up; when it is there but unused, the home page offers a one-click install of the NVIDIA libraries (about 1 GB, once) and a restart. Anyone with an NVIDIA card should be steered to it. There is no "is my computer good enough" checklist: the guide only recommends the card.
-- Answers use the student's own Gemini key (stored encrypted via Windows DPAPI). When the free quota runs out: reduce usage and show a clear message.
+- The built-in AI is Gemini, through the student's own API key (stored encrypted via Windows DPAPI): without a key there is no "answer here", so the interface must make that state and its fix obvious. When the free quota runs out: reduce usage and show a clear message.
 - Nothing leaves the computer without a student action; cloud sync is off until turned on; the app listens only on 127.0.0.1.
 - Only computer audio is captured, not the microphone.
 - YouTube plays in YouTube's own player, never downloaded.
@@ -54,7 +54,7 @@ Real code, tests (`tools/test_*.py`), a one-minute how-to video (`System/Program
 2. Privacy by default: local first, no server, consent before anything is sent.
 3. Hebrew and right-to-left are the primary experience, not a translation.
 4. Works on the average student's laptop and free tools.
-5. The student's own AI, not ours.
+5. The AI is Gemini through the student's own key: Hevanti holds no model, no server and no key of its own.
 
 ## Accessibility & Inclusion
 

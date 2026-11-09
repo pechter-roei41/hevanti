@@ -1,0 +1,307 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-09T13:44:24+02:00",
+  "title": "Design System: Hevanti (הבנתי)",
+  "extensions": {
+    "colorMeta": {
+      "board-green": {
+        "role": "primary",
+        "displayName": "Board Green",
+        "canonical": "#1B6E4B",
+        "tonalRamp": [
+          "#153829",
+          "#216549",
+          "#2B9669",
+          "#32C98A",
+          "#63D3A4",
+          "#94DCBE",
+          "#C2E8D8",
+          "#EDF7F3"
+        ]
+      },
+      "board-green-soft": {
+        "role": "primary",
+        "displayName": "Board Green Soft",
+        "canonical": "#DCEBDF",
+        "tonalRamp": [
+          "#1E2E22",
+          "#34533A",
+          "#497952",
+          "#5CA069",
+          "#82B48C",
+          "#A8C8AE",
+          "#CCDED0",
+          "#F0F5F1"
+        ]
+      },
+      "highlighter": {
+        "role": "secondary",
+        "displayName": "Highlighter",
+        "canonical": "#F7D44C",
+        "tonalRamp": [
+          "#40360C",
+          "#776210",
+          "#B19010",
+          "#F0C10B",
+          "#EFCD46",
+          "#EFD881",
+          "#F2E6B8",
+          "#FAF7EA"
+        ]
+      },
+      "recording-red": {
+        "role": "tertiary",
+        "displayName": "Recording Red",
+        "canonical": "#C2412D",
+        "tonalRamp": [
+          "#381914",
+          "#662A21",
+          "#97382A",
+          "#CC4530",
+          "#D47161",
+          "#DD9D93",
+          "#E9C7C1",
+          "#F8EEED"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#F6F3E9",
+        "tonalRamp": [
+          "#322D1A",
+          "#5B502C",
+          "#85743C",
+          "#B29A49",
+          "#C2B074",
+          "#D1C59F",
+          "#E2DCC8",
+          "#F6F4EF"
+        ]
+      },
+      "sheet": {
+        "role": "neutral",
+        "displayName": "Sheet",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "#262626",
+          "#434343",
+          "#616161",
+          "#7E7E7E",
+          "#9B9B9B",
+          "#B8B8B8",
+          "#D5D5D5",
+          "#F2F2F2"
+        ]
+      },
+      "sunk-paper": {
+        "role": "neutral",
+        "displayName": "Sunk Paper",
+        "canonical": "#ECE7D8",
+        "tonalRamp": [
+          "#302B1C",
+          "#574D30",
+          "#7F7042",
+          "#A99353",
+          "#BBAB7B",
+          "#CDC2A3",
+          "#E0DBCA",
+          "#F5F4EF"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#17261F",
+        "tonalRamp": [
+          "#1F2D27",
+          "#365144",
+          "#4B7662",
+          "#5F9C80",
+          "#84B29C",
+          "#A9C7B9",
+          "#CDDDD6",
+          "#F0F4F2"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Ink Muted",
+        "canonical": "#56625B",
+        "tonalRamp": [
+          "#242826",
+          "#404743",
+          "#5B6660",
+          "#76867C",
+          "#95A19A",
+          "#B4BCB7",
+          "#D3D7D5",
+          "#F2F3F2"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#DDD7C4",
+        "tonalRamp": [
+          "#2E2A1F",
+          "#524B34",
+          "#786D49",
+          "#9F8F5C",
+          "#B4A882",
+          "#C8C0A8",
+          "#DEDACD",
+          "#F5F3F0"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page titles only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "The title of the primary card."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All running text, Hebrew first."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Timestamps and shortcut keys, isolated left-to-right."
+      }
+    },
+    "shadows": [
+      {
+        "name": "primary-action",
+        "value": "0 6px 18px -8px color-mix(in srgb, var(--accent) 70%, transparent)",
+        "purpose": "The single lifted element per screen: the green start card."
+      },
+      {
+        "name": "dialog",
+        "value": "0 18px 48px rgba(0,0,0,.25)",
+        "purpose": "Modals only."
+      }
+    ],
+    "motion": [
+      {
+        "name": "recording-pulse",
+        "value": "pulse 1.4s ease-in-out infinite (opacity 1 to .25)",
+        "purpose": "The recording dot; off when motion is reduced."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow-nav",
+        "value": "700px"
+      },
+      {
+        "name": "cards-stack",
+        "value": "760px"
+      },
+      {
+        "name": "two-columns-stack",
+        "value": "900px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one solid-green action on a screen.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">סימון</button>",
+      "css": ".ds-btn{font:700 15px Assistant,Segoe UI,sans-serif;border-radius:12px;cursor:pointer}.ds-btn-primary{background:#1B6E4B;color:#fff;border:0;padding:9px 18px}.ds-btn-primary:hover{filter:brightness(1.07)}.ds-btn-primary:focus-visible{outline:2px solid #1B6E4B;outline-offset:2px}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Every other action: green outline, green text.",
+      "html": "<button class=\"ds-btn ds-btn-ghost\">מעבר על ההרצאה</button>",
+      "css": ".ds-btn{font:700 15px Assistant,Segoe UI,sans-serif;border-radius:12px;cursor:pointer}.ds-btn-ghost{background:transparent;color:#1B6E4B;border:1.5px solid #1B6E4B;padding:7px 15px}.ds-btn-ghost:hover{background:#DCEBDF}.ds-btn-ghost:focus-visible{outline:2px solid #1B6E4B;outline-offset:2px}"
+    },
+    {
+      "name": "Primary Action Card",
+      "kind": "card",
+      "refersTo": "card-primary-action",
+      "description": "The home page's main start: solid green with the single soft shadow.",
+      "html": "<div class=\"ds-start\"><b>הרצאה חיה בעברית</b><span>זום או שידור. נכתבת תוך כדי, עם השקופיות.</span></div>",
+      "css": ".ds-start{display:grid;gap:6px;background:#1B6E4B;color:#fff;border-radius:14px;padding:22px;min-height:120px;box-shadow:0 6px 18px -8px rgba(27,110,75,.7);font-family:Assistant,sans-serif;direction:rtl}.ds-start b{font:400 26px/1.2 'Secular One',Assistant,sans-serif}.ds-start span{opacity:.92;font-size:16px}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "A white sheet with a 1px hairline; never nested.",
+      "html": "<div class=\"ds-card\"><b>הרצאה 09.11.2026 08:30</b><small>חשבון אינפיניטסימלי 2 · 1:35:02 · 22 שקופיות</small></div>",
+      "css": ".ds-card{display:grid;gap:2px;background:#fff;border:1px solid #DDD7C4;border-radius:14px;padding:16px 18px;color:#17261F;font-family:Assistant,sans-serif;direction:rtl}.ds-card small{color:#56625B;font-size:14px}"
+    },
+    {
+      "name": "Status Pill",
+      "kind": "chip",
+      "refersTo": "pill",
+      "description": "A quiet pill; red with a dot while a lecture records.",
+      "html": "<span class=\"ds-pill\">מוכן</span>",
+      "css": ".ds-pill{display:inline-block;background:#ECE7D8;color:#56625B;border-radius:999px;padding:3px 12px;font:400 14px Assistant,sans-serif}"
+    },
+    {
+      "name": "Text Box",
+      "kind": "input",
+      "refersTo": "card",
+      "description": "Starts right-to-left when empty; the placeholder sits at the right.",
+      "html": "<textarea class=\"ds-input\" rows=\"2\" placeholder=\"מה לא ברור? (Enter לשליחה)\"></textarea>",
+      "css": ".ds-input{width:100%;box-sizing:border-box;font:inherit;font:17px Assistant,sans-serif;background:#F6F3E9;color:#17261F;border:1px solid #DDD7C4;border-radius:12px;padding:10px 12px;direction:rtl;text-align:right}.ds-input:focus-visible{outline:2px solid #1B6E4B;outline-offset:1px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Open Notebook",
+    "overview": "Hevanti is designed to sit on a page, not on a screen: cream paper, white sheets with a hairline, a warm rounded Hebrew display face, exactly one solid-green action per screen, and yellow only as the highlighter. It stays quiet because the student is listening to a lecture. The dark theme keeps the same warm paper feeling. Right-to-left Hebrew is the primary direction.",
+    "keyCharacteristics": [
+      "One solid-green action per screen",
+      "Flat by default; one soft shadow for the primary action",
+      "Hebrew first and right-to-left",
+      "Warm in both themes",
+      "One logo at every size"
+    ],
+    "rules": [
+      {
+        "name": "The One Green Rule",
+        "body": "Only one control per screen is solid green; every other action is a ghost button or a text link.",
+        "section": "colors"
+      },
+      {
+        "name": "The Highlighter Rule",
+        "body": "Yellow means marked by the student, or the logo check. Never a button or a background.",
+        "section": "colors"
+      },
+      {
+        "name": "The Few Headings Rule",
+        "body": "Secular One appears only on page titles and the primary card.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Lifted Thing Rule",
+        "body": "At most one element per screen is lifted by a shadow: the primary action.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep one solid-green action per screen",
+      "Do design right-to-left first",
+      "Do keep muted text at 4.5:1 on every surface",
+      "Do draw icons as 2px line icons",
+      "Do show a missing state together with its fix"
+    ],
+    "donts": [
+      "Don't use yellow except for the star and the logo check",
+      "Don't nest cards or use thick side borders",
+      "Don't use emoji as icons",
+      "Don't add a second logo variant",
+      "Don't use a cold green-black dark theme"
+    ]
+  }
+}

@@ -12,3 +12,11 @@ System/python/
 
 mini-profile/
 System/loading_stuck.txt
+
+# AI-tool folders (Impeccable and its agents): installed per developer, not part of the product
+.claude/
+.agents/
+.codex/
+# Impeccable: the shared design files (config.json, design.json) are committed; the private ones are not
+.impeccable/config.local.json
+.impeccable/hook.cache.json
