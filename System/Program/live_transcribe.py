@@ -5094,16 +5094,17 @@ def _logo_rgba(S):
     im = Image.new("RGBA", (N, N), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     d.ellipse([0, 0, N - 1, N - 1], fill=cream, outline=green, width=int(2.4 * K * S / 56))
-    sc = 0.6 * N / 108   # the small-size mark: a rounded square without a tail, a thick check (readable at 32 px and below)
-    ox, oy = N / 2 - 60 * sc, N / 2 - 60 * sc
+    sc = 0.56 * N / 108   # the one Hevanti mark: a rounded bubble with a short tail and a thick check (readable down to 16 px)
+    ox, oy = N / 2 - 60 * sc, N / 2 - 61 * sc
 
     def P(x, y):
         return (ox + x * sc, oy + y * sc)
-    d.rounded_rectangle([P(6, 12), P(114, 108)], radius=28 * sc, fill=green)
-    pts = [P(34, 62), P(53, 80), P(88, 38)]
-    d.line(pts, fill=yellow, width=int(19 * sc), joint="curve")
+    d.rounded_rectangle([P(6, 8), P(114, 94)], radius=24 * sc, fill=green)
+    d.polygon([P(68, 93), P(92, 93), P(100, 114)], fill=green)
+    pts = [P(33, 52), P(52, 71), P(87, 33)]
+    d.line(pts, fill=yellow, width=int(17 * sc), joint="curve")
     for x, y in pts:
-        d.ellipse([x - 9.5 * sc, y - 9.5 * sc, x + 9.5 * sc, y + 9.5 * sc], fill=yellow)
+        d.ellipse([x - 8.5 * sc, y - 8.5 * sc, x + 8.5 * sc, y + 8.5 * sc], fill=yellow)
     im = im.resize((S, S), Image.LANCZOS)
     a = np.asarray(im, dtype=np.float32)
     alpha = a[..., 3:4] / 255.0

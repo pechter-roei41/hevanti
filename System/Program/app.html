@@ -9,7 +9,7 @@ function bzmTheme(t) { if (t === "light" || t === "dark") document.documentEleme
   try { if (t) localStorage.setItem("bzm.theme", t); else localStorage.removeItem("bzm.theme"); } catch (e) {} }
 try { bzmTheme(localStorage.getItem("bzm.theme") || ""); } catch (e) {}</script>
 <!-- Hevanti (הבנתי) - the app (the page the tool opens on this computer) - (c) 2026 Roei Pechter. MIT License, see LICENSE.txt -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 120 120%27%3E%3Crect x=%276%27 y=%2712%27 width=%27108%27 height=%2796%27 rx=%2728%27 fill=%27%231F7A55%27/%3E%3Cpath d=%27M34 62L53 80L88 38%27 fill=%27none%27 stroke=%27%23F7D44C%27 stroke-width=%2719%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 120 120%27%3E%3Cpath d=%27M30%208H90A24%2024%200%200%201%20114%2032V70A24%2024%200%200%201%2090%2094H92L100%20114L68%2094H30A24%2024%200%200%201%206%2070V32A24%2024%200%200%201%2030%208Z%27 fill=%27%231F7A55%27/%3E%3Cpath d=%27M33%2052L52%2071L87%2033%27 fill=%27none%27 stroke=%27%23F7D44C%27 stroke-width=%2717%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E">
 <style>
 /* the two fonts of the app come with the program (System/Program/fonts, SIL Open Font License): nothing is loaded from the internet */
 @font-face{font-family:"Secular One";src:url("/fonts/SecularOne-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
@@ -483,7 +483,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 <body>
 <header>
   <div class="bar">
-    <button class="brand" id="brand" type="button" title="למסך הבית של האפליקציה"><svg class="logo" width="30" height="30" viewBox="0 0 120 120" aria-hidden="true"><path d="M20 14H100A14 14 0 0 1 114 28V76A14 14 0 0 1 100 90H96L99 110L74 90H20A14 14 0 0 1 6 76V28A14 14 0 0 1 20 14Z" fill="var(--accent)"></path><path d="M35 52L51 68L85 34" fill="none" stroke="var(--mark)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"></path></svg>הבנתי <small><span id="verTop"></span></small></button>
+    <button class="brand" id="brand" type="button" title="למסך הבית של האפליקציה"><svg class="logo" width="30" height="30" viewBox="0 0 120 120" aria-hidden="true"><path d="M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z" fill="var(--accent)"></path><path d="M33 52L52 71L87 33" fill="none" stroke="var(--mark)" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"></path></svg>הבנתי <small><span id="verTop"></span></small></button>
     <nav class="nav" aria-label="ניווט ראשי">
       <a href="#" data-nav="home">בית</a>
       <a href="#courses" data-nav="courses">הקורסים שלי</a>
@@ -844,19 +844,19 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <section id="vHow" aria-label="איך משתמשים" hidden>
     <h1>איך משתמשים</h1>
     <nav class="chips" aria-label="חלקי המדריך">
-      <button type="button" data-go="g-video">סרטון</button><button type="button" data-go="g-key">חיבור לתשובות</button><button type="button" data-go="g-live">בהרצאה</button><button type="button" data-go="g-after">אחרי ההרצאה</button><button type="button" data-go="g-priv">פרטיות</button><button type="button" data-go="g-fix">משהו לא עובד</button>
+      <button type="button" data-go="g-video">סרטון</button><button type="button" data-go="g-key">חיבור לתשובות</button><button type="button" data-go="g-live">בהרצאה</button><button type="button" data-go="g-after">אחרי ההרצאה</button><button type="button" data-go="g-look">מראה ונגישות</button><button type="button" data-go="g-priv">פרטיות</button><button type="button" data-go="g-fix">משהו לא עובד</button>
     </nav>
     <span id="g-video"></span>
     <div class="howtop">
     <figure class="howvid">
       <video controls preload="metadata" poster="/howto.jpg" src="/howto.mp4" aria-label="סרטון הסבר: איך משתמשים בהבנתי"></video>
-      <figcaption>דקה אחת: מפתח, הרצאה, שאלה מהחלון הצף, סימון ★ ומה עושים אחרי. לחיצה על פרק קופצת אליו.</figcaption>
+      <figcaption>דקה אחת: מפתח, הרצאה, שאלה מהחלון הקטן, סימון ★ ומה עושים אחרי. לחיצה על פרק קופצת אליו.</figcaption>
     </figure>
     <ol class="chapters" id="howChapters" aria-label="פרקי הסרטון">
       <li><button type="button" data-t="0"><b>0:00</b> מדביקים מפתח Gemini חינמי (פעם אחת)</button></li>
       <li><button type="button" data-t="6"><b>0:06</b> בוחרים קורס ומתחילים הרצאה</button></li>
-      <li><button type="button" data-t="9"><b>0:09</b> ההרצאה במסך מלא, והכפתור הצף בקצה</button></li>
-      <li><button type="button" data-t="14"><b>0:14</b> פותחים את החלון הצף וכותבים שאלה</button></li>
+      <li><button type="button" data-t="9"><b>0:09</b> ההרצאה במסך מלא, והכפתור בקצה המסך</button></li>
+      <li><button type="button" data-t="14"><b>0:14</b> פותחים את החלון הקטן וכותבים שאלה</button></li>
       <li><button type="button" data-t="20"><b>0:20</b> התשובה, ושאלות המשך עם נוסחאות</button></li>
       <li><button type="button" data-t="31"><b>0:31</b> מסמנים ★ רגע חשוב, ומסתירים את החלון</button></li>
       <li><button type="button" data-t="37"><b>0:37</b> אחרי ההרצאה: דף הקורס</button></li>
@@ -875,21 +875,23 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <ol class="gsteps">
           <li>נכנסים ל-<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> עם חשבון Google הרגיל.</li>
           <li>לוחצים <span class="say">Create API key</span> ואז <span class="say">Copy key</span>.</li>
-          <li>ב<b>הגדרות ← תשובות</b> מדביקים ולוחצים "שמירה ובדיקה". הודעה ירוקה = מוכן.</li>
+          <li>מדביקים אותו בחלון <b>בואו נתחיל</b> שמופיע בפעם הראשונה (או ב<b>הגדרות ← תשובות</b>). ההדבקה מספיקה: הבנתי שומרת ובודקת לבד.</li>
+          <li>מוכן כשבבית כתוב <b>תשובות בתוך הבנתי: מוכן</b>. אם כתוב <b>חסר מפתח Gemini</b>, לוחצים שם על "להגדרה".</li>
         </ol>
         <p class="gnote">המפתח הוא כמו סיסמה: לא שולחים אותו לאף אחד. הבנתי שומרת אותו מוצפן במחשב.</p>
       </section>
       <section id="g-live" aria-labelledby="g-liveT">
         <h2 id="g-liveT">בהרצאה</h2>
         <ol class="gsteps">
-          <li>ב<b>בית</b> בוחרים קורס (הוא נבחר לבד אם על המסך יש חלון עם שם הקורס) ולוחצים <b>הרצאה חיה</b>.</li>
-          <li>מפעילים את ההרצאה, גם במסך מלא. בקצה המסך מופיע כפתור קטן עם הלוגו.</li>
+          <li>ב<b>בית</b> בוחרים קורס (הוא נבחר לבד אם על המסך יש חלון עם שם הקורס) ולוחצים <b>הרצאה חיה בעברית</b> (או <b>באנגלית</b>).</li>
+          <li>מפעילים את ההרצאה, גם במסך מלא. בקצה המסך מופיע כפתור עגול עם הלוגו.</li>
           <li>לוחצים עליו (או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>), כותבים שאלה ו-<kbd>Enter</kbd>. התשובה מופיעה מתחת.</li>
-          <li>בסוף: <b>עצירה</b>. הכל נשמר בקורס.</li>
+          <li>בסוף: <b>עצירה</b> (במסך ההרצאה או בבית). הכל נשמר בקורס.</li>
         </ol>
         <ul class="glist">
           <li><b>★ רגע חשוב:</b> כפתור ★ בחלון הקטן (או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>M</kbd></span>). אחר כך חוזרים לרגע הזה מדף הקורס.</li>
           <li><b>מה פספסתי:</b> שלושה כפתורים בחלון הקטן (3, 7, 15 דקות) מסכמים את הדקות האחרונות.</li>
+          <li><b>להסתיר את החלון:</b> הכפתור — או <kbd>Esc</kbd>. הכפתור העגול חוזר, ולחיצה עליו פותחת אותו שוב.</li>
           <li><b>מקורות:</b> ליד משפט בתשובה מופיעה השעה שבה זה נאמר. בהרצאה שמורה ובנגן, לחיצה עליה קופצת לשם.</li>
           <li><b>משהו פרטי על המסך?</b> <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd></span> עוצר את הצילום. התמלול ממשיך.</li>
           <li><b>הקלטה או יוטיוב:</b> ב<b>בית</b> ← <b>הרצאה מוקלטת</b>, גוררים קובץ או מדביקים קישור. שואלים באותה דרך.</li>
@@ -898,10 +900,20 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <section id="g-after" aria-labelledby="g-afterT">
         <h2 id="g-afterT">אחרי ההרצאה</h2>
         <ul class="glist">
+          <li>בבית מופיעה <b>ההרצאה האחרונה</b>, עם מספר הסימונים ★ שמחכים בה. לחיצה אחת פותחת אותה.</li>
           <li>ב<b>הקורסים שלי</b> פותחים הרצאה: <b>סיכום</b>, <b>מבחן דמה</b> ו<b>דף נוסחאות</b> בלחיצה אחת, והסבר לכל רגע שסימנת ★.</li>
           <li><b>חיפוש</b> ב"הקורסים שלי" מוצא כל מילה בכל ההרצאות, ופותח בדיוק שם.</li>
-          <li><b>דף הקורס:</b> כל ההרצאות, כל הסימונים, וסילבוס ומילון מונחים. סילבוס שמעלים שם משפר את התמלול של מונחים ושמות.</li>
+          <li><b>דף הקורס</b> בנוי משלוש לשוניות: <b>ההרצאות</b>, <b>סימונים</b> (כל הרגעים שסימנת, עם "פתיחה ברגע הזה") ו<b>סילבוס ומילון</b>. סילבוס שמעלים שם משפר את התמלול של מונחים ושמות.</li>
+          <li>בלשונית ההרצאות, בכרטיס <b>קבצים וניהול</b>: קובץ אחד של כל הקורס, פתיחת התיקייה, שינוי שם ומחיקה.</li>
           <li>כל שאלה ותשובה נשמרות בתיקיית ההרצאה (<span class="say">שאלות ותשובות.md</span>).</li>
+        </ul>
+      </section>
+      <section id="g-look" aria-labelledby="g-lookT">
+        <h2 id="g-lookT">מראה ונגישות</h2>
+        <ul class="glist">
+          <li><b>בהיר או כהה:</b> הכפתור בצד שמאל של הסרגל העליון. הבחירה נשמרת, והחלון הקטן עוקב אחריה.</li>
+          <li><b>גודל טקסט, ניגודיות גבוהה, בלי תנועה</b> ועוד: <b>הגדרות ← נגישות</b>.</li>
+          <li><b>הקלדה:</b> בכל תיבה הכתיבה מתחילה מימין, ועוברת לשמאל לבד כשכותבים באנגלית.</li>
         </ul>
       </section>
       <section id="g-priv" aria-labelledby="g-privT">
@@ -917,9 +929,9 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <h2 id="g-fixT">משהו לא עובד</h2>
         <dl class="gfix">
           <dt>לא מופיע טקסט</dt><dd>בודקים שהסאונד של המחשב פתוח ושההרצאה לא מושתקת.</dd>
-          <dt>אין "תשובה כאן"</dt><dd>עוד אין מפתח: <button type="button" class="linkish" data-go="g-key">חיבור לתשובות</button>.</dd>
+          <dt>אין "תשובה כאן"</dt><dd>בבית כתוב "חסר מפתח Gemini": <button type="button" class="linkish" data-go="g-key">חיבור לתשובות</button>.</dd>
           <dt>"Gemini עמוס" / "הגעת למכסה"</dt><dd>מחכים דקה ומנסים שוב.</dd>
-          <dt>החלון הקטן לא נפתח</dt><dd>מנסים את הכפתור "חלון שאלות קטן" במסך ההרצאה החיה.</dd>
+          <dt>החלון הקטן לא נפתח</dt><dd>מנסים את הכפתור "חלון שאלות קטן" במסך ההרצאה החיה, או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>.</dd>
           <dt>האפליקציה לא נפתחת</dt><dd>פותחים בדפדפן <span class="say">http://127.0.0.1:8765/</span></dd>
           <dt>משהו אחר</dt><dd>ב<b>בית</b>, למטה: <b>דיווח על תקלה</b>.</dd>
         </dl>
@@ -1460,7 +1472,7 @@ const setPanels = {};
   const logo = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   logo.setAttribute("viewBox", "0 0 120 120"); logo.setAttribute("width", "26"); logo.setAttribute("height", "26"); logo.setAttribute("aria-hidden", "true");
   logo.style.cssText = "vertical-align:middle;margin:-2px 2px";
-  logo.innerHTML = '<circle cx="60" cy="60" r="56" fill="#f6f3e9" stroke="#1f7a55" stroke-width="5"/><g transform="translate(60 60) scale(.56) translate(-60 -61)"><rect x="6" y="14" width="108" height="76" rx="14" fill="#1f7a55"/><path d="M96 88l3 22-25-22z" fill="#1f7a55"/><path d="M35 52l16 16 34-34" fill="none" stroke="#f7d44c" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></g>';
+  logo.innerHTML = '<circle cx="60" cy="60" r="56" fill="#f6f3e9" stroke="#1f7a55" stroke-width="5"/><g transform="translate(60 60) scale(.6) translate(-60 -61)"><path d="M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z" fill="#1f7a55"/><path d="M33 52L52 71L87 33" fill="none" stroke="#f7d44c" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/></g>';
   bt.append(logo, " צף על המסך בזמן הרצאה חיה, כשהחלון הקטן סגור (לחיצה עליו פותחת את החלון)");
   bl.append(bc, bt);
   setPanels.cap.appendChild(bl);
