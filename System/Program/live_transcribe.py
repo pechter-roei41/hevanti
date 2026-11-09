@@ -898,6 +898,57 @@ def gpu_install():
     threading.Thread(target=run, daemon=True).start()
 
 
+def _write_window_icon(path):
+    """The one Hevanti mark as a multi-size .ico (each size drawn on its own, filling its square)."""
+    from PIL import Image, ImageDraw
+    green, yellow = (31, 122, 85, 255), (247, 212, 76, 255)
+
+    def draw(S):
+        k = 8
+        N = S * k
+        im = Image.new("RGBA", (N, N), (0, 0, 0, 0))
+        d = ImageDraw.Draw(im)
+        u = N * 0.98 / 108
+        ox, oy = N * 0.01 - 6 * u, N * 0.01 + (N * 0.98 - 106 * u) / 2 - 8 * u
+
+        def P(x, y):
+            return (ox + x * u, oy + y * u)
+        d.rounded_rectangle([P(6, 8), P(114, 94)], radius=24 * u, fill=green)
+        d.polygon([P(68, 93), P(92, 93), P(100, 114)], fill=green)
+        pts = [P(33, 52), P(52, 71), P(87, 33)]
+        d.line(pts, fill=yellow, width=int(17 * u), joint="curve")
+        for x, y in pts:
+            d.ellipse((x - 8.5 * u, y - 8.5 * u, x + 8.5 * u, y + 8.5 * u), fill=yellow)
+        return im.resize((S, S), Image.LANCZOS)
+    sizes = [16, 24, 32, 48, 64, 128, 256]
+    frames = [draw(n) for n in sizes]
+    frames[-1].save(path, format="ICO", sizes=[(n, n) for n in sizes], append_images=frames[:-1])
+
+
+def set_window_icon():
+    """The minimized window on the taskbar shows the Hevanti mark. A console window gets only a 32 px icon from its shortcut,
+    which Windows then stretches on a scaled screen (blocky). Give it big and small icons of its own: Windows shrinks them smoothly."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        import tempfile
+        hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+        if not hwnd:
+            return
+        path = os.path.join(tempfile.gettempdir(), "hevanti-window.ico")
+        _write_window_icon(path)
+        u = ctypes.WinDLL("user32")
+        u.LoadImageW.restype = ctypes.c_void_p
+        u.SendMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_size_t, ctypes.c_void_p]
+        for kind, size in ((1, 128), (0, 32)):   # ICON_BIG (taskbar), ICON_SMALL (title bar)
+            h = u.LoadImageW(None, path, 1, size, size, 0x10)   # IMAGE_ICON, LR_LOADFROMFILE
+            if h:
+                u.SendMessageW(hwnd, 0x80, kind, h)   # WM_SETICON
+    except Exception:
+        pass
+
+
 def probe_gpu():
     """At start-up (not only when the first lecture loads the model): is there an NVIDIA card, and can Hevanti use it?
     The home page then offers the one-click install at once."""
@@ -8533,6 +8584,7 @@ def main():
     if not server.start():
         raise RuntimeError("לא הצלחתי לפתוח את האפליקציה (כל הפורטים 8765-8769 תפוסים).")
     APP.url = server.url
+    set_window_icon()
     threading.Thread(target=probe_gpu, daemon=True).start()   # an NVIDIA card? (home page banner)
     if os.name == "nt":
         MiniHotkey(daemon=True).start()   # Ctrl+Alt+Q
