@@ -898,6 +898,19 @@ def gpu_install():
     threading.Thread(target=run, daemon=True).start()
 
 
+def probe_gpu():
+    """At start-up (not only when the first lecture loads the model): is there an NVIDIA card, and can Hevanti use it?
+    The home page then offers the one-click install at once."""
+    try:
+        _add_nvidia_dlls()
+        import ctranslate2
+        n = ctranslate2.get_cuda_device_count()
+        GPU["cards"] = n
+        GPU["libs_ok"] = not (n > 0 and not _cuda_libs_ok())
+    except Exception:
+        pass
+
+
 def _cuda_libs_ok():
     """Windows: can NVIDIA's cuBLAS and cuDNN be loaded? (otherwise: leave it to CTranslate2.)"""
     if os.name != "nt":
@@ -8520,6 +8533,7 @@ def main():
     if not server.start():
         raise RuntimeError("לא הצלחתי לפתוח את האפליקציה (כל הפורטים 8765-8769 תפוסים).")
     APP.url = server.url
+    threading.Thread(target=probe_gpu, daemon=True).start()   # an NVIDIA card? (home page banner)
     if os.name == "nt":
         MiniHotkey(daemon=True).start()   # Ctrl+Alt+Q
         MiniButton(mini_button_wanted, _mini_button_click).start()   # the floating button
