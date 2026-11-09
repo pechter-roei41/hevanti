@@ -954,14 +954,17 @@ def set_window_icon():
 
     def keep():
         import ctypes
+        seen = set()
+        fast_until = time.time() + 45   # right after start-up, and after any new window: every quarter of a second
         while True:
             try:
                 hwnds = []
                 c = ctypes.windll.kernel32.GetConsoleWindow()
                 if c:
                     hwnds.append(c)
-                if _APP_WIN["hwnd"]:
-                    hwnds.append(_APP_WIN["hwnd"])
+                for k in ("hwnd", "early"):
+                    if _APP_WIN.get(k):
+                        hwnds.append(_APP_WIN[k])
                 try:
                     m = _find_mini(_mini_user32())
                     if m:
@@ -969,10 +972,13 @@ def set_window_icon():
                 except Exception:
                     pass
                 for h in hwnds:
+                    if h not in seen:
+                        seen.add(h)
+                        fast_until = time.time() + 15
                     _set_icons(h)
             except Exception:
                 pass
-            time.sleep(3)
+            time.sleep(0.25 if time.time() < fast_until else 3)
     threading.Thread(target=keep, daemon=True).start()
 
 
@@ -8270,6 +8276,8 @@ def _watch_app_window(u, before):
     while time.time() < end:
         time.sleep(0.25)
         for h, title in _chrome_windows(u).items():
+            if h not in before and "127.0.0.1" in title:
+                _APP_WIN["early"] = h   # the window has just appeared (its title is still the address): its icon can be set at once
             if h not in before and (title.startswith(PAGE_TITLE) or title.endswith("· הבנתי")):
                 _APP_WIN["hwnd"] = h
                 return
