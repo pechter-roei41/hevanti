@@ -1671,7 +1671,7 @@ async function autoCourse() {
   const note = $("#courseAuto");
   if (!r || !r.ok || !r.course || !courses.some(c => c.name === r.course)) { note.hidden = true; return; }
   if (r.course !== curCourse) { curCourse = r.course; drawCourseSel(); }
-  note.textContent = r.why === "title" ? "נבחר לפי החלון: " + r.detail : "נבחר לפי המערכת השבועית (" + r.detail + ")";
+  note.textContent = r.why === "title" ? "הקורס נבחר לפי החלון" : "נבחר לפי המערכת השבועית (" + r.detail + ")";
   note.hidden = false;
 }
 setTimeout(autoCourse, 1500); setInterval(autoCourse, 15000);
@@ -2112,7 +2112,7 @@ async function pollLive() {
   if (d.lag > 15) add("איחור", Math.round(d.lag) + " שניות" + (d.fast ? " (מצב מהיר)" : ""));
   if (info.transcript) add("נשמר ב", info.transcript);
   $("#liveEnded").hidden = !d.ended;
-  if (d.ended) { $("#liveEnded").textContent = "ההרצאה נשמרה ב-" + (info.transcript || "הקורסים שלי") + ". אפשר לחזור למסך הבית, ולפתוח אותה מ\"הקורסים שלי\"."; $("#liveStop").hidden = true; liveStudyF = info.f || ""; }
+  if (d.ended) { const sd = started ? started.toLocaleDateString("he-IL") + ", " + info.started : ""; $("#liveEnded").textContent = "ההרצאה נשמרה ב\"" + (info.course || "הקורסים שלי") + "\"" + (sd ? " (" + sd + ")" : "") + ". היא מחכה לך ב\"הקורסים שלי\"."; $("#liveStop").hidden = true; liveStudyF = info.f || ""; }
   $("#liveStudy").hidden = !(d.ended && liveStudyF);
   setTimeout(pollLive, d.ended ? 4000 : 1000);
 }

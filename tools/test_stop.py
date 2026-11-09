@@ -51,6 +51,13 @@ lectures = [n for n in os.listdir(L.course_dir(C)) if os.path.isdir(os.path.join
 check("stop while loading: no lecture folder", lectures == [], lectures)
 check("a new lecture can start right after", app.start("live", "he", lambda sess, *a: None, course=C) is not None)
 
+# the live view must not show the lecture that just ended while the next one is still loading
+app.live = L.LiveNow("a/old.txt", __import__("datetime").datetime.now(), course=C)
+app.live.ended = True
+check("live view shows the old lecture before a new one starts", L.live_state(0).get("ended") is True)
+app.start("live", "he", lambda sess, *a: None, course=C)
+check("a new lecture clears the old live view at once", L.live_state(0) == {"none": True}, L.live_state(0))
+
 # a quiet live lecture keeps now_watching.txt fresh (the AI treats a file that stopped updating as a stopped lecture)
 import datetime  # noqa: E402
 L.LiveNow.EVERY_S, L.LiveNow.BEAT_S = 0.2, 1

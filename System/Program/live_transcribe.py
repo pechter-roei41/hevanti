@@ -36,8 +36,8 @@ try:
 except Exception:  # lets "uninstall" run even if the install never finished
     np = None
 
-VERSION = "2.13"
-VERSION_DATE = "08.11.2026"
+VERSION = "2.14"
+VERSION_DATE = "09.11.2026"
 PRODUCT = "הבנתי"
 GUIDE_URL = "https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD"
 
@@ -1933,24 +1933,6 @@ def _mark_math(img_path, model):
             hide_file(path)
 
 
-def pick_gemini_model(names):
-    """The model for reading pictures: Google's "always the newest flash" name if it is offered, else the newest
-    plain flash model (not lite / image / speech / live / embedding)."""
-    short = [str(n).split("/")[-1] for n in names]
-    if "gemini-flash-latest" in short:
-        return "gemini-flash-latest"
-    best = None
-    for b in short:
-        if not b.startswith("gemini") or "flash" not in b or \
-                any(x in b for x in ("lite", "image", "tts", "live", "audio", "embed", "thinking", "exp", "latest")):
-            continue
-        nums = re.findall(r"\d+(?:\.\d+)?", b)
-        rank = (float(nums[0]) if nums else 0.0, "preview" not in b, -len(b))
-        if best is None or rank > best[0]:
-            best = (rank, b)
-    return best[1] if best else None
-
-
 _GEMINI_SKIP = ("image", "tts", "live", "audio", "embed", "thinking", "exp", "omni")
 
 
@@ -2390,11 +2372,6 @@ def tutor_system(task=False):
         text += ("\n\nהוראות אישיות של הסטודנט לתשובות (לפיהן לנסח, לקצר או להאריך ובאיזו שפה; הן לא מבטלות את הכלל "
                  "שלעולם לא ממציאים מה המרצה אמר): " + notes)
     return text
-
-
-def ask_on():
-    s = math_settings()
-    return bool(s.get("key")) and s.get("ask", True) is not False
 
 
 TOKENS_MAX = 1024 * 1024   # (about 6000 lines; the newest 3000 are kept - today's counts come from them)
@@ -5106,31 +5083,6 @@ def mini_button_wanted():
         return True
 
 
-def _logo_pixels(S):
-    """The Hevanti logo (a speech bubble with a check mark) on a round cream button, as bottom-up BGRA bytes for GDI.
-    Drawn 6x larger and shrunk, so the edges are smooth."""
-    from PIL import Image, ImageDraw
-    K = 6
-    N = S * K
-    green, yellow, cream = (31, 122, 85), (247, 212, 76), (246, 243, 233)
-    im = Image.new("RGB", (N, N), cream)
-    d = ImageDraw.Draw(im)
-    d.ellipse([0, 0, N - 1, N - 1], fill=cream, outline=green, width=int(2.4 * K))
-    sc = 0.56 * N / 108
-    ox, oy = N / 2 - 60 * sc, N / 2 - 61 * sc
-
-    def P(x, y):
-        return (ox + x * sc, oy + y * sc)
-    d.rounded_rectangle([P(6, 14), P(114, 90)], radius=14 * sc, fill=green)
-    d.polygon([P(96, 88), P(99, 110), P(74, 88)], fill=green)
-    pts = [P(35, 52), P(51, 68), P(85, 34)]
-    d.line(pts, fill=yellow, width=int(12 * sc), joint="curve")
-    for x, y in pts:
-        d.ellipse([x - 6 * sc, y - 6 * sc, x + 6 * sc, y + 6 * sc], fill=yellow)
-    im = im.resize((S, S), Image.LANCZOS)
-    return im.convert("RGBA").transpose(Image.FLIP_TOP_BOTTOM).tobytes("raw", "BGRA")
-
-
 def _logo_rgba(S):
     """The logo on a round cream disc with a green ring, as premultiplied BGRA bytes (top-down) for UpdateLayeredWindow:
     the edge of the disc is smoothed by the alpha channel, and outside the disc the window is transparent."""
@@ -6307,9 +6259,6 @@ class Recording:
         with self.lock:
             self.phase, self.note = phase, note
 
-    def set_note(self, note):
-        self.note = note
-
     # --- where you are (the page reports it) ---
     def set_place(self, d):
         with self.lock:
@@ -6684,9 +6633,8 @@ class App:
         sess.yt = yt
         with self.lock:
             self.session, self.question, self.pending = sess, None, None
-            if kind == "rec":
-                self.live = None
-            else:
+            self.live = None   # the live view must not show the lecture that just ended while the new one is loading
+            if kind != "rec":
                 self.rec = None
         sess.thread = threading.Thread(target=self._run, args=(sess, fn) + args, daemon=True)
         sess.thread.start()
