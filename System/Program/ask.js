@@ -19,6 +19,7 @@
 .askp .head b{font-size:18px}
 .askp .head small{color:var(--muted);font-size:13px}
 .askp textarea{font:inherit;font-size:15px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px;resize:vertical;min-height:2.9em;width:100%;box-sizing:border-box}
+.askp textarea:placeholder-shown{direction:rtl;text-align:right}
 .askp textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .askp .ais{display:flex;gap:6px;flex-wrap:wrap}
 .askp .ais button{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;padding:5px 13px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}

@@ -20,7 +20,7 @@ Everything else supports these two.
 - **Courses:** a folder per course in "הקורסים שלי", a course page (lectures, marks, and the syllabus and glossary that improve transcription: the course name and its terms are given to the model as hotwords), search across everything that was said, and suggested terms for 55 common courses ([`course_terms.json`](System/Program/course_terms.json)) that improve transcription.
 - **Connect your own AI:** a small MCP server lets Claude for desktop, ChatGPT (Codex) or Gemini (`agy`) read the lecture themselves ("what is he saying now?"). Optional cloud sync copies transcripts to your own Google Drive or OneDrive for AIs that cannot read your computer.
 - **Accessibility:** text and interface size, reading spacing, high contrast, no motion, screen-reader announcements, a keyboard-friendly floating window.
-- **How to use:** a two-minute video inside the app (the "איך משתמשים?" button). What changed in each version: [`System/VERSION.txt`](System/VERSION.txt).
+- **How to use:** a one-minute video inside the app (the "איך משתמשים?" button). What changed in each version: [`System/VERSION.txt`](System/VERSION.txt).
 
 ## Download and install
 

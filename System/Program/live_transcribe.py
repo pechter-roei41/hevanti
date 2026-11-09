@@ -5094,17 +5094,16 @@ def _logo_rgba(S):
     im = Image.new("RGBA", (N, N), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     d.ellipse([0, 0, N - 1, N - 1], fill=cream, outline=green, width=int(2.4 * K * S / 56))
-    sc = 0.56 * N / 108
-    ox, oy = N / 2 - 60 * sc, N / 2 - 61 * sc
+    sc = 0.6 * N / 108   # the small-size mark: a rounded square without a tail, a thick check (readable at 32 px and below)
+    ox, oy = N / 2 - 60 * sc, N / 2 - 60 * sc
 
     def P(x, y):
         return (ox + x * sc, oy + y * sc)
-    d.rounded_rectangle([P(6, 14), P(114, 90)], radius=14 * sc, fill=green)
-    d.polygon([P(96, 88), P(99, 110), P(74, 88)], fill=green)
-    pts = [P(35, 52), P(51, 68), P(85, 34)]
-    d.line(pts, fill=yellow, width=int(12 * sc), joint="curve")
+    d.rounded_rectangle([P(6, 12), P(114, 108)], radius=28 * sc, fill=green)
+    pts = [P(34, 62), P(53, 80), P(88, 38)]
+    d.line(pts, fill=yellow, width=int(19 * sc), joint="curve")
     for x, y in pts:
-        d.ellipse([x - 6 * sc, y - 6 * sc, x + 6 * sc, y + 6 * sc], fill=yellow)
+        d.ellipse([x - 9.5 * sc, y - 9.5 * sc, x + 9.5 * sc, y + 9.5 * sc], fill=yellow)
     im = im.resize((S, S), Image.LANCZOS)
     a = np.asarray(im, dtype=np.float32)
     alpha = a[..., 3:4] / 255.0

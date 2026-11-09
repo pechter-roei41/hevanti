@@ -17,35 +17,46 @@ try { bzmTheme(localStorage.getItem("bzm.theme") || ""); } catch (e) {}</script>
 <style>
 :root{
   --bg:#F6F3E9; --surface:#FFFFFF; --sunk:#ECE7D8; --fg:#17261F; --muted:#56625B; --line:#DDD7C4;
-  --accent:#1F7A55; --accent-ink:#FFFFFF; --accent-soft:#DCEBDF; --rec:#C2412D; --warn-bg:#FBF0DA; --warn-fg:#6B5020;
+  --accent:#1B6E4B; --accent-ink:#FFFFFF; --accent-soft:#DCEBDF; --rec:#C2412D; --warn-bg:#FBF0DA; --warn-fg:#6B5020;
   --f-body:"Assistant","Segoe UI","Arial Hebrew",Arial,system-ui,sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#121C17; --surface:#1A2620; --sunk:#22302A; --fg:#E8EFE9; --muted:#9FB0A6; --line:#2E3D35;
-  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#1F3A2E; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; color-scheme:dark}}
+  --bg:#1C1B16; --surface:#26241D; --sunk:#2F2C23; --fg:#F1ECDF; --muted:#B5AFA0; --line:#3E3A2E;
+  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#121C17; --surface:#1A2620; --sunk:#22302A; --fg:#E8EFE9; --muted:#9FB0A6; --line:#2E3D35;
-  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#1F3A2E; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; color-scheme:dark}
+  --bg:#1C1B16; --surface:#26241D; --sunk:#2F2C23; --fg:#F1ECDF; --muted:#B5AFA0; --line:#3E3A2E;
+  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; color-scheme:dark}
 :root[data-theme="light"]{color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.5;display:flex;flex-direction:column}
 button,textarea{font:inherit;color:inherit}
+textarea:placeholder-shown,input:not([dir="ltr"]):not([type=password]):not([type=checkbox]):not([type=radio]):placeholder-shown{direction:rtl;text-align:right}
+
 [hidden]{display:none!important}
-header{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--surface)}
+header{display:flex;align-items:center;gap:8px;padding:6px 8px 6px 10px;border-bottom:1px solid var(--line);background:var(--surface)}
 header b{font-size:15px}
-#lec{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:700;color:var(--fg)}
-.hb{border:1px solid var(--line);background:none;border-radius:8px;padding:1px 10px;cursor:pointer;font-size:15px;line-height:1.4}
+#lec{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:8px}
+#lec::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--line)}
+body.on #lec{color:var(--fg)}
+body.on #lec::before{background:var(--rec)}
+@media (prefers-reduced-motion:no-preference){body.on #lec::before{animation:pulse 1.6s ease-in-out infinite}}
+@keyframes pulse{50%{opacity:.3}}
+.hb{flex:none;width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);background:none;border-radius:10px;padding:0;cursor:pointer;font-size:16px;line-height:1}
 .hb:hover{background:var(--accent-soft)}
+.hb:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#markImp{color:var(--accent);border-color:var(--accent)}
 .miss{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 10px 0;font-size:13px;color:var(--muted)}
 .miss button{border:1px solid var(--accent);background:none;color:var(--accent);border-radius:999px;padding:1px 11px;cursor:pointer;font-size:13px;font-weight:600}
 .miss button:hover{background:var(--accent-soft)}
-#note{margin:8px 10px 0;padding:6px 10px;border-radius:10px;background:var(--warn-bg);color:var(--warn-fg);font-size:13px}
+#note{margin:8px 10px 0;padding:6px 10px;border-radius:10px;background:var(--sunk);color:var(--muted);font-size:13.5px;line-height:1.45}
+.miss button{padding:3px 12px;min-height:28px}
 #box{flex:1;min-height:0;padding:8px 10px 10px}
 #box.askp{display:flex;flex-direction:column;height:100%;gap:8px}
 #box.askp .conv{flex:1;min-height:0;max-height:none}
 #box.askp .head{display:none}
-#box.askp textarea{font-size:16px}
+#box.askp textarea{font-size:17px;padding:10px 12px;min-height:3.6em;border-radius:12px}
+#box.askp .ais button.here{padding:8px 18px;font-size:15px;border-radius:12px;margin-inline-start:auto}
 #toast{position:fixed;inset-inline:10px;bottom:10px;background:var(--fg);color:var(--bg);padding:8px 12px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
 #toast.on{opacity:1}
 </style>
@@ -106,7 +117,7 @@ async function pollApp() {
     const kind = live ? (s.kind === "rec" ? "הרצאה מוקלטת" : s.yt ? "סרטון יוטיוב" : "הרצאה חיה") : "";
     $("#lec").textContent = live ? kind + (s.course && s.course !== "ללא קורס" ? " - " + s.course : "") : "אין עכשיו הרצאה פעילה";
     kind0 = s ? s.kind : "";
-    $("#note").hidden = live;
+    $("#note").hidden = live; document.body.classList.toggle("on", live);
     $("#miss").hidden = !live;
     if (window.BZMAsk) {
       BZMAsk.setConnected(d.connect); BZMAsk.setApps(d.ai_apps);

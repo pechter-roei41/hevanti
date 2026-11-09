@@ -1,0 +1,60 @@
+# Product
+
+<!-- impeccable:product-schema 1 -->
+
+## Platform
+
+web
+
+(Windows desktop app; the UI is a local page served on 127.0.0.1 and opened in the browser. Hebrew, right-to-left first; English also supported.)
+
+## Users
+
+Israeli university students, mostly on an ordinary laptop (no discrete GPU assumed). They use Hevanti during a lecture (live, Zoom, recorded or YouTube) or after it, to ask questions about what was just said and to mark moments they did not understand.
+
+## Product Purpose
+
+Hevanti (הבנתי) is a lecture companion. It transcribes lectures on the student's computer in Hebrew or English and saves a picture of every new slide or board. Two things sit at the core:
+
+- A small always-on-top floating window (Ctrl+Alt+Q), also over a full-screen lecture: type a question and get an answer based on the last minutes of the lecture and the slide on screen.
+- One-click marks (star = important, ? = didn't understand; Ctrl+Alt+M) that mark the moment without stopping to listen, then list every mark with what was said just before it.
+
+Success is measured by study time saved, number of users, and being a project worth showing.
+
+## Positioning
+
+Free and open source (MIT), with no Hevanti server and no AI of its own. Transcripts and slides stay on the student's computer. Answers inside Hevanti come from the student's own free Gemini API key; without a key, the question plus the last five minutes can be copied to ChatGPT, Gemini or Claude. A small MCP server lets the student's own AI read the lecture directly.
+
+## Operating Context
+
+During a live lecture the student is listening, so interactions must be quick and non-disruptive. After a lecture: summary, mock exam, formula sheet, explanation of marked moments. Lectures live in a folder per course in "הקורסים שלי"; each course has a page with lectures, marks, syllabus and glossary (glossary terms improve transcription). Also: search across everything said, recorded lectures in a player synced with the transcript, optional cloud sync to the student's own Google Drive or OneDrive.
+
+## Capabilities and Constraints
+
+- Must work on an average student laptop; no local AI model by default.
+- Answers use the student's own Gemini key (stored encrypted via Windows DPAPI). When the free quota runs out: reduce usage and show a clear message.
+- Nothing leaves the computer without a student action; cloud sync is off until turned on; the app listens only on 127.0.0.1.
+- Only computer audio is captured, not the microphone.
+- YouTube plays in YouTube's own player, never downloaded.
+- Formulas are rendered with KaTeX.
+- Undecided: possible paid tier in the future.
+
+## Brand Commitments
+
+Name הבנתי / Hevanti and its logo. Hebrew first: interface and guide in Hebrew, GitHub README in English. App fonts are Secular One and Assistant (existing assets).
+
+## Evidence on Hand
+
+Real code, tests (`tools/test_*.py`), a how-to video (`System/Program/media/howto.mp4`), a beta release and a guide. No proof of a large user base yet (the code-signing application was declined for lack of it); do not fabricate user counts or testimonials.
+
+## Product Principles
+
+1. The student is listening: every in-lecture interaction must cost seconds and no attention.
+2. Privacy by default: local first, no server, consent before anything is sent.
+3. Hebrew and right-to-left are the primary experience, not a translation.
+4. Works on the average student's laptop and free tools.
+5. The student's own AI, not ours.
+
+## Accessibility & Inclusion
+
+Existing features to preserve: adjustable text and interface size, reading spacing, high contrast, no-motion mode, screen-reader announcements, keyboard-friendly floating window.
