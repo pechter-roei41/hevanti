@@ -63,18 +63,31 @@ Full policy: https://github.com/pechter-roei41/hevanti/blob/main/CODE_SIGNING.md
 
 
 def make_icon(path):
-    """The logo (a green speech bubble with a yellow tick) as a Windows .ico, drawn here - no image file in the repo."""
+    """The logo (a green bubble with a short tail and a thick yellow tick) as a Windows .ico, drawn here - no image file in the repo.
+    Every size is drawn on its own (8x, then smoothed down) and fills its square, so the taskbar and Start icons stay crisp."""
     from PIL import Image, ImageDraw
-    big = 512
-    im = Image.new("RGBA", (big, big), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
     green, yellow = (31, 122, 85, 255), (247, 212, 76, 255)
-    d.rounded_rectangle((26, 60, 486, 384), radius=60, fill=green)
-    d.polygon([(330, 370), (420, 370), (432, 470)], fill=green)   # the bubble's tail
-    d.line([(150, 222), (218, 290), (362, 146)], fill=yellow, width=52, joint="curve")
-    for x, y in ((150, 222), (218, 290), (362, 146)):
-        d.ellipse((x - 26, y - 26, x + 26, y + 26), fill=yellow)
-    im.save(path, sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+
+    def draw(S):
+        k = 8
+        N = S * k
+        im = Image.new("RGBA", (N, N), (0, 0, 0, 0))
+        d = ImageDraw.Draw(im)
+        u = N * 0.98 / 108   # the mark is 108 x 106 units: fill the square
+        ox, oy = N * 0.01 - 6 * u, N * 0.01 + (N * 0.98 - 106 * u) / 2 - 8 * u
+
+        def P(x, y):
+            return (ox + x * u, oy + y * u)
+        d.rounded_rectangle([P(6, 8), P(114, 94)], radius=24 * u, fill=green)
+        d.polygon([P(68, 93), P(92, 93), P(100, 114)], fill=green)
+        pts = [P(33, 52), P(52, 71), P(87, 33)]
+        d.line(pts, fill=yellow, width=int(17 * u), joint="curve")
+        for x, y in pts:
+            d.ellipse((x - 8.5 * u, y - 8.5 * u, x + 8.5 * u, y + 8.5 * u), fill=yellow)
+        return im.resize((S, S), Image.LANCZOS)
+    sizes = [16, 20, 24, 32, 40, 48, 64, 96, 128, 256]
+    frames = [draw(n) for n in sizes]
+    frames[-1].save(path, format="ICO", sizes=[(n, n) for n in sizes], append_images=frames[:-1])
 
 
 def main():

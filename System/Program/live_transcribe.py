@@ -36,7 +36,7 @@ try:
 except Exception:  # lets "uninstall" run even if the install never finished
     np = None
 
-VERSION = "2.14"
+VERSION = "2.15"
 VERSION_DATE = "09.11.2026"
 PRODUCT = "הבנתי"
 GUIDE_URL = "https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD"
@@ -869,6 +869,35 @@ def model_path(name):
     return fast_download(name) or name
 
 
+# The NVIDIA card (if any) and whether Hevanti can use it. Shown on the home page with a one-click install.
+GPU = {"cards": 0, "libs_ok": True, "state": "", "msg": ""}   # state: "" | "installing" | "done" | "failed"
+
+
+def gpu_public():
+    return {"cards": GPU["cards"], "libs_ok": GPU["libs_ok"], "state": GPU["state"], "msg": GPU["msg"]}
+
+
+def gpu_install():
+    """One click: NVIDIA's cuBLAS and cuDNN (about 1 GB, from PyPI) into Hevanti's own Python - what install_gpu.bat does."""
+    if GPU["state"] == "installing":
+        return
+    GPU["state"], GPU["msg"] = "installing", ""
+
+    def run():
+        import subprocess
+        try:
+            r = subprocess.run([sys.executable, "-m", "pip", "install", "nvidia-cublas-cu12", "nvidia-cudnn-cu12==9.*"],
+                               capture_output=True, text=True, timeout=1800,
+                               creationflags=0x08000000 if os.name == "nt" else 0)
+            if r.returncode == 0:
+                GPU["state"], GPU["msg"] = "done", ""
+            else:
+                GPU["state"], GPU["msg"] = "failed", ((r.stderr or r.stdout or "").strip().splitlines() or ["pip failed"])[-1][:200]
+        except Exception as e:
+            GPU["state"], GPU["msg"] = "failed", f"{e.__class__.__name__}: {str(e)[:160]}"
+    threading.Thread(target=run, daemon=True).start()
+
+
 def _cuda_libs_ok():
     """Windows: can NVIDIA's cuBLAS and cuDNN be loaded? (otherwise: leave it to CTranslate2.)"""
     if os.name != "nt":
@@ -902,6 +931,8 @@ def load_model(stub_av=True):
             path = model_path(name)
             import ctranslate2
             gpus = ctranslate2.get_cuda_device_count()
+            GPU["cards"] = gpus
+            GPU["libs_ok"] = not (gpus > 0 and not _cuda_libs_ok())
             if gpus > 0 and not _cuda_libs_ok():
                 # an NVIDIA card but no cuBLAS/cuDNN (Hevanti-Setup's own Python has none until install_gpu):
                 # trying the GPU then can hang for ever - straight to the CPU
@@ -6614,7 +6645,7 @@ class App:
                     "progress": progress, "question": self.question, "pending": self.pending,
                     "notes": [n for n in self.notes if n["id"] > notes_since],
                     "lib_rev": self.lib_rev, "first_view": self.first_view,
-                    "screens": SCREEN_ENABLED, "capture": capture_control().public(), "math": math_reader().status(),
+                    "screens": SCREEN_ENABLED, "capture": capture_control().public(), "math": math_reader().status(), "gpu": gpu_public(),
                     "product": PRODUCT, "migrated": self.migrated,
                     "course": load_settings().get("course") or "", "connect": self.connect_info(),
                     "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme()}
@@ -6779,6 +6810,9 @@ class App:
             t = d.get("theme") if d.get("theme") in ("light", "dark") else ""
             save_settings(theme=t)
             return {"ok": True, "theme": t}
+        if a == "install_gpu":   # the NVIDIA libraries, one click (home page banner)
+            gpu_install()
+            return {"ok": True, "gpu": gpu_public()}
         if a == "external_ai":   # show the buttons that copy a question to another AI (off by default: answers are inside Hevanti)
             save_settings(external_ai=bool(d.get("on")))
             return {"ok": True}

@@ -534,6 +534,8 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 
     <div class="connbar" id="tutorBar" hidden><span><b>חדש: תשובות בתוך הבנתי, תוך כדי ההרצאה.</b> שואלים "מה הוא אמר עכשיו?" ו-Gemini עונה כאן, עם מה שנאמר והשקופית. צריך פעם אחת מפתח חינמי של Google (דקה).</span><button class="btn small" id="tutorGo" type="button">להגדרה</button><button class="btn quiet small" id="tutorNo" type="button">לא עכשיו</button></div>
 
+    <div class="connbar gpubar" id="gpuBar" hidden><span id="gpuText"></span><button class="btn small" id="gpuGo" type="button"></button></div>
+
     <div class="card capcard" id="capHome"></div>
 
     <div class="starts">
@@ -1661,8 +1663,26 @@ async function drawResume() {
     if (mine.length) { mb.textContent = mine.length + " ★ סימונים מחכים"; mb.hidden = false; mb.onclick = () => { location.hash = "c=" + encodeURIComponent(e.course); }; }
   }
 }
+// an NVIDIA card that Hevanti cannot use yet: say it plainly, and install what is missing with one click
+function drawGpu(d) {
+  const g = d && d.gpu, bar = $("#gpuBar"); if (!bar) return;
+  const txt = $("#gpuText"), go = $("#gpuGo");
+  if (!g || !(g.cards > 0) || (g.libs_ok && g.state !== "done" && g.state !== "installing")) { bar.hidden = true; return; }
+  bar.hidden = false; txt.replaceChildren(); go.hidden = false; go.disabled = false;
+  if (g.state === "installing") { txt.append(el("b", "", "מתקין את מה שהכרטיס צריך... "), "כ-1GB, כמה דקות. אפשר להמשיך להשתמש בהבנתי בינתיים."); go.hidden = true; }
+  else if (g.state === "done") { txt.append(el("b", "", "ההתקנה הסתיימה. "), "כדי שהתמלול ישתמש בכרטיס המסך, סוגרים את הבנתי ופותחים אותה שוב."); go.textContent = "סגירת האפליקציה"; go.dataset.act = "quit"; }
+  else {
+    txt.append(el("b", "", "יש לך כרטיס מסך של NVIDIA, והתמלול עדיין רץ על המעבד. "), "בכרטיס הוא מהיר בהרבה ועומד בקצב גם בהרצאות ארוכות. התקנה אחת של כ-1GB, כמה דקות." + (g.state === "failed" ? " ההתקנה הקודמת נכשלה" + (g.msg ? " (" + g.msg + ")" : "") + "." : ""));
+    go.textContent = g.state === "failed" ? "לנסות שוב" : "להתקין עכשיו"; go.dataset.act = "install";
+  }
+}
+$("#gpuGo").addEventListener("click", async () => {
+  if ($("#gpuGo").dataset.act === "quit") { $("#quitBtn").click(); return; }
+  $("#gpuGo").disabled = true;
+  try { const r = await api("/api/cmd", {action: "install_gpu"}); if (app && r.gpu) { app.gpu = r.gpu; drawGpu(app); } } catch (e) {}
+});
 function render(d) {
-  drawHomeHints(d);
+  drawHomeHints(d); drawGpu(d);
   $("#ver").textContent = "גרסת בטא " + d.version + " (" + d.date + ")"; $("#ver").title = "גרסת בטא: עדיין בבדיקה, ועלולות להיות תקלות. אם משהו לא עובד, יש \"דיווח על תקלה\" בתחתית מסך הבית.";
   if (!render.themed) { render.themed = true;   // a browser that has no choice of its own yet takes Hevanti's
     let mine = ""; try { mine = localStorage.getItem("bzm.theme") || ""; } catch (e) {}
