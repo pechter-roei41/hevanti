@@ -57,9 +57,10 @@ header{position:sticky;top:0;z-index:5;padding:10px 16px 0;background:linear-gra
   background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:999px}
 .brand{display:flex;align-items:center;gap:9px;font-family:var(--f-display);font-weight:400;font-size:22px;cursor:pointer;background:none;border:0;padding:0 6px}
 .nav{display:flex;gap:2px;flex-wrap:wrap;margin-inline-end:auto}
-.nav a{color:var(--muted);text-decoration:none;font-weight:600;font-size:15.5px;padding:5px 13px;border-radius:999px;white-space:nowrap}
-.nav a:hover{color:var(--fg);background:var(--sunk)}
-.nav a[aria-current="page"]{color:var(--fg);background:var(--sunk);font-weight:800}
+.nav button{color:var(--muted);background:transparent;border:0;font:inherit;cursor:pointer;font-weight:600;font-size:15.5px;padding:5px 13px;border-radius:999px;white-space:nowrap}   /* buttons, not links: the browser then shows no address bubble on hover */
+.nav button:hover{color:var(--fg);background:var(--sunk)}
+.nav button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.nav button[aria-current="page"]{color:var(--fg);background:var(--sunk);font-weight:800}
 .iconbtn{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;border:0;background:transparent;color:var(--muted);cursor:pointer}
 .iconbtn:hover{background:var(--sunk);color:var(--fg)}
 @media (max-width:520px){.brand small{display:none}}
@@ -492,10 +493,10 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <div class="bar">
     <button class="brand" id="brand" type="button" title="למסך הבית של האפליקציה"><svg class="logo" width="30" height="30" viewBox="0 0 120 120" aria-hidden="true"><path d="M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z" fill="var(--accent)"></path><path d="M33 52L52 71L87 33" fill="none" stroke="var(--mark)" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"></path></svg>הבנתי <small><span id="verTop"></span></small></button>
     <nav class="nav" aria-label="ניווט ראשי">
-      <a href="#" data-nav="home">בית</a>
-      <a href="#courses" data-nav="courses">הקורסים שלי</a>
-      <a href="#how" data-nav="how">איך משתמשים</a>
-      <a href="#settings" data-nav="settings" id="setBtn">הגדרות</a>
+      <button type="button" data-nav="home" data-hash="">בית</button>
+      <button type="button" data-nav="courses" data-hash="courses">הקורסים שלי</button>
+      <button type="button" data-nav="how" data-hash="how">איך משתמשים</button>
+      <button type="button" data-nav="settings" data-hash="settings" id="setBtn">הגדרות</button>
     </nav>
     <span class="pill" id="statePill" aria-live="polite">מוכן</span>
     <span class="pill" id="devPill" hidden></span>
@@ -1599,6 +1600,7 @@ function route() {
 }
 window.addEventListener("hashchange", route);
 $("#brand").addEventListener("click", () => { location.hash = ""; });
+document.querySelectorAll("[data-nav]").forEach(b => b.addEventListener("click", () => { location.hash = b.dataset.hash; }));   // the top-bar tabs
 $("#cBack").addEventListener("click", () => { location.hash = "courses"; });
 document.querySelectorAll("[data-home]").forEach(b => b.addEventListener("click", () => { location.hash = ""; }));
 // from a lecture: back to where it was opened from (its course page or home)
