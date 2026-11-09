@@ -925,28 +925,55 @@ def _write_window_icon(path):
     frames[-1].save(path, format="ICO", sizes=[(n, n) for n in sizes], append_images=frames[:-1])
 
 
-def set_window_icon():
-    """The minimized window on the taskbar shows the Hevanti mark. A console window gets only a 32 px icon from its shortcut,
-    which Windows then stretches on a scaled screen (blocky). Give it big and small icons of its own: Windows shrinks them smoothly."""
-    if os.name != "nt":
-        return
-    try:
-        import ctypes
-        import tempfile
-        hwnd = ctypes.windll.kernel32.GetConsoleWindow()
-        if not hwnd:
-            return
+_ICON_PATH = {"path": ""}
+
+
+def _set_icons(hwnd):
+    """Give one window big (128 px, taskbar) and small (32 px, title bar) icons of the Hevanti mark. Windows shrinks them
+    smoothly, so they stay sharp on a scaled screen; a 32 px icon (a shortcut's, or a browser's favicon) is stretched and blocky."""
+    import ctypes
+    import tempfile
+    if not _ICON_PATH["path"]:
         path = os.path.join(tempfile.gettempdir(), "hevanti-window.ico")
         _write_window_icon(path)
-        u = ctypes.WinDLL("user32")
-        u.LoadImageW.restype = ctypes.c_void_p
-        u.SendMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_size_t, ctypes.c_void_p]
-        for kind, size in ((1, 128), (0, 32)):   # ICON_BIG (taskbar), ICON_SMALL (title bar)
-            h = u.LoadImageW(None, path, 1, size, size, 0x10)   # IMAGE_ICON, LR_LOADFROMFILE
-            if h:
-                u.SendMessageW(hwnd, 0x80, kind, h)   # WM_SETICON
-    except Exception:
-        pass
+        _ICON_PATH["path"] = path
+    u = ctypes.WinDLL("user32")
+    u.LoadImageW.restype = ctypes.c_void_p
+    u.SendMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_size_t, ctypes.c_void_p]
+    for kind, size in ((1, 128), (0, 32)):   # ICON_BIG, ICON_SMALL
+        h = u.LoadImageW(None, _ICON_PATH["path"], 1, size, size, 0x10)   # IMAGE_ICON, LR_LOADFROMFILE
+        if h:
+            u.SendMessageW(hwnd, 0x80, kind, h)   # WM_SETICON
+
+
+def set_window_icon():
+    """The minimized black window, the app window and the small question window all show the Hevanti mark on the taskbar.
+    A browser window repaints its own (blocky) icon when it loads, so the icons are set again every few seconds."""
+    if os.name != "nt":
+        return
+
+    def keep():
+        import ctypes
+        while True:
+            try:
+                hwnds = []
+                c = ctypes.windll.kernel32.GetConsoleWindow()
+                if c:
+                    hwnds.append(c)
+                if _APP_WIN["hwnd"]:
+                    hwnds.append(_APP_WIN["hwnd"])
+                try:
+                    m = _find_mini(_mini_user32())
+                    if m:
+                        hwnds.append(m)
+                except Exception:
+                    pass
+                for h in hwnds:
+                    _set_icons(h)
+            except Exception:
+                pass
+            time.sleep(3)
+    threading.Thread(target=keep, daemon=True).start()
 
 
 def probe_gpu():
