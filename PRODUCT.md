@@ -32,6 +32,7 @@ During a live lecture the student is listening, so interactions must be quick an
 ## Capabilities and Constraints
 
 - Must work on an average student laptop; no local AI model by default.
+- Transcription runs on the CPU by default and is much faster and keeps pace with long lectures on an NVIDIA graphics card. Hevanti detects the card at start-up; when it is there but unused, the home page offers a one-click install of the NVIDIA libraries (about 1 GB, once) and a restart. Anyone with an NVIDIA card should be steered to it. There is no "is my computer good enough" checklist: the guide only recommends the card.
 - Answers use the student's own Gemini key (stored encrypted via Windows DPAPI). When the free quota runs out: reduce usage and show a clear message.
 - Nothing leaves the computer without a student action; cloud sync is off until turned on; the app listens only on 127.0.0.1.
 - Only computer audio is captured, not the microphone.
@@ -41,11 +42,11 @@ During a live lecture the student is listening, so interactions must be quick an
 
 ## Brand Commitments
 
-Name הבנתי / Hevanti and its logo. Hebrew first: interface and guide in Hebrew, GitHub README in English. App fonts are Secular One and Assistant (existing assets).
+Name הבנתי / Hevanti and its logo: one mark everywhere (green speech bubble with a short tail and a thick yellow check; drawn the same in the app and player headers, favicon, floating button, installer icon, web guide and video). No second small-size variant. Hebrew first: interface and guide in Hebrew, GitHub README in English. App fonts are Secular One and Assistant (existing assets).
 
 ## Evidence on Hand
 
-Real code, tests (`tools/test_*.py`), a how-to video (`System/Program/media/howto.mp4`), a beta release and a guide. No proof of a large user base yet (the code-signing application was declined for lack of it); do not fabricate user counts or testimonials.
+Real code, tests (`tools/test_*.py`), a one-minute how-to video (`System/Program/media/howto.mp4`, footage of the current interface), a beta release, the in-app guide ("איך משתמשים") and a public web guide (a claude.ai Artifact linked from the README). No proof of a large user base yet (the code-signing application was declined for lack of it); do not fabricate user counts or testimonials.
 
 ## Product Principles
 
