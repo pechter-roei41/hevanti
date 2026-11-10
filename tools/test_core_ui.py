@@ -411,7 +411,8 @@ with sync_playwright() as p:
         d = os.path.join(L.course_dir(course), nm)
         os.makedirs(d)
         with open(os.path.join(d, nm + ".txt"), "w", encoding="utf-8") as f:
-            f.write(f"# תמלול הרצאה (עברית) - התחלה {head}\n[{head[-5:]}:00 | +0:00:05] שלום לכולם\n# סוף\n")
+            slides = "".join(f"[{head[-5:]}:0{i} | +0:00:0{i}] [צילום מסך: {course}/{nm}/שקופיות/s{i}.jpg]\n" for i in (1, 2)) if nm == "מבוא לגבולות" else ""
+            f.write(f"# תמלול הרצאה (עברית) - התחלה {head}\n[{head[-5:]}:00 | +0:00:05] שלום לכולם\n{slides}# סוף\n")
     from urllib.parse import quote
     pg.goto(url + "/#c=" + quote(course))
     pg.reload()   # (the library is read when the page opens: the lectures above were made after it)
@@ -420,17 +421,23 @@ with sync_playwright() as p:
     meta = pg.evaluate("[...document.querySelectorAll('#cLib li')].map(li => [li.querySelector('.t').textContent, li.querySelector('.m').textContent])")
     auto = [m for m in meta if m[0].startswith("הרצאה 02.11.2026")]
     named = [m for m in meta if m[0] == "מבוא לגבולות"]
-    check("a lecture whose title is its date and time: the line under it does not say them again",
-          len(auto) == 1 and "10:00" not in auto[0][1] and "2026-11-02" not in auto[0][1] and "עברית" in auto[0][1], meta)
-    check("a lecture with a name of its own: the line under it has the date and time", len(named) == 1 and "2026-11-09 08:30" in named[0][1], meta)
-    check("one line under a lecture: a line in singular", all("שורה אחת" in m[1] for m in meta), meta)
+    check("a lecture whose title is its date and time: the line under it has only the length (not the date and time again, not the language, not the lines)",
+          len(auto) == 1 and auto[0][1] == "אורך 00:00:05", meta)
+    check("a lecture with a name of its own: the date in one format (09.11.2026), the length, the slides - and no time, language or lines",
+          len(named) == 1 and named[0][1] == "09.11.2026 · אורך 00:00:05 · שתי שקופיות", meta)
+    check("the line under a lecture has no ISO date and no 'lines'", all("2026-" not in m[1] and "שורה" not in m[1] and "עברית" not in m[1] for m in meta), meta)
     check("the course page: 'two lectures', not '2 lectures'", "שתי הרצאות" in pg.inner_text("#cSub") and "שתי הרצאות" in pg.inner_text("#ctLec"), (pg.inner_text("#cSub"), pg.inner_text("#ctLec")))
     check("the summary line is built from the same list as the lectures (and is not 'no lectures' above a list)",
           "אין הרצאות" not in pg.inner_text("#cSize") and "עוד אין הרצאות" not in pg.inner_text("#cSize") and "שתי הרצאות" in pg.inner_text("#cSize"), pg.inner_text("#cSize"))
     pg.evaluate("openPast(%s)" % json.dumps(course + "/2026-11-02 10-00 הרצאה"))
     pg.wait_for_timeout(1000)
     sub = pg.inner_text("#pastSub")
-    check("a saved lecture: the line under its title does not repeat the date and time either", "10:00" not in sub and "2026-11-02" not in sub and "שורה אחת" in sub, sub)
+    check("a saved lecture: the line under its title is the same line (the course, the length) - no date and time again, no language, no lines",
+          sub == course + " · אורך 00:00:05", sub)
+    check("...the language and the number of lines are with the transcript, on the same page", pg.inner_text("#pastTrCount") == "עברית · שורה אחת", pg.inner_text("#pastTrCount"))
+    pg.evaluate("openPast(%s)" % json.dumps(course + "/מבוא לגבולות"))
+    pg.wait_for_timeout(1000)
+    check("a saved lecture with a name: the course, the date in one format, the length, the slides", pg.inner_text("#pastSub") == course + " · 09.11.2026 · אורך 00:00:05 · שתי שקופיות", pg.inner_text("#pastSub"))
     check("2.18 page: no script errors", pg.errs == [], pg.errs)
 
     # ---- 2.19, stage 6: the lecture page - the three study cards are not inside a card, the summary card is soft green, "answer here" is the one solid green ----

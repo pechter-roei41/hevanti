@@ -2018,6 +2018,15 @@ function drawTabs() {
   if (c) $("#libCbarText").textContent = c.name + " · " + nLec(c.lectures) + " · מילון: " + nTerm(c.terms);
 }
 $("#libCbarGo").addEventListener("click", () => { if (libCourse) location.hash = "c=" + encodeURIComponent(libCourse); });
+// one date format everywhere (the title of a lecture that was not renamed uses it too): 09.11.2026
+function fmtDate(when) { const m = /^(\d{4})-(\d\d)-(\d\d)/.exec(when || ""); return m ? m[3] + "." + m[2] + "." + m[1] : ""; }
+// the line under a lecture, in the list and on its page: the date (not when the title already is the date and time), the length, the slides
+function lecInfo(e) {
+  const bits = [e.when_in_title ? "" : fmtDate(e.when)];
+  if (e.length) bits.push("אורך " + e.length);
+  if (e.shots) bits.push(nSlide(e.shots));
+  return bits.filter(Boolean);
+}
 function lecItem(e, withCourse) {
   const li = el("li");
   const k = el("span", "k"); k.innerHTML = e.kind === "yt"
@@ -2030,9 +2039,7 @@ function lecItem(e, withCourse) {
   if (e.running) t.appendChild(el("span", "tag run", "פועל עכשיו"));
   else if (!e.complete) t.appendChild(el("span", "tag part", e.kind !== "rec" ? "לא הסתיים כרגיל" :
     (e.progress != null ? "תומלל " + e.progress + "%" : "השקופיות לא הושלמו")));
-  const bits = [e.when_in_title ? "" : e.when, langName(e.lang)];   // (a title that is the date and time already says it)
-  if (e.length) bits.push("אורך " + e.length);
-  bits.push(nLine(e.lines)); if (e.shots) bits.push(nShot(e.shots));
+  const bits = lecInfo(e);   // date, length, slides - nothing else (the language and the lines are on the lecture's page)
   const m = el("div", "m");
   if (withCourse) {   // the course name leads to the course page
     const ct = el("a", "ctag", e.course); ct.href = "#c=" + encodeURIComponent(e.course); ct.title = "לדף הקורס";
@@ -2539,13 +2546,13 @@ async function openPast(f, at) {
   drawPastMarks(d.lines);
   drawStudyWhere();
   $("#pastTitle").textContent = e.title;
-  $("#pastSub").textContent = [e.course, e.when_in_title ? "" : e.when, langName(e.lang), e.length ? "אורך " + e.length : "", nLine(e.lines)].filter(Boolean).join(" · ");
+  $("#pastSub").textContent = [e.course && e.course !== NO_COURSE ? e.course : "", ...lecInfo(e)].filter(Boolean).join(" · ");
   $("#pastPlay").hidden = !(e.kind === "rec" && e.has_media);
   const box = $("#pastLines"), frag = document.createDocumentFragment();
   for (const x of d.lines) appendLine(frag, x);
   if (!d.lines.length) frag.appendChild(el("li", "note", "אין שורות בתמלול הזה."));
   box.replaceChildren(frag); box.scrollTop = 0;
-  $("#pastTrCount").textContent = nLine(e.lines);
+  $("#pastTrCount").textContent = langName(e.lang) + " · " + nLine(e.lines);   // (what the line under the title no longer says: it is here, with the transcript)
   $("#pastTrFold").open = at != null;   // the transcript opens when the student came to a moment in it
   $("#pastAskFold").open = false;
   if (at != null) {
