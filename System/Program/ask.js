@@ -24,7 +24,8 @@
 .askp .ais{display:flex;gap:6px;flex-wrap:wrap}
 .askp .ais button{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;padding:5px 13px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
 .askp .ais button:hover{background:var(--accent-soft)}
-.askp .ais button.last{background:var(--accent);color:var(--accent-ink)}
+.askp .ais button.last{border-width:2px;font-weight:800}   /* the AI used last: a ghost button with a thicker edge and the word, not a second solid green */
+.askp .ais button.last::after{content:"· אחרון";font-weight:400;font-size:.82em;margin-inline-start:6px}
 .askp .hint{color:var(--muted);font-size:13px;line-height:1.5;margin:0}
 .askp .conn{background:var(--accent-soft);color:var(--fg);border-radius:10px;padding:7px 11px;font-size:14px;line-height:1.5;margin:0}
 .askp .conn b{color:var(--accent)}
@@ -52,7 +53,7 @@
 .askp .alt-box{margin-top:6px;display:grid;gap:6px;font-size:14px;line-height:1.5;color:var(--fg)}
 .askp .conv{gap:12px;padding-block:4px}
 .askp .qa{display:grid;gap:6px;background:none;border:0;padding:0}
-.askp .qa .q{justify-self:start;max-width:88%;margin:0;padding:7px 13px;border-radius:16px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:calc(14.5px * var(--tx, 1));line-height:1.5}
+.askp .qa .q{justify-self:start;max-width:88%;margin:0;padding:7px 13px;border-radius:16px;background:var(--accent-soft);color:var(--fg);font-weight:600;font-size:calc(14.5px * var(--tx, 1));line-height:1.5}
 .askp .qa .a{justify-self:end;max-width:96%;padding:8px 13px;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
 .askp .qa.err .a{border-color:var(--rec)}
 .askp .src{display:inline;border:0;background:none;padding:0;margin-inline:2px;font-family:var(--f-mono,Consolas,"Cascadia Mono",ui-monospace,monospace);font-size:.85em;color:var(--muted);direction:ltr;unicode-bidi:isolate;white-space:nowrap}
