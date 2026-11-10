@@ -3617,6 +3617,43 @@ def tidy_yt_transcript(path):
 
 
 # ---------- audio capture ----------
+# The sound waiting to be transcribed has a ceiling. A computer too slow for the lecture would otherwise keep every second it
+# could not keep up with in memory (about 11 MB for every minute of delay, stereo at 48 kHz) and fall further behind until the end.
+AUDIO_QUEUE_MAX = 7000    # buffers of 2048 frames: about 5 minutes of sound. Past it, the oldest waiting sound is skipped...
+AUDIO_QUEUE_KEEP = 1400   # ...down to the newest about minute, so the transcript goes on from nearly "now"
+
+
+class AudioQueue(queue.Queue):
+    """The queue between the sound card and the transcription, with a ceiling: when it is full the oldest waiting sound is dropped
+    (all but the newest AUDIO_QUEUE_KEEP buffers). The reader finds out through gap_seen (how many buffers were dropped before the
+    buffer it just took), so it can say so and give the words after the gap their own times."""
+
+    def __init__(self, max_chunks=None, keep_chunks=None):
+        super().__init__()
+        self.max = AUDIO_QUEUE_MAX if max_chunks is None else max_chunks
+        self.keep = AUDIO_QUEUE_KEEP if keep_chunks is None else keep_chunks
+        self.gap_chunks = 0     # dropped, and the next buffer to be taken is the first one after them
+        self.gap_seen = 0       # dropped before the buffer the reader just took (the reader sets it back to 0)
+        self.dropped_total = 0
+
+    def put(self, item, block=True, timeout=None):
+        with self.mutex:
+            if len(self.queue) >= self.max:
+                drop = max(1, len(self.queue) - self.keep)
+                for _ in range(drop):
+                    self.queue.popleft()
+                self.gap_chunks += drop
+                self.dropped_total += drop
+        super().put(item, block, timeout)
+
+    def _get(self):   # (under the queue's lock: no buffer is dropped between taking one and marking the gap before it)
+        item = self.queue.popleft()
+        if self.gap_chunks:
+            self.gap_seen += self.gap_chunks
+            self.gap_chunks = 0
+        return item
+
+
 class DefaultSpeakers:
     """Asks Windows which speakers/headphones are the default right now (a cheap call),
     so switching between headphones and speakers is noticed within a second."""
@@ -7567,6 +7604,7 @@ def library_entry(d, course):
                                  when=f"{m.group(2)} {m.group(3)}")
                         dm = DEFAULT_LIVE_NAME.match(name)
                         if dm:  # not renamed: a readable title
+                            e["when_in_title"] = True   # (the page does not write the date and time again beside it)
                             e["title"] = (f"הרצאה {dm.group(3)}.{dm.group(2)}.{dm.group(1)} {dm.group(4)}:{dm.group(5)}"
                                           + (" (אנגלית)" if dm.group(6) else "") + (dm.group(7) or ""))
                         continue
@@ -8901,7 +8939,7 @@ def run_live(sess, lang, course=""):
         return
     on_gpu = model_desc.endswith("GPU")
     min_s, max_s = (GPU_MIN_CHUNK_S, GPU_MAX_CHUNK_S) if on_gpu else (MIN_CHUNK_S, MAX_CHUNK_S)
-    q = queue.Queue()
+    q = AudioQueue()   # (a ceiling on the sound that waits: see AudioQueue)
     audio = AudioInput(q)
     told = False
     while not sess.stop.is_set():
@@ -9242,6 +9280,19 @@ def run_live(sess, lang, course=""):
         elapsed = str(datetime.timedelta(seconds=int(now - start.timestamp())))
         write_line(f"[{stamp} | +{elapsed}] [{line}]")
 
+    def skip_gap(frames):
+        """The sound that waited was too much (the computer is too slow for this lecture) and the oldest of it was dropped:
+        say what was skipped, and start the words after the gap with their own time."""
+        nonlocal blocks, n, t0
+        chunks, q.gap_seen = q.gap_seen, 0
+        secs = chunks * frames / sr
+        if n > 0:   # what came before the gap is transcribed first
+            handle_chunk(np.concatenate(blocks), t0, sr)
+        blocks, n, t0 = [], 0, None
+        log(f"התמלול מאחר מאוד: המחשב איטי מדי להרצאה הזאת. דילגתי על {secs:.0f} שניות של ההרצאה (מה שנאמר בהן לא יתומלל) כדי להמשיך מהרגע הנוכחי. "
+            "כדאי לסגור תוכנות כבדות, ובמחשב נייד לחבר למטען.")
+        note(f"דילגתי על {secs:.0f} שניות: התמלול מאחר מדי")
+
     def reconnect(reason, loud):
         """Reopen the audio device (new default device, after sleep, after an error)."""
         nonlocal blocks, n, t0, sr, ch
@@ -9336,6 +9387,8 @@ def run_live(sess, lang, course=""):
                 continue
             last_audio = time.time(); warned_silent = False
             a = to_mono(data, ch)
+            if q.gap_seen:
+                skip_gap(len(a))
             if t0 is None:
                 t0 = t
             blocks.append(a)

@@ -109,7 +109,7 @@ h2{font-size:21px;margin:0;text-wrap:balance}
 .resume .rtxt{margin-inline-end:auto;min-width:0;display:grid}
 .resume .rtxt b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .resume .rtxt small{color:var(--muted);font-size:14px}
-.homehints{display:flex;justify-content:space-between;align-items:center;gap:8px 24px;flex-wrap:wrap;margin:0 2px 18px;color:var(--muted);font-size:14.5px}
+.homehints{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin:0 2px 18px;color:var(--muted);font-size:14.5px}
 .homehints p{margin:0}
 .hkeys{display:flex;gap:6px 18px;flex-wrap:wrap}
 .hstat{display:flex;align-items:center;gap:8px}
@@ -239,6 +239,8 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .pano summary{cursor:pointer}
 .pano ol{margin:6px 0;padding-inline-start:22px}
 .connbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--accent-soft);border-radius:var(--r);padding:10px 14px;margin:0 0 18px}
+.keybar{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap;background:var(--warn-bg);color:var(--warn-fg);border-radius:var(--r);padding:14px 18px;margin:0 0 18px;font-size:16px;line-height:1.5}
+.keybar span{margin-inline-end:auto}
 .connbar span{margin-inline-end:auto}
 .foot{margin-top:26px;color:var(--muted);font-size:14px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 
@@ -434,7 +436,7 @@ kbd{font-family:var(--f-mono);font-size:13px;background:var(--surface);border:1p
 .optbox p{margin:0;font-size:15px;line-height:1.55;color:var(--muted)}
 .optbox ol{margin:0;padding-inline-start:20px;font-size:15px;line-height:1.6;display:grid;gap:2px}
 .optbox label.row{gap:8px;cursor:pointer;line-height:1.5}
-.optbox .warn{color:var(--rec);font-weight:700}
+.optbox .warn{color:var(--warn-fg);background:var(--warn-bg);border-radius:10px;padding:8px 12px;font-weight:600}
 .optbox a{color:var(--accent)}
 /* the first-start card */
 .setup{list-style:none;margin:0;padding:0;display:grid;gap:10px}
@@ -546,6 +548,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 
     <div class="connbar gpubar" id="gpuBar" hidden><span id="gpuText"></span><button class="btn small" id="gpuGo" type="button"></button></div>
 
+    <div class="keybar" id="keyBar" role="status" hidden><span><b>חסר מפתח Gemini.</b> בלי זה אין "תשובה כאן" בתוך הבנתי. מדביקים פעם אחת, בערך דקה.</span><button class="btn small" id="keyBarGo" type="button">הדבקת מפתח</button></div>
     <div class="card capcard" id="capHome"></div>
 
     <div class="starts">
@@ -607,7 +610,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <summary><b>AI מובנה (Gemini): תשובות בתוך הבנתי וקריאת נוסחאות</b> <span class="sub2" id="mathSum" style="color:var(--muted)"></span></summary>
       <div style="display:grid;gap:12px;margin-top:10px">
         <div class="optbox">
-          <h4>1. מפתח Gemini ותשובות בתוך הבנתי</h4>
+          <h4>מפתח Gemini ותשובות בתוך הבנתי</h4>
           <p>הבנתי עונה בעצמה על שאלות, בעזרת Gemini של Google. לשם כך צריך "מפתח": קוד חינמי של Google, בלי כרטיס אשראי.</p>
           <ol><li>נכנסים ל-<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> עם חשבון Google רגיל.</li><li>לוחצים <b>Create API key</b>, ואז <b>Copy key</b>.</li><li>מדביקים כאן ולוחצים <b>"שמירה ובדיקה"</b>. המפתח נשמר מוצפן, רק במחשב הזה.</li></ol>
           <div class="row"><input type="password" id="mathKey" placeholder="להדביק כאן את מפתח Gemini" autocomplete="off" aria-label="מפתח Gemini" dir="ltr"><button class="btn small" id="mathSave" type="button">שמירה ובדיקה</button></div>
@@ -617,19 +620,19 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <div class="row"><button class="btn ghost small" id="mathForget" type="button" hidden>מחיקת המפתח</button></div>
         </div>
         <div class="optbox">
-          <h4>2. הוראות אישיות לתשובות</h4>
+          <h4>הוראות אישיות לתשובות</h4>
           <p>מה שכתוב כאן נוסף להוראות של הבנתי בכל "תשובה כאן": אורך, שפה, איך להסביר. למשל: <button class="linkish" type="button" data-note="תענה בשורה או שתיים.">שורה או שתיים</button> <button class="linkish" type="button" data-note="תסביר כמו למתחיל, עם דוגמה.">כמו למתחיל</button> <button class="linkish" type="button" data-note="תענה באנגלית.">באנגלית</button> <button class="linkish" type="button" data-note="בלי נוסחאות, רק במילים.">בלי נוסחאות</button>. נוסחאות נכתבות ב-LaTeX כברירת מחדל, ואפשר לשנות גם את זה. הבנתי תמיד לא תמציא מה המרצה אמר.</p>
           <textarea id="notesIn" maxlength="500" rows="3" dir="auto" placeholder="למשל: תענה בעברית פשוטה, עד 4 שורות, ותוסיף דוגמה אם יש." aria-label="הוראות אישיות לתשובות" style="width:100%;box-sizing:border-box;font:inherit;font-size:15px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px"></textarea>
           <div class="row"><button class="btn small" id="notesSave" type="button">שמירה</button><span class="sub" id="notesCount" style="color:var(--muted)">0/500</span></div>
           <p class="warn">הטקסט נשלח ל-Google עם כל שאלה. לא לכתוב כאן מידע אישי.</p>
         </div>
         <div class="optbox">
-          <h4>3. יש לי מנוי בתשלום</h4>
+          <h4>יש לי מנוי בתשלום</h4>
           <label class="row"><input type="checkbox" id="planPaid"><b>יש לי מנוי ל-ChatGPT, Claude או Gemini</b></label>
           <p>שאלות והרצאות שלמות ילכו ישר לאפליקציה שלך, בלי מכסה. "תשובה כאן" נשארת אפשרות חינמית נוספת.</p>
         </div>
         <div class="optbox">
-          <h4>4. קריאת נוסחאות וכתב יד</h4>
+          <h4>קריאת נוסחאות וכתב יד</h4>
           <label class="row"><input type="checkbox" id="mathOn"><b>לקרוא נוסחאות וכתב יד בכל שקופית חדשה</b></label>
           <p>הקריאה הרגילה של השקופיות לא מבינה נוסחאות וכתב יד. כשזה פועל, שקופית שאינה טקסט מודפס ברור (נוסחה, כתב יד, תמונה) נשלחת ל-Gemini (טקסט מודפס ברור נקרא במחשב, בלי לשלוח), והוא כותב את הטקסט והנוסחאות (למשל <code dir="ltr">$I = \int r^2\,dm$</code>) לחיפוש, לסיכומים ולתשובות.</p>
           <p class="warn">שימו לב: זה פועל מעצמו כשמוסיפים מפתח, ושולח ל-Google שקופיות שאינן טקסט מודפס ברור (נוסחאות, כתב יד, תמונות). אפשר לכבות כאן בכל רגע.</p>
@@ -1134,6 +1137,13 @@ $("#connClose").addEventListener("click", () => { $("#conn").hidden = true; });
 function toast(t) { const e = $("#toast"); e.textContent = t; e.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => e.classList.remove("on"), Math.max(2800, t.length * 55)); }
 function hms(t) { t = Math.max(0, Math.floor(t || 0)); return [t / 3600 | 0, (t % 3600) / 60 | 0, t % 60].map(x => String(x).padStart(2, "0")).join(":"); }
 function langName(l) { return l === "en" ? "אנגלית" : "עברית"; }
+// counts in Hebrew: "הרצאה אחת", "שתי הרצאות", "5 הרצאות" - never "1 הרצאות"
+function heN(n, one, two, many, zero) { n = +n || 0; return n === 0 ? (zero || "אין " + many) : n === 1 ? one : n === 2 ? two : n + " " + many; }
+const nLec = n => heN(n, "הרצאה אחת", "שתי הרצאות", "הרצאות");
+const nTerm = n => heN(n, "מונח אחד", "שני מונחים", "מונחים");
+const nSlide = n => heN(n, "שקופית אחת", "שתי שקופיות", "שקופיות");
+const nLine = n => heN(n, "שורה אחת", "שתי שורות", "שורות");
+const nShot = n => heN(n, "צילום אחד", "שני צילומים", "צילומים");
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 function big(src) { $("#big img").src = src; $("#big").hidden = false; }
 $("#big").addEventListener("click", () => { $("#big").hidden = true; });
@@ -1377,13 +1387,13 @@ $("#mathOn").addEventListener("change", () => mathSend({on: $("#mathOn").checked
 $("#planPaid").addEventListener("change", () => mathSend({plan: $("#planPaid").checked ? "paid" : "free"}, $("#planPaid").checked ? "מעכשיו שאלות והרצאות שלמות ילכו לאפליקציית ה-AI שלך." : "מעכשיו הבנתי עונה כאן, במכסה החינמית."));
 $("#askOn").addEventListener("change", () => mathSend({ask: $("#askOn").checked}, $("#askOn").checked ? "תשובות בתוך הבנתי פועלות." : "תשובות בתוך הבנתי כבויות."));
 // ---------- the first start: two steps (a free Gemini key, one window to photograph) ----------
-let setupNo = false;
+let setupNo = false, setupForce = false;   // (setupForce: the student asked for it, from the bar above the cards)
 try { setupNo = localStorage.getItem("bzm.setupNo") === "1"; } catch (e) {}
 function drawSetup() {
   const m = (app && app.math) || {};   // (what to photograph: the whole screen by default; to mosaic parts: the settings)
   const keyDone = !!m.has_key || m.plan === "paid";
   $("#stKey").classList.toggle("done", keyDone);
-  const show = !setupNo && !keyDone && view === "home" && !(app && app.session && !app.session.done);
+  const show = (setupForce || !setupNo) && !keyDone && view === "home" && !(app && app.session && !app.session.done);
   $("#setupCard").hidden = !show;
   if (show) $("#tutorBar").hidden = true;   // (the same invitation, in the card)
   if (keyDone && !$("#setupKeyStat").textContent.startsWith("המפתח לא")) $("#setupKeyStat").textContent = "";
@@ -1399,7 +1409,8 @@ async function setupSaveKey() {
 $("#setupKeySave").addEventListener("click", setupSaveKey);
 $("#setupKey").addEventListener("paste", () => setTimeout(() => { if ($("#setupKey").value.trim().length > 20) setupSaveKey(); }, 50));   // pasting is enough
 $("#setupKey").addEventListener("keydown", e => { if (e.key === "Enter") setupSaveKey(); });
-$("#setupLater").addEventListener("click", () => { setupNo = true; $("#setupCard").hidden = true; try { localStorage.setItem("bzm.setupNo", "1"); } catch (e) {} });
+$("#keyBarGo").addEventListener("click", () => { setupForce = true; drawSetup(); $("#setupKey").focus(); });
+$("#setupLater").addEventListener("click", () => { setupNo = true; setupForce = false; $("#setupCard").hidden = true; try { localStorage.setItem("bzm.setupNo", "1"); } catch (e) {} });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#setupCard").hidden && view !== "settings" && $("#capModal").hidden) $("#setupLater").click(); });
 let tutorBarNo = false;
 try { tutorBarNo = localStorage.getItem("bzm.tutorNo") === "1"; } catch (e) {}
@@ -1592,7 +1603,7 @@ function route() {
   if (h === "settings") { show("settings"); openSettings(setTab); return; }
   if (raw.startsWith("t=")) { if (view !== "past") backTo = view === "course" && courseName ? "c=" + encodeURIComponent(courseName) : (view === "courses" ? "courses" : "");
     $("#pastBack").textContent = backTo === "courses" ? "→ הקורסים שלי" : backTo ? "→ חזרה לקורס" : "→ למסך הבית"; const [f, at] = raw.slice(2).split("&at="); openPast(decodeURIComponent(f), at != null ? +at : null); return; }
-  if (raw.startsWith("c=")) { openCourse(decodeURIComponent(raw.slice(2))); return; }
+  if (raw.startsWith("c=")) { openCourse(decodeURIComponent(raw.slice(2))); loadLib(true); return; }   // (the list of lectures is read here too: a link or a reload straight to a course page used to show it empty)
   if (raw.startsWith("rec=")) {   // a recording sent from another tab (the Panopto bookmark): offer it, then home
     const q = new URLSearchParams(raw), src = q.get("rec") || "", name = q.get("name") || "";
     history.replaceState(null, "", location.pathname);
@@ -1651,11 +1662,14 @@ function liveTip(s) {
 // home: is "answer here" ready? (a free Gemini key, or the student's own paid AI)
 function drawHomeHints(d) {
   const m = (d && d.math) || {}, box = $("#homeAns"); if (!box) return;
+  const noKey = !m.has_key && m.plan !== "paid";   // no key and no paid AI: "answer here" cannot work - the bar above the cards says it
+  $("#keyBar").hidden = !noKey;
+  box.hidden = noKey;
   box.className = "hstat"; box.replaceChildren();
+  if (noKey) return;
   if (m.has_key && m.ask) box.textContent = "תשובות בתוך הבנתי: מוכן";
   else if (m.has_key) { box.textContent = "יש מפתח Gemini, אבל \"תשובה כאן\" כבויה. "; const b = el("button", "", "להפעלה"); b.type = "button"; b.onclick = () => { location.hash = "settings"; }; box.appendChild(b); }
-  else if (m.plan === "paid") box.textContent = "יש לך מנוי: שאלות הולכות לאפליקציית ה-AI שלך";
-  else { box.classList.add("warn"); box.append("חסר מפתח Gemini, ובלי זה אין תשובה בתוך הבנתי. "); const b = el("button", "", "להגדרה (דקה)"); b.type = "button"; b.onclick = () => { location.hash = "settings"; }; box.appendChild(b); }
+  else box.textContent = "יש לך מנוי: שאלות הולכות לאפליקציית ה-AI שלך";
 }
 // home: the newest lecture, and the moments marked in it, so coming back after class takes one click
 let resumeTok = 0;
@@ -1666,7 +1680,7 @@ async function drawResume() {
   const e = items[0];
   if (!e || (s && !s.done)) { box.hidden = true; return; }
   $("#resTitle").textContent = e.title;
-  $("#resSub").textContent = [e.course && e.course !== NO_COURSE ? e.course : "", e.length, e.shots ? e.shots + " שקופיות" : ""].filter(Boolean).join(" · ") || e.when;
+  $("#resSub").textContent = [e.course && e.course !== NO_COURSE ? e.course : "", e.length, e.shots ? nSlide(e.shots) : ""].filter(Boolean).join(" · ") || e.when;
   $("#resOpen").onclick = () => { location.hash = "t=" + encodeURIComponent(e.f); };
   const mb = $("#resMarks"); mb.hidden = true;
   box.hidden = false;
@@ -1971,7 +1985,7 @@ function drawTabs() {
   box.appendChild(add);
   const c = courses.find(x => x.name === libCourse);
   $("#libCbar").hidden = !c || c.name === NO_COURSE;
-  if (c) $("#libCbarText").textContent = c.name + " · " + c.lectures + " הרצאות · מילון: " + c.terms + " מונחים";
+  if (c) $("#libCbarText").textContent = c.name + " · " + nLec(c.lectures) + " · מילון: " + nTerm(c.terms);
 }
 $("#libCbarGo").addEventListener("click", () => { if (libCourse) location.hash = "c=" + encodeURIComponent(libCourse); });
 function lecItem(e, withCourse) {
@@ -1986,15 +2000,15 @@ function lecItem(e, withCourse) {
   if (e.running) t.appendChild(el("span", "tag run", "פועל עכשיו"));
   else if (!e.complete) t.appendChild(el("span", "tag part", e.kind !== "rec" ? "לא הסתיים כרגיל" :
     (e.progress != null ? "תומלל " + e.progress + "%" : "השקופיות לא הושלמו")));
-  const bits = [e.when, langName(e.lang)];
+  const bits = [e.when_in_title ? "" : e.when, langName(e.lang)];   // (a title that is the date and time already says it)
   if (e.length) bits.push("אורך " + e.length);
-  bits.push(e.lines + " שורות"); if (e.shots) bits.push(e.shots + " צילומים");
+  bits.push(nLine(e.lines)); if (e.shots) bits.push(nShot(e.shots));
   const m = el("div", "m");
   if (withCourse) {   // the course name leads to the course page
     const ct = el("a", "ctag", e.course); ct.href = "#c=" + encodeURIComponent(e.course); ct.title = "לדף הקורס";
     m.appendChild(ct); m.append(" · ");
   }
-  m.append(bits.join(" · "));
+  m.append(bits.filter(Boolean).join(" · "));
   const acts = el("div", "acts");
   if (e.kind === "rec" && e.has_media) {
     const p = el("button", "btn small", "צפייה"); p.type = "button"; p.onclick = () => playRecording(e.f); acts.appendChild(p);
@@ -2156,9 +2170,9 @@ function lectureMenu(e) {
   };
   $("#lmClose").onclick = () => { $("#lecMenu").hidden = true; };
 }
-let courseName = "", courseTextCache = "", courseAsk = null;
+let courseName = "", courseTextCache = "", courseChars = null, courseAsk = null;
 async function openCourse(name) {
-  show("course"); courseName = name; courseTextCache = "";
+  show("course"); courseName = name; courseTextCache = ""; courseChars = null;
   $("#cTitle").textContent = name; $("#cSub").textContent = "טוען..."; $("#glossIn").value = ""; $("#cSize").textContent = "";
   $("#cSug").hidden = true; $("#cSug").replaceChildren();
   let d; try { d = await api("/api/course?c=" + encodeURIComponent(name)); } catch (e) { d = {none: true}; }
@@ -2171,16 +2185,23 @@ async function openCourse(name) {
     const t = await api("/api/course_text?c=" + encodeURIComponent(name));
     if (courseName !== name) return;
     courseTextCache = t.text;
-    const k = Math.round(t.chars / 1000);
-    $("#cSize").textContent = t.lectures ? (t.lectures + " הרצאות, " + (k < 1 ? "פחות מאלף תווים." : "בערך " + k + " אלף תווים.") +
-      (t.chars > 150000 ? " זה ארוך: הכי טוב Gemini, או \"קובץ אחד של כל הקורס\" ולהעלות אותו לצ'אט." : "")) : "עוד אין הרצאות בקורס.";
+    courseChars = t.chars; drawCourseSize();
   } catch (e) {}
+}
+// the line above the lectures: how many (counted from the same list as the lectures below) and, once known, how long
+function drawCourseSize() {
+  const n = libItems.filter(e => e.course === courseName).length, box = $("#cSize");
+  if (!n) { box.textContent = ""; return; }   // (the list says there are none)
+  const k = courseChars == null ? null : Math.round(courseChars / 1000);
+  box.textContent = nLec(n) + (k == null ? "." : ", " + (k < 1 ? "פחות מאלף תווים." : "בערך " + k + " אלף תווים.")) +
+    (courseChars > 150000 ? " זה ארוך: הכי טוב Gemini, או \"קובץ אחד של כל הקורס\" ולהעלות אותו לצ'אט." : "");
 }
 function drawCourseLib() {
   const items = libItems.filter(e => e.course === courseName), list = $("#cLib");
-  $("#cSub").textContent = items.length + " הרצאות · התיקייה: הקורסים שלי\\" + courseName;
+  $("#cSub").textContent = nLec(items.length) + " · התיקייה: הקורסים שלי\\" + courseName;
   list.replaceChildren(...(items.length ? items.map(e => lecItem(e, false)) : [el("li", "empty", "עוד אין הרצאות בקורס הזה. בוחרים אותו במסך הבית לפני שמתחילים הרצאה.")]));
-  $("#ctLec").textContent = items.length ? items.length + " הרצאות" : "עוד אין";
+  $("#ctLec").textContent = items.length ? nLec(items.length) : "עוד אין";
+  drawCourseSize();
 }
 // the course page's parts: one shown at a time, chosen from the tabs at the top
 function setCTab(t) {
@@ -2189,7 +2210,7 @@ function setCTab(t) {
 }
 document.querySelectorAll("#cTabs [data-ct]").forEach(b =>
   b.addEventListener("click", () => setCTab(b.dataset.ct)));
-function drawGlCount() { const n = $("#glossIn").value.split(/\n+/).filter(x => x.trim()).length; $("#ctGl").textContent = n ? n + " מונחים" : "עוד ריק"; }
+function drawGlCount() { const n = $("#glossIn").value.split(/\n+/).filter(x => x.trim()).length; $("#ctGl").textContent = n ? nTerm(n) : "עוד ריק"; }
 $("#glossIn").addEventListener("input", drawGlCount);
 // the marked moments of the course (★, set in the small window or with Ctrl+Alt+M; older lectures may also hold "לא הבנתי" marks)
 let courseMarks = [];
@@ -2283,7 +2304,7 @@ $("#glossSave").addEventListener("click", async () => {
 });
 $("#cExport").addEventListener("click", async () => {
   const r = await api("/api/cmd", {action: "export_course", course: courseName});
-  toast(r.ok ? "נשמר הקובץ \"" + courseName + " - כל ההרצאות.txt\" (" + r.lectures + " הרצאות). אפשר להעלות אותו לצ'אט." : (r.error || "לא הצלחתי."));
+  toast(r.ok ? "נשמר הקובץ \"" + courseName + " - כל ההרצאות.txt\" (" + nLec(r.lectures) + "). אפשר להעלות אותו לצ'אט." : (r.error || "לא הצלחתי."));
 });
 // renaming the course: the folder gets the new name (its lectures go with it)
 $("#cRename").addEventListener("click", () => { $("#rcName").value = courseName; $("#renCourse").hidden = false; $("#rcName").focus(); $("#rcName").select(); });
@@ -2471,13 +2492,13 @@ async function openPast(f, at) {
   drawPastMarks(d.lines);
   drawStudyWhere();
   $("#pastTitle").textContent = e.title;
-  $("#pastSub").textContent = [e.course, e.when, langName(e.lang), e.length ? "אורך " + e.length : "", e.lines + " שורות"].filter(Boolean).join(" · ");
+  $("#pastSub").textContent = [e.course, e.when_in_title ? "" : e.when, langName(e.lang), e.length ? "אורך " + e.length : "", nLine(e.lines)].filter(Boolean).join(" · ");
   $("#pastPlay").hidden = !(e.kind === "rec" && e.has_media);
   const box = $("#pastLines"), frag = document.createDocumentFragment();
   for (const x of d.lines) frag.appendChild(lineEl(x));
   if (!d.lines.length) frag.appendChild(el("li", "note", "אין שורות בתמלול הזה."));
   box.replaceChildren(frag); box.scrollTop = 0;
-  $("#pastTrCount").textContent = e.lines + " שורות";
+  $("#pastTrCount").textContent = nLine(e.lines);
   $("#pastTrFold").open = at != null;   // the transcript opens when the student came to a moment in it
   $("#pastAskFold").open = false;
   if (at != null) {

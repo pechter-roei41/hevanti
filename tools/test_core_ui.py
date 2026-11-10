@@ -294,6 +294,106 @@ with sync_playwright() as p:
     mini.wait_for_timeout(1500)
     check("floating window: choosing Gemini hides the floating window", any(m.get("action") == "hide_mini" for m in marked), marked)
     check("floating window: no script errors", errs == [], errs)
+
+    # ---- 2.18: the missing-key bar, the settings, Hebrew counts, no date and time twice ----
+    L.save_settings(math={})
+    pg = b.new_context(viewport={"width": 1100, "height": 900}, locale="he-IL").new_page()
+    pg.errs = []
+    pg.on("pageerror", lambda e: pg.errs.append(str(e)))
+    pg.goto(url + "/")
+    pg.wait_for_function("document.querySelector('#keyBar') && !document.querySelector('#keyBar').hidden", timeout=8000)
+    check("no key: a bar above the cards says so, with a button to paste the key",
+          "חסר מפתח Gemini" in pg.inner_text("#keyBar") and pg.inner_text("#keyBarGo") == "הדבקת מפתח", pg.inner_text("#keyBar"))
+    check("...it is above the cards that start a lecture", pg.evaluate("document.querySelector('#keyBar').getBoundingClientRect().bottom <= document.querySelector('.starts').getBoundingClientRect().top"))
+    check("...in the caution colours (the page's own caution paper), over the whole width",
+          pg.evaluate("""() => { const p = document.createElement('div'); p.style.cssText = 'background:var(--warn-bg);color:var(--warn-fg)'; document.body.appendChild(p);
+              const a = getComputedStyle(p), b = getComputedStyle(document.querySelector('#keyBar')), r = document.querySelector('#keyBar').getBoundingClientRect(),
+                    c = document.querySelector('.starts').getBoundingClientRect();
+              const ok = a.backgroundColor === b.backgroundColor && a.color === b.color && Math.abs(r.width - c.width) < 4; p.remove(); return ok; }"""))
+    check("...and the small status line says nothing more about the key", pg.evaluate("document.querySelector('#homeAns').hidden"))
+    pg.click("#setupLater")
+    check("'not now' closes the first-start card", not pg.is_visible("#setupCard"))
+    pg.click("#keyBarGo")
+    check("the button in the bar opens the paste-the-key card again, with the cursor in the box",
+          pg.is_visible("#setupCard") and pg.evaluate("document.activeElement.id") == "setupKey", pg.evaluate("document.activeElement.id"))
+    L.save_settings(math={"key": L.keep_secret("AQ.fake"), "ask": True})
+    pg.wait_for_function("document.querySelector('#keyBar').hidden", timeout=8000)
+    check("with a key: the bar is gone, and the status line is back", not pg.evaluate("document.querySelector('#homeAns').hidden") and "מוכן" in pg.inner_text("#homeAns"), pg.inner_text("#homeAns"))
+    check("the keyboard shortcuts have a row of their own, under the status",
+          pg.evaluate("document.querySelector('.hkeys').getBoundingClientRect().top >= document.querySelector('#homeAns').getBoundingClientRect().bottom - 1"))
+    L.save_settings(math={"plan": "paid"})
+    pg.wait_for_function("document.querySelector('#keyBar').hidden && document.querySelector('#homeAns').textContent.includes('מנוי')", timeout=8000)
+    check("a paid AI plan and no key: no bar (the questions go to the student's AI app)", "מנוי" in pg.inner_text("#homeAns"), pg.inner_text("#homeAns"))
+    L.save_settings(math={"key": L.keep_secret("AQ.fake"), "ask": True})
+
+    pg.evaluate("openSettings('key')")
+    pg.wait_for_timeout(500)
+    heads = pg.evaluate("[...document.querySelectorAll('#set-key .optbox h4')].map(h => h.textContent.trim())")
+    check("settings: the groups are not numbered", heads and not any(h[:1].isdigit() for h in heads), heads)
+    check("settings: the privacy notes are in the caution colours, not the error red",
+          pg.evaluate("""() => { const n = document.querySelector('#set-key .optbox .warn'), p = document.createElement('div');
+              p.style.cssText = 'background:var(--warn-bg);color:var(--warn-fg)'; document.body.appendChild(p);
+              const a = getComputedStyle(p), b = getComputedStyle(n); const ok = a.backgroundColor === b.backgroundColor && a.color === b.color; p.remove(); return ok; }"""))
+    check("settings: ...and not bold red", pg.evaluate("getComputedStyle(document.querySelector('#set-key .optbox .warn')).fontWeight") in ("600", "500"))
+
+    counts = pg.evaluate("[nLec(0), nLec(1), nLec(2), nLec(5), nTerm(1), nTerm(2), nTerm(30), nLine(1), nLine(2), nSlide(1), nSlide(7), nShot(1)]")
+    check("Hebrew counts: one, two, many, none", counts == ["אין הרצאות", "הרצאה אחת", "שתי הרצאות", "5 הרצאות", "מונח אחד", "שני מונחים", "30 מונחים",
+                                                             "שורה אחת", "שתי שורות", "שקופית אחת", "7 שקופיות", "צילום אחד"], counts)
+    course = "קורס ספירה"
+    L.create_course(course)
+    for nm, head in (("2026-11-02 10-00 הרצאה", "2026-11-02 10:00"), ("מבוא לגבולות", "2026-11-09 08:30")):
+        d = os.path.join(L.course_dir(course), nm)
+        os.makedirs(d)
+        with open(os.path.join(d, nm + ".txt"), "w", encoding="utf-8") as f:
+            f.write(f"# תמלול הרצאה (עברית) - התחלה {head}\n[{head[-5:]}:00 | +0:00:05] שלום לכולם\n# סוף\n")
+    from urllib.parse import quote
+    pg.goto(url + "/#c=" + quote(course))
+    pg.reload()   # (the library is read when the page opens: the lectures above were made after it)
+    pg.wait_for_function("document.querySelectorAll('#cLib li').length === 2", timeout=8000)
+    pg.wait_for_timeout(600)
+    meta = pg.evaluate("[...document.querySelectorAll('#cLib li')].map(li => [li.querySelector('.t').textContent, li.querySelector('.m').textContent])")
+    auto = [m for m in meta if m[0].startswith("הרצאה 02.11.2026")]
+    named = [m for m in meta if m[0] == "מבוא לגבולות"]
+    check("a lecture whose title is its date and time: the line under it does not say them again",
+          len(auto) == 1 and "10:00" not in auto[0][1] and "2026-11-02" not in auto[0][1] and "עברית" in auto[0][1], meta)
+    check("a lecture with a name of its own: the line under it has the date and time", len(named) == 1 and "2026-11-09 08:30" in named[0][1], meta)
+    check("one line under a lecture: a line in singular", all("שורה אחת" in m[1] for m in meta), meta)
+    check("the course page: 'two lectures', not '2 lectures'", "שתי הרצאות" in pg.inner_text("#cSub") and "שתי הרצאות" in pg.inner_text("#ctLec"), (pg.inner_text("#cSub"), pg.inner_text("#ctLec")))
+    check("the summary line is built from the same list as the lectures (and is not 'no lectures' above a list)",
+          "אין הרצאות" not in pg.inner_text("#cSize") and "עוד אין הרצאות" not in pg.inner_text("#cSize") and "שתי הרצאות" in pg.inner_text("#cSize"), pg.inner_text("#cSize"))
+    pg.evaluate("openPast(%s)" % json.dumps(course + "/2026-11-02 10-00 הרצאה"))
+    pg.wait_for_timeout(1000)
+    sub = pg.inner_text("#pastSub")
+    check("a saved lecture: the line under its title does not repeat the date and time either", "10:00" not in sub and "2026-11-02" not in sub and "שורה אחת" in sub, sub)
+    check("2.18 page: no script errors", pg.errs == [], pg.errs)
+
+    # ---- the transcript is behind: the floating window says so, in seconds, over 10 ----
+    lagp = b.new_context(viewport={"width": 420, "height": 760}, locale="he-IL").new_page()
+    lag_errs = []
+    lagp.on("pageerror", lambda e: lag_errs.append(str(e)))
+    state = {"lag": 25, "live": True}
+    lagp.route("**/api/app*", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(
+        {"session": {"kind": "live", "done": False, "course": "פיזיקה"} if state["live"] else None, "math": {"ask": True}, "ai_apps": {}, "connect": {}})))
+    lagp.route("**/api/live*", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(
+        {"total": 0, "items": [], "lag": state["lag"], "info": {}}) if state["live"] else json.dumps({"none": True})))
+    lagp.goto(url + "/mini")
+    lagp.wait_for_timeout(800)
+
+    def poll():
+        lagp.evaluate("async () => { await pollApp(); await pollLive(); }")
+        return lagp.evaluate("[!document.querySelector('#lag').hidden, document.querySelector('#lag').textContent]")
+    shown, txt = poll()
+    check("floating window: the transcript is 25 seconds behind - it says so, in seconds", shown and "מאחר ב-25 שניות" in txt, (shown, txt))
+    state["lag"] = 10
+    check("floating window: 10 seconds is not worth a warning", poll()[0] is False)
+    state["lag"] = 11
+    check("floating window: over 10 seconds it is shown", poll()[0] is True)
+    state["lag"] = 3
+    check("floating window: caught up - the warning goes away", poll()[0] is False)
+    state["lag"], state["live"] = 40, False
+    check("floating window: no lecture - no warning", poll()[0] is False)
+    check("floating window: the warning is a status the screen reader announces", lagp.evaluate("document.querySelector('#lag').getAttribute('role')") == "status")
+    check("floating window (lag): no script errors", lag_errs == [], lag_errs)
     b.close()
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
