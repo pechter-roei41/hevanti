@@ -15,6 +15,7 @@ colors:
   caution-paper: "#FBF0DA"
   caution-ink: "#6B5020"
   now-line: "#FBEFB5"
+  mark-line: "#F7DD7B"
   night-paper: "#1C1B16"
   night-sheet: "#26241D"
   night-sunk: "#2F2C23"
@@ -25,6 +26,7 @@ colors:
   night-green-soft: "#25382B"
   night-highlighter: "#E8C547"
   night-recording: "#FF7A63"
+  night-mark-line: "#594E25"
 typography:
   display:
     fontFamily: "Secular One, Assistant, Segoe UI, sans-serif"
@@ -121,7 +123,7 @@ A cream-and-board-green palette with a highlighter yellow. Neutrals lean warm; t
 - **Board Green Soft** (#DCEBDF, night #25382B): icon plates, selected tabs, the quiet banner behind a suggestion (for example "install the NVIDIA libraries").
 
 ### Secondary
-- **Highlighter** (#F7D44C, night #E8C547): the ★ mark and the check in the logo. Never a button, never decoration.
+- **Highlighter** (#F7D44C, night #E8C547): the ★ mark, the highlighter band over a transcript line the student marked (the **Mark Line** token, #F7DD7B, night #594E25: the highlighter at 70% over paper, and at 30% over the night paper; text on it stays ink), and the check in the logo. Never a button, never decoration.
 
 ### Tertiary
 - **Recording Red** (#C2412D, night #FF7A63): a lecture in progress (the pill and the pulsing dot), and destructive actions.
@@ -138,7 +140,7 @@ A cream-and-board-green palette with a highlighter yellow. Neutrals lean warm; t
 ### Named Rules
 **The One Green Rule.** On any screen, only one control is solid green. Everything else, however useful, is a ghost button or a text link.
 
-**The Highlighter Rule.** Yellow means "marked by the student" or "this is the logo". It is never used as a button, a background or an accent.
+**The Highlighter Rule.** Yellow means "marked by the student" or "this is the logo". On a marked transcript line it is the highlighter band behind the line; it is never used as a button, a card background or an accent. A mark never relies on yellow alone: the line also carries ★ and the words "מסומנת" for the screen reader.
 
 ## Typography
 
@@ -226,7 +228,7 @@ One mark, everywhere: a green bubble with a short tail at its lower right and a 
 - **Do** show a missing state with its fix: "חסר מפתח Gemini" with a link to the setting, "יש כרטיס NVIDIA" with an install button.
 
 ### Don't:
-- **Don't** use yellow for anything but the ★ mark and the logo check.
+- **Don't** use yellow for anything but the ★ mark (the star, and the highlighter band behind a marked transcript line) and the logo check.
 - **Don't** nest cards, and don't mark a state with a thick side border; use a dot, a tint or an icon.
 - **Don't** use emoji as icons or Secular One for body text or controls.
 - **Don't** add a second logo variant or a decorative gradient.

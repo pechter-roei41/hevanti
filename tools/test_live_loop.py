@@ -255,6 +255,47 @@ sF.thread.join(30)
 check("on a GPU: a draft of what is being said while it is still being said", bool(seen), seen[:2])
 check("...made with the fast setting, not the slow one", any(c["beam"] == 1 for c in wF.calls), [c["beam"] for c in wF.calls][:6])
 
+# ---------------------------------------------------------------------------- G: the sound that waits has a ceiling
+aq = L.AudioQueue(10, 4)
+for i in range(10):
+    aq.put((1, float(i), b"x"))
+check("the queue of sound holds what fits", aq.qsize() == 10 and aq.dropped_total == 0 and aq.gap_seen == 0)
+aq.put((1, 10.0, b"x"))
+check("one more than the ceiling: the oldest are dropped, down to the newest few", aq.qsize() == 5 and aq.dropped_total == 6, (aq.qsize(), aq.dropped_total))
+first = aq.get()
+check("what is left is the newest, in order", first[1] == 6.0 and [aq.get()[1] for _ in range(4)] == [7.0, 8.0, 9.0, 10.0], first)
+check("the reader is told how much was dropped before the buffer it took (once)", aq.gap_seen == 6, aq.gap_seen)
+aq.gap_seen = 0
+aq.put((1, 11.0, b"x"))
+check("...and no gap is reported when nothing more was dropped", aq.get()[1] == 11.0 and aq.gap_seen == 0)
+
+# a computer that cannot keep up: slow Whisper, sound that arrives much faster than it is transcribed
+sizes = []
+real_put = L.AudioQueue.put
+
+
+def spy_put(self, item, block=True, timeout=None):
+    real_put(self, item, block, timeout)
+    sizes.append(self.qsize())
+
+
+L.AudioQueue.put = spy_put
+L.AUDIO_QUEUE_MAX, L.AUDIO_QUEUE_KEEP = 60, 20
+wG = FakeWhisper(delay=0.3)
+live, audio, tr = run("תקרה", [speech(45.0)], wG, speed=20, wait_s=30)
+L.AudioQueue.put = real_put
+L.AUDIO_QUEUE_MAX, L.AUDIO_QUEUE_KEEP = 7000, 1400
+check("far behind: the sound that waits never goes over the ceiling", sizes and max(sizes) <= 60, max(sizes) if sizes else sizes)
+skipped = [x for x in logged if "דילגתי על" in x]
+check("...and the student is told what was skipped (how many seconds, and that it will not be transcribed)",
+      bool(skipped) and re.search(r"דילגתי על \d+ שניות", skipped[0]) and "לא יתומלל" in skipped[0], skipped[:1])
+notes = [x for x in tr if "[דילגתי על" in x]
+check("...and the transcript says so where it happened", bool(notes) and tr.index(notes[0]) > 0, tr[:6])
+words = spoken(tr)
+check("...the lecture goes on after the gap, and ends properly", len(words) >= 3 and tr[-1].startswith("# סוף"), (len(words), tr[-2:]))
+after = [x for x in tr[tr.index(notes[0]) + 1:] if x in words] if notes else []
+check("...and words are written after the note (the lecture went on from \"now\")", len(after) >= 1, (len(words), len(after)))
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.stdout.flush()
 os._exit(1 if fails else 0)

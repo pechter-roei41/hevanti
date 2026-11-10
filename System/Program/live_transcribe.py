@@ -36,8 +36,8 @@ try:
 except Exception:  # lets "uninstall" run even if the install never finished
     np = None
 
-VERSION = "2.17"
-VERSION_DATE = "09.11.2026"
+VERSION = "2.18"
+VERSION_DATE = "10.11.2026"
 PRODUCT = "הבנתי"
 GUIDE_URL = "https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD"
 
@@ -2011,16 +2011,29 @@ def _dpapi(data, protect):
         k32.LocalFree(ctypes.cast(out.pbData, ctypes.c_void_p))
 
 
+DPAPI_REQUIRED = os.name == "nt"   # Hevanti is for Windows. (Elsewhere - tests, development - there is no DPAPI, and the key stays plain.)
+
+
+class SecretError(Exception):
+    """The key could not be encrypted: it is not saved."""
+
+
+SECRET_ERROR = "לא הצלחתי להצפין את המפתח. לנסות שוב, ואם זה חוזר: \"דיווח על תקלה\" בתחתית מסך הבית."
+
+
 def keep_secret(s):
+    """The text to save for a secret (the Gemini key): encrypted for this Windows user. When the encryption fails the key is
+    NOT saved - SecretError, never a quiet fall back to plain text (the guide and the README say the key is encrypted)."""
     import base64
     s = str(s or "").strip()
     if not s:
         return ""
-    if os.name == "nt":
+    if DPAPI_REQUIRED:
         try:
             return "dpapi:" + base64.b64encode(_dpapi(s.encode("utf-8"), True)).decode("ascii")
         except Exception:
             save_error("keep secret")
+            raise SecretError(SECRET_ERROR)
     return "plain:" + s
 
 
@@ -2104,15 +2117,28 @@ def gemini_call(path, key, body=None, timeout=90):
         raise MathError(f"אין חיבור ל-Gemini ({e.__class__.__name__}). ממשיך לבד אחר כך.", 60)
 
 
+def _google_error(raw):
+    """What Google's error body says: (the short message, the status like PERMISSION_DENIED, the reasons like API_KEY_INVALID)."""
+    try:
+        err = json.loads(raw).get("error") or {}
+    except (ValueError, AttributeError):
+        err = {}
+    msg = " ".join(str(err.get("message") or "").split())
+    reasons = [str(d.get("reason") or "") for d in err.get("details") or [] if isinstance(d, dict) and d.get("reason")]
+    return msg, str(err.get("status") or ""), reasons
+
+
+def _short(msg, n=140):
+    return msg if len(msg) <= n else msg[:n].rstrip() + "..."
+
+
 def _gemini_http_error(e):
     try:
         raw = e.read().decode("utf-8", "replace")
     except Exception:
         raw = ""
-    try:
-        msg = (json.loads(raw).get("error") or {}).get("message") or ""
-    except Exception:
-        msg = ""
+    msg, status, reasons = _google_error(raw)
+    low = msg.lower()
     if e.code == 429:   # (the free quota is per model: another model may still answer)
         if "perday" in raw.lower().replace("_", "").replace(" ", ""):   # the day's quota: a minute will not help
             return MathError("המכסה החינמית של Gemini נגמרה להיום.", 900, other=True, kind="quota")
@@ -2121,11 +2147,20 @@ def _gemini_http_error(e):
         return MathError("הגעת למכסה החינמית של Gemini לדקה הזו.", wait, other=True, kind="quota")
     if e.code == 404:
         return MathError("המודל הזה של Gemini כבר לא זמין.", other=True)
-    if e.code in (400, 401, 403) and ("key" in msg.lower() or e.code != 400):
+    key_bad = "API_KEY_INVALID" in reasons or "api key not valid" in low or "api key expired" in low or "api_key_invalid" in raw.lower()
+    if e.code in (400, 401, 403) and (key_bad or e.code == 401):
         return MathError("Gemini לא קיבל את המפתח. לבדוק אותו (aistudio.google.com/apikey).")
+    if "location is not supported" in low or "user location" in low:   # (Google's 400 FAILED_PRECONDITION, or a 403)
+        return MathError("Gemini לא זמין באזור שבו המחשב נמצא (" + _short(msg) + ").")
+    if e.code == 403:   # a key that is fine, and Google still says no: say why, in Google's words
+        if "SERVICE_DISABLED" in reasons or "has not been used in project" in low or "is disabled" in low:
+            return MathError("ה-API של Gemini לא מופעל בפרויקט של המפתח. להפעיל אותו ב-Google AI Studio ולנסות שוב (" + _short(msg) + ").")
+        if "model" in low or "resource" in low:   # (this model, not the key: another model may answer)
+            return MathError("אין למפתח הרשאה למודל הזה של Gemini (" + _short(msg) + ").", other=True)
+        return MathError("Gemini סירב (403): " + (_short(msg) or status or "בלי פירוט") + ".")
     if e.code >= 500:
         return MathError(f"Gemini עמוס כרגע ({e.code}). לנסות שוב עוד רגע.", 60, other=True)
-    return MathError(f"Gemini החזיר שגיאה {e.code}: {msg[:160]}")
+    return MathError(f"Gemini החזיר שגיאה {e.code}: {_short(msg, 160)}")
 
 
 def gemini_models(key):
@@ -2386,6 +2421,31 @@ def probe_cache_drop():
     _remove_quietly(_probe_cache_path())
 
 
+def settings_secret_files():
+    """Every file that can hold a copy of the Gemini key (encrypted): the settings, the last good copy, a damaged copy, an unfinished
+    write - and the models check, which holds a mark of the key."""
+    return [SETTINGS_FILE, SETTINGS_FILE + ".bak", SETTINGS_FILE + ".corrupt", SETTINGS_FILE + ".tmp", _probe_cache_path()]
+
+
+def scrub_key_copies():
+    """After the key was deleted or replaced: the old key must not stay in a copy. The damaged copy, an unfinished write and the models
+    check go; the last good copy is made again from the settings as they are now (so it is still there to restore from)."""
+    import shutil
+    for f in (SETTINGS_FILE + ".corrupt", SETTINGS_FILE + ".tmp", _probe_cache_path()):
+        _remove_quietly(f)
+    try:
+        if os.path.isfile(SETTINGS_FILE):
+            shutil.copy2(SETTINGS_FILE, SETTINGS_FILE + ".bak")
+    except OSError:
+        _remove_quietly(SETTINGS_FILE + ".bak")
+
+
+def remove_settings_files():
+    """The uninstall: the settings, with the key, and every copy of them. Whatever the student answers about the recordings."""
+    for f in settings_secret_files():
+        _remove_quietly(f)
+
+
 def math_reader():
     if not _MATH:
         _MATH.append(MathReader())
@@ -2423,6 +2483,10 @@ def math_set(d):
     s = dict(math_settings())
     if "key" in d:
         key = str(d.get("key") or "").strip()
+        try:
+            secret = keep_secret(key)   # first: a key that cannot be kept encrypted is not even sent to Google
+        except SecretError as e:
+            return {"ok": False, "error": str(e)}
         if key:
             try:
                 model = math_reader().probe(key)   # checks the key, and which models answer now
@@ -2432,7 +2496,7 @@ def math_set(d):
                 return {"ok": False, "error": "המפתח תקין, אבל כרגע אף מודל של Gemini לא עונה (עומס). לנסות שוב עוד כמה דקות."}
             with math_reader().lock:
                 math_reader().error = ""
-        s["key"] = keep_secret(key)
+        s["key"] = secret
         if not key:
             s.pop("on", None)   # (a new key later starts with the default: on)
         elif "on" not in s and "on" not in d:
@@ -2449,7 +2513,10 @@ def math_set(d):
             s["notes"] = notes
         else:
             s.pop("notes", None)
-    save_settings(math=s)
+    if not save_settings(math=s):
+        return {"ok": False, "error": SAVE_FAIL_MSG}
+    if "key" in d:
+        scrub_key_copies()   # (a deleted or replaced key does not stay in the last good copy, a damaged copy or the models check)
     return {"ok": True, "math": math_reader().status()}
 
 
@@ -2560,23 +2627,82 @@ def log_tokens(model, usage, body_chars, ok, started, quota=False, kind="ask"):
         pass
 
 
-def gemini_stream(key, model, body, usage=None, timeout=15):
-    """Yields the answer's text as Gemini writes it (server-sent events). `usage` (a dict) gets the token counts."""
+# How long a question to Gemini may take (seconds). The start (connecting and the first words) and the silence between two pieces of
+# the answer are separate: a model that "thinks" before it starts is not the same as one that stopped in the middle.
+GEMINI_START_S = 15           # a live question: until Gemini starts to answer
+GEMINI_TASK_START_S = 60      # a whole lecture takes longer to start
+GEMINI_READ_S = 45            # once it has started: the longest silence between two pieces
+GEMINI_LIVE_MODELS = 2        # a live question tries at most this many models (each try is a request of the free quota)
+GEMINI_LIVE_DEADLINE_S = 25   # ...and at most this long, all together, before the answer starts
+GEMINI_TASK_DEADLINE_S = 90
+
+_FINISH_WHY = {   # why Gemini stopped, in words (finishReason / promptFeedback.blockReason)
+    "SAFETY": "מסנן הבטיחות של Gemini עצר אותה",
+    "BLOCKLIST": "מסנן הבטיחות של Gemini עצר אותה",
+    "PROHIBITED_CONTENT": "מסנן הבטיחות של Gemini עצר אותה",
+    "IMAGE_SAFETY": "מסנן הבטיחות של Gemini עצר אותה בגלל התמונה",
+    "RECITATION": "Gemini עצר אותה כי היא חזרה על טקסט מוגן",
+    "MAX_TOKENS": "היא ארוכה מהמותר",
+    "LANGUAGE": "השפה לא נתמכת ב-Gemini",
+}
+
+
+def _stream_warning(text_seen, block, finish):
+    """The line to show when the answer did not come out whole (None when it did): why, and the code Google gave."""
+    why_code = block or (finish if finish not in ("", "STOP", "FINISH_REASON_UNSPECIFIED") else "")
+    if not why_code:
+        return None if text_seen else "Gemini לא החזיר תשובה."
+    why = _FINISH_WHY.get(why_code, "Gemini עצר אותה (" + why_code + ")")
+    if text_seen:
+        return "התשובה נקטעה: " + why + " (" + why_code + ")."
+    return ("Gemini לא ענה: השאלה נחסמה. " if block else "Gemini לא ענה: ") + why + " (" + why_code + ")."
+
+
+def _set_read_timeout(r, secs):
+    try:
+        r.fp.raw._sock.settimeout(secs)   # (the socket of the open answer: what is waited for from now on)
+    except Exception:
+        pass
+
+
+def gemini_stream(key, model, body, usage=None, timeout=None, read_timeout=None, info=None):
+    """Yields the answer's text as Gemini writes it (server-sent events). `usage` (a dict) gets the token counts; `info` (a
+    dict) gets "warn" - a line saying why the answer is empty or cut (blocked, too long...) - when it did not come out whole.
+    `timeout`: until the answer starts. `read_timeout`: the longest silence after it started."""
+    import http.client
     import urllib.error
     import urllib.request
+    timeout = GEMINI_START_S if timeout is None else timeout
+    read_timeout = GEMINI_READ_S if read_timeout is None else read_timeout
     req = urllib.request.Request(f"{GEMINI_URL}/models/{model}:streamGenerateContent?alt=sse", method="POST",
                                  data=json.dumps(body).encode("utf-8"),
                                  headers={"x-goog-api-key": key, "Content-Type": "application/json"})
     try:
-        r = urllib.request.urlopen(req, timeout=timeout)   # (a live question that has not started in 15 s: the next model)
+        r = urllib.request.urlopen(req, timeout=timeout)   # (a live question that has not started in time: the next model)
     except urllib.error.HTTPError as e:
         raise _gemini_http_error(e)
     except TimeoutError:
         raise MathError("Gemini לא ענה בזמן. לנסות שוב עוד רגע.", other=True)
     except (urllib.error.URLError, OSError) as e:
+        if isinstance(getattr(e, "reason", None), TimeoutError):
+            raise MathError("Gemini לא ענה בזמן. לנסות שוב עוד רגע.", other=True)
         raise MathError(f"אין חיבור ל-Gemini ({e.__class__.__name__}). לבדוק את האינטרנט.")
+    text_seen, block, finish = False, "", ""
     with r:
-        for raw in _lines_or_timeout(r):
+        lines = iter(r)
+        while True:
+            try:
+                raw = next(lines)
+            except StopIteration:
+                if getattr(r, "length", None):   # (an answer of a known size that ended before its size: the connection was cut)
+                    raise MathError("החיבור ל-Gemini נותק באמצע התשובה. לנסות שוב.", other=not text_seen)
+                break
+            except TimeoutError:
+                if text_seen:
+                    raise MathError("Gemini הפסיק לענות באמצע. לנסות שוב.")
+                raise MathError("Gemini לא ענה בזמן. לנסות שוב עוד רגע.", other=True)
+            except (http.client.HTTPException, OSError):
+                raise MathError("החיבור ל-Gemini נותק באמצע התשובה. לנסות שוב.", other=not text_seen)
             line = raw.decode("utf-8", "replace").strip()
             if not line.startswith("data:"):
                 continue
@@ -2584,19 +2710,22 @@ def gemini_stream(key, model, body, usage=None, timeout=15):
                 d = json.loads(line[5:].strip())
             except ValueError:
                 continue
+            if not isinstance(d, dict):
+                continue
             if usage is not None and isinstance(d.get("usageMetadata"), dict):
                 usage.update(d["usageMetadata"])
+            block = block or str((d.get("promptFeedback") or {}).get("blockReason") or "")
             for c in d.get("candidates") or []:
+                finish = str(c.get("finishReason") or "") or finish
                 for p in (c.get("content") or {}).get("parts") or []:
                     if isinstance(p, dict) and p.get("text") and not p.get("thought"):
+                        if not text_seen:
+                            text_seen = True
+                            _set_read_timeout(r, read_timeout)   # it started: from now on only silence in the middle counts
                         yield p["text"]
-
-
-def _lines_or_timeout(r):
-    try:
-        yield from r
-    except TimeoutError:
-        raise MathError("Gemini הפסיק לענות באמצע. לנסות שוב.")
+    warn = _stream_warning(text_seen, block, finish)
+    if warn and info is not None:
+        info["warn"] = warn
 
 
 def tutor_image(d):
@@ -3516,6 +3645,43 @@ def tidy_yt_transcript(path):
 
 
 # ---------- audio capture ----------
+# The sound waiting to be transcribed has a ceiling. A computer too slow for the lecture would otherwise keep every second it
+# could not keep up with in memory (about 11 MB for every minute of delay, stereo at 48 kHz) and fall further behind until the end.
+AUDIO_QUEUE_MAX = 7000    # buffers of 2048 frames: about 5 minutes of sound. Past it, the oldest waiting sound is skipped...
+AUDIO_QUEUE_KEEP = 1400   # ...down to the newest about minute, so the transcript goes on from nearly "now"
+
+
+class AudioQueue(queue.Queue):
+    """The queue between the sound card and the transcription, with a ceiling: when it is full the oldest waiting sound is dropped
+    (all but the newest AUDIO_QUEUE_KEEP buffers). The reader finds out through gap_seen (how many buffers were dropped before the
+    buffer it just took), so it can say so and give the words after the gap their own times."""
+
+    def __init__(self, max_chunks=None, keep_chunks=None):
+        super().__init__()
+        self.max = AUDIO_QUEUE_MAX if max_chunks is None else max_chunks
+        self.keep = AUDIO_QUEUE_KEEP if keep_chunks is None else keep_chunks
+        self.gap_chunks = 0     # dropped, and the next buffer to be taken is the first one after them
+        self.gap_seen = 0       # dropped before the buffer the reader just took (the reader sets it back to 0)
+        self.dropped_total = 0
+
+    def put(self, item, block=True, timeout=None):
+        with self.mutex:
+            if len(self.queue) >= self.max:
+                drop = max(1, len(self.queue) - self.keep)
+                for _ in range(drop):
+                    self.queue.popleft()
+                self.gap_chunks += drop
+                self.dropped_total += drop
+        super().put(item, block, timeout)
+
+    def _get(self):   # (under the queue's lock: no buffer is dropped between taking one and marking the gap before it)
+        item = self.queue.popleft()
+        if self.gap_chunks:
+            self.gap_seen += self.gap_chunks
+            self.gap_chunks = 0
+        return item
+
+
 class DefaultSpeakers:
     """Asks Windows which speakers/headphones are the default right now (a cheap call),
     so switching between headphones and speakers is noticed within a second."""
@@ -5089,6 +5255,17 @@ def missed_question(minutes):
             "מה היה על השקף או הלוח, ומה חשוב שאבין כדי להמשיך לעקוב עכשיו. קצר וברור, לפי הסדר - אני באמצע ההרצאה.")
 
 
+def mini_question(d):
+    """(the question, the minutes) of a question from the small window: a "what I missed" button sends its minutes (3, 7, 15) and
+    gets the ready question for them; any other question is the student's own words, over the usual minutes (0)."""
+    try:
+        minutes = int(d.get("minutes") or 0)
+    except (TypeError, ValueError):
+        minutes = 0
+    minutes = min(minutes, 30) if minutes > 0 else 0
+    return (missed_question(minutes) if minutes else str(d.get("question") or "")), minutes
+
+
 def _earlier_slides_text(pairs, minutes=ASK_MINUTES):
     """pairs: [(time label, slide text)] of the slides shown BEFORE the minutes that are sent, oldest first. The newest 12
     that have text, at most ~8000 characters: the lecturer often builds on something shown earlier without saying so."""
@@ -5512,30 +5689,125 @@ def lecture_summary(f):
         return ""
 
 
+_SETTINGS_LOCK = threading.RLock()   # one reader-changer-writer at a time (the page, the slide reader and the hotkeys all save settings)
+
+
+def _read_settings():
+    """The settings as a dict ({} when there is no file yet), or None when the file is there but cannot be read right now
+    (Windows: another program - a virus scanner, a sync tool - holds it for a moment). A damaged file: see _settings_damaged."""
+    for _ in range(4):
+        try:
+            with open(SETTINGS_FILE, encoding="utf-8") as f:
+                d = json.load(f)
+            return d if isinstance(d, dict) else {}
+        except FileNotFoundError:
+            return {}
+        except ValueError:
+            return _settings_damaged()
+        except OSError:
+            time.sleep(0.05)
+    return None
+
+
 def load_settings():
+    d = _read_settings()
+    return d if d is not None else {}
+
+
+def _settings_damaged():
+    import shutil
+    with _SETTINGS_LOCK:
+        try:   # (another thread may have put a good file back meanwhile)
+            with open(SETTINGS_FILE, encoding="utf-8") as f:
+                d = json.load(f)
+            return d if isinstance(d, dict) else {}
+        except (OSError, ValueError):
+            pass
+        try:
+            shutil.copy2(SETTINGS_FILE, SETTINGS_FILE + ".corrupt")
+        except OSError:
+            pass
+        try:
+            with open(SETTINGS_FILE + ".bak", encoding="utf-8") as f:
+                d = json.load(f)
+            if not isinstance(d, dict):
+                raise ValueError("not a dict")
+        except (OSError, ValueError):
+            d = {}
+        save_error_text("settings damaged", f"{SETTINGS_FILE} could not be read; a copy is in settings.json.corrupt; "
+                        + ("the last good copy was restored." if d else "there is no good copy: settings start empty."))
+        log("קובץ ההגדרות היה פגום. " + ("שחזרתי את ההעתק האחרון התקין." if d else "אין העתק תקין, ולכן ההגדרות התחילו מחדש (גם המפתח).")
+            + " הקובץ הפגום נשמר ליד, בשם settings.json.corrupt.")
+        if d:
+            try:
+                _write_settings(d)
+            except OSError:
+                pass
+        return d
+
+
+def _write_settings(d):
+    """A temporary file, then one replace: a crash in the middle leaves the old file whole. The last good file is kept as .bak."""
+    import shutil
+    os.makedirs(LOCAL_DIR, exist_ok=True)
+    tmp = SETTINGS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(d, f, ensure_ascii=False)
+        f.flush()
+        os.fsync(f.fileno())
     try:
-        with open(SETTINGS_FILE, encoding="utf-8") as f:
-            d = json.load(f)
-        return d if isinstance(d, dict) else {}
-    except (OSError, ValueError):
-        return {}
+        shutil.copy2(SETTINGS_FILE, SETTINGS_FILE + ".bak")   # (the file as it was: it was read as good just before)
+    except OSError:
+        pass
+    for i in range(5):   # (Windows: the file may be open in another program for a moment)
+        try:
+            os.replace(tmp, SETTINGS_FILE)
+            return
+        except PermissionError:
+            if i == 4:
+                raise
+            time.sleep(0.05)
+
+
+SAVE_FAIL_MSG = "לא הצלחתי לשמור את ההגדרות. לנסות שוב."
+_SAVE_FAIL = {"n": 0, "at": 0.0}   # how many saves failed, and when the last one did: the pages show it (save_failed in /api/app)
+
+
+def _save_failed():
+    _SAVE_FAIL["n"] += 1
+    _SAVE_FAIL["at"] = time.time()
+    log(SAVE_FAIL_MSG)
+
+
+def save_failed_public():
+    """What the pages show after a save that failed (for a minute): {"n": count, "msg": text}, else None."""
+    return {"n": _SAVE_FAIL["n"], "msg": SAVE_FAIL_MSG} if _SAVE_FAIL["n"] and time.time() - _SAVE_FAIL["at"] < 60 else None
+
+
+def save_settings(**kw):
+    """Read, change and write under one lock. Returns False when it could not be saved - and then the student is told
+    (SAVE_FAIL_MSG in the window, the app and the floating window) and error_log.txt has the details.
+    A file that exists but cannot be read is never overwritten from an empty start: nothing is saved then."""
+    with _SETTINGS_LOCK:
+        d = _read_settings()
+        if d is None:
+            save_error_text("save settings", f"{SETTINGS_FILE} could not be read, so nothing was saved: {sorted(kw)}")
+            _save_failed()
+            return False
+        d.update(kw)
+        try:
+            _write_settings(d)
+            return True
+        except OSError:
+            save_error("save settings")
+            _save_failed()
+            return False
 
 
 def ui_theme():
     """"light", "dark", or "" (follow Windows) - the button in the app's top bar."""
     t = load_settings().get("theme")
     return t if t in ("light", "dark") else ""
-
-
-def save_settings(**kw):
-    d = load_settings()
-    d.update(kw)
-    try:
-        os.makedirs(LOCAL_DIR, exist_ok=True)
-        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-            json.dump(d, f, ensure_ascii=False)
-    except OSError:
-        pass
 
 
 OLD_LIVE_STEM = re.compile(r"(\d{4}-\d\d-\d\d)_(\d\d-\d\d)(_en)?")
@@ -5614,6 +5886,21 @@ def _ram_gb():
         return None
 
 
+_SECRET_LOOKS = re.compile(r"AIza[0-9A-Za-z_\-]{20,}|AQ\.[0-9A-Za-z_\-]{16,}|(?:dpapi|plain):[A-Za-z0-9+/=_\-]{6,}")
+
+
+def scrub_secrets(text):
+    """Text for a report: the key, in any form it is kept in or looks like (Google keys, the saved dpapi:/plain: values), is taken out."""
+    text = _SECRET_LOOKS.sub("<מפתח הוסר>", str(text))
+    try:
+        key = read_secret(math_settings().get("key"))
+        if len(key) >= 8:
+            text = text.replace(key, "<מפתח הוסר>")
+    except Exception:
+        pass
+    return text
+
+
 def diag_text():
     """"Report a problem": what the student copies into a report themselves - the version, the computer, what is
     turned on, and the newest errors. Never the key, a transcript or a question; the user's own folder name is hidden."""
@@ -5641,6 +5928,7 @@ def diag_text():
     except OSError:
         pass
     text = "\n".join(lines) + "\n\nשגיאות אחרונות:\n" + (tail.strip() or "(אין)")
+    text = scrub_secrets(text)
     home, user = os.path.expanduser("~"), os.environ.get("USERNAME") or ""
     for a, b in ((home, "%USERPROFILE%"), (home.replace("\\", "/"), "%USERPROFILE%")):
         if a and len(a) > 3:
@@ -6745,7 +7033,7 @@ class App:
                     "screens": SCREEN_ENABLED, "capture": capture_control().public(), "math": math_reader().status(), "gpu": gpu_public(),
                     "product": PRODUCT, "migrated": self.migrated,
                     "course": load_settings().get("course") or "", "connect": self.connect_info(),
-                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme()}
+                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme(), "save_failed": save_failed_public()}
 
     def connect_info(self):
         """Which AI apps are connected (reading two small config files - at most every few seconds)."""
@@ -7389,6 +7677,7 @@ def library_entry(d, course):
                                  when=f"{m.group(2)} {m.group(3)}")
                         dm = DEFAULT_LIVE_NAME.match(name)
                         if dm:  # not renamed: a readable title
+                            e["when_in_title"] = True   # (the page does not write the date and time again beside it)
                             e["title"] = (f"הרצאה {dm.group(3)}.{dm.group(2)}.{dm.group(1)} {dm.group(4)}:{dm.group(5)}"
                                           + (" (אנגלית)" if dm.group(6) else "") + (dm.group(7) or ""))
                         continue
@@ -8031,6 +8320,10 @@ def _app_handler():
                     return self._json(out)
                 if p == "/api/ask":   # the built-in tutor (a whole lecture can be sent with a task: a bigger body)
                     return self._ask(self._body_json(limit=8 << 20))
+                if p == "/api/mini_context":   # the small window: the text to COPY to another AI app - the question with the last minutes. Sends nothing.
+                    d = self._body_json()
+                    question, minutes = mini_question(d)
+                    return self._json({"context": mini_context(question, minutes or ASK_MINUTES)})
                 d = self._body_json()  # always read it: the connection is reused
                 if p == "/api/place":
                     rec, live = APP.rec, APP.live
@@ -8057,12 +8350,7 @@ def _app_handler():
             reader = math_reader()
             try:
                 if d.get("where") == "mini":   # the small window: the server knows what was said
-                    try:   # "what I missed" (3 / 7 / 15 minutes): a ready question over more minutes than the usual 5
-                        minutes = int(d.get("minutes") or 0)
-                    except (TypeError, ValueError):
-                        minutes = 0
-                    minutes = min(minutes, 30) if minutes > 0 else 0
-                    question = missed_question(minutes) if minutes else str(d.get("question") or "")
+                    question, minutes = mini_question(d)   # ("what I missed" - 3 / 7 / 15 minutes: a ready question over more minutes than the usual 5)
                     if APP.live is None and APP.rec is not None:   # a recording: the place the player reports
                         d = dict(d, context=mini_context(question, minutes or ASK_MINUTES), where="rec", question=question,
                                  n=_rec_shot_before(APP.rec, float(APP.rec.pos or 0.0)))
@@ -8075,10 +8363,19 @@ def _app_handler():
                         d = dict(d, context=str(d.get("context") or "") + "\n" + note)
                 body = tutor_body(d)
                 pieces, first, last_err, quota_err = None, "", None, None
-                usage, started, chars, used = {}, time.time(), len(json.dumps(body, ensure_ascii=False)), ""
-                for model in reader.models_to_try(key):   # busy / retired / slow today: the next model
+                usage, started, chars, used, info = {}, time.time(), len(json.dumps(body, ensure_ascii=False)), "", {}
+                task = bool(d.get("task"))   # (a whole lecture takes longer to start, and may try more models)
+                models = reader.models_to_try(key)
+                if not task:
+                    models = models[:GEMINI_LIVE_MODELS]   # a live question: two models at most - each try costs quota and time
+                deadline = started + (GEMINI_TASK_DEADLINE_S if task else GEMINI_LIVE_DEADLINE_S)   # ...and this long all together
+                for model in models:   # busy / retired / slow today: the next model
+                    left = deadline - time.time()
+                    if last_err is not None and left < 1:
+                        break
                     try:
-                        pieces = gemini_stream(key, model, body, usage, 60 if d.get("task") else 15)   # (a whole lecture takes longer to start)
+                        pieces = gemini_stream(key, model, body, usage, min(GEMINI_TASK_START_S if task else GEMINI_START_S, max(1.0, left)),
+                                               info=info)
                         first = next(pieces, "")
                         reader.worked(model)
                         used = model
@@ -8123,6 +8420,11 @@ def _app_handler():
             except (ConnectionError, OSError):
                 ok = False   # the page stopped it, or was closed
             answer = "".join(out).strip()
+            if ok and info.get("warn"):   # blocked, or cut (too long...): the page shows why instead of "no answer"
+                try:
+                    self.wfile.write(("\n\n⚠ " + info["warn"]).encode("utf-8"))
+                except OSError:
+                    pass
             log_tokens(used, usage, chars, ok and bool(answer), started)
             if ok and answer:
                 tutor_save(d, answer)
@@ -8709,7 +9011,7 @@ def run_live(sess, lang, course=""):
         return
     on_gpu = model_desc.endswith("GPU")
     min_s, max_s = (GPU_MIN_CHUNK_S, GPU_MAX_CHUNK_S) if on_gpu else (MIN_CHUNK_S, MAX_CHUNK_S)
-    q = queue.Queue()
+    q = AudioQueue()   # (a ceiling on the sound that waits: see AudioQueue)
     audio = AudioInput(q)
     told = False
     while not sess.stop.is_set():
@@ -9050,6 +9352,19 @@ def run_live(sess, lang, course=""):
         elapsed = str(datetime.timedelta(seconds=int(now - start.timestamp())))
         write_line(f"[{stamp} | +{elapsed}] [{line}]")
 
+    def skip_gap(frames):
+        """The sound that waited was too much (the computer is too slow for this lecture) and the oldest of it was dropped:
+        say what was skipped, and start the words after the gap with their own time."""
+        nonlocal blocks, n, t0
+        chunks, q.gap_seen = q.gap_seen, 0
+        secs = chunks * frames / sr
+        if n > 0:   # what came before the gap is transcribed first
+            handle_chunk(np.concatenate(blocks), t0, sr)
+        blocks, n, t0 = [], 0, None
+        log(f"התמלול מאחר מאוד: המחשב איטי מדי להרצאה הזאת. דילגתי על {secs:.0f} שניות של ההרצאה (מה שנאמר בהן לא יתומלל) כדי להמשיך מהרגע הנוכחי. "
+            "כדאי לסגור תוכנות כבדות, ובמחשב נייד לחבר למטען.")
+        note(f"דילגתי על {secs:.0f} שניות: התמלול מאחר מדי")
+
     def reconnect(reason, loud):
         """Reopen the audio device (new default device, after sleep, after an error)."""
         nonlocal blocks, n, t0, sr, ch
@@ -9144,6 +9459,8 @@ def run_live(sess, lang, course=""):
                 continue
             last_audio = time.time(); warned_silent = False
             a = to_mono(data, ch)
+            if q.gap_seen:
+                skip_gap(len(a))
             if t0 is None:
                 t0 = t
             blocks.append(a)
@@ -9262,6 +9579,8 @@ def uninstall():
     subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", *TOOL_PKGS])
     if _ask("להסיר גם ספריות כלליות שהכלי התקין (" + ", ".join(SHARED_PKGS) + ")? אם יש לך תוכנות Python אחרות, עדיף לבחור N."):
         subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", *SHARED_PKGS])
+    remove_settings_files()   # the key and every copy of it go, whatever is answered below about the recordings
+    show("ההגדרות והמפתח נמחקו.")
     for local in (LOCAL_DIR, OLD_LOCAL_DIR):
         if os.path.isdir(local):
             gb = _size_gb(local)

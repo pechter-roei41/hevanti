@@ -1,6 +1,6 @@
 # Hevanti (הבנתי)
 
-Open-source (MIT) lecture companion for Israeli university students, Windows only. Beta (currently 2.17).
+Open-source (MIT) lecture companion for Israeli university students, Windows only. Beta (currently 2.18).
 
 It transcribes a lecture on the student's computer (Hebrew or English, live or recorded), saves a picture of every new slide, and has two core features:
 - **The floating window** (`mini.html`, Ctrl+Alt+Q, or the round button at the screen edge): always on top, also over a full-screen lecture. Type a question, get an answer based on the last minutes and the slide on screen. Three "what did I miss" buttons (3, 7, 15 minutes).
@@ -18,9 +18,11 @@ Read before larger changes:
 
 ## Principles (do not break without asking Roei)
 
+- **Settings and the key are saved whole or not at all.** `save_settings` writes a temporary file, then replaces, under one lock; a damaged `settings.json` is kept as `.corrupt` and the last good `.bak` is used, never read as "no settings" quietly. On Windows a key that cannot be encrypted (DPAPI) is **not saved** (`SecretError`, "לא הצלחתי להצפין את המפתח"); never add a quiet fall back to plain text.
 - **No server, no AI of our own.** Gemini through the student's key (stored encrypted, Windows DPAPI), or copy the question to the student's own AI app. A paid AI subscription does not give API quota, so subscribers work through their app, not through the key.
 - **Privacy:** transcripts and screenshots stay on the computer. The server listens on `127.0.0.1` only, and commands need the page's `X-BZM: 1` header (another site cannot drive Hevanti). Nothing leaves without a student action. Cloud sync is off by default. No telemetry. "Report a problem" only shows text to copy (no key, no transcripts, no user name).
 - **Works on an ordinary laptop:** no discrete GPU, little memory. No local AI model by default. Without a GPU, a small ivrit.ai Zipformer drafts what is being said right now (Hebrew live only).
+- **Colour is computed, not estimated.** Colours come from `DESIGN.md`; `tools/contrast.py` and `tools/test_contrast.py` check that the pages use those tokens and that every pair keeps 4.5:1 (text) or 3:1 (graphic), light and dark. Add a pair there for any new colour combination. **One solid-green control per screen** ("answer here" on the live and lecture screens; the lecture card on home); the others are ghost buttons. Yellow is only the ★ mark (the star, and the `mark-line` band behind a marked transcript line) and the logo check; the `now-line` is the line being played or opened.
 - **Do not promise a price.** No "free" claims about Hevanti itself (decided 8.11.2026). Descriptions of Google's free key and quota are fine.
 - **Do not invent what the lecturer said.** The tutor instructions say so, and the student's personal instructions (up to 500 characters) cannot override it.
 - **Hebrew first, right-to-left.** UI and in-app guide in Hebrew; README, code comments and this file in English.
@@ -35,9 +37,9 @@ Read before larger changes:
 
 - `Hevanti.bat` (or the installed shortcut) starts `System/Program/live_transcribe.py --app`, which serves the app at `http://127.0.0.1:8765/` and opens it in Edge or Chrome app mode (`--app=`). A minimized black window stays open; closing it stops Hevanti. Nothing starts recording until the student presses a button.
 - Server: standard-library HTTP server in `live_transcribe.py` (`AppServer`, `App`). The page talks to `/api/...`. One page runs everything.
-- Transcription: faster-whisper with `ivrit-ai/whisper-large-v3-turbo-ct2`. Models go to `%PUBLIC%\whisper_models`. NVIDIA GPU is detected at start and offered as a one-time install; CPU otherwise. Course name and glossary terms are given to the model as hotwords.
+- Transcription: faster-whisper with `ivrit-ai/whisper-large-v3-turbo-ct2`. The sound waits in an `AudioQueue` with a ceiling (7,000 buffers, about 5 minutes; past it the oldest is skipped down to about the last minute, and Hevanti says how many seconds). The floating window shows "התמלול מאחר ב-N שניות" over 10 seconds. There is no automatic catch-up on the CPU yet (decided to wait for a measurement on a real laptop). Models go to `%PUBLIC%\whisper_models`. NVIDIA GPU is detected at start and offered as a one-time install; CPU otherwise. Course name and glossary terms are given to the model as hotwords.
 - Slides: `ScreenWatcher` and `SlideJudge`. A slide is saved only when stable (live: about 6 seconds without movement), plus one picture when the student starts typing a question. OCR offline with Tesseract; formulas and handwriting go to Gemini as LaTeX, only for slides that are not clearly plain printed text.
-- Gemini: the model that answers is picked by what responds today (checked once a day, cached in `gemini_models.json`, with the key's mark, not the key). Model names change often. Quota: a model that hit it rests a minute. Each question is logged without its content in `tokens.jsonl` under `%LOCALAPPDATA%\Hevanti`.
+- Gemini: the model that answers is picked by what responds today (checked once a day, cached in `gemini_models.json`, with the key's mark, not the key). Model names change often. Quota: a model that hit it rests a minute. A live question tries at most 2 models (`GEMINI_LIVE_MODELS`) and gives up within 25 s of waiting for the answer to start (90 s for a whole-lecture task); the start limit and the silence limit between pieces (45 s) are separate. A blocked or cut answer shows a ⚠ line with Google's reason. Each question is logged without its content in `tokens.jsonl` under `%LOCALAPPDATA%\Hevanti`.
 - Lecture sources: live (Hebrew or English), recorded (file, drag and drop, link; Panopto and others), YouTube (official player, `YtClock`/`YtNow`). Recordings play in `player.html`, which reports the position back.
 
 ## Where things live
@@ -84,12 +86,10 @@ Then open `http://127.0.0.1:8765/` (and `/mini` for the floating window) with Pl
 
 `System/Program/media/howto.mp4`: 58.8 s, 1920x1080, **no audio**. A dark caption bar on top carries the Hebrew narration text, so changing a step means re-recording footage and caption. Chapters (in `app.html`, `#howChapters`, `data-t` seconds): 0 key, 5 start, 8 live transcript and screenshots, 14 full screen and button, 19 floating window, 24 answer, 27 "what did I miss", 32 mark ★, 38 course page, 41 marks, 45 syllabus and glossary, 51 files and management, 54 summary slide. It shows version 2.17, the lecture "חשבון אינפיניטסימלי 2", an answer with a ⏱ time source, and the three "what did I miss" buttons.
 
-Known mismatches found on 10.11.2026 (not fixed, listed in `DECISIONS.md`):
+Known mismatches that remain in the video (found on 10.11.2026, listed in `DECISIONS.md`):
 - The last slide (0:54) says step 4 is "אחרי ההרצאה: דף הקורס והכנה למבחן", but the "הכנה למבחן" tab was removed from the course page (5.11.2026). The course page has three tabs: ההרצאות, סימונים, סילבוס ומילון.
-- At 0:38 the course page shows "עוד אין הרצאות בקורס." above a list of two lectures. In 2.17 the line is the lecture count, so this looks like the line before it was filled in.
-- Settings > תשובות numbers its boxes 1, 2, 4: box 3 ("יש לי מנוי בתשלום") is hidden, so the visible numbering skips a number.
-- The course page says "1 הרצאות" for one lecture (no singular form).
-- `README.md`, `PRODUCT.md` and `README.txt` used to describe two marks (★ and ?). Since 2.13 only ★ exists; old "?" marks are still read and shown.
+- At 0:38 the course page shows "עוד אין הרצאות בקורס." above a list of two lectures. The app no longer does this (fixed in 2.18: the summary line is built from the same list, and a link straight to a course page loads the list), but the footage still shows it.
+- The video shows version 2.17 and the home page without the missing-key bar; re-record when the flow changes.
 
 ## Testing
 
@@ -102,7 +102,7 @@ python tools/test_mcp.py
 python tools/test_course_ai.py
 ```
 
-`.github/workflows/tests.yml` runs these on Windows and Linux: `test_core`, `test_mcp`, `test_course_ai`, `test_quota`, `test_youtube_rect`, `test_stop`, `test_panopto`, `test_live_loop`, `test_recording`, `test_course_guess`, `test_slides`, plus `test_av` (needs `av` and `faster-whisper`). `test_core_ui.py` needs Playwright and Edge, so it runs on Windows only.
+`.github/workflows/tests.yml` runs these on Windows and Linux: `test_core`, `test_contrast` (colours and contrast, computed from DESIGN.md), `test_settings` (saving settings and the key, deleting every copy of it), `test_gemini` (every error Google gives, a stream that stops or is cut, the limits), `test_ai_flow` (the question to Gemini from the sound to the answer, with a made-up Gemini), `test_mcp`, `test_course_ai`, `test_quota`, `test_youtube_rect`, `test_stop`, `test_panopto`, `test_live_loop`, `test_recording`, `test_course_guess`, `test_slides`, plus `test_av` (needs `av` and `faster-whisper`). `test_core_ui.py` and `test_ai_flow_ui.py` (the page offers ChatGPT/Gemini/Claude when the quota is used up) need Playwright and Edge, so they run on Windows only; elsewhere set `HEVANTI_TEST_CHROMIUM=<path to a Chromium>` and install the `playwright` Python package.
 
 Not in CI, run by hand on Windows: `test_mini_place.py` (opens a real window, needs Edge or Chrome), `test_quick_draft.py` (needs the Whisper model and a 60 s Hebrew clip), `bench_transcribe.py` (is transcription fast enough for live on this computer: below 1 means yes), `smoke_server.py` and `smoke_install.ps1` (an installed copy).
 

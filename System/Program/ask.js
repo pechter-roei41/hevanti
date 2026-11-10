@@ -55,9 +55,10 @@
 .askp .qa .q{justify-self:start;max-width:88%;margin:0;padding:7px 13px;border-radius:16px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:calc(14.5px * var(--tx, 1));line-height:1.5}
 .askp .qa .a{justify-self:end;max-width:96%;padding:8px 13px;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
 .askp .qa.err .a{border-color:var(--rec)}
-.askp .src{display:inline-block;border:1px solid var(--line);background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:0 8px;margin-inline:2px;font:inherit;font-size:.82em;line-height:1.5;direction:ltr;unicode-bidi:isolate;white-space:nowrap}
-.askp button.src{cursor:pointer;border-color:var(--accent)}
-.askp button.src:hover{background:var(--accent);color:var(--accent-ink)}
+.askp .src{display:inline;border:0;background:none;padding:0;margin-inline:2px;font-family:var(--f-mono,Consolas,"Cascadia Mono",ui-monospace,monospace);font-size:.85em;color:var(--muted);direction:ltr;unicode-bidi:isolate;white-space:nowrap}
+.askp button.src{cursor:pointer;color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:3px;border-radius:4px}   /* a time that can be opened looks like a link; one that cannot is only text */
+.askp button.src:hover{background:var(--accent-soft)}
+.askp button.src:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .askp .mx{display:inline-block;direction:ltr;unicode-bidi:isolate;vertical-align:middle}
 .askp .mx.d{display:block;text-align:center;margin:4px 0;overflow-x:auto}
 .askp math{font-size:1.12em}
@@ -194,7 +195,7 @@
       const st = doc.createElement("style"); st.id = "askp-css"; st.textContent = css; doc.head.appendChild(st);
     }
   }
-  // opts: context(question) -> the text for an AI site; toast(text); hasImage() -> true when there is a
+  // opts: copyContext(question, minutes) -> the text to copy, when it is not context(question) (the small window); context(question) -> the text for an AI site; toast(text); hasImage() -> true when there is a
   //       screenshot/slide the person may want to add; win: the window the box lives in (the floating window);
   //       onSource(label) -> open the transcript at the line with that time label (the sources in an answer)
   function mount(box, opts) {
@@ -343,7 +344,13 @@
     }
     async function sendQ0(a, q, extra) {
       let text = "";
-      try { text = extra && extra.context ? await extra.context() : await opts.context(q); } catch (e) { text = q; }   // (may read the slides' text first)
+      // (may read the slides' text first). The small window does not keep the lecture: copyContext asks Hevanti for the question
+      // with the last minutes - the same text the lecture page copies. Nothing is sent anywhere; it is only copied.
+      let bare = "";   // said in the message when only the question could be copied (the lecture could not be attached)
+      try {
+        text = extra && extra.context ? await extra.context()
+          : opts.copyContext ? await opts.copyContext(q, extra && extra.minutes || 0) : await opts.context(q);
+      } catch (e) { text = q; bare = "לא הצלחתי לצרף את ההרצאה, הועתקה רק השאלה. "; }
       const ok = await copyText(text, opts.win);
       if (!ok) { opts.toast("לא הצלחתי להעתיק. לנסות שוב."); return false; }
       setLast(a.id); refresh();
@@ -354,17 +361,17 @@
       const appFirst = AI.apps[a.id] && (!link || (a.id === "claude" && AI.connected.claude));
       if (link && !appFirst) {
         const {w} = openAi(a, opts.win, link);
-        opts.toast(w === null ? "הועתק. לפתוח את הפרויקט של הקורס ב-" + a.name + " ולהדביק (Ctrl+V)."
-          : "נפתח הפרויקט של הקורס ב-" + a.name + " בשליש המסך. השאלה הועתקה (Ctrl+V), או פשוט לשאול שם.");
+        opts.toast(bare + (w === null ? "הועתק. לפתוח את הפרויקט של הקורס ב-" + a.name + " ולהדביק (Ctrl+V)."
+          : "נפתח הפרויקט של הקורס ב-" + a.name + " בשליש המסך. השאלה הועתקה (Ctrl+V), או פשוט לשאול שם."));
         return true;
       }
       if (appFirst && await openApp(a)) {
-        opts.toast("הועתק ונפתחה האפליקציה של " + a.name + ". להדביק (Ctrl+V) ולשלוח." +
+        opts.toast(bare + "הועתק ונפתחה האפליקציה של " + a.name + ". להדביק (Ctrl+V) ולשלוח." +
           (AI.connected[a.id] ? " היא מחוברת להבנתי, אז אפשר גם פשוט לשאול שם" + (link ? ", בפרויקט של הקורס." : ".") : "") + img);
         return true;
       }
       const {w, reused} = openAi(a, opts.win);
-      opts.toast((w === null ? "הועתק. לפתוח את " + a.name + " ולהדביק (Ctrl+V)."
+      opts.toast(bare + (w === null ? "הועתק. לפתוח את " + a.name + " ולהדביק (Ctrl+V)."
         : reused ? "הועתק. להדביק (Ctrl+V) בחלון של " + a.name + " - השיחה שם ממשיכה."
         : "הועתק ונפתח " + a.name + " בשליש המסך. להדביק (Ctrl+V) ולשלוח.") + img);
       return true;

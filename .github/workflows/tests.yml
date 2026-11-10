@@ -31,6 +31,17 @@ jobs:
       - name: The core in a browser - the marks tab, the consent, the ask box, the floating window
         if: runner.os == 'Windows'
         run: python tools/test_core_ui.py
+      - name: The question to Gemini, from the sound to the answer - a model that fails, the quota, what is kept (made-up Gemini)
+        run: python tools/test_ai_flow.py
+      - name: The page offers the student's own AI apps when the quota is used up (browser, made-up Gemini)
+        if: runner.os == 'Windows'
+        run: python tools/test_ai_flow_ui.py
+      - name: Saving the settings and the key - whole or not at all, a damaged file, two threads at once, no key without encryption
+        run: python tools/test_settings.py
+      - name: The connection to Gemini - every error Google gives, a stream that stops, is cut or is slow, at most two models for a live question
+        run: python tools/test_gemini.py
+      - name: Colours - the pages use the tokens of DESIGN.md, and every colour pair keeps its contrast (computed)
+        run: python tools/test_contrast.py
       - name: The AI connector
         run: python tools/test_mcp.py
       - name: The AI of each course

@@ -85,6 +85,37 @@ with sync_playwright() as p:
     check("marks tab: ...and from a few seconds BEFORE the mark (a mark is made after the lecturer said it)",
           pg.evaluate("[MARK_LEAD_S, document.querySelector('#pastLines li.hit')._x.t]") == [8, 10], pg.evaluate("document.querySelector('#pastLines li.hit')._x.t"))
     check("marks tab: no script errors", pg.errs == [], pg.errs)
+    # a marked moment: the highlighter band over the line said before the mark and over the mark row, a ★ and "מסומנת" for the screen reader
+    MARKED = """() => { const probe = document.createElement('i'); probe.style.background = 'var(--mark-line)'; probe.style.color = 'var(--fg)'; document.body.appendChild(probe);
+        const band = getComputedStyle(probe).backgroundColor, ink = getComputedStyle(probe).color; probe.remove();
+        const rows = [...document.querySelectorAll('#pastLines li.mark')];
+        return {band, rows: rows.map(r => { const p = r.previousElementSibling, b = getComputedStyle(r), pb = p && getComputedStyle(p), ts = p && p.querySelector('.ts');
+          return {row: b.backgroundColor === band, text: r.textContent, prevMarked: !!p && p.classList.contains('marked'), prevBand: !!p && pb.backgroundColor === band,
+                  star: p ? (p.querySelector('.mstar') || {}).textContent : null, starHidden: p && p.querySelector('.mstar') ? p.querySelector('.mstar').getAttribute('aria-hidden') : null,
+                  sr: p ? (p.querySelector('.sr-only') || {}).textContent : null, tsInk: !!ts && getComputedStyle(ts).color === ink, prevText: p ? p.textContent : ''}; }),
+          plain: [...document.querySelectorAll('#pastLines li:not(.marked):not(.mark):not(.note)')].filter(l => getComputedStyle(l).backgroundColor === band).length }; }"""
+    for theme, scheme in (("light", "light"), ("dark", "dark")):
+        for motion in ("no-preference", "reduce"):
+            mk = b.new_context(viewport={"width": 1100, "height": 900}, locale="he-IL", color_scheme=scheme, reduced_motion=motion).new_page()
+            mk.route("**/api/transcript*", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"entry": entry, "lines": lines, "summary": ""})))
+            mk.goto(url + "/")
+            mk.wait_for_timeout(900)
+            mk.evaluate(f"document.documentElement.dataset.theme = '{theme}'; document.querySelectorAll('.modal').forEach(m => m.hidden = true); openPast('c/t')")
+            mk.wait_for_timeout(900)
+            m = mk.evaluate(MARKED)
+            check(f"marked moments, {theme}, motion {motion}: each mark row and the line before it are one highlighter band (mark-line)",
+                  len(m["rows"]) == 2 and all(r["row"] and r["prevMarked"] and r["prevBand"] for r in m["rows"]), m)
+            check(f"...the first is an old '?' mark and the second a ★ mark: the same band, the glyph tells them apart",
+                  m["rows"][0]["star"] == "?" and m["rows"][1]["star"] == "★" and "? סימנת" in m["rows"][0]["text"] and "★ סימנת" in m["rows"][1]["text"], m["rows"])
+            check("...the ★ is hidden from the screen reader and the words 'מסומנת' are said instead (so it never relies on yellow alone)",
+                  all(r["starHidden"] == "true" and r["sr"] == "מסומנת: " for r in m["rows"]), m["rows"])
+            check("...the time on a marked line is ink (not muted), and no ordinary line has the band", all(r["tsInk"] for r in m["rows"]) and m["plain"] == 0, m)
+            if theme == "light" and motion == "no-preference":
+                mk.evaluate("document.documentElement.classList.add('a-contrast')")
+                check("...in high-contrast mode a marked line also has an outline (not colour alone)",
+                      mk.evaluate("getComputedStyle(document.querySelector('#pastLines li.mark')).outlineStyle") == "solid")
+            mk.context.close()
+
     # the course page's list of marks opens the lecture a few seconds before the mark
     pg = page()
     pg.route("**/api/marks*", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(
@@ -113,6 +144,18 @@ with sync_playwright() as p:
       return out; }""")
     check("sources: a time that was sent is a button, a made-up time is only text", r["buttons"] == ["⏱ 00:20:44", "⏱ 01:05"] and r["plain"] == ["⏱ 00:99:99"], r)
     check("sources: a click goes to that line of the transcript", r["went"] == ["00:20:44"], r)
+    for theme in ("light", "dark"):
+        pg.evaluate(f"document.documentElement.dataset.theme = '{theme}'")
+        st = pg.evaluate("""() => { const t = document.querySelector('.askp, body'); const css = n => { const e = document.createElement('div'); e.className = 'askp'; document.body.appendChild(e);
+              BZMAsk.render(document, e, '[00:20:44] [00:99:99]', {go: () => {}, known: new Set(['00:20:44'])}); const b = e.querySelector('button.src'), x = e.querySelector('span.src');
+              const f = el => { const c = getComputedStyle(el); return {u: c.textDecorationLine, color: c.color, bg: c.backgroundColor, border: c.borderTopWidth, font: c.fontFamily.toLowerCase()}; };
+              const out = {b: f(b), x: f(x), muted: getComputedStyle(document.documentElement).getPropertyValue('--muted').trim(), accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()};
+              const probe = c => { const i = document.createElement('i'); i.style.color = c; document.body.appendChild(i); const v = getComputedStyle(i).color; i.remove(); return v; };
+              out.mutedRgb = probe(out.muted); out.accentRgb = probe(out.accent); e.remove(); return out; }; return css(); }""")
+        check(f"sources, {theme}: a time that can be opened looks like a link (underlined, green), and one that cannot is plain muted text",
+              "underline" in st["b"]["u"] and st["b"]["color"] == st["accentRgb"] and st["x"]["u"] == "none" and st["x"]["color"] == st["mutedRgb"]
+              and st["x"]["bg"] == "rgba(0, 0, 0, 0)" and st["x"]["border"] == "0px" and "underline" not in st["x"]["u"], st)
+    pg.evaluate("document.documentElement.dataset.theme = ''")
     check("sources: a page that cannot open the transcript (the floating window): chips, not buttons", r["noGo"][0] == 0 and r["noGo"][1] == 1, r)
 
     # ---- the course of the lecture about to start: guessed, selected, with the reason; until the student chooses ----
@@ -259,6 +302,18 @@ with sync_playwright() as p:
     mini = b.new_context(viewport={"width": 420, "height": 760}, locale="he-IL").new_page()
     errs = []
     mini.on("pageerror", lambda e: errs.append(str(e)))
+    # The window asks Hevanti every 4 seconds what is running and whether "answer here" is set up, and shows or hides its parts by
+    # that. A test that only flips those parts by hand races with that poll (the button it clicks is hidden again): so the test says
+    # what Hevanti answers - a lecture is running, and "answer here" is on or off - and the window follows it, as in real use.
+    mini_state = {"live": True, "ask": True}
+
+    def mini_app(route):
+        resp = route.fetch()
+        d = resp.json()
+        d["session"] = {"kind": "live", "done": False, "course": "פיזיקה"} if mini_state["live"] else None
+        d["math"] = dict(d.get("math") or {}, ask=mini_state["ask"])
+        route.fulfill(response=resp, body=json.dumps(d))
+    mini.route("**/api/app*", mini_app)
     mini.goto(url + "/mini")
     mini.wait_for_timeout(1200)
     check("floating window: the question box and the ★ mark (no '?')", mini.is_visible("textarea") and mini.is_visible("#markImp") and mini.query_selector("#markLost") is None)
@@ -278,9 +333,15 @@ with sync_playwright() as p:
     # "what I missed": three buttons, each a ready question over the last 3 / 7 / 15 minutes
     asked = []
     mini.route("**/api/ask", lambda r: (asked.append(json.loads(r.request.post_data or "{}")), r.fulfill(status=200, content_type="text/plain", body="סיכום"))[1])
-    mini.evaluate("BZMAsk.setBuiltin(true); document.querySelector('#miss').hidden = false")
+    mini_state["ask"] = True
+    mini.evaluate("pollApp()")
+    mini.wait_for_selector("#miss button[data-m='3']", state="visible", timeout=10000)
     check("floating window: three 'what I missed' buttons", mini.evaluate("[...document.querySelectorAll('#miss button')].map(b => b.dataset.m).join()") == "3,7,15")
+    greens = mini.evaluate("""() => { const p = document.createElement('i'); p.style.background = 'var(--accent)'; document.body.appendChild(p); const green = getComputedStyle(p).backgroundColor; p.remove();
+        return [...document.querySelectorAll('button')].filter(b => b.offsetParent !== null && getComputedStyle(b).backgroundColor === green).map(b => b.textContent.trim()); }""")
+    check("floating window: exactly one solid green control: 'answer here'", greens == ["תשובה כאן"], greens)
     for n in (3, 7, 15):
+        mini.wait_for_selector(f"#miss button[data-m='{n}']", state="visible", timeout=10000)
         mini.click(f"#miss button[data-m='{n}']")
         mini.wait_for_timeout(600)
     check("floating window: each sends its minutes, from the small window, with a ready question",
@@ -288,12 +349,351 @@ with sync_playwright() as p:
     check("floating window: a ready question does not ask for a picture of its own", [m.get("action") for m in marked].count("snap_question") == 1, marked)
     # an AI chosen in the floating window: the window goes away (it stays on top, the AI would open behind it)
     marked.clear()
-    mini.evaluate("BZMAsk.setBuiltin(false)")
+    mini_state["ask"] = False
+    mini.evaluate("pollApp()")
+    mini.wait_for_selector("button[data-ai=gemini]", state="visible", timeout=10000)
     mini.fill("textarea", "מה זה?")
     mini.click("button[data-ai=gemini]")
     mini.wait_for_timeout(1500)
     check("floating window: choosing Gemini hides the floating window", any(m.get("action") == "hide_mini" for m in marked), marked)
     check("floating window: no script errors", errs == [], errs)
+
+    # ---- 2.18: the missing-key bar, the settings, Hebrew counts, no date and time twice ----
+    L.save_settings(math={})
+    pg = b.new_context(viewport={"width": 1100, "height": 900}, locale="he-IL").new_page()
+    pg.errs = []
+    pg.on("pageerror", lambda e: pg.errs.append(str(e)))
+    pg.goto(url + "/")
+    pg.wait_for_function("document.querySelector('#keyBar') && !document.querySelector('#keyBar').hidden", timeout=8000)
+    check("no key: a bar above the cards says so, with a button to paste the key",
+          "חסר מפתח Gemini" in pg.inner_text("#keyBar") and pg.inner_text("#keyBarGo") == "הדבקת מפתח", pg.inner_text("#keyBar"))
+    check("...its button is a ghost button, not a solid green one (the home page already has the one green action: the lecture card)",
+          pg.evaluate("""() => { const b = getComputedStyle(document.querySelector('#keyBarGo')), g = getComputedStyle(document.querySelector('.start[data-start=he]'));
+              return b.backgroundColor === 'rgba(0, 0, 0, 0)' && b.backgroundColor !== g.backgroundColor; }"""))
+    check("...it is above the cards that start a lecture", pg.evaluate("document.querySelector('#keyBar').getBoundingClientRect().bottom <= document.querySelector('.starts').getBoundingClientRect().top"))
+    check("...in the caution colours (the page's own caution paper), over the whole width",
+          pg.evaluate("""() => { const p = document.createElement('div'); p.style.cssText = 'background:var(--warn-bg);color:var(--warn-fg)'; document.body.appendChild(p);
+              const a = getComputedStyle(p), b = getComputedStyle(document.querySelector('#keyBar')), r = document.querySelector('#keyBar').getBoundingClientRect(),
+                    c = document.querySelector('.starts').getBoundingClientRect();
+              const ok = a.backgroundColor === b.backgroundColor && a.color === b.color && Math.abs(r.width - c.width) < 4; p.remove(); return ok; }"""))
+    check("...and the small status line says nothing more about the key", pg.evaluate("document.querySelector('#homeAns').hidden"))
+    pg.click("#setupLater")
+    check("'not now' closes the first-start card", not pg.is_visible("#setupCard"))
+    pg.click("#keyBarGo")
+    check("the button in the bar opens the paste-the-key card again, with the cursor in the box",
+          pg.is_visible("#setupCard") and pg.evaluate("document.activeElement.id") == "setupKey", pg.evaluate("document.activeElement.id"))
+    L.save_settings(math={"key": L.keep_secret("AQ.fake"), "ask": True})
+    pg.wait_for_function("document.querySelector('#keyBar').hidden", timeout=8000)
+    check("with a key: the bar is gone, and the status line is back", not pg.evaluate("document.querySelector('#homeAns').hidden") and "מוכן" in pg.inner_text("#homeAns"), pg.inner_text("#homeAns"))
+    check("the keyboard shortcuts have a row of their own, under the status",
+          pg.evaluate("document.querySelector('.hkeys').getBoundingClientRect().top >= document.querySelector('#homeAns').getBoundingClientRect().bottom - 1"))
+    L.save_settings(math={"plan": "paid"})
+    pg.wait_for_function("document.querySelector('#keyBar').hidden && document.querySelector('#homeAns').textContent.includes('מנוי')", timeout=8000)
+    check("a paid AI plan and no key: no bar (the questions go to the student's AI app)", "מנוי" in pg.inner_text("#homeAns"), pg.inner_text("#homeAns"))
+    L.save_settings(math={"key": L.keep_secret("AQ.fake"), "ask": True})
+
+    pg.evaluate("openSettings('key')")
+    pg.wait_for_timeout(500)
+    heads = pg.evaluate("[...document.querySelectorAll('#set-key .optbox h4')].map(h => h.textContent.trim())")
+    check("settings: the groups are not numbered", heads and not any(h[:1].isdigit() for h in heads), heads)
+    check("settings: the privacy notes are in the caution colours, not the error red",
+          pg.evaluate("""() => { const n = document.querySelector('#set-key .optbox .warn'), p = document.createElement('div');
+              p.style.cssText = 'background:var(--warn-bg);color:var(--warn-fg)'; document.body.appendChild(p);
+              const a = getComputedStyle(p), b = getComputedStyle(n); const ok = a.backgroundColor === b.backgroundColor && a.color === b.color; p.remove(); return ok; }"""))
+    check("settings: ...and not bold red", pg.evaluate("getComputedStyle(document.querySelector('#set-key .optbox .warn')).fontWeight") in ("600", "500"))
+
+    counts = pg.evaluate("[nLec(0), nLec(1), nLec(2), nLec(5), nTerm(1), nTerm(2), nTerm(30), nLine(1), nLine(2), nSlide(1), nSlide(7), nShot(1)]")
+    check("Hebrew counts: one, two, many, none", counts == ["אין הרצאות", "הרצאה אחת", "שתי הרצאות", "5 הרצאות", "מונח אחד", "שני מונחים", "30 מונחים",
+                                                             "שורה אחת", "שתי שורות", "שקופית אחת", "7 שקופיות", "צילום אחד"], counts)
+    course = "קורס ספירה"
+    L.create_course(course)
+    for nm, head in (("2026-11-02 10-00 הרצאה", "2026-11-02 10:00"), ("מבוא לגבולות", "2026-11-09 08:30")):
+        d = os.path.join(L.course_dir(course), nm)
+        os.makedirs(d)
+        with open(os.path.join(d, nm + ".txt"), "w", encoding="utf-8") as f:
+            slides = "".join(f"[{head[-5:]}:0{i} | +0:00:0{i}] [צילום מסך: {course}/{nm}/שקופיות/s{i}.jpg]\n" for i in (1, 2)) if nm == "מבוא לגבולות" else ""
+            f.write(f"# תמלול הרצאה (עברית) - התחלה {head}\n[{head[-5:]}:00 | +0:00:05] שלום לכולם\n{slides}# סוף\n")
+    from urllib.parse import quote
+    pg.goto(url + "/#c=" + quote(course))
+    pg.reload()   # (the library is read when the page opens: the lectures above were made after it)
+    pg.wait_for_function("document.querySelectorAll('#cLib li').length === 2", timeout=8000)
+    pg.wait_for_timeout(600)
+    meta = pg.evaluate("[...document.querySelectorAll('#cLib li')].map(li => [li.querySelector('.t').textContent, li.querySelector('.m').textContent])")
+    auto = [m for m in meta if m[0].startswith("הרצאה 02.11.2026")]
+    named = [m for m in meta if m[0] == "מבוא לגבולות"]
+    check("a lecture whose title is its date and time: the line under it has only the length (not the date and time again, not the language, not the lines)",
+          len(auto) == 1 and auto[0][1] == "אורך 00:00:05", meta)
+    check("a lecture with a name of its own: the date in one format (09.11.2026), the length, the slides - and no time, language or lines",
+          len(named) == 1 and named[0][1] == "09.11.2026 · אורך 00:00:05 · שתי שקופיות", meta)
+    check("the line under a lecture has no ISO date and no 'lines'", all("2026-" not in m[1] and "שורה" not in m[1] and "עברית" not in m[1] for m in meta), meta)
+    check("the course page: 'two lectures', not '2 lectures'", "שתי הרצאות" in pg.inner_text("#cSub") and "שתי הרצאות" in pg.inner_text("#ctLec"), (pg.inner_text("#cSub"), pg.inner_text("#ctLec")))
+    check("the summary line is built from the same list as the lectures (and is not 'no lectures' above a list)",
+          "אין הרצאות" not in pg.inner_text("#cSize") and "עוד אין הרצאות" not in pg.inner_text("#cSize") and "שתי הרצאות" in pg.inner_text("#cSize"), pg.inner_text("#cSize"))
+    pg.evaluate("openPast(%s)" % json.dumps(course + "/2026-11-02 10-00 הרצאה"))
+    pg.wait_for_timeout(1000)
+    sub = pg.inner_text("#pastSub")
+    check("a saved lecture: the line under its title is the same line (the course, the length) - no date and time again, no language, no lines",
+          sub == course + " · אורך 00:00:05", sub)
+    check("...the language and the number of lines are with the transcript, on the same page", pg.inner_text("#pastTrCount") == "עברית · שורה אחת", pg.inner_text("#pastTrCount"))
+    pg.evaluate("openPast(%s)" % json.dumps(course + "/מבוא לגבולות"))
+    pg.wait_for_timeout(1000)
+    check("a saved lecture with a name: the course, the date in one format, the length, the slides", pg.inner_text("#pastSub") == course + " · 09.11.2026 · אורך 00:00:05 · שתי שקופיות", pg.inner_text("#pastSub"))
+    check("2.18 page: no script errors", pg.errs == [], pg.errs)
+
+    # ---- 2.19, stage 9: the guide's text is about 70 characters a line, and the video, the chapters and the "something is wrong" table hold ----
+    for theme in ("light", "dark"):
+        gd = b.new_context(viewport={"width": 1280, "height": 900}, locale="he-IL", color_scheme=theme).new_page()
+        gd.errs = []
+        gd.on("pageerror", lambda e: gd.errs.append(str(e)))
+        gd.goto(url + "/#how")
+        gd.wait_for_timeout(1500)
+        gd.evaluate(f"document.documentElement.dataset.theme = '{theme}'; document.querySelectorAll('.modal').forEach(m => m.hidden = true)")
+        r = gd.evaluate("""() => { const per = [];
+            for (const el of document.querySelectorAll('.guide p, .guide li')) { const t = el.firstChild && el.firstChild.nodeType === 3 && el.firstChild.length > 80 ? el.firstChild : null; if (!t) continue;   // (text that starts the element, so it starts a line)
+              const rg = document.createRange(); let first = null, n = 0;
+              for (let i = 0; i < t.length; i++) { rg.setStart(t, i); rg.setEnd(t, i + 1); const b = rg.getBoundingClientRect(); if (first === null) first = Math.round(b.top); if (Math.round(b.top) !== first) break; n++; }
+              per.push(n); }
+            const vid = document.querySelector('.howvid video').getBoundingClientRect(), ch = document.querySelector('#howChapters').getBoundingClientRect(), g = document.querySelector('.guide').getBoundingClientRect();
+            const dt = document.querySelector('.gfix dt').getBoundingClientRect(), dd = document.querySelector('.gfix dd').getBoundingClientRect();
+            return {per, guide: Math.round(g.width), video: [Math.round(vid.width), Math.round(vid.height)], chapters: [Math.round(ch.width), Math.round(ch.height)], sameRow: Math.abs(vid.top - ch.top) < 30,
+                    overflow: document.documentElement.scrollWidth > window.innerWidth, table2cols: Math.abs(dt.top - dd.top) < 12 && dt.left !== dd.left, chaptersCount: document.querySelectorAll('#howChapters button').length}; }""")
+        check(f"guide, {theme}: the running text is 60 to 80 characters a line (about 70)", r["per"] and min(r["per"]) >= 60 and max(r["per"]) <= 80, r)
+        check(f"guide, {theme}: the text column is narrower than it was (720px)", r["guide"] < 640, r)
+        check(f"guide, {theme}: the video keeps its size (16:9) and the chapters list is beside it", r["video"][0] > 500 and abs(r["video"][0] / r["video"][1] - 16 / 9) < 0.05 and r["sameRow"] and r["chaptersCount"] == 13, r)
+        check(f"guide, {theme}: the 'something is wrong' table keeps its two columns, and nothing overflows sideways", r["table2cols"] and not r["overflow"], r)
+        check(f"guide, {theme}: no script errors", gd.errs == [], gd.errs)
+        gd.context.close()
+
+    # ---- 2.19, stage 8: settings - a quiet delete-key link, a short "today" line, the model in Advanced, green checkboxes ----
+    for theme in ("light", "dark"):
+        sp = b.new_context(viewport={"width": 1200, "height": 1000}, locale="he-IL", color_scheme=theme).new_page()
+        sp.errs = []
+        sp.on("pageerror", lambda e: sp.errs.append(str(e)))
+
+        def set_app(route):
+            resp = route.fetch()
+            d = resp.json()
+            d["math"] = dict(d.get("math") or {}, has_key=True, ask=True, on=True, model="gemini-3-flash", done=12, skipped=3, waiting=1,
+                             today={"asks": 8, "reads": 58, "skipped": 3, "failed": 0, "quota": 0})
+            route.fulfill(response=resp, body=json.dumps(d))
+        sp.route("**/api/app*", set_app)
+        sp.goto(url + "/#settings")
+        sp.wait_for_timeout(1200)
+        sp.evaluate(f"document.documentElement.dataset.theme = '{theme}'; document.querySelectorAll('.modal').forEach(m => m.hidden = true); openSettings('key')")
+        sp.wait_for_timeout(600)
+        st = sp.inner_text("#mathStat")
+        check(f"settings, {theme}: the state line is short - the key is saved, and today: 8 questions, 58 slides read", st == "המפתח שמור. היום: 8 שאלות, 58 שקופיות נקראו.", st)
+        check(f"settings, {theme}: the model's name is not on the Answers tab", "gemini-3" not in sp.inner_text("#set-key"), sp.inner_text("#set-key")[:300])
+        r = sp.evaluate("""() => { const f = document.querySelector('#mathForget'), c = getComputedStyle(f), s = document.querySelector('#mathStat');
+            const probe = document.createElement('i'); probe.style.color = 'var(--muted)'; document.body.appendChild(probe); const muted = getComputedStyle(probe).color; probe.remove();
+            return {visible: f.offsetParent !== null, muted: c.color === muted, bg: c.backgroundColor, border: c.borderTopWidth, tag: f.tagName, ul: c.textDecorationLine,
+                    sameRow: f.parentElement === s.parentElement && Math.abs(f.getBoundingClientRect().top - s.getBoundingClientRect().top) < 24}; }""")
+        check(f"settings, {theme}: 'delete the key' is a quiet text link (muted, underlined, no fill, no border) on the line that says the key is saved",
+              r["visible"] and r["muted"] and r["bg"] == "rgba(0, 0, 0, 0)" and r["border"] == "0px" and "underline" in r["ul"] and r["sameRow"], r)
+        sp.click("#mathForget")
+        sp.wait_for_timeout(300)
+        check(f"settings, {theme}: it still asks before it deletes (the existing confirmation)", sp.is_visible("#confOk"))
+        sp.click("#confNo")
+        sp.evaluate("openSettings('ai')")
+        sp.wait_for_timeout(500)
+        tech = sp.inner_text("#mathTech")
+        check(f"settings, {theme}: the model and the slide reading of this run are in Advanced", "gemini-3-flash" in tech and "נקראו בהפעלה הזו 12 שקופיות" in tech and "עוד 3 לא נשלחו" in tech, tech)
+        acc = sp.evaluate("""() => { const probe = document.createElement('i'); probe.style.color = 'var(--accent)'; document.body.appendChild(probe); const g = getComputedStyle(probe).color; probe.remove();
+            const r = document.createElement('input'); r.type = 'radio'; document.body.appendChild(r); const rr = getComputedStyle(r).accentColor; r.remove();
+            return {green: g, all: [...document.querySelectorAll('input[type=checkbox]')].map(c => getComputedStyle(c).accentColor === g), radio: rr === g}; }""")
+        check(f"settings, {theme}: every checkbox and radio is the board green (accent-color), not the system blue", acc["all"] and all(acc["all"]) and acc["radio"], acc)
+        check(f"settings, {theme}: no script errors", sp.errs == [], sp.errs)
+        sp.context.close()
+
+    # ---- 2.19, stage 6: the lecture page - the three study cards are not inside a card, the summary card is soft green, "answer here" is the one solid green ----
+    for theme in ("light", "dark"):
+        lp = b.new_context(viewport={"width": 1200, "height": 1000}, locale="he-IL", color_scheme=theme).new_page()
+        lp.errs = []
+        lp.on("pageerror", lambda e: lp.errs.append(str(e)))
+        lp.route("**/api/transcript*", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"entry": entry, "lines": no_marks, "summary": ""})))
+
+        def lp_app(route):
+            resp = route.fetch()
+            d = resp.json()
+            d["math"] = dict(d.get("math") or {}, has_key=True, ask=True, on=True)
+            route.fulfill(response=resp, body=json.dumps(d))
+        lp.route("**/api/app*", lp_app)
+        lp.goto(url + "/")
+        lp.wait_for_timeout(900)
+        lp.evaluate(f"document.documentElement.dataset.theme = '{theme}'; document.querySelectorAll('.modal').forEach(m => m.hidden = true); openPast('c/t')")
+        lp.wait_for_timeout(900)
+        lp.evaluate("document.querySelector('#pastAskFold').open = true")
+        lp.wait_for_selector("#pastAsk .ais button", timeout=8000)
+        r = lp.evaluate("""() => { const probe = document.createElement('i'); probe.style.background = 'var(--accent-soft)'; document.body.appendChild(probe);
+            const soft = getComputedStyle(probe).backgroundColor; probe.style.background = 'var(--accent)'; const green = getComputedStyle(probe).backgroundColor; probe.remove();
+            const st = getComputedStyle(document.querySelector('#pastStudy')), main = getComputedStyle(document.querySelector('.tile.main'));
+            return {soft, green, mainBg: main.backgroundColor, studyBorder: st.borderTopWidth, studyBg: st.backgroundColor, studyPad: st.paddingTop,
+                    nested: document.querySelectorAll('#vPast .card .card, #vPast .card .tile, #pastStudy.card').length,
+                    tiles: [...document.querySelectorAll('#pastStudy .tile')].filter(t => !t.hidden).length, tileBorder: getComputedStyle(document.querySelector('.tile')).borderTopWidth,
+                    solid: [...document.querySelectorAll('#vPast button, #vPast a.btn')].filter(x => x.offsetParent !== null && getComputedStyle(x).backgroundColor === green).map(x => x.textContent.trim())}; }""")
+        check(f"lecture page, {theme}: the summary card is soft green, not solid", r["mainBg"] == r["soft"] and r["mainBg"] != r["green"], r)
+        check(f"lecture page, {theme}: what holds the three study cards is not a card (no border, no fill, no padding), and no card is inside a card",
+              r["studyBorder"] == "0px" and r["studyBg"] == "rgba(0, 0, 0, 0)" and r["studyPad"] == "0px" and r["nested"] == 0, r)
+        check(f"lecture page, {theme}: the three cards are still cards (a border each)", r["tiles"] == 3 and r["tileBorder"] != "0px", r)
+        check(f"lecture page, {theme}, the question box open: 'answer here' is the one solid green control", r["solid"] == ["תשובה כאן"], r["solid"])
+        check(f"lecture page, {theme}: no script errors", lp.errs == [], lp.errs)
+        lp.context.close()
+
+    # ---- 2.19, stage 5: the graphics card capsule in the top bar exists only when there is something to press ----
+    gpu_state = {"gpu": {"cards": 0, "libs_ok": False, "state": "", "msg": ""}, "device": "CPU"}
+    cmds = []
+    gp = b.new_context(viewport={"width": 1100, "height": 800}, locale="he-IL").new_page()
+    gp.errs = []
+    gp.on("pageerror", lambda e: gp.errs.append(str(e)))
+
+    def gpu_app(route):
+        resp = route.fetch()
+        d = resp.json()
+        d["gpu"], d["device"] = gpu_state["gpu"], gpu_state["device"]
+        route.fulfill(response=resp, body=json.dumps(d))
+    gp.route("**/api/app*", gpu_app)
+    gp.route("**/api/cmd", lambda r: (cmds.append(json.loads(r.request.post_data or "{}")), r.fulfill(content_type="application/json", body=json.dumps({"ok": True, "gpu": {"cards": 1, "libs_ok": False, "state": "installing", "msg": ""}})))[1])
+    gp.goto(url + "/")
+    gp.evaluate("document.querySelectorAll('.modal').forEach(m => m.hidden = true)")
+
+    def gpu_seen(hash_):
+        gp.evaluate(f"location.hash = '{hash_}'")
+        gp.wait_for_timeout(1700)
+        return gp.evaluate("""() => { const vis = e => !!e && !e.hidden && e.offsetParent !== null;
+            return {pill: vis(document.querySelector('#gpuPill')), pillText: document.querySelector('#gpuPill').innerText, bar: vis(document.querySelector('#gpuBar')),
+                    barBtn: vis(document.querySelector('#gpuGo')), dev: !!document.querySelector('#devPill'),
+                    installs: [...document.querySelectorAll('#gpuPillGo, #gpuGo')].filter(vis).length}; }""")
+    for name, g, dev in (("no NVIDIA card (the computer works on the processor)", {"cards": 0, "libs_ok": False, "state": "", "msg": ""}, "CPU"),
+                         ("a card that is in use", {"cards": 1, "libs_ok": True, "state": "", "msg": ""}, "GPU"),
+                         ("a card and the processor works on the card's libraries being installed", {"cards": 1, "libs_ok": False, "state": "installing", "msg": ""}, "CPU")):
+        gpu_state["gpu"], gpu_state["device"] = g, dev
+        for h in ("how", "courses"):
+            r = gpu_seen(h)
+            check(f"graphics-card capsule, {name}, page {h}: not in the top bar, and no status pill for the device", not r["pill"] and not r["dev"], r)
+    gpu_state["gpu"], gpu_state["device"] = {"cards": 1, "libs_ok": False, "state": "", "msg": ""}, "CPU"
+    r = gpu_seen("how")
+    check("a card that is not used, on another page: the capsule is in the top bar with the install button", r["pill"] and "NVIDIA" in r["pillText"] and r["installs"] == 1, r)
+    r = gpu_seen("")
+    check("...on the home page the bar below says it with its own button, and the capsule is gone (one install button, never two)",
+          r["bar"] and r["barBtn"] and not r["pill"] and r["installs"] == 1, r)
+    gpu_seen("how")
+    del cmds[:]
+    gp.click("#gpuPillGo")
+    gp.wait_for_timeout(500)
+    check("the capsule's button installs (the same action as the home bar's)", any(c.get("action") == "install_gpu" for c in cmds), cmds)
+    for st, word in (("failed", "לנסות שוב"), ("done", "סגירה")):
+        gpu_state["gpu"] = {"cards": 1, "libs_ok": False, "state": st, "msg": ""}
+        r = gpu_seen("how")
+        check(f"capsule, state {st}: its button says '{word}'", r["pill"] and word in r["pillText"] and r["installs"] == 1, r)
+    check("graphics-card capsule: no script errors", gp.errs == [], gp.errs)
+    gp.context.close()
+
+    # ---- 2.19, stage 2: the live lecture screen has one solid green: "answer here" ----
+    live_now = {"yes": True}
+    lv = b.new_context(viewport={"width": 1280, "height": 900}, locale="he-IL").new_page()
+    lv.errs = []
+    lv.on("pageerror", lambda e: lv.errs.append(str(e)))
+
+    def live_app(route):
+        resp = route.fetch()
+        d = resp.json()
+        d["session"] = {"kind": "live", "lang": "he", "title": "", "course": "פיזיקה", "ready": True, "done": False, "stopping": False, "started": 0, "yt": False}
+        d["math"] = dict(d.get("math") or {}, has_key=True, ask=True, on=True)
+        route.fulfill(response=resp, body=json.dumps(d))
+    lv.route("**/api/app*", live_app)
+    lv.route("**/api/live*", lambda r: r.fulfill(content_type="application/json", body=json.dumps({"total": 0, "since": 0, "draft": "", "pending": 0, "lag": 0, "fast": False, "shot": None, "info": {}, "ended": False, "items": []})))
+    lv.goto(url + "/#live")
+    lv.wait_for_selector("#liveAsk .ais button", timeout=10000)
+    lv.evaluate("document.querySelectorAll('.modal').forEach(m => m.hidden = true)")
+    SOLID = """() => [...document.querySelectorAll('#vLive button, #vLive a.btn')].filter(b => b.offsetParent !== null && !b.hidden)
+          .filter(b => { const c = getComputedStyle(b).backgroundColor; return c !== 'rgba(0, 0, 0, 0)' && c === getComputedStyle(document.documentElement).getPropertyValue('--accent-solid-probe') || false; }).length"""
+    solid = lv.evaluate("""() => { const p = document.createElement('button'); p.className = 'btn'; document.body.appendChild(p); const green = getComputedStyle(p).backgroundColor; p.remove();
+        return [...document.querySelectorAll('#vLive button, #vLive a.btn')].filter(b => b.offsetParent !== null && getComputedStyle(b).backgroundColor === green).map(b => b.textContent.trim()); }""")
+    check("live lecture screen: exactly one solid green control, and it is 'answer here'", solid == ["תשובה כאן"], solid)
+    for sel, what in (("[data-float]", "the small window"), ("#markImp", "mark ★"), ("#liveStop", "stop")):
+        check(f"live lecture screen: {what} is a ghost button", lv.evaluate(f"getComputedStyle(document.querySelector('#vLive {sel}')).backgroundColor") == "rgba(0, 0, 0, 0)")
+    rects = lv.evaluate("['#markImp', '[data-float]', '#liveStop', '.livebar .what b'].map(s => { const r = document.querySelector('#vLive ' + s).getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; })")
+    check("live lecture screen: stop is in the same row as the title and the other actions (not a row of its own)",
+          max(r[0] for r in rects[:3]) < min(r[1] for r in rects[:3]) and abs(rects[2][0] - rects[0][0]) < 4, rects)
+    lv.set_viewport_size({"width": 600, "height": 900})
+    lv.wait_for_timeout(300)
+    acts = lv.evaluate("[...document.querySelectorAll('#vLive .acts button')].filter(b => !b.hidden).map(b => Math.round(b.getBoundingClientRect().top))")
+    check("live lecture screen, narrow: the actions stay together in one row (stop is never alone)", len(set(acts)) == 1, acts)
+    check("live lecture screen: no script errors", lv.errs == [], lv.errs)
+    lv.context.close()
+
+    # ---- 2.19, stage 1: the placeholder of every field is ink-muted (not the browser's grey) ----
+    PH = """() => { const out = []; for (const tag of ['input', 'textarea']) { const e = document.createElement(tag); if (tag === 'input') e.type = 'search'; e.placeholder = 'x';
+          document.body.appendChild(e); const c = getComputedStyle(e, '::placeholder'); const m = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim();
+          const probe = document.createElement('i'); probe.style.color = m; document.body.appendChild(probe);
+          out.push([c.color === getComputedStyle(probe).color, c.opacity]); e.remove(); probe.remove(); } return out; }"""
+    for page_name, path in (("app", "/"), ("floating window", "/mini"), ("player", "/player")):
+        for theme in ("light", "dark"):
+            ph = b.new_context(viewport={"width": 900, "height": 700}, locale="he-IL", color_scheme=theme).new_page()
+            ph.goto(url + path)
+            ph.evaluate(f"document.documentElement.dataset.theme = '{theme}'")
+            ph.wait_for_timeout(300)
+            r = ph.evaluate(PH)
+            check(f"placeholder, {page_name}, {theme}: ink-muted at full strength (a text box and a search box)", r == [[True, "1"], [True, "1"]], r)
+            ph.context.close()
+
+    # ---- the transcript is behind: the floating window says so, in seconds, over 10 ----
+    lagp = b.new_context(viewport={"width": 420, "height": 760}, locale="he-IL").new_page()
+    lag_errs = []
+    lagp.on("pageerror", lambda e: lag_errs.append(str(e)))
+    state = {"lag": 25, "live": True}
+    lagp.route("**/api/app*", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(
+        {"session": {"kind": "live", "done": False, "course": "פיזיקה"} if state["live"] else None, "math": {"ask": True}, "ai_apps": {}, "connect": {}})))
+    lagp.route("**/api/live*", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(
+        {"total": 0, "items": [], "lag": state["lag"], "info": {}}) if state["live"] else json.dumps({"none": True})))
+    lagp.goto(url + "/mini")
+    lagp.wait_for_timeout(800)
+
+    def poll():
+        lagp.evaluate("async () => { await pollApp(); await pollLive(); }")
+        return lagp.evaluate("[!document.querySelector('#lag').hidden, document.querySelector('#lag').textContent]")
+    shown, txt = poll()
+    check("floating window: the transcript is 25 seconds behind - it says so, in seconds", shown and "מאחר ב-25 שניות" in txt, (shown, txt))
+    check("...in the header row, with the ★ and the minimize button (not a row of its own that competes with them)",
+          lagp.evaluate("document.querySelector('#lag').parentElement.tagName") == "HEADER"
+          and lagp.evaluate("""() => { const h = document.querySelector('header').getBoundingClientRect(), l = document.querySelector('#lag').getBoundingClientRect();
+              return l.top >= h.top - 1 && l.bottom <= h.bottom + 1; }"""))
+    check("...with the whole sentence for the screen reader and the pointer",
+          "התמלול מאחר ב-25 שניות" in lagp.evaluate("document.querySelector('#lag').getAttribute('aria-label')"))
+    check("...a caution pill: not green", lagp.evaluate("""() => { const p = document.createElement('div'); p.style.cssText = 'background:var(--warn-bg);color:var(--warn-fg)'; document.body.appendChild(p);
+          const a = getComputedStyle(p), b = getComputedStyle(document.querySelector('#lag')); const ok = a.backgroundColor === b.backgroundColor && a.color === b.color; p.remove(); return ok; }"""))
+    state["lag"] = 10
+    check("floating window: 10 seconds is not worth a warning", poll()[0] is False)
+    state["lag"] = 11
+    check("floating window: over 10 seconds it is shown", poll()[0] is True)
+    state["lag"] = 3
+    check("floating window: caught up - the warning goes away", poll()[0] is False)
+    state["lag"], state["live"] = 40, False
+    check("floating window: no lecture - no warning", poll()[0] is False)
+    check("floating window: the warning is a status the screen reader announces", lagp.evaluate("document.querySelector('#lag').getAttribute('role')") == "status")
+    check("floating window (lag): no script errors", lag_errs == [], lag_errs)
+
+    # ---- a settings save that failed is told (once per failure), in the floating window and in the app ----
+    saves = {"n": 1}
+    for page_name, path in (("floating window", "/mini"), ("app", "/")):
+        sp = b.new_context(viewport={"width": 1100, "height": 800}, locale="he-IL").new_page()
+
+        def patched(route):
+            resp = route.fetch()
+            d = resp.json()
+            d["save_failed"] = {"n": saves["n"], "msg": "לא הצלחתי לשמור את ההגדרות. לנסות שוב."}
+            route.fulfill(response=resp, body=json.dumps(d))
+        sp.route("**/api/app*", patched)
+        sp.goto(url + path)
+        sp.wait_for_function("document.querySelector('#toast') && document.querySelector('#toast').textContent.includes('לא הצלחתי לשמור')", timeout=8000)
+        check(f"{page_name}: a save that failed is shown in words", "לנסות שוב" in sp.inner_text("#toast"), sp.inner_text("#toast"))
+        sp.evaluate("document.querySelector('#toast').textContent = ''; document.querySelector('#toast').classList.remove('on')")
+        sp.wait_for_timeout(4500)
+        check(f"{page_name}: the same failure is not shown again on every poll", sp.evaluate("document.querySelector('#toast').textContent") == "")
+        saves["n"] += 1
+        sp.wait_for_function("document.querySelector('#toast').textContent.includes('לא הצלחתי לשמור')", timeout=8000)
+        check(f"{page_name}: a new failure is shown", True)
+        sp.context.close()
     b.close()
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")

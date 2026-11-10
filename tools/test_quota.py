@@ -152,22 +152,28 @@ code, body = ask()
 d = asked_json(body, code)
 check("quota: the page is told (429, quota, wait)", code == 429 and d.get("quota") is True and 0 < d.get("wait", 0) <= 60 and "מכסה" in d.get("error", ""), (code, body))
 tried = HITS["stream"]
-check("quota: the usable models were tried (not the image one)", 1 <= tried <= 3, tried)
+check("quota: a live question tries two models at most (each try costs quota)", 1 <= tried <= L.GEMINI_LIVE_MODELS, tried)
 
-# ... and they rest: the next question does not ask Google again
+# ... the next question tries the model that was not asked yet; then every model rests, and Google is not asked again
 code, body = ask()
 d = asked_json(body, code)
 check("quota: asked again at once - the same answer", code == 429 and d.get("quota") is True, (code, body))
-check("quota: Google was not asked again", HITS["stream"] == tried, (HITS["stream"], tried))
+check("quota: only a model that did not rest was asked (the models that said 'quota' were not)", HITS["stream"] - tried <= 1, (HITS["stream"], tried))
+settled = HITS["stream"]
+code, body = ask()
+d = asked_json(body, code)
+check("quota: once every model rests, the same answer", code == 429 and d.get("quota") is True, (code, body))
+check("quota: ...and Google was not asked again", HITS["stream"] == settled, (HITS["stream"], settled))
 check("quota: the models rest at most a minute", bool(reader.cool) and all(u - time.time() <= 61 for u, _ in reader.cool.values()), reader.cool)
 
 # the rest is over: the question goes through, and the model that answered is free again
+rested = len(reader.cool)
 for m in list(reader.cool):
     reader.cool[m] = (0, reader.cool[m][1])
 MODE["stream"] = "ok"
 code, body = ask()
 check("after the rest: answered", code == 200 and body == "שלום לכולם", (code, body))
-check("after the rest: the model that answered is free", len(reader.cool) < tried, reader.cool)
+check("after the rest: the model that answered is free", len(reader.cool) < rested, reader.cool)
 
 # the day's quota: said so, but a wrong guess never locks the lecture for long
 reader.cool.clear()

@@ -29,7 +29,7 @@ try { bzmTheme(localStorage.getItem("bzm.theme") || ""); } catch (e) {}</script>
 :root{
   --bg:#F6F3E9; --surface:#FFFFFF; --sunk:#ECE7D8; --fg:#17261F; --muted:#56625B; --line:#DDD7C4;
   --accent:#1B6E4B; --accent-ink:#FFFFFF; --accent-soft:#DCEBDF; --mark:#F7D44C; --rec:#C2412D; --ok:#1B6E4B; --ok-soft:#DCEBDF;
-  --warn-bg:#FBF0DA; --warn-fg:#6B5020; --now:#FBEFB5; --now-ink:#17261F;
+  --warn-bg:#FBF0DA; --warn-fg:#6B5020; --now:#FBEFB5; --now-ink:#17261F; --mark-line:#F7DD7B;
   --f-body:"Assistant","Segoe UI","Arial Hebrew",Arial,system-ui,sans-serif; --f-display:"Secular One","Assistant","Segoe UI",sans-serif;
   --f-mono:Consolas,"Cascadia Mono",ui-monospace,monospace;
   --r:14px;
@@ -37,11 +37,11 @@ try { bzmTheme(localStorage.getItem("bzm.theme") || ""); } catch (e) {}</script>
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#1C1B16; --surface:#26241D; --sunk:#2F2C23; --fg:#F1ECDF; --muted:#B5AFA0; --line:#3E3A2E;
   --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --mark:#E8C547; --rec:#FF7A63; --ok:#5BC79A; --ok-soft:#1F3A2E;
-  --warn-bg:#3A3122; --warn-fg:#EBD08E; --now:#3D3816; --now-ink:#FFF6CF; color-scheme:dark}}
+  --warn-bg:#3A3122; --warn-fg:#EBD08E; --now:#3D3816; --now-ink:#FFF6CF; --mark-line:#594E25; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#1C1B16; --surface:#26241D; --sunk:#2F2C23; --fg:#F1ECDF; --muted:#B5AFA0; --line:#3E3A2E;
   --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --mark:#E8C547; --rec:#FF7A63; --ok:#5BC79A; --ok-soft:#1F3A2E;
-  --warn-bg:#3A3122; --warn-fg:#EBD08E; --now:#3D3816; --now-ink:#FFF6CF; color-scheme:dark}
+  --warn-bg:#3A3122; --warn-fg:#EBD08E; --now:#3D3816; --now-ink:#FFF6CF; --mark-line:#594E25; color-scheme:dark}
 :root[data-theme="light"]{color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -68,6 +68,8 @@ header{position:sticky;top:0;z-index:5;padding:10px 16px 0;background:linear-gra
 .brand small{font-family:var(--f-body);font-weight:600;font-size:13px;color:var(--muted);background:var(--sunk);border-radius:999px;padding:1px 9px}
 .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--accent)}
 .pill{font-size:14px;padding:3px 12px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.pill.gpu{background:var(--warn-bg);color:var(--warn-fg);display:inline-flex;align-items:center;gap:10px}   /* a caution capsule with a text link: only while there is a card that is not used, and something to press */
+.pill.gpu .linkish{color:var(--warn-fg);font-weight:700}
 .pill.live{background:color-mix(in srgb,var(--rec) 16%,transparent);color:var(--rec);font-weight:600}
 .pill.live::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--rec);margin-inline-end:7px;vertical-align:1px}
 @media (prefers-reduced-motion:no-preference){.pill.live::before{animation:pulse 1.4s ease-in-out infinite}}
@@ -109,7 +111,7 @@ h2{font-size:21px;margin:0;text-wrap:balance}
 .resume .rtxt{margin-inline-end:auto;min-width:0;display:grid}
 .resume .rtxt b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .resume .rtxt small{color:var(--muted);font-size:14px}
-.homehints{display:flex;justify-content:space-between;align-items:center;gap:8px 24px;flex-wrap:wrap;margin:0 2px 18px;color:var(--muted);font-size:14.5px}
+.homehints{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin:0 2px 18px;color:var(--muted);font-size:14.5px}
 .homehints p{margin:0}
 .hkeys{display:flex;gap:6px 18px;flex-wrap:wrap}
 .hstat{display:flex;align-items:center;gap:8px}
@@ -239,6 +241,8 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .pano summary{cursor:pointer}
 .pano ol{margin:6px 0;padding-inline-start:22px}
 .connbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--accent-soft);border-radius:var(--r);padding:10px 14px;margin:0 0 18px}
+.keybar{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap;background:var(--warn-bg);color:var(--warn-fg);border-radius:var(--r);padding:14px 18px;margin:0 0 18px;font-size:16px;line-height:1.5}
+.keybar span{margin-inline-end:auto}
 .connbar span{margin-inline-end:auto}
 .foot{margin-top:26px;color:var(--muted);font-size:14px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 
@@ -265,13 +269,22 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .moremenu .menu button[hidden]{display:none}
 .study .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}
 .linkish{border:0;background:none;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
+.linkish.muted{color:var(--muted)}   /* a quiet link: not a button, not green (deleting the key is rare) */
+.keystat{display:flex;align-items:baseline;gap:4px 16px;flex-wrap:wrap}
+.keystat .capstat{flex:1 1 auto}
+.keystat .linkish{margin-inline-start:auto}
+input[type=checkbox],input[type=radio]{accent-color:var(--accent)}   /* the board green, not the system blue */
 .tile{display:grid;gap:3px;text-align:start;padding:13px 16px;border:1.5px solid var(--line);border-radius:14px;background:var(--bg);color:var(--fg);font:inherit;cursor:pointer}
 .tile b{font-size:17px}
 .tile small{color:var(--muted);font-size:13.5px;line-height:1.4}
 .tile:hover,.tile:focus-visible{border-color:var(--accent)}
-.tile.main{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.tile.main small{color:inherit;opacity:.85}
+.tile.main{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}   /* the first of the three: soft green, not solid - "answer here" is the one solid green of the page */
+.tile.main small{color:var(--muted)}
 .tile[hidden]{display:none}
+/* the three study cards are cards; what holds them is not (cards are never nested): no border, no fill, no padding */
+.study.plain{margin:0 0 16px}
+.study.plain h2{margin:0 0 2px}
+.study.plain .sub{color:var(--muted);font-size:15px;margin:0 0 10px}
 .study .where{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;font-size:14px;color:var(--muted)}
 .study .where .seg button{font-size:14px;padding:5px 13px}
 .study .sub2{margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--muted)}
@@ -283,7 +296,8 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .fold>summary small{color:var(--muted);font-weight:400;font-size:14px}
 .fold>.card,.fold>.tbox{border:0;border-top:1px solid var(--line);border-radius:0 0 var(--r) var(--r)}
 .livebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-.livebar .what{margin-inline-end:auto}
+.livebar .what{margin-inline-end:auto;min-width:0}
+.livebar .acts{display:flex;align-items:center;gap:10px;flex:none}   /* the actions stay one row: they wrap together, never "stop" alone */
 .livebar .what b{font-size:22px;font-family:var(--f-display);font-weight:400}
 #liveStop{border-color:var(--line);color:var(--muted)}
 #liveStop:hover{border-color:var(--rec);color:var(--rec);background:transparent}
@@ -302,7 +316,7 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .lines li.draft{color:var(--muted);font-style:italic}
 .lines li.draft .ts{color:var(--muted)}
 .lines li.hit{background:var(--now);color:var(--now-ink)}
-.ts{font-family:var(--f-mono);font-size:13px;color:var(--accent);direction:ltr;unicode-bidi:isolate;padding-top:3px;white-space:nowrap}
+.ts{font-family:var(--f-mono);font-size:13px;color:var(--muted);direction:ltr;unicode-bidi:isolate;padding-top:3px;white-space:nowrap}
 .side{display:grid;gap:12px;min-width:0}
 .side>*{min-width:0}
 /* the question box leads; the screenshot and its management come next, then what is photographed */
@@ -386,6 +400,8 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 .cfiles{margin-top:16px;display:grid;gap:12px}
 /* an empty box starts right-to-left (caret and placeholder on the right); once text is typed, dir="auto" follows the language typed */
 textarea:placeholder-shown,input:not([dir="ltr"]):not([type=password]):not([type=checkbox]):not([type=radio]):placeholder-shown{direction:rtl;text-align:right}
+/* the placeholder is ink-muted (DESIGN.md), never the browser's own grey (#757575: 3.74:1 on the dark paper): 5.74:1 by day, 7.89:1 at night on paper */
+::placeholder{color:var(--muted);opacity:1}
 input[dir="ltr"]::placeholder{direction:rtl;text-align:right}
 .cfiles h3{margin:0;font-size:17px}
 .cfrow{display:flex;gap:12px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding:12px 2px 0}
@@ -414,7 +430,7 @@ input[dir="ltr"]::placeholder{direction:rtl;text-align:right}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px}
 .chips button{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:4px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
 .chips button:hover{border-color:var(--accent)}
-.guide{max-width:720px;display:grid;gap:8px;margin-top:20px}
+.guide{max-width:70ch;display:grid;gap:8px;margin-top:20px}   /* about 70 characters a line (DESIGN.md: 65 to 75); it was 720px, about 98 */
 .guide section{padding:18px 0 6px;border-top:1px solid var(--line);scroll-margin-top:90px}
 .guide h2{margin:0 0 8px}
 .guide p{margin:0 0 10px}
@@ -434,7 +450,7 @@ kbd{font-family:var(--f-mono);font-size:13px;background:var(--surface);border:1p
 .optbox p{margin:0;font-size:15px;line-height:1.55;color:var(--muted)}
 .optbox ol{margin:0;padding-inline-start:20px;font-size:15px;line-height:1.6;display:grid;gap:2px}
 .optbox label.row{gap:8px;cursor:pointer;line-height:1.5}
-.optbox .warn{color:var(--rec);font-weight:700}
+.optbox .warn{color:var(--warn-fg);background:var(--warn-bg);border-radius:10px;padding:8px 12px;font-weight:600}
 .optbox a{color:var(--accent)}
 /* the first-start card */
 .setup{list-style:none;margin:0;padding:0;display:grid;gap:10px}
@@ -448,7 +464,13 @@ kbd{font-family:var(--f-mono);font-size:13px;background:var(--surface);border:1p
 /* display and accessibility (2.2): chosen in the settings (gear) > accessibility, kept in this browser */
 .lines{font-size:calc(17px * var(--tx, 1))}
 .lines li.note,.lines li.gap{font-size:calc(14px * var(--tx, 1))}
-.lines li.mark{background:var(--accent-soft);font-weight:700}
+/* a moment the student marked: the line said just before the mark, and the mark row under it, are one highlighter band (mark-line). The ★ and the words "מסומנת" say it too: never yellow alone. The line opened from a mark or a search (.hit) keeps its own colour. */
+.lines li.marked,.lines li.mark{background:var(--mark-line);color:var(--fg)}
+.lines li.marked .ts,.lines li.mark .ts{color:var(--fg)}
+.lines li.mark{font-weight:600}
+.lines li.marked.hit,.lines li.mark.hit{background:var(--now);color:var(--now-ink)}
+.mstar{font-weight:800;margin-inline-end:6px}
+html.a-contrast .lines li.marked,html.a-contrast .lines li.mark{outline:2px solid var(--fg);outline-offset:-2px}
 html.a-read body{line-height:1.95;letter-spacing:.015em;word-spacing:.14em}
 html.a-read .lines li{padding-block:8px}
 html.a-read p,html.a-read .lines li span{max-width:75ch}
@@ -501,7 +523,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <button type="button" data-nav="settings" data-hash="settings" id="setBtn">הגדרות</button>
     </nav>
     <span class="pill" id="statePill" aria-live="polite">מוכן</span>
-    <span class="pill" id="devPill" hidden></span>
+    <span class="pill gpu" id="gpuPill" hidden><span>יש כרטיס מסך של NVIDIA</span><button class="linkish" id="gpuPillGo" type="button"></button></span>
     <button class="iconbtn" id="themeBtn" type="button" aria-label="מעבר למצב כהה" title="מעבר למצב כהה"></button>
   </div>
 </header>
@@ -546,6 +568,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 
     <div class="connbar gpubar" id="gpuBar" hidden><span id="gpuText"></span><button class="btn small" id="gpuGo" type="button"></button></div>
 
+    <div class="keybar" id="keyBar" role="status" hidden><span><b>חסר מפתח Gemini.</b> בלי זה אין "תשובה כאן" בתוך הבנתי. מדביקים פעם אחת, בערך דקה.</span><button class="btn ghost small" id="keyBarGo" type="button">הדבקת מפתח</button></div>
     <div class="card capcard" id="capHome"></div>
 
     <div class="starts">
@@ -607,29 +630,28 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <summary><b>AI מובנה (Gemini): תשובות בתוך הבנתי וקריאת נוסחאות</b> <span class="sub2" id="mathSum" style="color:var(--muted)"></span></summary>
       <div style="display:grid;gap:12px;margin-top:10px">
         <div class="optbox">
-          <h4>1. מפתח Gemini ותשובות בתוך הבנתי</h4>
+          <h4>מפתח Gemini ותשובות בתוך הבנתי</h4>
           <p>הבנתי עונה בעצמה על שאלות, בעזרת Gemini של Google. לשם כך צריך "מפתח": קוד חינמי של Google, בלי כרטיס אשראי.</p>
           <ol><li>נכנסים ל-<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> עם חשבון Google רגיל.</li><li>לוחצים <b>Create API key</b>, ואז <b>Copy key</b>.</li><li>מדביקים כאן ולוחצים <b>"שמירה ובדיקה"</b>. המפתח נשמר מוצפן, רק במחשב הזה.</li></ol>
           <div class="row"><input type="password" id="mathKey" placeholder="להדביק כאן את מפתח Gemini" autocomplete="off" aria-label="מפתח Gemini" dir="ltr"><button class="btn small" id="mathSave" type="button">שמירה ובדיקה</button></div>
           <label class="row"><input type="checkbox" id="askOn"><b>להפעיל "תשובה כאן" בכל תיבת שאלה</b></label>
           <p>הבנתי שולחת ל-Gemini רק מה ששואלים: השאלה, הדקות האחרונות מההרצאה והשקופית שעל המסך. התשובה נכתבת מתחת לשאלה, כמו בצ'אט.</p>
-          <p class="capstat" id="mathStat" style="margin:0"></p>
-          <div class="row"><button class="btn ghost small" id="mathForget" type="button" hidden>מחיקת המפתח</button></div>
+          <div class="keystat"><p class="capstat" id="mathStat" style="margin:0"></p><button class="linkish muted" id="mathForget" type="button" hidden>מחיקת המפתח</button></div>
         </div>
         <div class="optbox">
-          <h4>2. הוראות אישיות לתשובות</h4>
+          <h4>הוראות אישיות לתשובות</h4>
           <p>מה שכתוב כאן נוסף להוראות של הבנתי בכל "תשובה כאן": אורך, שפה, איך להסביר. למשל: <button class="linkish" type="button" data-note="תענה בשורה או שתיים.">שורה או שתיים</button> <button class="linkish" type="button" data-note="תסביר כמו למתחיל, עם דוגמה.">כמו למתחיל</button> <button class="linkish" type="button" data-note="תענה באנגלית.">באנגלית</button> <button class="linkish" type="button" data-note="בלי נוסחאות, רק במילים.">בלי נוסחאות</button>. נוסחאות נכתבות ב-LaTeX כברירת מחדל, ואפשר לשנות גם את זה. הבנתי תמיד לא תמציא מה המרצה אמר.</p>
           <textarea id="notesIn" maxlength="500" rows="3" dir="auto" placeholder="למשל: תענה בעברית פשוטה, עד 4 שורות, ותוסיף דוגמה אם יש." aria-label="הוראות אישיות לתשובות" style="width:100%;box-sizing:border-box;font:inherit;font-size:15px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px"></textarea>
           <div class="row"><button class="btn small" id="notesSave" type="button">שמירה</button><span class="sub" id="notesCount" style="color:var(--muted)">0/500</span></div>
           <p class="warn">הטקסט נשלח ל-Google עם כל שאלה. לא לכתוב כאן מידע אישי.</p>
         </div>
         <div class="optbox">
-          <h4>3. יש לי מנוי בתשלום</h4>
+          <h4>יש לי מנוי בתשלום</h4>
           <label class="row"><input type="checkbox" id="planPaid"><b>יש לי מנוי ל-ChatGPT, Claude או Gemini</b></label>
           <p>שאלות והרצאות שלמות ילכו ישר לאפליקציה שלך, בלי מכסה. "תשובה כאן" נשארת אפשרות חינמית נוספת.</p>
         </div>
         <div class="optbox">
-          <h4>4. קריאת נוסחאות וכתב יד</h4>
+          <h4>קריאת נוסחאות וכתב יד</h4>
           <label class="row"><input type="checkbox" id="mathOn"><b>לקרוא נוסחאות וכתב יד בכל שקופית חדשה</b></label>
           <p>הקריאה הרגילה של השקופיות לא מבינה נוסחאות וכתב יד. כשזה פועל, שקופית שאינה טקסט מודפס ברור (נוסחה, כתב יד, תמונה) נשלחת ל-Gemini (טקסט מודפס ברור נקרא במחשב, בלי לשלוח), והוא כותב את הטקסט והנוסחאות (למשל <code dir="ltr">$I = \int r^2\,dm$</code>) לחיפוש, לסיכומים ולתשובות.</p>
           <p class="warn">שימו לב: זה פועל מעצמו כשמוסיפים מפתח, ושולח ל-Google שקופיות שאינן טקסט מודפס ברור (נוסחאות, כתב יד, תמונות). אפשר לכבות כאן בכל רגע.</p>
@@ -684,14 +706,16 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="livebar">
       <button class="btn ghost back" type="button" data-home>→ למסך הבית</button>
       <div class="what"><b id="liveWhat">הרצאה חיה</b><small id="liveSub">טוען...</small></div>
-      <button class="btn ghost" id="markImp" type="button" title="מסמן את הרגע הזה בתמלול. אחרי ההרצאה ה-AI יסביר את כל הרגעים שסימנת. גם Ctrl+Alt+M מכל תוכנה."><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align:-2px;margin-inline-end:6px"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2 6.3 20.3l1.2-6.4L2.8 9.5l6.4-.8z"/></svg>סימון</button>
-      <button class="btn" type="button" data-float title="חלון קטן לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">חלון שאלות קטן</button>
-      <button class="btn ghost" id="liveStop" type="button">עצירה</button>
+      <div class="acts">
+        <button class="btn ghost" id="markImp" type="button" title="מסמן את הרגע הזה בתמלול. אחרי ההרצאה ה-AI יסביר את כל הרגעים שסימנת. גם Ctrl+Alt+M מכל תוכנה."><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align:-2px;margin-inline-end:6px"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2 6.3 20.3l1.2-6.4L2.8 9.5l6.4-.8z"/></svg>סימון</button>
+        <button class="btn ghost" type="button" data-float title="חלון קטן לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">חלון שאלות קטן</button>
+        <button class="btn ghost" id="liveStop" type="button">עצירה</button>
+      </div>
     </div>
     <div class="ended" id="liveEnded" hidden></div>
     <div class="card study" id="liveStudy" hidden><h2 style="margin:0 0 6px">ההרצאה נשמרה. מה עושים איתה?</h2>
       <p class="sub" style="margin-top:0">לחיצה אחת: הבנתי שולחת ל-AI שלך את ההרצאה הזו עם המשימה (סיכום, מבחן דמה או דף נוסחאות).</p>
-      <div class="row"><button class="btn" id="liveStudyGo" type="button">סיכום, מבחן דמה ודף נוסחאות ←</button></div></div>
+      <div class="row"><button class="btn ghost" id="liveStudyGo" type="button">סיכום, מבחן דמה ודף נוסחאות ←</button></div></div>
     <div class="split">
       <div class="tbox">
         <div class="tools"><input type="search" id="liveFind" placeholder="חיפוש בתמלול" aria-label="חיפוש בתמלול"><button class="btn ghost small" id="liveFollow" type="button" hidden>לסוף</button></div>
@@ -718,8 +742,10 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="livebar">
       <button class="btn ghost back" type="button" data-home>→ למסך הבית</button>
       <div class="what"><b id="ytWhat">סרטון יוטיוב</b><small id="ytSub">טוען...</small></div>
-      <button class="btn" type="button" data-float title="חלון קטן לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">חלון שאלות קטן</button>
-      <button class="btn ghost" id="ytStop" type="button">עצירה</button>
+      <div class="acts">
+        <button class="btn ghost" type="button" data-float title="חלון קטן לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">חלון שאלות קטן</button>
+        <button class="btn ghost" id="ytStop" type="button">עצירה</button>
+      </div>
     </div>
     <div class="ended" id="ytEnded" hidden></div>
     <div class="msg" id="ytMsg" hidden></div>
@@ -743,7 +769,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="livebar">
       <button class="btn ghost back" id="pastBack" type="button">→ חזרה</button>
       <div class="what"><b id="pastTitle"></b><small id="pastSub"></small></div>
-      <button class="btn" id="pastPlay" type="button" hidden>צפייה בנגן</button>
+      <button class="btn ghost" id="pastPlay" type="button" hidden>צפייה בנגן</button>
       <details class="moremenu" id="pastMenu">
         <summary class="btn quiet" aria-label="עוד פעולות להרצאה" title="עוד פעולות">⋯</summary>
         <div class="menu">
@@ -763,12 +789,12 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <div class="card">
         <h2>הרגעים שסימנתי</h2>
         <p class="sub">★ רגע שסימנת (בהרצאות ישנות יכול להופיע גם ? "לא הבנתי"). לכל סימון מופיע מה נאמר רגע לפניו. "בתמלול" קופץ אל הרגע הזה.</p>
-        <div class="row"><button class="btn small" id="pastMarksAsk" type="button">הסבר לכל הרגעים (AI)</button></div>
+        <div class="row"><button class="btn ghost small" id="pastMarksAsk" type="button">הסבר לכל הרגעים (AI)</button></div>
         <div id="pastMkList" class="mklist"></div>
       </div>
     </div>
     <div class="ppanel" id="pastPanelStudy">
-    <div class="card study" id="pastStudy">
+    <div class="study plain" id="pastStudy">
       <h2>לימוד בלחיצה אחת</h2>
       <p class="sub">הבנתי שולחת ל-AI את ההרצאה הזו (התמלול והטקסט מהשקופיות) עם המשימה, וזוכרת לאיזה AI.</p>
       <div class="tiles">
@@ -891,7 +917,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <li>נכנסים ל-<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> עם חשבון Google הרגיל.</li>
           <li>לוחצים <span class="say">Create API key</span> ואז <span class="say">Copy key</span>.</li>
           <li>מדביקים אותו בחלון <b>בואו נתחיל</b> שמופיע בפעם הראשונה (או ב<b>הגדרות ← תשובות</b>). ההדבקה מספיקה: הבנתי שומרת ובודקת לבד.</li>
-          <li>מוכן כשבבית כתוב <b>תשובות בתוך הבנתי: מוכן</b>. אם כתוב <b>חסר מפתח Gemini</b>, לוחצים שם על "להגדרה".</li>
+          <li>מוכן כשבבית כתוב <b>תשובות בתוך הבנתי: מוכן</b>. אם מופיע פס <b>חסר מפתח Gemini</b> מעל הכרטיסים, לוחצים בו על <b>הדבקת מפתח</b>.</li>
         </ol>
         <p class="gnote">המפתח הוא כמו סיסמה: לא שולחים אותו לאף אחד. הבנתי שומרת אותו מוצפן במחשב.</p>
       </section>
@@ -904,10 +930,11 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <li>בסוף: <b>עצירה</b> (במסך ההרצאה או בבית). הכל נשמר בקורס.</li>
         </ol>
         <ul class="glist">
-          <li><b>★ רגע חשוב:</b> כפתור ★ בחלון הקטן (או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>M</kbd></span>). אחר כך חוזרים לרגע הזה מדף הקורס.</li>
+          <li><b>★ רגע חשוב:</b> כפתור ★ בחלון הקטן (או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>M</kbd></span>). אחר כך חוזרים לרגע הזה מדף הקורס. בתמלול, השורה שנאמרה רגע לפני הסימון מודגשת בצהוב ועליה ★.</li>
           <li><b>מה פספסתי:</b> שלושה כפתורים בחלון הקטן (3, 7, 15 דקות) מסכמים את הדקות האחרונות.</li>
           <li><b>להסתיר את החלון:</b> הכפתור — או <kbd>Esc</kbd>. הכפתור העגול חוזר, ולחיצה עליו פותחת אותו שוב.</li>
           <li><b>מקורות:</b> ליד משפט בתשובה מופיעה השעה שבה זה נאמר. בהרצאה שמורה ובנגן, לחיצה עליה קופצת לשם.</li>
+          <li><b>התמלול מאחר?</b> בכותרת החלון הקטן מופיע "מאחר ב-N שניות" כשהאיחור מעל 10 שניות, והתשובות מבוססות על מה שכבר נכתב. אם המחשב איטי מדי להרצאה, הבנתי מדלגת על קול שחיכה יותר מדי (בערך 5 דקות) ואומרת על כמה שניות דילגה.</li>
           <li><b>משהו פרטי על המסך?</b> <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd></span> עוצר את הצילום. התמלול ממשיך.</li>
           <li><b>הקלטה או יוטיוב:</b> ב<b>בית</b> ← <b>הרצאה מוקלטת</b>, גוררים קובץ או מדביקים קישור. שואלים באותה דרך.</li>
         </ul>
@@ -915,6 +942,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <section id="g-after" aria-labelledby="g-afterT">
         <h2 id="g-afterT">אחרי ההרצאה</h2>
         <ul class="glist">
+          <li>ב<b>הקורסים שלי</b> כל הרצאה מראה תאריך, אורך ומספר שקופיות. השפה ומספר השורות נמצאים בדף ההרצאה, ליד התמלול.</li>
           <li>בבית מופיעה <b>ההרצאה האחרונה</b>, עם מספר הסימונים ★ שמחכים בה. לחיצה אחת פותחת אותה.</li>
           <li>ב<b>הקורסים שלי</b> פותחים הרצאה: <b>סיכום</b>, <b>מבחן דמה</b> ו<b>דף נוסחאות</b> בלחיצה אחת, והסבר לכל רגע שסימנת ★.</li>
           <li><b>חיפוש</b> ב"הקורסים שלי" מוצא כל מילה בכל ההרצאות, ופותח בדיוק שם.</li>
@@ -944,8 +972,11 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <h2 id="g-fixT">משהו לא עובד</h2>
         <dl class="gfix">
           <dt>לא מופיע טקסט</dt><dd>בודקים שהסאונד של המחשב פתוח ושההרצאה לא מושתקת.</dd>
-          <dt>אין "תשובה כאן"</dt><dd>בבית כתוב "חסר מפתח Gemini": <button type="button" class="linkish" data-go="g-key">חיבור לתשובות</button>.</dd>
+          <dt>אין "תשובה כאן"</dt><dd>בבית מופיע פס "חסר מפתח Gemini": <button type="button" class="linkish" data-go="g-key">חיבור לתשובות</button>.</dd>
           <dt>"Gemini עמוס" / "הגעת למכסה"</dt><dd>מחכים דקה ומנסים שוב.</dd>
+          <dt>התמלול איטי, ויש כרטיס מסך של NVIDIA</dt><dd>בסרגל העליון (ובדף הבית) מופיעה הצעה: לחיצה על <b>התקנה</b> מתקינה את מה שהכרטיס צריך (כ-1GB, פעם אחת), ואז סוגרים את הבנתי ופותחים אותה שוב.</dd>
+          <dt>שורת ⚠ במקום תשובה</dt><dd>Gemini חסם את השאלה או קטע את התשובה. הסיבה כתובה בשורה: אפשר לנסח את השאלה אחרת או לקצר אותה.</dd>
+          <dt>"לא הצלחתי להצפין את המפתח"</dt><dd>המפתח לא נשמר (הבנתי לא שומרת מפתח בלי הצפנה). מנסים שוב, ואם זה חוזר: "דיווח על תקלה" בתחתית מסך הבית.</dd>
           <dt>החלון הקטן לא נפתח</dt><dd>מנסים את הכפתור "חלון שאלות קטן" במסך ההרצאה החיה, או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>.</dd>
           <dt>האפליקציה לא נפתחת</dt><dd>פותחים בדפדפן <span class="say">http://127.0.0.1:8765/</span></dd>
           <dt>משהו אחר</dt><dd>ב<b>בית</b>, למטה: <b>דיווח על תקלה</b>.</dd>
@@ -1060,7 +1091,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 const $ = s => document.querySelector(s);
 const api = (p, body) => fetch(p, body === undefined ? {cache: "no-store"} :
   {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify(body)}).then(r => r.json());
-let app = null, notesSince = 0, libRev = -1, libItems = [], fails = 0, lastQ = null, lastOffer = null;
+let app = null, notesSince = 0, libRev = -1, libItems = [], fails = 0, lastQ = null, lastOffer = null, lastSaveFail = null;
 let wantPlayer = null, recSource = "", recLang = "he", view = "home", pastFile = null, shownErr = "";
 const NO_COURSE = "ללא קורס";
 let courses = [], curCourse = "", libCourse = "", searchSeq = 0;
@@ -1134,6 +1165,13 @@ $("#connClose").addEventListener("click", () => { $("#conn").hidden = true; });
 function toast(t) { const e = $("#toast"); e.textContent = t; e.classList.add("on"); clearTimeout(toast.h); toast.h = setTimeout(() => e.classList.remove("on"), Math.max(2800, t.length * 55)); }
 function hms(t) { t = Math.max(0, Math.floor(t || 0)); return [t / 3600 | 0, (t % 3600) / 60 | 0, t % 60].map(x => String(x).padStart(2, "0")).join(":"); }
 function langName(l) { return l === "en" ? "אנגלית" : "עברית"; }
+// counts in Hebrew: "הרצאה אחת", "שתי הרצאות", "5 הרצאות" - never "1 הרצאות"
+function heN(n, one, two, many, zero) { n = +n || 0; return n === 0 ? (zero || "אין " + many) : n === 1 ? one : n === 2 ? two : n + " " + many; }
+const nLec = n => heN(n, "הרצאה אחת", "שתי הרצאות", "הרצאות");
+const nTerm = n => heN(n, "מונח אחד", "שני מונחים", "מונחים");
+const nSlide = n => heN(n, "שקופית אחת", "שתי שקופיות", "שקופיות");
+const nLine = n => heN(n, "שורה אחת", "שתי שורות", "שורות");
+const nShot = n => heN(n, "צילום אחד", "שני צילומים", "צילומים");
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 function big(src) { $("#big img").src = src; $("#big").hidden = false; }
 $("#big").addEventListener("click", () => { $("#big").hidden = true; });
@@ -1336,6 +1374,15 @@ $("#shotDelMany").addEventListener("click", async () => {
 
 // ---------- formulas and handwriting: Gemini reads the slides (the student's own key, off until turned on) ----------
 let mathSig = "", pastHasImgs = false, mathMsg = "";   // mathMsg: the last failure of saving a key (stays until the next try)
+// "היום: 8 שאלות, 58 שקופיות נקראו" - short; the quota only when it was reached
+function todayLine(t) {
+  if (!t) return "";
+  const parts = [];
+  if (t.asks) parts.push(heN(t.asks, "שאלה אחת", "שתי שאלות", "שאלות"));
+  if (t.reads) parts.push(t.reads === 1 ? "שקופית אחת נקראה" : t.reads === 2 ? "שתי שקופיות נקראו" : t.reads + " שקופיות נקראו");
+  if (t.quota) parts.push("הגעת למכסה " + (t.quota === 1 ? "פעם אחת" : t.quota === 2 ? "פעמיים" : t.quota + " פעמים"));
+  return " היום: " + (parts.join(", ") || "עוד לא נשלח כלום ל-Gemini") + ".";
+}
 function drawMath() {
   const m = (app && app.math) || {}, sig = JSON.stringify([m, pastHasImgs, mathMsg]);
   if (sig === mathSig) return;
@@ -1346,9 +1393,14 @@ function drawMath() {
   $("#notesIn").disabled = $("#notesSave").disabled = !m.has_key;
   $("#planPaid").checked = m.plan === "paid";
   $("#mathSum").textContent = m.has_key ? "· " + [m.ask ? "תשובות פועלות" : "תשובות כבויות", m.on ? "נוסחאות פועל" : ""].filter(Boolean).join(", ") : (m.plan === "paid" ? "· יש מנוי: שאלות הולכות לאפליקציית ה-AI" : "· לא מוגדר");
-  $("#mathStat").textContent = (m.has_key ? "המפתח שמור" + (m.model ? " (" + m.model + ")" : "") + "." +
-    (m.on ? " נוסחאות: נקראו בהפעלה הזו " + (m.done || 0) + " שקופיות" + (m.skipped ? " (עוד " + m.skipped + " לא נשלחו: טקסט מודפס ברור)" : "") + (m.waiting ? ", ממתינות " + m.waiting : "") + "." : "") +
-    (m.today ? " היום, לפי שעון המחשב: " + m.today.asks + " שאלות, " + m.today.reads + " שקופיות שנקראו ב-Gemini" + (m.today.quota ? ", והגעת למכסה " + m.today.quota + " פעמים" : "") + "." : "") : "עוד אין מפתח.") + (m.error ? " " + m.error : "") + (mathMsg ? " " + mathMsg : "");
+  $("#mathStat").textContent = (m.has_key ? "המפתח שמור." + todayLine(m.today) : "עוד אין מפתח.") + (m.error ? " " + m.error : "") + (mathMsg ? " " + mathMsg : "");
+  $("#mathStat").title = m.has_key ? "הספירה היומית לפי שעון המחשב" : "";
+  const tech = $("#mathTech");   // (the model's name and the slide reading of this run: the advanced tab)
+  if (tech) {
+    tech.hidden = !m.has_key;
+    tech.textContent = (m.model ? "המודל של Gemini שעונה עכשיו: " + m.model + ". " : "") +
+      (m.on ? "קריאת נוסחאות: נקראו בהפעלה הזו " + (m.done || 0) + " שקופיות" + (m.skipped ? " (עוד " + m.skipped + " לא נשלחו: טקסט מודפס ברור)" : "") + (m.waiting ? ", ממתינות " + m.waiting : "") + "." : "קריאת נוסחאות כבויה.");
+  }
   $("#pastMath").hidden = !(m.on && pastHasImgs);
 }
 async function mathSend(d, okText) {
@@ -1377,13 +1429,13 @@ $("#mathOn").addEventListener("change", () => mathSend({on: $("#mathOn").checked
 $("#planPaid").addEventListener("change", () => mathSend({plan: $("#planPaid").checked ? "paid" : "free"}, $("#planPaid").checked ? "מעכשיו שאלות והרצאות שלמות ילכו לאפליקציית ה-AI שלך." : "מעכשיו הבנתי עונה כאן, במכסה החינמית."));
 $("#askOn").addEventListener("change", () => mathSend({ask: $("#askOn").checked}, $("#askOn").checked ? "תשובות בתוך הבנתי פועלות." : "תשובות בתוך הבנתי כבויות."));
 // ---------- the first start: two steps (a free Gemini key, one window to photograph) ----------
-let setupNo = false;
+let setupNo = false, setupForce = false;   // (setupForce: the student asked for it, from the bar above the cards)
 try { setupNo = localStorage.getItem("bzm.setupNo") === "1"; } catch (e) {}
 function drawSetup() {
   const m = (app && app.math) || {};   // (what to photograph: the whole screen by default; to mosaic parts: the settings)
   const keyDone = !!m.has_key || m.plan === "paid";
   $("#stKey").classList.toggle("done", keyDone);
-  const show = !setupNo && !keyDone && view === "home" && !(app && app.session && !app.session.done);
+  const show = (setupForce || !setupNo) && !keyDone && view === "home" && !(app && app.session && !app.session.done);
   $("#setupCard").hidden = !show;
   if (show) $("#tutorBar").hidden = true;   // (the same invitation, in the card)
   if (keyDone && !$("#setupKeyStat").textContent.startsWith("המפתח לא")) $("#setupKeyStat").textContent = "";
@@ -1399,7 +1451,8 @@ async function setupSaveKey() {
 $("#setupKeySave").addEventListener("click", setupSaveKey);
 $("#setupKey").addEventListener("paste", () => setTimeout(() => { if ($("#setupKey").value.trim().length > 20) setupSaveKey(); }, 50));   // pasting is enough
 $("#setupKey").addEventListener("keydown", e => { if (e.key === "Enter") setupSaveKey(); });
-$("#setupLater").addEventListener("click", () => { setupNo = true; $("#setupCard").hidden = true; try { localStorage.setItem("bzm.setupNo", "1"); } catch (e) {} });
+$("#keyBarGo").addEventListener("click", () => { setupForce = true; drawSetup(); $("#setupKey").focus(); });
+$("#setupLater").addEventListener("click", () => { setupNo = true; setupForce = false; $("#setupCard").hidden = true; try { localStorage.setItem("bzm.setupNo", "1"); } catch (e) {} });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#setupCard").hidden && view !== "settings" && $("#capModal").hidden) $("#setupLater").click(); });
 let tutorBarNo = false;
 try { tutorBarNo = localStorage.getItem("bzm.tutorNo") === "1"; } catch (e) {}
@@ -1523,7 +1576,8 @@ const setPanels = {};
   const card = $("#a11y .card");   // accessibility: its choices (not its own title and close button)
   for (const x of [...card.children]) if (x.id !== "a11yT" && !x.querySelector("#a11yClose")) setPanels.a11y.appendChild(x);
   const ai = setPanels.ai;   // advanced: everything that is not the floating window and the marks
-  ai.append(el("p", "sub", "אלה דברים אופציונליים. בלי אף אחד מהם הבנתי עובדת במלואה: שואלים בחלון הצף, מסמנים ★ ו-?, והתשובות מגיעות בתוך הבנתי."));
+  ai.append(el("p", "sub", "אלה דברים אופציונליים. בלי אף אחד מהם הבנתי עובדת במלואה: שואלים בחלון הצף, מסמנים ★, והתשובות מגיעות בתוך הבנתי."));
+  { const tp = el("p", "capstat", ""); tp.id = "mathTech"; tp.hidden = true; ai.append(el("h3", "", "פרטים טכניים של Gemini"), tp); }
   const exl = el("label", "row miniopt"), exc = el("input"); exc.type = "checkbox"; exc.id = "extAi";
   exc.addEventListener("change", async () => { await api("/api/cmd", {action: "external_ai", on: exc.checked}); if (window.BZMAsk) BZMAsk.setExternal(exc.checked); try { app = await api("/api/app"); } catch (e) {} drawMath(); });
   exl.append(exc, el("b", "", "להציג גם כפתורים שמעתיקים את השאלה ל-ChatGPT, Gemini או Claude"));
@@ -1573,6 +1627,7 @@ drawThemeBtn();
 function show(v) {
   const was = view;
   view = v;
+  if (app && typeof drawGpu === "function") drawGpu(app);   // (the capsule in the top bar is for every page but the home page)
   if (was === "yt" && v !== "yt") ytLeave();
   if (was === "how" && v !== "how") HOW.stop();
   // (the sections are not called "home"/"live": a #live link would scroll the page to them)
@@ -1592,7 +1647,7 @@ function route() {
   if (h === "settings") { show("settings"); openSettings(setTab); return; }
   if (raw.startsWith("t=")) { if (view !== "past") backTo = view === "course" && courseName ? "c=" + encodeURIComponent(courseName) : (view === "courses" ? "courses" : "");
     $("#pastBack").textContent = backTo === "courses" ? "→ הקורסים שלי" : backTo ? "→ חזרה לקורס" : "→ למסך הבית"; const [f, at] = raw.slice(2).split("&at="); openPast(decodeURIComponent(f), at != null ? +at : null); return; }
-  if (raw.startsWith("c=")) { openCourse(decodeURIComponent(raw.slice(2))); return; }
+  if (raw.startsWith("c=")) { openCourse(decodeURIComponent(raw.slice(2))); loadLib(true); return; }   // (the list of lectures is read here too: a link or a reload straight to a course page used to show it empty)
   if (raw.startsWith("rec=")) {   // a recording sent from another tab (the Panopto bookmark): offer it, then home
     const q = new URLSearchParams(raw), src = q.get("rec") || "", name = q.get("name") || "";
     history.replaceState(null, "", location.pathname);
@@ -1651,11 +1706,14 @@ function liveTip(s) {
 // home: is "answer here" ready? (a free Gemini key, or the student's own paid AI)
 function drawHomeHints(d) {
   const m = (d && d.math) || {}, box = $("#homeAns"); if (!box) return;
+  const noKey = !m.has_key && m.plan !== "paid";   // no key and no paid AI: "answer here" cannot work - the bar above the cards says it
+  $("#keyBar").hidden = !noKey;
+  box.hidden = noKey;
   box.className = "hstat"; box.replaceChildren();
+  if (noKey) return;
   if (m.has_key && m.ask) box.textContent = "תשובות בתוך הבנתי: מוכן";
   else if (m.has_key) { box.textContent = "יש מפתח Gemini, אבל \"תשובה כאן\" כבויה. "; const b = el("button", "", "להפעלה"); b.type = "button"; b.onclick = () => { location.hash = "settings"; }; box.appendChild(b); }
-  else if (m.plan === "paid") box.textContent = "יש לך מנוי: שאלות הולכות לאפליקציית ה-AI שלך";
-  else { box.classList.add("warn"); box.append("חסר מפתח Gemini, ובלי זה אין תשובה בתוך הבנתי. "); const b = el("button", "", "להגדרה (דקה)"); b.type = "button"; b.onclick = () => { location.hash = "settings"; }; box.appendChild(b); }
+  else box.textContent = "יש לך מנוי: שאלות הולכות לאפליקציית ה-AI שלך";
 }
 // home: the newest lecture, and the moments marked in it, so coming back after class takes one click
 let resumeTok = 0;
@@ -1666,7 +1724,7 @@ async function drawResume() {
   const e = items[0];
   if (!e || (s && !s.done)) { box.hidden = true; return; }
   $("#resTitle").textContent = e.title;
-  $("#resSub").textContent = [e.course && e.course !== NO_COURSE ? e.course : "", e.length, e.shots ? e.shots + " שקופיות" : ""].filter(Boolean).join(" · ") || e.when;
+  $("#resSub").textContent = [e.course && e.course !== NO_COURSE ? e.course : "", e.length, e.shots ? nSlide(e.shots) : ""].filter(Boolean).join(" · ") || e.when;
   $("#resOpen").onclick = () => { location.hash = "t=" + encodeURIComponent(e.f); };
   const mb = $("#resMarks"); mb.hidden = true;
   box.hidden = false;
@@ -1681,7 +1739,12 @@ async function drawResume() {
 function drawGpu(d) {
   const g = d && d.gpu, bar = $("#gpuBar"); if (!bar) return;
   const txt = $("#gpuText"), go = $("#gpuGo");
-  if (!g || !(g.cards > 0) || (g.libs_ok && g.state !== "done" && g.state !== "installing")) { bar.hidden = true; return; }
+  const needs = !!g && g.cards > 0 && !(g.libs_ok && g.state !== "done" && g.state !== "installing");
+  // the capsule in the top bar: only when there is something to press (not while it installs), and not on the home page - there the bar below says it, with its own button
+  const pill = $("#gpuPill");
+  pill.hidden = !(needs && g.state !== "installing" && view !== "home");
+  if (!pill.hidden) $("#gpuPillGo").textContent = g.state === "failed" ? "לנסות שוב" : g.state === "done" ? "סגירה והפעלה מחדש" : "התקנה";
+  if (!needs) { bar.hidden = true; return; }
   bar.hidden = false; txt.replaceChildren(); go.hidden = false; go.disabled = false;
   if (g.state === "installing") { txt.append(el("b", "", "מתקין את מה שהכרטיס צריך... "), "כ-1GB, כמה דקות. אפשר להמשיך להשתמש בהבנתי בינתיים."); go.hidden = true; }
   else if (g.state === "done") { txt.append(el("b", "", "ההתקנה הסתיימה. "), "כדי שהתמלול ישתמש בכרטיס המסך, סוגרים את הבנתי ופותחים אותה שוב."); go.textContent = "סגירת האפליקציה"; go.dataset.act = "quit"; }
@@ -1690,6 +1753,7 @@ function drawGpu(d) {
     go.textContent = g.state === "failed" ? "לנסות שוב" : "להתקין עכשיו"; go.dataset.act = "install";
   }
 }
+$("#gpuPillGo").addEventListener("click", () => $("#gpuGo").click());   // (one set of states and actions)
 $("#gpuGo").addEventListener("click", async () => {
   if ($("#gpuGo").dataset.act === "quit") { $("#quitBtn").click(); return; }
   $("#gpuGo").disabled = true;
@@ -1716,7 +1780,6 @@ function render(d) {
   else if (active) { pill.className = "pill"; pill.textContent = s.ready ? "הקלטה פתוחה" : "מכין הקלטה..."; }
   else { pill.className = "pill"; pill.textContent = "מוכן"; }
   liveTip(s);
-  const dp = $("#devPill"); dp.hidden = !d.device; dp.textContent = d.device === "GPU" ? "כרטיס מסך" : "מעבד";
   // what is running (home)
   const rb = $("#runBanner");
   rb.hidden = !active;
@@ -1745,6 +1808,8 @@ function render(d) {
     // (only a fresh warning is shown as a message: opening the page replays the old ones, which are only in the log)
     if (n.level === "warn" && (!n.t || Date.now() / 1000 - n.t < 25)) toast(n.text.split("\n")[0]);
   }
+  // a settings save that failed: said once, in words (nothing is lost quietly)
+  if (d.save_failed && d.save_failed.n !== lastSaveFail) { lastSaveFail = d.save_failed.n; toast(d.save_failed.msg); }
   // a question (passcode for a link)
   if (d.question && (!lastQ || lastQ !== d.question.id)) {
     lastQ = d.question.id; $("#askT").textContent = d.question.text; $("#askIn").type = d.question.secret ? "password" : "text";
@@ -1971,9 +2036,18 @@ function drawTabs() {
   box.appendChild(add);
   const c = courses.find(x => x.name === libCourse);
   $("#libCbar").hidden = !c || c.name === NO_COURSE;
-  if (c) $("#libCbarText").textContent = c.name + " · " + c.lectures + " הרצאות · מילון: " + c.terms + " מונחים";
+  if (c) $("#libCbarText").textContent = c.name + " · " + nLec(c.lectures) + " · מילון: " + nTerm(c.terms);
 }
 $("#libCbarGo").addEventListener("click", () => { if (libCourse) location.hash = "c=" + encodeURIComponent(libCourse); });
+// one date format everywhere (the title of a lecture that was not renamed uses it too): 09.11.2026
+function fmtDate(when) { const m = /^(\d{4})-(\d\d)-(\d\d)/.exec(when || ""); return m ? m[3] + "." + m[2] + "." + m[1] : ""; }
+// the line under a lecture, in the list and on its page: the date (not when the title already is the date and time), the length, the slides
+function lecInfo(e) {
+  const bits = [e.when_in_title ? "" : fmtDate(e.when)];
+  if (e.length) bits.push("אורך " + e.length);
+  if (e.shots) bits.push(nSlide(e.shots));
+  return bits.filter(Boolean);
+}
 function lecItem(e, withCourse) {
   const li = el("li");
   const k = el("span", "k"); k.innerHTML = e.kind === "yt"
@@ -1986,15 +2060,13 @@ function lecItem(e, withCourse) {
   if (e.running) t.appendChild(el("span", "tag run", "פועל עכשיו"));
   else if (!e.complete) t.appendChild(el("span", "tag part", e.kind !== "rec" ? "לא הסתיים כרגיל" :
     (e.progress != null ? "תומלל " + e.progress + "%" : "השקופיות לא הושלמו")));
-  const bits = [e.when, langName(e.lang)];
-  if (e.length) bits.push("אורך " + e.length);
-  bits.push(e.lines + " שורות"); if (e.shots) bits.push(e.shots + " צילומים");
+  const bits = lecInfo(e);   // date, length, slides - nothing else (the language and the lines are on the lecture's page)
   const m = el("div", "m");
   if (withCourse) {   // the course name leads to the course page
     const ct = el("a", "ctag", e.course); ct.href = "#c=" + encodeURIComponent(e.course); ct.title = "לדף הקורס";
     m.appendChild(ct); m.append(" · ");
   }
-  m.append(bits.join(" · "));
+  m.append(bits.filter(Boolean).join(" · "));
   const acts = el("div", "acts");
   if (e.kind === "rec" && e.has_media) {
     const p = el("button", "btn small", "צפייה"); p.type = "button"; p.onclick = () => playRecording(e.f); acts.appendChild(p);
@@ -2156,9 +2228,9 @@ function lectureMenu(e) {
   };
   $("#lmClose").onclick = () => { $("#lecMenu").hidden = true; };
 }
-let courseName = "", courseTextCache = "", courseAsk = null;
+let courseName = "", courseTextCache = "", courseChars = null, courseAsk = null;
 async function openCourse(name) {
-  show("course"); courseName = name; courseTextCache = "";
+  show("course"); courseName = name; courseTextCache = ""; courseChars = null;
   $("#cTitle").textContent = name; $("#cSub").textContent = "טוען..."; $("#glossIn").value = ""; $("#cSize").textContent = "";
   $("#cSug").hidden = true; $("#cSug").replaceChildren();
   let d; try { d = await api("/api/course?c=" + encodeURIComponent(name)); } catch (e) { d = {none: true}; }
@@ -2171,16 +2243,23 @@ async function openCourse(name) {
     const t = await api("/api/course_text?c=" + encodeURIComponent(name));
     if (courseName !== name) return;
     courseTextCache = t.text;
-    const k = Math.round(t.chars / 1000);
-    $("#cSize").textContent = t.lectures ? (t.lectures + " הרצאות, " + (k < 1 ? "פחות מאלף תווים." : "בערך " + k + " אלף תווים.") +
-      (t.chars > 150000 ? " זה ארוך: הכי טוב Gemini, או \"קובץ אחד של כל הקורס\" ולהעלות אותו לצ'אט." : "")) : "עוד אין הרצאות בקורס.";
+    courseChars = t.chars; drawCourseSize();
   } catch (e) {}
+}
+// the line above the lectures: how many (counted from the same list as the lectures below) and, once known, how long
+function drawCourseSize() {
+  const n = libItems.filter(e => e.course === courseName).length, box = $("#cSize");
+  if (!n) { box.textContent = ""; return; }   // (the list says there are none)
+  const k = courseChars == null ? null : Math.round(courseChars / 1000);
+  box.textContent = nLec(n) + (k == null ? "." : ", " + (k < 1 ? "פחות מאלף תווים." : "בערך " + k + " אלף תווים.")) +
+    (courseChars > 150000 ? " זה ארוך: הכי טוב Gemini, או \"קובץ אחד של כל הקורס\" ולהעלות אותו לצ'אט." : "");
 }
 function drawCourseLib() {
   const items = libItems.filter(e => e.course === courseName), list = $("#cLib");
-  $("#cSub").textContent = items.length + " הרצאות · התיקייה: הקורסים שלי\\" + courseName;
+  $("#cSub").textContent = nLec(items.length) + " · התיקייה: הקורסים שלי\\" + courseName;
   list.replaceChildren(...(items.length ? items.map(e => lecItem(e, false)) : [el("li", "empty", "עוד אין הרצאות בקורס הזה. בוחרים אותו במסך הבית לפני שמתחילים הרצאה.")]));
-  $("#ctLec").textContent = items.length ? items.length + " הרצאות" : "עוד אין";
+  $("#ctLec").textContent = items.length ? nLec(items.length) : "עוד אין";
+  drawCourseSize();
 }
 // the course page's parts: one shown at a time, chosen from the tabs at the top
 function setCTab(t) {
@@ -2189,7 +2268,7 @@ function setCTab(t) {
 }
 document.querySelectorAll("#cTabs [data-ct]").forEach(b =>
   b.addEventListener("click", () => setCTab(b.dataset.ct)));
-function drawGlCount() { const n = $("#glossIn").value.split(/\n+/).filter(x => x.trim()).length; $("#ctGl").textContent = n ? n + " מונחים" : "עוד ריק"; }
+function drawGlCount() { const n = $("#glossIn").value.split(/\n+/).filter(x => x.trim()).length; $("#ctGl").textContent = n ? nTerm(n) : "עוד ריק"; }
 $("#glossIn").addEventListener("input", drawGlCount);
 // the marked moments of the course (★, set in the small window or with Ctrl+Alt+M; older lectures may also hold "לא הבנתי" marks)
 let courseMarks = [];
@@ -2283,7 +2362,7 @@ $("#glossSave").addEventListener("click", async () => {
 });
 $("#cExport").addEventListener("click", async () => {
   const r = await api("/api/cmd", {action: "export_course", course: courseName});
-  toast(r.ok ? "נשמר הקובץ \"" + courseName + " - כל ההרצאות.txt\" (" + r.lectures + " הרצאות). אפשר להעלות אותו לצ'אט." : (r.error || "לא הצלחתי."));
+  toast(r.ok ? "נשמר הקובץ \"" + courseName + " - כל ההרצאות.txt\" (" + nLec(r.lectures) + "). אפשר להעלות אותו לצ'אט." : (r.error || "לא הצלחתי."));
 });
 // renaming the course: the folder gets the new name (its lectures go with it)
 $("#cRename").addEventListener("click", () => { $("#rcName").value = courseName; $("#renCourse").hidden = false; $("#rcName").focus(); $("#rcName").select(); });
@@ -2329,11 +2408,28 @@ function renderLiveHead(s) {
   $("#markImp").hidden = s.done || !s.ready || !!s.yt;
   if (s.error) { $("#liveSub").textContent = "נעצר בגלל שגיאה"; }
 }
+// a marked moment: the line said just before the mark gets the highlighter band, a ★ ("?" for the old "didn't understand" marks - the same band,
+// one colour one meaning) and, for the screen reader, the words "מסומנת"
+function markPrev(li) {
+  const glyph = /\?\s*סימנת/.test(li.textContent) ? "?" : "★";
+  let p = li.previousElementSibling;
+  for (let n = 0; p && n < 8; p = p.previousElementSibling, n++) {
+    if (p.classList.contains("mark")) return;   // (that line already belongs to an earlier mark)
+    if (p._x && p._x.x && !p._x.img) {
+      if (p.classList.contains("marked")) return;
+      p.classList.add("marked");
+      const sp = p.children[1];
+      if (sp) { const st = el("span", "mstar", glyph); st.setAttribute("aria-hidden", "true"); sp.prepend(st, el("span", "sr-only", "מסומנת: ")); }
+      return;
+    }
+  }
+}
+function appendLine(parent, x) { const li = lineEl(x); parent.appendChild(li); if (li.classList.contains("mark")) markPrev(li); return li; }
 function lineEl(x) {
   const mk = markOf(x);
   if (mk) {   // a moment the student marked in the lecture
     const li = el("li", "mark"); li.appendChild(el("span", "ts", x.c));
-    li.appendChild(el("span", "", (mk === "חשוב" ? "⭐ סימנת: חשוב" : "❓ סימנת: לא הבנתי"))); li._x = x; return li;
+    li.appendChild(el("span", "", (mk === "חשוב" ? "★ סימנת: חשוב" : "? סימנת: " + mk))); li._x = x; return li;
   }
   const li = el("li", x.img ? "shot" : (x.note ? "note" : (x.gap ? "gap" : "")));
   li.appendChild(el("span", "ts", x.c));
@@ -2362,7 +2458,7 @@ async function pollLive() {
   liveLast = d;
   const box = $("#liveLines"), atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
   const draftEl = box.querySelector("li.draft"); if (draftEl) draftEl.remove();
-  for (const x of d.items) { liveItems.push(x); box.appendChild(lineEl(x)); }
+  for (const x of d.items) { liveItems.push(x); appendLine(box, x); }
   if (liveSince && d.items.length) srSay(d.items.filter(x => x.x && !markOf(x)).map(x => x.x).join(" "));
   liveSince = d.total;
   if (d.draft) { const li = el("li", "draft"); li.appendChild(el("span", "ts", "עכשיו")); const sp = el("span", "", "טיוטה: " + d.draft); sp.dir = "auto"; li.appendChild(sp); box.appendChild(li); }
@@ -2471,13 +2567,13 @@ async function openPast(f, at) {
   drawPastMarks(d.lines);
   drawStudyWhere();
   $("#pastTitle").textContent = e.title;
-  $("#pastSub").textContent = [e.course, e.when, langName(e.lang), e.length ? "אורך " + e.length : "", e.lines + " שורות"].filter(Boolean).join(" · ");
+  $("#pastSub").textContent = [e.course && e.course !== NO_COURSE ? e.course : "", ...lecInfo(e)].filter(Boolean).join(" · ");
   $("#pastPlay").hidden = !(e.kind === "rec" && e.has_media);
   const box = $("#pastLines"), frag = document.createDocumentFragment();
-  for (const x of d.lines) frag.appendChild(lineEl(x));
+  for (const x of d.lines) appendLine(frag, x);
   if (!d.lines.length) frag.appendChild(el("li", "note", "אין שורות בתמלול הזה."));
   box.replaceChildren(frag); box.scrollTop = 0;
-  $("#pastTrCount").textContent = e.lines + " שורות";
+  $("#pastTrCount").textContent = langName(e.lang) + " · " + nLine(e.lines);   // (what the line under the title no longer says: it is here, with the transcript)
   $("#pastTrFold").open = at != null;   // the transcript opens when the student came to a moment in it
   $("#pastAskFold").open = false;
   if (at != null) {
