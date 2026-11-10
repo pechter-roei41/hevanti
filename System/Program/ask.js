@@ -345,10 +345,11 @@
       let text = "";
       // (may read the slides' text first). The small window does not keep the lecture: copyContext asks Hevanti for the question
       // with the last minutes - the same text the lecture page copies. Nothing is sent anywhere; it is only copied.
+      let bare = "";   // said in the message when only the question could be copied (the lecture could not be attached)
       try {
         text = extra && extra.context ? await extra.context()
           : opts.copyContext ? await opts.copyContext(q, extra && extra.minutes || 0) : await opts.context(q);
-      } catch (e) { text = q; }
+      } catch (e) { text = q; bare = "לא הצלחתי לצרף את ההרצאה, הועתקה רק השאלה. "; }
       const ok = await copyText(text, opts.win);
       if (!ok) { opts.toast("לא הצלחתי להעתיק. לנסות שוב."); return false; }
       setLast(a.id); refresh();
@@ -359,17 +360,17 @@
       const appFirst = AI.apps[a.id] && (!link || (a.id === "claude" && AI.connected.claude));
       if (link && !appFirst) {
         const {w} = openAi(a, opts.win, link);
-        opts.toast(w === null ? "הועתק. לפתוח את הפרויקט של הקורס ב-" + a.name + " ולהדביק (Ctrl+V)."
-          : "נפתח הפרויקט של הקורס ב-" + a.name + " בשליש המסך. השאלה הועתקה (Ctrl+V), או פשוט לשאול שם.");
+        opts.toast(bare + (w === null ? "הועתק. לפתוח את הפרויקט של הקורס ב-" + a.name + " ולהדביק (Ctrl+V)."
+          : "נפתח הפרויקט של הקורס ב-" + a.name + " בשליש המסך. השאלה הועתקה (Ctrl+V), או פשוט לשאול שם."));
         return true;
       }
       if (appFirst && await openApp(a)) {
-        opts.toast("הועתק ונפתחה האפליקציה של " + a.name + ". להדביק (Ctrl+V) ולשלוח." +
+        opts.toast(bare + "הועתק ונפתחה האפליקציה של " + a.name + ". להדביק (Ctrl+V) ולשלוח." +
           (AI.connected[a.id] ? " היא מחוברת להבנתי, אז אפשר גם פשוט לשאול שם" + (link ? ", בפרויקט של הקורס." : ".") : "") + img);
         return true;
       }
       const {w, reused} = openAi(a, opts.win);
-      opts.toast((w === null ? "הועתק. לפתוח את " + a.name + " ולהדביק (Ctrl+V)."
+      opts.toast(bare + (w === null ? "הועתק. לפתוח את " + a.name + " ולהדביק (Ctrl+V)."
         : reused ? "הועתק. להדביק (Ctrl+V) בחלון של " + a.name + " - השיחה שם ממשיכה."
         : "הועתק ונפתח " + a.name + " בשליש המסך. להדביק (Ctrl+V) ולשלוח.") + img);
       return true;

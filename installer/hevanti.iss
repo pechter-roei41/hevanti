@@ -85,5 +85,8 @@ Filename: "{app}\python\python.exe"; Parameters: """{app}\System\Program\live_tr
 Filename: "{app}\python\python.exe"; Parameters: """{app}\System\Program\live_transcribe.py"" --disconnect-ai"; Flags: runhidden waituntilterminated; RunOnceId: "DisconnectAI"
 
 [UninstallDelete]
+; the settings with the Gemini key (encrypted) and every copy of them (.bak, .corrupt, .tmp), and the models check
+Type: files; Name: "{localappdata}\Hevanti\settings.json*"
+Type: files; Name: "{localappdata}\Hevanti\gemini_models.json"
 Type: filesandordirs; Name: "{app}\python"
 Type: filesandordirs; Name: "{app}\System"

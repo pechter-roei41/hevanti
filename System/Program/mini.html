@@ -130,6 +130,7 @@ async function getJson(u) { return (await fetch(u, {cache: "no-store"})).json();
 async function pollApp() {
   try {
     const d = await getJson("/api/app"), s = d.session;
+    if (d.save_failed && d.save_failed.n !== lastSaveFail) { lastSaveFail = d.save_failed.n; toast(d.save_failed.msg); }   // (a settings save that failed: said once)
     if ("theme" in d && (d.theme || "") !== (document.documentElement.dataset.theme || "")) bzmTheme(d.theme || "");
     live = !!(s && !s.done && (s.kind === "live" || s.kind === "rec"));   // a live lecture, a video, or a recording being watched
     // "הרצאה חיה - <the course>", e.g. "הרצאה חיה - מכניקת מוצקים"
@@ -158,6 +159,7 @@ async function pollLive() {
   } catch (e) {}
 }
 const LAG_SHOW_S = 10;
+let lastSaveFail = null;
 pollApp(); setInterval(pollApp, 4000);
 setInterval(pollLive, 3000);
 if (box) box.focus();

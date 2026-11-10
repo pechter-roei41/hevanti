@@ -176,6 +176,108 @@ try:
 finally:
     L._dpapi, L.DPAPI_REQUIRED = real_dpapi, real_flag
 
+# ------------------------------------------------------------------------------------------ 8. a save that cannot be done is told
+real_open2 = open
+
+
+def locked_open2(path, *a2, **k):
+    if str(path) == F or str(path) == F + ".tmp":
+        raise PermissionError("in use by another program")
+    return real_open2(path, *a2, **k)
+
+
+del said[:]
+before_n = L._SAVE_FAIL["n"]
+builtins.open = locked_open2
+try:
+    saved = L.save_settings(theme="light")
+    r = L.math_set({"notes": "תענה בשורה אחת"})
+    state_during = L.APP.state() if getattr(L, "APP", None) is not None else {}
+finally:
+    builtins.open = real_open2
+check("a save that cannot be done: the student is told in Hebrew, in the window", saved is False and any(L.SAVE_FAIL_MSG in x for x in said), (saved, said))
+check("...the message says 'could not save, try again'", "לא הצלחתי לשמור" in L.SAVE_FAIL_MSG and "לנסות שוב" in L.SAVE_FAIL_MSG, L.SAVE_FAIL_MSG)
+check("a command that saves (the instructions) answers with the same message, not 'ok'", r.get("ok") is False and r.get("error") == L.SAVE_FAIL_MSG, r)
+check("...and every page is told: save_failed in what the app polls (a count, so each failure is shown once)",
+      L._SAVE_FAIL["n"] >= before_n + 2 and (L.save_failed_public() or {}).get("msg") == L.SAVE_FAIL_MSG, (L._SAVE_FAIL, L.save_failed_public()))
+check("...it is in the app's state", (state_during.get("save_failed") or {}).get("msg") == L.SAVE_FAIL_MSG if state_during else True, state_during.get("save_failed"))
+L._SAVE_FAIL["at"] = 0.0
+check("...and it is shown only for a minute", L.save_failed_public() is None)
+
+# ------------------------------------------------------------------------------------------ 9. deleting the key deletes every copy of it
+KEY2 = "AQ.deleteme-secret-key-0123456789"
+L.save_settings(theme="dark", math={"key": L.keep_secret(KEY2), "ask": True})
+L.save_settings(course="פיזיקה")                       # (this save makes the last good copy, .bak, from a file that has the key)
+L.probe_cache_write(KEY2, ["gemini-x"])
+with open(F + ".corrupt", "w", encoding="utf-8") as f:
+    f.write(json.dumps({"math": {"key": L.keep_secret(KEY2)}}))
+with open(F + ".tmp", "w", encoding="utf-8") as f:
+    f.write(json.dumps({"math": {"key": L.keep_secret(KEY2)}}))
+stored = L.math_settings().get("key")
+check("before: the key is in the settings, in the last good copy, in a damaged copy and in an unfinished write",
+      all(stored in real_open2(x, encoding="utf-8").read() for x in (F, F + ".bak", F + ".corrupt", F + ".tmp")) and os.path.isfile(L._probe_cache_path()))
+
+
+def files_with(text):
+    hits = []
+    for root, _dirs, names in os.walk(os.path.dirname(F)):
+        for n in names:
+            try:
+                if text in real_open2(os.path.join(root, n), encoding="utf-8", errors="replace").read():
+                    hits.append(n)
+            except OSError:
+                pass
+    return hits
+
+
+r = L.math_set({"key": ""})
+check("'delete the key' worked", r.get("ok") is True and not L.math_settings().get("key"), r)
+check("...the key is in no file of Hevanti's folder (not the settings, not the last good copy, not the damaged copy, not a write that did not finish)",
+      not files_with(stored) and not files_with("AQ.deleteme"), (files_with(stored), os.listdir(os.path.dirname(F))))
+check("...the models check (it holds a mark of the key) is gone too", not os.path.exists(L._probe_cache_path()))
+check("...the last good copy is made again from the settings as they are now, so it can still be restored from",
+      os.path.isfile(F + ".bak") and json.load(real_open2(F + ".bak", encoding="utf-8")) == json.load(real_open2(F, encoding="utf-8")))
+check("...and the other settings stayed", L.load_settings().get("theme") == "dark" and L.load_settings().get("course") == "פיזיקה", L.load_settings())
+
+# replacing the key: the old one does not stay in a copy either
+KEY3 = "AQ.the-new-key-9876543210-abcdef"
+L.save_settings(math={"key": L.keep_secret(KEY2), "ask": True})
+L.save_settings(course="כימיה")
+real_probe2 = L.MathReader.probe
+L.MathReader.probe = lambda self, key: "gemini-x"
+try:
+    r = L.math_set({"key": KEY3})
+finally:
+    L.MathReader.probe = real_probe2
+check("a new key replaces the old one: the old key is in no file", r.get("ok") is True and not files_with(L.keep_secret(KEY2)) and not files_with("AQ.deleteme"), (r, files_with("AQ.deleteme")))
+check("...and the new one is saved", L.read_secret(L.math_settings().get("key")) == KEY3)
+
+# ------------------------------------------------------------------------------------------ 10. "report a problem" never carries a key, or the copy
+with open(L.ERROR_LOG, "a", encoding="utf-8") as f:
+    f.write("\n--- test ---\nrequest failed key=AQ.leaked-in-a-log-0123456789abcdef and AIzaSyA-leaked-google-key-0123456789 and dpapi:AAAABBBBCCCCDDDD== and plain:AQ.something-else-1234567890\n")
+with open(F + ".bak", "a", encoding="utf-8") as f:
+    f.write("\nBAK-ONLY-MARKER")
+rep_text = L.diag_text()
+check("the report has no Google key, no saved key, whatever the log held",
+      all(x not in rep_text for x in ("AQ.leaked", "AIzaSyA-leaked", "dpapi:AAAA", "plain:AQ.something", KEY3)), rep_text[-600:])
+check("...it says where it took them out", "מפתח הוסר" in rep_text)
+check("...and it does not read the last good copy", "BAK-ONLY-MARKER" not in rep_text)
+check("...but it still says whether there is a key, and the version", "מפתח Gemini: יש" in rep_text and L.VERSION in rep_text, rep_text[:300])
+
+# ------------------------------------------------------------------------------------------ 11. the uninstall
+import inspect  # noqa: E402
+src = inspect.getsource(L.uninstall)
+check("the uninstall deletes the settings and the key BEFORE it asks about the recordings (so 'no' does not leave the key)",
+      "remove_settings_files()" in src and src.index("remove_settings_files()") < src.index("for local in (LOCAL_DIR, OLD_LOCAL_DIR)"), src[:200])
+for x in L.settings_secret_files():
+    with open(x, "a", encoding="utf-8") as f:
+        f.write("x")
+L.remove_settings_files()
+check("...and it removes every file that can hold the key", not any(os.path.exists(x) for x in L.settings_secret_files()), [x for x in L.settings_secret_files() if os.path.exists(x)])
+iss = open(os.path.join(HERE, "installer", "hevanti.iss"), encoding="utf-8").read()
+check("the installer's uninstall deletes the settings and every copy (settings.json*, the models check) from %LOCALAPPDATA%\\Hevanti",
+      'Name: "{localappdata}\\Hevanti\\settings.json*"' in iss and 'gemini_models.json' in iss, iss[iss.index("[UninstallDelete]"):][:400])
+
 print()
 print("all passed" if not fails else "FAILED: " + ", ".join(fails))
 sys.exit(1 if fails else 0)

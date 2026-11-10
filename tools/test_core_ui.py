@@ -411,6 +411,28 @@ with sync_playwright() as p:
     check("floating window: no lecture - no warning", poll()[0] is False)
     check("floating window: the warning is a status the screen reader announces", lagp.evaluate("document.querySelector('#lag').getAttribute('role')") == "status")
     check("floating window (lag): no script errors", lag_errs == [], lag_errs)
+
+    # ---- a settings save that failed is told (once per failure), in the floating window and in the app ----
+    saves = {"n": 1}
+    for page_name, path in (("floating window", "/mini"), ("app", "/")):
+        sp = b.new_context(viewport={"width": 1100, "height": 800}, locale="he-IL").new_page()
+
+        def patched(route):
+            resp = route.fetch()
+            d = resp.json()
+            d["save_failed"] = {"n": saves["n"], "msg": "לא הצלחתי לשמור את ההגדרות. לנסות שוב."}
+            route.fulfill(response=resp, body=json.dumps(d))
+        sp.route("**/api/app*", patched)
+        sp.goto(url + path)
+        sp.wait_for_function("document.querySelector('#toast') && document.querySelector('#toast').textContent.includes('לא הצלחתי לשמור')", timeout=8000)
+        check(f"{page_name}: a save that failed is shown in words", "לנסות שוב" in sp.inner_text("#toast"), sp.inner_text("#toast"))
+        sp.evaluate("document.querySelector('#toast').textContent = ''; document.querySelector('#toast').classList.remove('on')")
+        sp.wait_for_timeout(4500)
+        check(f"{page_name}: the same failure is not shown again on every poll", sp.evaluate("document.querySelector('#toast').textContent") == "")
+        saves["n"] += 1
+        sp.wait_for_function("document.querySelector('#toast').textContent.includes('לא הצלחתי לשמור')", timeout=8000)
+        check(f"{page_name}: a new failure is shown", True)
+        sp.context.close()
     b.close()
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")

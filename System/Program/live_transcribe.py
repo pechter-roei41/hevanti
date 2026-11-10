@@ -2421,6 +2421,31 @@ def probe_cache_drop():
     _remove_quietly(_probe_cache_path())
 
 
+def settings_secret_files():
+    """Every file that can hold a copy of the Gemini key (encrypted): the settings, the last good copy, a damaged copy, an unfinished
+    write - and the models check, which holds a mark of the key."""
+    return [SETTINGS_FILE, SETTINGS_FILE + ".bak", SETTINGS_FILE + ".corrupt", SETTINGS_FILE + ".tmp", _probe_cache_path()]
+
+
+def scrub_key_copies():
+    """After the key was deleted or replaced: the old key must not stay in a copy. The damaged copy, an unfinished write and the models
+    check go; the last good copy is made again from the settings as they are now (so it is still there to restore from)."""
+    import shutil
+    for f in (SETTINGS_FILE + ".corrupt", SETTINGS_FILE + ".tmp", _probe_cache_path()):
+        _remove_quietly(f)
+    try:
+        if os.path.isfile(SETTINGS_FILE):
+            shutil.copy2(SETTINGS_FILE, SETTINGS_FILE + ".bak")
+    except OSError:
+        _remove_quietly(SETTINGS_FILE + ".bak")
+
+
+def remove_settings_files():
+    """The uninstall: the settings, with the key, and every copy of them. Whatever the student answers about the recordings."""
+    for f in settings_secret_files():
+        _remove_quietly(f)
+
+
 def math_reader():
     if not _MATH:
         _MATH.append(MathReader())
@@ -2488,7 +2513,10 @@ def math_set(d):
             s["notes"] = notes
         else:
             s.pop("notes", None)
-    save_settings(math=s)
+    if not save_settings(math=s):
+        return {"ok": False, "error": SAVE_FAIL_MSG}
+    if "key" in d:
+        scrub_key_copies()   # (a deleted or replaced key does not stay in the last good copy, a damaged copy or the models check)
     return {"ok": True, "math": math_reader().status()}
 
 
@@ -5741,13 +5769,30 @@ def _write_settings(d):
             time.sleep(0.05)
 
 
+SAVE_FAIL_MSG = "לא הצלחתי לשמור את ההגדרות. לנסות שוב."
+_SAVE_FAIL = {"n": 0, "at": 0.0}   # how many saves failed, and when the last one did: the pages show it (save_failed in /api/app)
+
+
+def _save_failed():
+    _SAVE_FAIL["n"] += 1
+    _SAVE_FAIL["at"] = time.time()
+    log(SAVE_FAIL_MSG)
+
+
+def save_failed_public():
+    """What the pages show after a save that failed (for a minute): {"n": count, "msg": text}, else None."""
+    return {"n": _SAVE_FAIL["n"], "msg": SAVE_FAIL_MSG} if _SAVE_FAIL["n"] and time.time() - _SAVE_FAIL["at"] < 60 else None
+
+
 def save_settings(**kw):
-    """Read, change and write under one lock. Returns False (and writes to error_log.txt) when it could not be saved.
+    """Read, change and write under one lock. Returns False when it could not be saved - and then the student is told
+    (SAVE_FAIL_MSG in the window, the app and the floating window) and error_log.txt has the details.
     A file that exists but cannot be read is never overwritten from an empty start: nothing is saved then."""
     with _SETTINGS_LOCK:
         d = _read_settings()
         if d is None:
             save_error_text("save settings", f"{SETTINGS_FILE} could not be read, so nothing was saved: {sorted(kw)}")
+            _save_failed()
             return False
         d.update(kw)
         try:
@@ -5755,6 +5800,7 @@ def save_settings(**kw):
             return True
         except OSError:
             save_error("save settings")
+            _save_failed()
             return False
 
 
@@ -5840,6 +5886,21 @@ def _ram_gb():
         return None
 
 
+_SECRET_LOOKS = re.compile(r"AIza[0-9A-Za-z_\-]{20,}|AQ\.[0-9A-Za-z_\-]{16,}|(?:dpapi|plain):[A-Za-z0-9+/=_\-]{6,}")
+
+
+def scrub_secrets(text):
+    """Text for a report: the key, in any form it is kept in or looks like (Google keys, the saved dpapi:/plain: values), is taken out."""
+    text = _SECRET_LOOKS.sub("<מפתח הוסר>", str(text))
+    try:
+        key = read_secret(math_settings().get("key"))
+        if len(key) >= 8:
+            text = text.replace(key, "<מפתח הוסר>")
+    except Exception:
+        pass
+    return text
+
+
 def diag_text():
     """"Report a problem": what the student copies into a report themselves - the version, the computer, what is
     turned on, and the newest errors. Never the key, a transcript or a question; the user's own folder name is hidden."""
@@ -5867,6 +5928,7 @@ def diag_text():
     except OSError:
         pass
     text = "\n".join(lines) + "\n\nשגיאות אחרונות:\n" + (tail.strip() or "(אין)")
+    text = scrub_secrets(text)
     home, user = os.path.expanduser("~"), os.environ.get("USERNAME") or ""
     for a, b in ((home, "%USERPROFILE%"), (home.replace("\\", "/"), "%USERPROFILE%")):
         if a and len(a) > 3:
@@ -6971,7 +7033,7 @@ class App:
                     "screens": SCREEN_ENABLED, "capture": capture_control().public(), "math": math_reader().status(), "gpu": gpu_public(),
                     "product": PRODUCT, "migrated": self.migrated,
                     "course": load_settings().get("course") or "", "connect": self.connect_info(),
-                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme()}
+                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme(), "save_failed": save_failed_public()}
 
     def connect_info(self):
         """Which AI apps are connected (reading two small config files - at most every few seconds)."""
@@ -9517,6 +9579,8 @@ def uninstall():
     subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", *TOOL_PKGS])
     if _ask("להסיר גם ספריות כלליות שהכלי התקין (" + ", ".join(SHARED_PKGS) + ")? אם יש לך תוכנות Python אחרות, עדיף לבחור N."):
         subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", *SHARED_PKGS])
+    remove_settings_files()   # the key and every copy of it go, whatever is answered below about the recordings
+    show("ההגדרות והמפתח נמחקו.")
     for local in (LOCAL_DIR, OLD_LOCAL_DIR):
         if os.path.isdir(local):
             gb = _size_gb(local)

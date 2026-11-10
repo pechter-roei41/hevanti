@@ -303,6 +303,9 @@ with sync_playwright() as p:
     pop.value.close()
     mini.wait_for_timeout(1200)
     check("floating window: if the context cannot be had, the bare question is still copied", mini.evaluate("navigator.clipboard.readText()") == "שאלה בלי הקשר")
+    toast_txt = mini.evaluate("document.querySelector('#toast').textContent")
+    check("...and the student is told, in words, that only the question was copied (the docs say the lecture comes with it)",
+          toast_txt.startswith("לא הצלחתי לצרף את ההרצאה, הועתקה רק השאלה."), toast_txt)
     check("floating window: no script errors", mini.errs == [], mini.errs)
 
     b.close()
