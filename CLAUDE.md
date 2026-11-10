@@ -102,7 +102,7 @@ python tools/test_mcp.py
 python tools/test_course_ai.py
 ```
 
-`.github/workflows/tests.yml` runs these on Windows and Linux: `test_core`, `test_mcp`, `test_course_ai`, `test_quota`, `test_youtube_rect`, `test_stop`, `test_panopto`, `test_live_loop`, `test_recording`, `test_course_guess`, `test_slides`, plus `test_av` (needs `av` and `faster-whisper`). `test_core_ui.py` needs Playwright and Edge, so it runs on Windows only.
+`.github/workflows/tests.yml` runs these on Windows and Linux: `test_core`, `test_ai_flow` (the question to Gemini from the sound to the answer, with a made-up Gemini), `test_mcp`, `test_course_ai`, `test_quota`, `test_youtube_rect`, `test_stop`, `test_panopto`, `test_live_loop`, `test_recording`, `test_course_guess`, `test_slides`, plus `test_av` (needs `av` and `faster-whisper`). `test_core_ui.py` and `test_ai_flow_ui.py` (the page offers ChatGPT/Gemini/Claude when the quota is used up) need Playwright and Edge, so they run on Windows only; elsewhere set `HEVANTI_TEST_CHROMIUM=<path to a Chromium>` and install the `playwright` Python package.
 
 Not in CI, run by hand on Windows: `test_mini_place.py` (opens a real window, needs Edge or Chrome), `test_quick_draft.py` (needs the Whisper model and a 60 s Hebrew clip), `bench_transcribe.py` (is transcription fast enough for live on this computer: below 1 means yes), `smoke_server.py` and `smoke_install.ps1` (an installed copy).
 
