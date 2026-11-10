@@ -449,7 +449,7 @@ with sync_playwright() as p:
         gd.wait_for_timeout(1500)
         gd.evaluate(f"document.documentElement.dataset.theme = '{theme}'; document.querySelectorAll('.modal').forEach(m => m.hidden = true)")
         r = gd.evaluate("""() => { const per = [];
-            for (const el of document.querySelectorAll('.guide p, .guide li')) { const t = [...el.childNodes].find(n => n.nodeType === 3 && n.length > 80); if (!t) continue;
+            for (const el of document.querySelectorAll('.guide p, .guide li')) { const t = el.firstChild && el.firstChild.nodeType === 3 && el.firstChild.length > 80 ? el.firstChild : null; if (!t) continue;   // (text that starts the element, so it starts a line)
               const rg = document.createRange(); let first = null, n = 0;
               for (let i = 0; i < t.length; i++) { rg.setStart(t, i); rg.setEnd(t, i + 1); const b = rg.getBoundingClientRect(); if (first === null) first = Math.round(b.top); if (Math.round(b.top) !== first) break; n++; }
               per.push(n); }

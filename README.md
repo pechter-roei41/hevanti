@@ -7,7 +7,7 @@
 Hevanti writes down everything said in the lecture, in Hebrew or English, while it runs on your computer. Its core is two things:
 
 - **The floating window.** A small button with the Hevanti logo sits at the edge of the screen (or press Ctrl+Alt+Q). It opens a small always-on-top window, also over a full-screen lecture: type a question, press Enter, and the answer is written under it, based on what the lecturer said in the last minutes and the slide on the screen. Three "what did I miss" buttons (3, 7 or 15 minutes) ask for a summary of the last minutes in one click, and an answer shows the time of the transcript line it relies on (⏱ 00:20:44; in a saved lecture or the player a click jumps there). Formulas are drawn with KaTeX.
-- **The marks.** One click on ★, also Ctrl+Alt+M, marks the moment without stopping to listen (older lectures may still show "?" marks from before 2.13; they are kept). After the lecture, the "my marks" tab of the lecture and of the course lists every mark with what was said just before it, opens the lecture 8 seconds before the mark, and can ask an AI to explain them all.
+- **The marks.** One click on ★, also Ctrl+Alt+M, marks the moment without stopping to listen (older lectures may still show "?" marks from before 2.13; they are kept). After the lecture, the "my marks" tab of the lecture and of the course lists every mark with what was said just before it, opens the lecture 8 seconds before the mark, and can ask an AI to explain them all. In the transcript the line said just before a mark is highlighted in yellow with a ★ (and "מסומנת" for a screen reader).
 
 Everything else supports these two.
 
