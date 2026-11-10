@@ -34,7 +34,10 @@ During a live lecture the student is listening, so interactions must be quick an
 
 - Must work on an average student laptop; no local AI model by default.
 - Transcription runs on the CPU by default and is much faster and keeps pace with long lectures on an NVIDIA graphics card. Hevanti detects the card at start-up; when it is there but unused, the home page offers a one-click install of the NVIDIA libraries (about 1 GB, once) and a restart. Anyone with an NVIDIA card should be steered to it. There is no "is my computer good enough" checklist: the guide only recommends the card.
-- The built-in AI is Gemini, through the student's own API key (stored encrypted via Windows DPAPI): without a key there is no "answer here", so the interface must make that state and its fix obvious. When the free quota runs out: reduce usage and show a clear message.
+- The built-in AI is Gemini, through the student's own API key (stored encrypted via Windows DPAPI; a key that cannot be encrypted is not saved): without a key there is no "answer here", so the interface must make that state and its fix obvious. When the free quota runs out: reduce usage and show a clear message.
+- Settings and the key are saved whole or not at all; a damaged settings file is kept and the last good copy is used, never read as "no settings" quietly.
+- A live question tries at most two Gemini models and gives up within about 25 seconds; an answer that Gemini blocks or cuts shows why.
+- Transcription that falls far behind is protected: the floating window shows the delay in seconds over 10, and sound that waited more than about five minutes is skipped and said so. No automatic catch-up yet (to be decided after measuring on a real student laptop).
 - Nothing leaves the computer without a student action; cloud sync is off until turned on; the app listens only on 127.0.0.1.
 - Only computer audio is captured, not the microphone.
 - YouTube plays in YouTube's own player, never downloaded.
