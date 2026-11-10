@@ -269,6 +269,11 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .moremenu .menu button[hidden]{display:none}
 .study .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}
 .linkish{border:0;background:none;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
+.linkish.muted{color:var(--muted)}   /* a quiet link: not a button, not green (deleting the key is rare) */
+.keystat{display:flex;align-items:baseline;gap:4px 16px;flex-wrap:wrap}
+.keystat .capstat{flex:1 1 auto}
+.keystat .linkish{margin-inline-start:auto}
+input[type=checkbox],input[type=radio]{accent-color:var(--accent)}   /* the board green, not the system blue */
 .tile{display:grid;gap:3px;text-align:start;padding:13px 16px;border:1.5px solid var(--line);border-radius:14px;background:var(--bg);color:var(--fg);font:inherit;cursor:pointer}
 .tile b{font-size:17px}
 .tile small{color:var(--muted);font-size:13.5px;line-height:1.4}
@@ -631,8 +636,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <div class="row"><input type="password" id="mathKey" placeholder="להדביק כאן את מפתח Gemini" autocomplete="off" aria-label="מפתח Gemini" dir="ltr"><button class="btn small" id="mathSave" type="button">שמירה ובדיקה</button></div>
           <label class="row"><input type="checkbox" id="askOn"><b>להפעיל "תשובה כאן" בכל תיבת שאלה</b></label>
           <p>הבנתי שולחת ל-Gemini רק מה ששואלים: השאלה, הדקות האחרונות מההרצאה והשקופית שעל המסך. התשובה נכתבת מתחת לשאלה, כמו בצ'אט.</p>
-          <p class="capstat" id="mathStat" style="margin:0"></p>
-          <div class="row"><button class="btn ghost small" id="mathForget" type="button" hidden>מחיקת המפתח</button></div>
+          <div class="keystat"><p class="capstat" id="mathStat" style="margin:0"></p><button class="linkish muted" id="mathForget" type="button" hidden>מחיקת המפתח</button></div>
         </div>
         <div class="optbox">
           <h4>הוראות אישיות לתשובות</h4>
@@ -1368,6 +1372,15 @@ $("#shotDelMany").addEventListener("click", async () => {
 
 // ---------- formulas and handwriting: Gemini reads the slides (the student's own key, off until turned on) ----------
 let mathSig = "", pastHasImgs = false, mathMsg = "";   // mathMsg: the last failure of saving a key (stays until the next try)
+// "היום: 8 שאלות, 58 שקופיות נקראו" - short; the quota only when it was reached
+function todayLine(t) {
+  if (!t) return "";
+  const parts = [];
+  if (t.asks) parts.push(heN(t.asks, "שאלה אחת", "שתי שאלות", "שאלות"));
+  if (t.reads) parts.push(t.reads === 1 ? "שקופית אחת נקראה" : t.reads === 2 ? "שתי שקופיות נקראו" : t.reads + " שקופיות נקראו");
+  if (t.quota) parts.push("הגעת למכסה " + (t.quota === 1 ? "פעם אחת" : t.quota === 2 ? "פעמיים" : t.quota + " פעמים"));
+  return " היום: " + (parts.join(", ") || "עוד לא נשלח כלום ל-Gemini") + ".";
+}
 function drawMath() {
   const m = (app && app.math) || {}, sig = JSON.stringify([m, pastHasImgs, mathMsg]);
   if (sig === mathSig) return;
@@ -1378,9 +1391,14 @@ function drawMath() {
   $("#notesIn").disabled = $("#notesSave").disabled = !m.has_key;
   $("#planPaid").checked = m.plan === "paid";
   $("#mathSum").textContent = m.has_key ? "· " + [m.ask ? "תשובות פועלות" : "תשובות כבויות", m.on ? "נוסחאות פועל" : ""].filter(Boolean).join(", ") : (m.plan === "paid" ? "· יש מנוי: שאלות הולכות לאפליקציית ה-AI" : "· לא מוגדר");
-  $("#mathStat").textContent = (m.has_key ? "המפתח שמור" + (m.model ? " (" + m.model + ")" : "") + "." +
-    (m.on ? " נוסחאות: נקראו בהפעלה הזו " + (m.done || 0) + " שקופיות" + (m.skipped ? " (עוד " + m.skipped + " לא נשלחו: טקסט מודפס ברור)" : "") + (m.waiting ? ", ממתינות " + m.waiting : "") + "." : "") +
-    (m.today ? " היום, לפי שעון המחשב: " + m.today.asks + " שאלות, " + m.today.reads + " שקופיות שנקראו ב-Gemini" + (m.today.quota ? ", והגעת למכסה " + m.today.quota + " פעמים" : "") + "." : "") : "עוד אין מפתח.") + (m.error ? " " + m.error : "") + (mathMsg ? " " + mathMsg : "");
+  $("#mathStat").textContent = (m.has_key ? "המפתח שמור." + todayLine(m.today) : "עוד אין מפתח.") + (m.error ? " " + m.error : "") + (mathMsg ? " " + mathMsg : "");
+  $("#mathStat").title = m.has_key ? "הספירה היומית לפי שעון המחשב" : "";
+  const tech = $("#mathTech");   // (the model's name and the slide reading of this run: the advanced tab)
+  if (tech) {
+    tech.hidden = !m.has_key;
+    tech.textContent = (m.model ? "המודל של Gemini שעונה עכשיו: " + m.model + ". " : "") +
+      (m.on ? "קריאת נוסחאות: נקראו בהפעלה הזו " + (m.done || 0) + " שקופיות" + (m.skipped ? " (עוד " + m.skipped + " לא נשלחו: טקסט מודפס ברור)" : "") + (m.waiting ? ", ממתינות " + m.waiting : "") + "." : "קריאת נוסחאות כבויה.");
+  }
   $("#pastMath").hidden = !(m.on && pastHasImgs);
 }
 async function mathSend(d, okText) {
@@ -1556,7 +1574,8 @@ const setPanels = {};
   const card = $("#a11y .card");   // accessibility: its choices (not its own title and close button)
   for (const x of [...card.children]) if (x.id !== "a11yT" && !x.querySelector("#a11yClose")) setPanels.a11y.appendChild(x);
   const ai = setPanels.ai;   // advanced: everything that is not the floating window and the marks
-  ai.append(el("p", "sub", "אלה דברים אופציונליים. בלי אף אחד מהם הבנתי עובדת במלואה: שואלים בחלון הצף, מסמנים ★ ו-?, והתשובות מגיעות בתוך הבנתי."));
+  ai.append(el("p", "sub", "אלה דברים אופציונליים. בלי אף אחד מהם הבנתי עובדת במלואה: שואלים בחלון הצף, מסמנים ★, והתשובות מגיעות בתוך הבנתי."));
+  { const tp = el("p", "capstat", ""); tp.id = "mathTech"; tp.hidden = true; ai.append(el("h3", "", "פרטים טכניים של Gemini"), tp); }
   const exl = el("label", "row miniopt"), exc = el("input"); exc.type = "checkbox"; exc.id = "extAi";
   exc.addEventListener("change", async () => { await api("/api/cmd", {action: "external_ai", on: exc.checked}); if (window.BZMAsk) BZMAsk.setExternal(exc.checked); try { app = await api("/api/app"); } catch (e) {} drawMath(); });
   exl.append(exc, el("b", "", "להציג גם כפתורים שמעתיקים את השאלה ל-ChatGPT, Gemini או Claude"));

@@ -440,6 +440,47 @@ with sync_playwright() as p:
     check("a saved lecture with a name: the course, the date in one format, the length, the slides", pg.inner_text("#pastSub") == course + " · 09.11.2026 · אורך 00:00:05 · שתי שקופיות", pg.inner_text("#pastSub"))
     check("2.18 page: no script errors", pg.errs == [], pg.errs)
 
+    # ---- 2.19, stage 8: settings - a quiet delete-key link, a short "today" line, the model in Advanced, green checkboxes ----
+    for theme in ("light", "dark"):
+        sp = b.new_context(viewport={"width": 1200, "height": 1000}, locale="he-IL", color_scheme=theme).new_page()
+        sp.errs = []
+        sp.on("pageerror", lambda e: sp.errs.append(str(e)))
+
+        def set_app(route):
+            resp = route.fetch()
+            d = resp.json()
+            d["math"] = dict(d.get("math") or {}, has_key=True, ask=True, on=True, model="gemini-3-flash", done=12, skipped=3, waiting=1,
+                             today={"asks": 8, "reads": 58, "skipped": 3, "failed": 0, "quota": 0})
+            route.fulfill(response=resp, body=json.dumps(d))
+        sp.route("**/api/app*", set_app)
+        sp.goto(url + "/#settings")
+        sp.wait_for_timeout(1200)
+        sp.evaluate(f"document.documentElement.dataset.theme = '{theme}'; document.querySelectorAll('.modal').forEach(m => m.hidden = true); openSettings('key')")
+        sp.wait_for_timeout(600)
+        st = sp.inner_text("#mathStat")
+        check(f"settings, {theme}: the state line is short - the key is saved, and today: 8 questions, 58 slides read", st == "המפתח שמור. היום: 8 שאלות, 58 שקופיות נקראו.", st)
+        check(f"settings, {theme}: the model's name is not on the Answers tab", "gemini-3" not in sp.inner_text("#set-key"), sp.inner_text("#set-key")[:300])
+        r = sp.evaluate("""() => { const f = document.querySelector('#mathForget'), c = getComputedStyle(f), s = document.querySelector('#mathStat');
+            const probe = document.createElement('i'); probe.style.color = 'var(--muted)'; document.body.appendChild(probe); const muted = getComputedStyle(probe).color; probe.remove();
+            return {visible: f.offsetParent !== null, muted: c.color === muted, bg: c.backgroundColor, border: c.borderTopWidth, tag: f.tagName, ul: c.textDecorationLine,
+                    sameRow: f.parentElement === s.parentElement && Math.abs(f.getBoundingClientRect().top - s.getBoundingClientRect().top) < 24}; }""")
+        check(f"settings, {theme}: 'delete the key' is a quiet text link (muted, underlined, no fill, no border) on the line that says the key is saved",
+              r["visible"] and r["muted"] and r["bg"] == "rgba(0, 0, 0, 0)" and r["border"] == "0px" and "underline" in r["ul"] and r["sameRow"], r)
+        sp.click("#mathForget")
+        sp.wait_for_timeout(300)
+        check(f"settings, {theme}: it still asks before it deletes (the existing confirmation)", sp.is_visible("#confOk"))
+        sp.click("#confNo")
+        sp.evaluate("openSettings('ai')")
+        sp.wait_for_timeout(500)
+        tech = sp.inner_text("#mathTech")
+        check(f"settings, {theme}: the model and the slide reading of this run are in Advanced", "gemini-3-flash" in tech and "נקראו בהפעלה הזו 12 שקופיות" in tech and "עוד 3 לא נשלחו" in tech, tech)
+        acc = sp.evaluate("""() => { const probe = document.createElement('i'); probe.style.color = 'var(--accent)'; document.body.appendChild(probe); const g = getComputedStyle(probe).color; probe.remove();
+            const r = document.createElement('input'); r.type = 'radio'; document.body.appendChild(r); const rr = getComputedStyle(r).accentColor; r.remove();
+            return {green: g, all: [...document.querySelectorAll('input[type=checkbox]')].map(c => getComputedStyle(c).accentColor === g), radio: rr === g}; }""")
+        check(f"settings, {theme}: every checkbox and radio is the board green (accent-color), not the system blue", acc["all"] and all(acc["all"]) and acc["radio"], acc)
+        check(f"settings, {theme}: no script errors", sp.errs == [], sp.errs)
+        sp.context.close()
+
     # ---- 2.19, stage 6: the lecture page - the three study cards are not inside a card, the summary card is soft green, "answer here" is the one solid green ----
     for theme in ("light", "dark"):
         lp = b.new_context(viewport={"width": 1200, "height": 1000}, locale="he-IL", color_scheme=theme).new_page()
