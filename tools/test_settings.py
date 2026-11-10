@@ -206,13 +206,14 @@ check("...and it is shown only for a minute", L.save_failed_public() is None)
 
 # ------------------------------------------------------------------------------------------ 9. deleting the key deletes every copy of it
 KEY2 = "AQ.deleteme-secret-key-0123456789"
-L.save_settings(theme="dark", math={"key": L.keep_secret(KEY2), "ask": True})
+STORED2 = L.keep_secret(KEY2)   # (DPAPI gives different bytes on every call: this one value is what is written everywhere below)
+L.save_settings(theme="dark", math={"key": STORED2, "ask": True})
 L.save_settings(course="פיזיקה")                       # (this save makes the last good copy, .bak, from a file that has the key)
 L.probe_cache_write(KEY2, ["gemini-x"])
 with open(F + ".corrupt", "w", encoding="utf-8") as f:
-    f.write(json.dumps({"math": {"key": L.keep_secret(KEY2)}}))
+    f.write(json.dumps({"math": {"key": STORED2}}))
 with open(F + ".tmp", "w", encoding="utf-8") as f:
-    f.write(json.dumps({"math": {"key": L.keep_secret(KEY2)}}))
+    f.write(json.dumps({"math": {"key": STORED2}}))
 stored = L.math_settings().get("key")
 check("before: the key is in the settings, in the last good copy, in a damaged copy and in an unfinished write",
       all(stored in real_open2(x, encoding="utf-8").read() for x in (F, F + ".bak", F + ".corrupt", F + ".tmp")) and os.path.isfile(L._probe_cache_path()))
@@ -241,7 +242,8 @@ check("...and the other settings stayed", L.load_settings().get("theme") == "dar
 
 # replacing the key: the old one does not stay in a copy either
 KEY3 = "AQ.the-new-key-9876543210-abcdef"
-L.save_settings(math={"key": L.keep_secret(KEY2), "ask": True})
+STORED2B = L.keep_secret(KEY2)
+L.save_settings(math={"key": STORED2B, "ask": True})
 L.save_settings(course="כימיה")
 real_probe2 = L.MathReader.probe
 L.MathReader.probe = lambda self, key: "gemini-x"
@@ -249,7 +251,7 @@ try:
     r = L.math_set({"key": KEY3})
 finally:
     L.MathReader.probe = real_probe2
-check("a new key replaces the old one: the old key is in no file", r.get("ok") is True and not files_with(L.keep_secret(KEY2)) and not files_with("AQ.deleteme"), (r, files_with("AQ.deleteme")))
+check("a new key replaces the old one: the old key is in no file", r.get("ok") is True and not files_with(STORED2B) and not files_with("AQ.deleteme"), (r, files_with("AQ.deleteme")))
 check("...and the new one is saved", L.read_secret(L.math_settings().get("key")) == KEY3)
 
 # ------------------------------------------------------------------------------------------ 10. "report a problem" never carries a key, or the copy
