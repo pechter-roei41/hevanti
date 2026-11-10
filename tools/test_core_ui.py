@@ -433,6 +433,40 @@ with sync_playwright() as p:
     check("a saved lecture: the line under its title does not repeat the date and time either", "10:00" not in sub and "2026-11-02" not in sub and "שורה אחת" in sub, sub)
     check("2.18 page: no script errors", pg.errs == [], pg.errs)
 
+    # ---- 2.19, stage 6: the lecture page - the three study cards are not inside a card, the summary card is soft green, "answer here" is the one solid green ----
+    for theme in ("light", "dark"):
+        lp = b.new_context(viewport={"width": 1200, "height": 1000}, locale="he-IL", color_scheme=theme).new_page()
+        lp.errs = []
+        lp.on("pageerror", lambda e: lp.errs.append(str(e)))
+        lp.route("**/api/transcript*", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"entry": entry, "lines": no_marks, "summary": ""})))
+
+        def lp_app(route):
+            resp = route.fetch()
+            d = resp.json()
+            d["math"] = dict(d.get("math") or {}, has_key=True, ask=True, on=True)
+            route.fulfill(response=resp, body=json.dumps(d))
+        lp.route("**/api/app*", lp_app)
+        lp.goto(url + "/")
+        lp.wait_for_timeout(900)
+        lp.evaluate(f"document.documentElement.dataset.theme = '{theme}'; document.querySelectorAll('.modal').forEach(m => m.hidden = true); openPast('c/t')")
+        lp.wait_for_timeout(900)
+        lp.evaluate("document.querySelector('#pastAskFold').open = true")
+        lp.wait_for_selector("#pastAsk .ais button", timeout=8000)
+        r = lp.evaluate("""() => { const probe = document.createElement('i'); probe.style.background = 'var(--accent-soft)'; document.body.appendChild(probe);
+            const soft = getComputedStyle(probe).backgroundColor; probe.style.background = 'var(--accent)'; const green = getComputedStyle(probe).backgroundColor; probe.remove();
+            const st = getComputedStyle(document.querySelector('#pastStudy')), main = getComputedStyle(document.querySelector('.tile.main'));
+            return {soft, green, mainBg: main.backgroundColor, studyBorder: st.borderTopWidth, studyBg: st.backgroundColor, studyPad: st.paddingTop,
+                    nested: document.querySelectorAll('#vPast .card .card, #vPast .card .tile, #pastStudy.card').length,
+                    tiles: [...document.querySelectorAll('#pastStudy .tile')].filter(t => !t.hidden).length, tileBorder: getComputedStyle(document.querySelector('.tile')).borderTopWidth,
+                    solid: [...document.querySelectorAll('#vPast button, #vPast a.btn')].filter(x => x.offsetParent !== null && getComputedStyle(x).backgroundColor === green).map(x => x.textContent.trim())}; }""")
+        check(f"lecture page, {theme}: the summary card is soft green, not solid", r["mainBg"] == r["soft"] and r["mainBg"] != r["green"], r)
+        check(f"lecture page, {theme}: what holds the three study cards is not a card (no border, no fill, no padding), and no card is inside a card",
+              r["studyBorder"] == "0px" and r["studyBg"] == "rgba(0, 0, 0, 0)" and r["studyPad"] == "0px" and r["nested"] == 0, r)
+        check(f"lecture page, {theme}: the three cards are still cards (a border each)", r["tiles"] == 3 and r["tileBorder"] != "0px", r)
+        check(f"lecture page, {theme}, the question box open: 'answer here' is the one solid green control", r["solid"] == ["תשובה כאן"], r["solid"])
+        check(f"lecture page, {theme}: no script errors", lp.errs == [], lp.errs)
+        lp.context.close()
+
     # ---- 2.19, stage 5: the graphics card capsule in the top bar exists only when there is something to press ----
     gpu_state = {"gpu": {"cards": 0, "libs_ok": False, "state": "", "msg": ""}, "device": "CPU"}
     cmds = []

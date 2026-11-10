@@ -55,6 +55,8 @@ PAIRS = [
     ("placeholder (ink-muted) on sunk paper", "ink-muted", "sunk-paper", "night-muted", "night-sunk", TEXT),
     ("ghost button (green text) on the caution bar", "board-green", "css:--warn-bg", "night-green", "cssdark:--warn-bg", TEXT),
     ("transcript timestamp (ink-muted, mono) on the highlighted line (the one opened from a mark or a search)", "ink-muted", "css:--now", "night-muted", "cssdark:--now", TEXT),
+    ("text of the summary card (ink) on the soft green", "ink", "board-green-soft", "night-ink", "night-green-soft", TEXT),
+    ("the small text of the summary card (ink-muted) on the soft green", "ink-muted", "board-green-soft", "night-muted", "night-green-soft", TEXT),
     ("text (ink) on the highlighter band of a marked transcript line (mark-line)", "ink", "mark-line", "night-ink", "night-mark-line", TEXT),
     ("the ★ mark (ink, a graphic part) on the mark-line", "ink", "mark-line", "night-ink", "night-mark-line", GRAPHIC),
     ("a time that can be opened (green link) on paper, where answers are", "board-green", "paper", "night-green", "night-paper", TEXT),

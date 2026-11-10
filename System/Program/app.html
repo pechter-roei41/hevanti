@@ -273,9 +273,13 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .tile b{font-size:17px}
 .tile small{color:var(--muted);font-size:13.5px;line-height:1.4}
 .tile:hover,.tile:focus-visible{border-color:var(--accent)}
-.tile.main{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.tile.main small{color:inherit;opacity:.85}
+.tile.main{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}   /* the first of the three: soft green, not solid - "answer here" is the one solid green of the page */
+.tile.main small{color:var(--muted)}
 .tile[hidden]{display:none}
+/* the three study cards are cards; what holds them is not (cards are never nested): no border, no fill, no padding */
+.study.plain{margin:0 0 16px}
+.study.plain h2{margin:0 0 2px}
+.study.plain .sub{color:var(--muted);font-size:15px;margin:0 0 10px}
 .study .where{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;font-size:14px;color:var(--muted)}
 .study .where .seg button{font-size:14px;padding:5px 13px}
 .study .sub2{margin:8px 0 0;font-size:14px;line-height:1.5;color:var(--muted)}
@@ -761,7 +765,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="livebar">
       <button class="btn ghost back" id="pastBack" type="button">→ חזרה</button>
       <div class="what"><b id="pastTitle"></b><small id="pastSub"></small></div>
-      <button class="btn" id="pastPlay" type="button" hidden>צפייה בנגן</button>
+      <button class="btn ghost" id="pastPlay" type="button" hidden>צפייה בנגן</button>
       <details class="moremenu" id="pastMenu">
         <summary class="btn quiet" aria-label="עוד פעולות להרצאה" title="עוד פעולות">⋯</summary>
         <div class="menu">
@@ -781,12 +785,12 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <div class="card">
         <h2>הרגעים שסימנתי</h2>
         <p class="sub">★ רגע שסימנת (בהרצאות ישנות יכול להופיע גם ? "לא הבנתי"). לכל סימון מופיע מה נאמר רגע לפניו. "בתמלול" קופץ אל הרגע הזה.</p>
-        <div class="row"><button class="btn small" id="pastMarksAsk" type="button">הסבר לכל הרגעים (AI)</button></div>
+        <div class="row"><button class="btn ghost small" id="pastMarksAsk" type="button">הסבר לכל הרגעים (AI)</button></div>
         <div id="pastMkList" class="mklist"></div>
       </div>
     </div>
     <div class="ppanel" id="pastPanelStudy">
-    <div class="card study" id="pastStudy">
+    <div class="study plain" id="pastStudy">
       <h2>לימוד בלחיצה אחת</h2>
       <p class="sub">הבנתי שולחת ל-AI את ההרצאה הזו (התמלול והטקסט מהשקופיות) עם המשימה, וזוכרת לאיזה AI.</p>
       <div class="tiles">
