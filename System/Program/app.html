@@ -285,7 +285,8 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .fold>summary small{color:var(--muted);font-weight:400;font-size:14px}
 .fold>.card,.fold>.tbox{border:0;border-top:1px solid var(--line);border-radius:0 0 var(--r) var(--r)}
 .livebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-.livebar .what{margin-inline-end:auto}
+.livebar .what{margin-inline-end:auto;min-width:0}
+.livebar .acts{display:flex;align-items:center;gap:10px;flex:none}   /* the actions stay one row: they wrap together, never "stop" alone */
 .livebar .what b{font-size:22px;font-family:var(--f-display);font-weight:400}
 #liveStop{border-color:var(--line);color:var(--muted)}
 #liveStop:hover{border-color:var(--rec);color:var(--rec);background:transparent}
@@ -689,14 +690,16 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="livebar">
       <button class="btn ghost back" type="button" data-home>→ למסך הבית</button>
       <div class="what"><b id="liveWhat">הרצאה חיה</b><small id="liveSub">טוען...</small></div>
-      <button class="btn ghost" id="markImp" type="button" title="מסמן את הרגע הזה בתמלול. אחרי ההרצאה ה-AI יסביר את כל הרגעים שסימנת. גם Ctrl+Alt+M מכל תוכנה."><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align:-2px;margin-inline-end:6px"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2 6.3 20.3l1.2-6.4L2.8 9.5l6.4-.8z"/></svg>סימון</button>
-      <button class="btn" type="button" data-float title="חלון קטן לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">חלון שאלות קטן</button>
-      <button class="btn ghost" id="liveStop" type="button">עצירה</button>
+      <div class="acts">
+        <button class="btn ghost" id="markImp" type="button" title="מסמן את הרגע הזה בתמלול. אחרי ההרצאה ה-AI יסביר את כל הרגעים שסימנת. גם Ctrl+Alt+M מכל תוכנה."><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align:-2px;margin-inline-end:6px"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2 6.3 20.3l1.2-6.4L2.8 9.5l6.4-.8z"/></svg>סימון</button>
+        <button class="btn ghost" type="button" data-float title="חלון קטן לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">חלון שאלות קטן</button>
+        <button class="btn ghost" id="liveStop" type="button">עצירה</button>
+      </div>
     </div>
     <div class="ended" id="liveEnded" hidden></div>
     <div class="card study" id="liveStudy" hidden><h2 style="margin:0 0 6px">ההרצאה נשמרה. מה עושים איתה?</h2>
       <p class="sub" style="margin-top:0">לחיצה אחת: הבנתי שולחת ל-AI שלך את ההרצאה הזו עם המשימה (סיכום, מבחן דמה או דף נוסחאות).</p>
-      <div class="row"><button class="btn" id="liveStudyGo" type="button">סיכום, מבחן דמה ודף נוסחאות ←</button></div></div>
+      <div class="row"><button class="btn ghost" id="liveStudyGo" type="button">סיכום, מבחן דמה ודף נוסחאות ←</button></div></div>
     <div class="split">
       <div class="tbox">
         <div class="tools"><input type="search" id="liveFind" placeholder="חיפוש בתמלול" aria-label="חיפוש בתמלול"><button class="btn ghost small" id="liveFollow" type="button" hidden>לסוף</button></div>
@@ -723,8 +726,10 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="livebar">
       <button class="btn ghost back" type="button" data-home>→ למסך הבית</button>
       <div class="what"><b id="ytWhat">סרטון יוטיוב</b><small id="ytSub">טוען...</small></div>
-      <button class="btn" type="button" data-float title="חלון קטן לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">חלון שאלות קטן</button>
-      <button class="btn ghost" id="ytStop" type="button">עצירה</button>
+      <div class="acts">
+        <button class="btn ghost" type="button" data-float title="חלון קטן לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">חלון שאלות קטן</button>
+        <button class="btn ghost" id="ytStop" type="button">עצירה</button>
+      </div>
     </div>
     <div class="ended" id="ytEnded" hidden></div>
     <div class="msg" id="ytMsg" hidden></div>

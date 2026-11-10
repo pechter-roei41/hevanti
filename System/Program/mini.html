@@ -59,7 +59,7 @@ body.on #lec::before{background:var(--rec)}
 .miss{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 10px 0;font-size:13px;color:var(--muted)}
 .miss button{border:1px solid var(--accent);background:none;color:var(--accent);border-radius:999px;padding:1px 11px;cursor:pointer;font-size:13px;font-weight:600}
 .miss button:hover{background:var(--accent-soft)}
-#lag{margin:8px 10px 0;padding:6px 10px;border-radius:10px;background:var(--warn-bg);color:var(--warn-fg);font-size:13.5px;line-height:1.45;font-weight:700}
+#lag{flex:none;padding:2px 10px;border-radius:999px;background:var(--warn-bg);color:var(--warn-fg);font-size:13px;line-height:1.5;font-weight:700;white-space:nowrap}   /* in the row of the actions (the title gives way), a caution pill: never green, never a second row */
 #note{margin:8px 10px 0;padding:6px 10px;border-radius:10px;background:var(--sunk);color:var(--muted);font-size:13.5px;line-height:1.45}
 .miss button{padding:3px 12px;min-height:28px}
 #box{flex:1;min-height:0;padding:8px 10px 10px}
@@ -75,10 +75,10 @@ body.on #lec::before{background:var(--rec)}
 <body>
 <header>
   <span id="lec">אין עכשיו הרצאה פעילה</span>
+ <span id="lag" role="status" hidden></span>
  <button class="hb" id="markImp" type="button" title="סימון ★ של הרגע הזה (Ctrl+Alt+M)" aria-label="סימון ★ של הרגע הזה">★</button>
  <button class="hb" id="hide" type="button" title="להסתיר (Ctrl+Alt+Q או Esc)" aria-label="להסתיר">—</button>
 </header>
-<div id="lag" role="status" hidden></div>
 <div id="note" hidden>אין עכשיו הרצאה פעילה. מתחילים הרצאה או פותחים הקלטה באפליקציה, ואז אפשר לשאול כאן.</div>
 <div class="miss" id="miss" role="group" aria-label="מה פספסתי" hidden>
   <span>מה פספסתי:</span>
@@ -155,7 +155,11 @@ async function pollLive() {
     // the transcript is behind what is being said: always shown over 10 seconds (the answers rest on what was already written)
     const lag = Math.round(d.lag || 0), lagBox = $("#lag");
     lagBox.hidden = !(lag > LAG_SHOW_S);
-    if (!lagBox.hidden) lagBox.textContent = "התמלול מאחר ב-" + lag + " שניות. התשובות מבוססות על מה שכבר נכתב.";
+    if (!lagBox.hidden) {
+      lagBox.textContent = "מאחר ב-" + lag + " שניות";
+      lagBox.title = lagBox.dataset.full = "התמלול מאחר ב-" + lag + " שניות. התשובות מבוססות על מה שכבר נכתב.";
+      lagBox.setAttribute("aria-label", lagBox.title);
+    }
     if (d.yt) { const im = (d.items || []).filter(x => x.img).pop(); if (im) shot = im.img; }
     else { total = d.total || total; if (d.shot) shot = d.shot; }
   } catch (e) {}

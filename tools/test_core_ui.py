@@ -294,6 +294,9 @@ with sync_playwright() as p:
     mini.evaluate("pollApp()")
     mini.wait_for_selector("#miss button[data-m='3']", state="visible", timeout=10000)
     check("floating window: three 'what I missed' buttons", mini.evaluate("[...document.querySelectorAll('#miss button')].map(b => b.dataset.m).join()") == "3,7,15")
+    greens = mini.evaluate("""() => { const p = document.createElement('i'); p.style.background = 'var(--accent)'; document.body.appendChild(p); const green = getComputedStyle(p).backgroundColor; p.remove();
+        return [...document.querySelectorAll('button')].filter(b => b.offsetParent !== null && getComputedStyle(b).backgroundColor === green).map(b => b.textContent.trim()); }""")
+    check("floating window: exactly one solid green control: 'answer here'", greens == ["תשובה כאן"], greens)
     for n in (3, 7, 15):
         mini.wait_for_selector(f"#miss button[data-m='{n}']", state="visible", timeout=10000)
         mini.click(f"#miss button[data-m='{n}']")
@@ -387,6 +390,40 @@ with sync_playwright() as p:
     check("a saved lecture: the line under its title does not repeat the date and time either", "10:00" not in sub and "2026-11-02" not in sub and "שורה אחת" in sub, sub)
     check("2.18 page: no script errors", pg.errs == [], pg.errs)
 
+    # ---- 2.19, stage 2: the live lecture screen has one solid green: "answer here" ----
+    live_now = {"yes": True}
+    lv = b.new_context(viewport={"width": 1280, "height": 900}, locale="he-IL").new_page()
+    lv.errs = []
+    lv.on("pageerror", lambda e: lv.errs.append(str(e)))
+
+    def live_app(route):
+        resp = route.fetch()
+        d = resp.json()
+        d["session"] = {"kind": "live", "lang": "he", "title": "", "course": "פיזיקה", "ready": True, "done": False, "stopping": False, "started": 0, "yt": False}
+        d["math"] = dict(d.get("math") or {}, has_key=True, ask=True, on=True)
+        route.fulfill(response=resp, body=json.dumps(d))
+    lv.route("**/api/app*", live_app)
+    lv.route("**/api/live*", lambda r: r.fulfill(content_type="application/json", body=json.dumps({"total": 0, "since": 0, "draft": "", "pending": 0, "lag": 0, "fast": False, "shot": None, "info": {}, "ended": False, "items": []})))
+    lv.goto(url + "/#live")
+    lv.wait_for_selector("#liveAsk .ais button", timeout=10000)
+    lv.evaluate("document.querySelectorAll('.modal').forEach(m => m.hidden = true)")
+    SOLID = """() => [...document.querySelectorAll('#vLive button, #vLive a.btn')].filter(b => b.offsetParent !== null && !b.hidden)
+          .filter(b => { const c = getComputedStyle(b).backgroundColor; return c !== 'rgba(0, 0, 0, 0)' && c === getComputedStyle(document.documentElement).getPropertyValue('--accent-solid-probe') || false; }).length"""
+    solid = lv.evaluate("""() => { const p = document.createElement('button'); p.className = 'btn'; document.body.appendChild(p); const green = getComputedStyle(p).backgroundColor; p.remove();
+        return [...document.querySelectorAll('#vLive button, #vLive a.btn')].filter(b => b.offsetParent !== null && getComputedStyle(b).backgroundColor === green).map(b => b.textContent.trim()); }""")
+    check("live lecture screen: exactly one solid green control, and it is 'answer here'", solid == ["תשובה כאן"], solid)
+    for sel, what in (("[data-float]", "the small window"), ("#markImp", "mark ★"), ("#liveStop", "stop")):
+        check(f"live lecture screen: {what} is a ghost button", lv.evaluate(f"getComputedStyle(document.querySelector('#vLive {sel}')).backgroundColor") == "rgba(0, 0, 0, 0)")
+    rects = lv.evaluate("['#markImp', '[data-float]', '#liveStop', '.livebar .what b'].map(s => { const r = document.querySelector('#vLive ' + s).getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; })")
+    check("live lecture screen: stop is in the same row as the title and the other actions (not a row of its own)",
+          max(r[0] for r in rects[:3]) < min(r[1] for r in rects[:3]) and abs(rects[2][0] - rects[0][0]) < 4, rects)
+    lv.set_viewport_size({"width": 600, "height": 900})
+    lv.wait_for_timeout(300)
+    acts = lv.evaluate("[...document.querySelectorAll('#vLive .acts button')].filter(b => !b.hidden).map(b => Math.round(b.getBoundingClientRect().top))")
+    check("live lecture screen, narrow: the actions stay together in one row (stop is never alone)", len(set(acts)) == 1, acts)
+    check("live lecture screen: no script errors", lv.errs == [], lv.errs)
+    lv.context.close()
+
     # ---- 2.19, stage 1: the placeholder of every field is ink-muted (not the browser's grey) ----
     PH = """() => { const out = []; for (const tag of ['input', 'textarea']) { const e = document.createElement(tag); if (tag === 'input') e.type = 'search'; e.placeholder = 'x';
           document.body.appendChild(e); const c = getComputedStyle(e, '::placeholder'); const m = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim();
@@ -419,6 +456,14 @@ with sync_playwright() as p:
         return lagp.evaluate("[!document.querySelector('#lag').hidden, document.querySelector('#lag').textContent]")
     shown, txt = poll()
     check("floating window: the transcript is 25 seconds behind - it says so, in seconds", shown and "מאחר ב-25 שניות" in txt, (shown, txt))
+    check("...in the header row, with the ★ and the minimize button (not a row of its own that competes with them)",
+          lagp.evaluate("document.querySelector('#lag').parentElement.tagName") == "HEADER"
+          and lagp.evaluate("""() => { const h = document.querySelector('header').getBoundingClientRect(), l = document.querySelector('#lag').getBoundingClientRect();
+              return l.top >= h.top - 1 && l.bottom <= h.bottom + 1; }"""))
+    check("...with the whole sentence for the screen reader and the pointer",
+          "התמלול מאחר ב-25 שניות" in lagp.evaluate("document.querySelector('#lag').getAttribute('aria-label')"))
+    check("...a caution pill: not green", lagp.evaluate("""() => { const p = document.createElement('div'); p.style.cssText = 'background:var(--warn-bg);color:var(--warn-fg)'; document.body.appendChild(p);
+          const a = getComputedStyle(p), b = getComputedStyle(document.querySelector('#lag')); const ok = a.backgroundColor === b.backgroundColor && a.color === b.color; p.remove(); return ok; }"""))
     state["lag"] = 10
     check("floating window: 10 seconds is not worth a warning", poll()[0] is False)
     state["lag"] = 11
