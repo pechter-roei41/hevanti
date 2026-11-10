@@ -17,7 +17,8 @@ Israeli university students, mostly on an ordinary laptop (no discrete GPU assum
 Hevanti (הבנתי) is a lecture companion. It transcribes lectures on the student's computer in Hebrew or English and saves a picture of every new slide or board. Two things sit at the core:
 
 - A small always-on-top floating window (Ctrl+Alt+Q), also over a full-screen lecture: type a question and get an answer based on the last minutes of the lecture and the slide on screen.
-- One-click marks (star = important, ? = didn't understand; Ctrl+Alt+M) that mark the moment without stopping to listen, then list every mark with what was said just before it.
+- One-click marks (★ only, since 2.13; Ctrl+Alt+M) that mark the moment without stopping to listen, then list every mark with what was said just before it. "?" marks from older lectures are still read and shown.
+- Three "what did I miss" buttons (3, 7, 15 minutes) in the floating window, and answers that cite the time of the transcript line they rely on (a link only when the page can open that line).
 
 Success is measured by study time saved, number of users, and being a project worth showing.
 

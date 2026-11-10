@@ -1,13 +1,13 @@
 # Hevanti (הבנתי)
 
-**Ask during the lecture, mark what you didn't understand.** An open-source lecture companion for students on Windows.
+**Ask during the lecture, mark the moments that matter.** An open-source lecture companion for students on Windows.
 
 > **Beta.** Hevanti is still being tested, and things may change or break. If something does not work, use "Report a problem" at the bottom of the home screen (or open an [issue](https://github.com/pechter-roei41/hevanti/issues)).
 
 Hevanti writes down everything said in the lecture, in Hebrew or English, while it runs on your computer. Its core is two things:
 
-- **The floating window.** A small button with the Hevanti logo sits at the edge of the screen (or press Ctrl+Alt+Q). It opens a small always-on-top window, also over a full-screen lecture: type a question, press Enter, and the answer is written under it, based on what the lecturer said in the last minutes and the slide on the screen. Formulas are drawn with KaTeX.
-- **The marks.** One click on ★ ("important") or ? ("didn't understand"), also Ctrl+Alt+M, marks the moment without stopping to listen. After the lecture, the "my marks" tab of the lecture and of the course lists every mark with what was said just before it, jumps to that moment in the transcript, and can ask an AI to explain them all.
+- **The floating window.** A small button with the Hevanti logo sits at the edge of the screen (or press Ctrl+Alt+Q). It opens a small always-on-top window, also over a full-screen lecture: type a question, press Enter, and the answer is written under it, based on what the lecturer said in the last minutes and the slide on the screen. Three "what did I miss" buttons (3, 7 or 15 minutes) ask for a summary of the last minutes in one click, and an answer shows the time of the transcript line it relies on (⏱ 00:20:44; in a saved lecture or the player a click jumps there). Formulas are drawn with KaTeX.
+- **The marks.** One click on ★, also Ctrl+Alt+M, marks the moment without stopping to listen (older lectures may still show "?" marks from before 2.13; they are kept). After the lecture, the "my marks" tab of the lecture and of the course lists every mark with what was said just before it, opens the lecture 8 seconds before the mark, and can ask an AI to explain them all.
 
 Everything else supports these two.
 
