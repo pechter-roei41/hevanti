@@ -113,6 +113,18 @@ with sync_playwright() as p:
       return out; }""")
     check("sources: a time that was sent is a button, a made-up time is only text", r["buttons"] == ["⏱ 00:20:44", "⏱ 01:05"] and r["plain"] == ["⏱ 00:99:99"], r)
     check("sources: a click goes to that line of the transcript", r["went"] == ["00:20:44"], r)
+    for theme in ("light", "dark"):
+        pg.evaluate(f"document.documentElement.dataset.theme = '{theme}'")
+        st = pg.evaluate("""() => { const t = document.querySelector('.askp, body'); const css = n => { const e = document.createElement('div'); e.className = 'askp'; document.body.appendChild(e);
+              BZMAsk.render(document, e, '[00:20:44] [00:99:99]', {go: () => {}, known: new Set(['00:20:44'])}); const b = e.querySelector('button.src'), x = e.querySelector('span.src');
+              const f = el => { const c = getComputedStyle(el); return {u: c.textDecorationLine, color: c.color, bg: c.backgroundColor, border: c.borderTopWidth, font: c.fontFamily.toLowerCase()}; };
+              const out = {b: f(b), x: f(x), muted: getComputedStyle(document.documentElement).getPropertyValue('--muted').trim(), accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()};
+              const probe = c => { const i = document.createElement('i'); i.style.color = c; document.body.appendChild(i); const v = getComputedStyle(i).color; i.remove(); return v; };
+              out.mutedRgb = probe(out.muted); out.accentRgb = probe(out.accent); e.remove(); return out; }; return css(); }""")
+        check(f"sources, {theme}: a time that can be opened looks like a link (underlined, green), and one that cannot is plain muted text",
+              "underline" in st["b"]["u"] and st["b"]["color"] == st["accentRgb"] and st["x"]["u"] == "none" and st["x"]["color"] == st["mutedRgb"]
+              and st["x"]["bg"] == "rgba(0, 0, 0, 0)" and st["x"]["border"] == "0px" and "underline" not in st["x"]["u"], st)
+    pg.evaluate("document.documentElement.dataset.theme = ''")
     check("sources: a page that cannot open the transcript (the floating window): chips, not buttons", r["noGo"][0] == 0 and r["noGo"][1] == 1, r)
 
     # ---- the course of the lecture about to start: guessed, selected, with the reason; until the student chooses ----

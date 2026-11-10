@@ -55,9 +55,10 @@
 .askp .qa .q{justify-self:start;max-width:88%;margin:0;padding:7px 13px;border-radius:16px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:calc(14.5px * var(--tx, 1));line-height:1.5}
 .askp .qa .a{justify-self:end;max-width:96%;padding:8px 13px;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
 .askp .qa.err .a{border-color:var(--rec)}
-.askp .src{display:inline-block;border:1px solid var(--line);background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:0 8px;margin-inline:2px;font:inherit;font-size:.82em;line-height:1.5;direction:ltr;unicode-bidi:isolate;white-space:nowrap}
-.askp button.src{cursor:pointer;border-color:var(--accent)}
-.askp button.src:hover{background:var(--accent);color:var(--accent-ink)}
+.askp .src{display:inline;border:0;background:none;padding:0;margin-inline:2px;font-family:var(--f-mono,Consolas,"Cascadia Mono",ui-monospace,monospace);font-size:.85em;color:var(--muted);direction:ltr;unicode-bidi:isolate;white-space:nowrap}
+.askp button.src{cursor:pointer;color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:3px;border-radius:4px}   /* a time that can be opened looks like a link; one that cannot is only text */
+.askp button.src:hover{background:var(--accent-soft)}
+.askp button.src:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .askp .mx{display:inline-block;direction:ltr;unicode-bidi:isolate;vertical-align:middle}
 .askp .mx.d{display:block;text-align:center;margin:4px 0;overflow-x:auto}
 .askp math{font-size:1.12em}

@@ -54,6 +54,9 @@ PAIRS = [
     ("placeholder (ink-muted) on a sheet", "ink-muted", "sheet", "night-muted", "night-sheet", TEXT),
     ("placeholder (ink-muted) on sunk paper", "ink-muted", "sunk-paper", "night-muted", "night-sunk", TEXT),
     ("ghost button (green text) on the caution bar", "board-green", "css:--warn-bg", "night-green", "cssdark:--warn-bg", TEXT),
+    ("transcript timestamp (ink-muted, mono) on the highlighted line (the one opened from a mark or a search)", "ink-muted", "css:--now", "night-muted", "cssdark:--now", TEXT),
+    ("a time that can be opened (green link) on paper, where answers are", "board-green", "paper", "night-green", "night-paper", TEXT),
+    ("a time that can be opened (green link), hovered, on the soft green", "board-green", "board-green-soft", "night-green", "night-green-soft", TEXT),
     ("caution text on the caution bar", "css:--warn-fg", "css:--warn-bg", "cssdark:--warn-fg", "cssdark:--warn-bg", TEXT),
 ]
 for what, lf, lb, df, db, need in PAIRS:
