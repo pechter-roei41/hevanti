@@ -40,6 +40,8 @@ jobs:
         run: python tools/test_settings.py
       - name: The connection to Gemini - every error Google gives, a stream that stops, is cut or is slow, at most two models for a live question
         run: python tools/test_gemini.py
+      - name: Colours - the pages use the tokens of DESIGN.md, and every colour pair keeps its contrast (computed)
+        run: python tools/test_contrast.py
       - name: The AI connector
         run: python tools/test_mcp.py
       - name: The AI of each course

@@ -321,6 +321,9 @@ with sync_playwright() as p:
     pg.wait_for_function("document.querySelector('#keyBar') && !document.querySelector('#keyBar').hidden", timeout=8000)
     check("no key: a bar above the cards says so, with a button to paste the key",
           "חסר מפתח Gemini" in pg.inner_text("#keyBar") and pg.inner_text("#keyBarGo") == "הדבקת מפתח", pg.inner_text("#keyBar"))
+    check("...its button is a ghost button, not a solid green one (the home page already has the one green action: the lecture card)",
+          pg.evaluate("""() => { const b = getComputedStyle(document.querySelector('#keyBarGo')), g = getComputedStyle(document.querySelector('.start[data-start=he]'));
+              return b.backgroundColor === 'rgba(0, 0, 0, 0)' && b.backgroundColor !== g.backgroundColor; }"""))
     check("...it is above the cards that start a lecture", pg.evaluate("document.querySelector('#keyBar').getBoundingClientRect().bottom <= document.querySelector('.starts').getBoundingClientRect().top"))
     check("...in the caution colours (the page's own caution paper), over the whole width",
           pg.evaluate("""() => { const p = document.createElement('div'); p.style.cssText = 'background:var(--warn-bg);color:var(--warn-fg)'; document.body.appendChild(p);
