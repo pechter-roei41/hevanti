@@ -5227,6 +5227,17 @@ def missed_question(minutes):
             "מה היה על השקף או הלוח, ומה חשוב שאבין כדי להמשיך לעקוב עכשיו. קצר וברור, לפי הסדר - אני באמצע ההרצאה.")
 
 
+def mini_question(d):
+    """(the question, the minutes) of a question from the small window: a "what I missed" button sends its minutes (3, 7, 15) and
+    gets the ready question for them; any other question is the student's own words, over the usual minutes (0)."""
+    try:
+        minutes = int(d.get("minutes") or 0)
+    except (TypeError, ValueError):
+        minutes = 0
+    minutes = min(minutes, 30) if minutes > 0 else 0
+    return (missed_question(minutes) if minutes else str(d.get("question") or "")), minutes
+
+
 def _earlier_slides_text(pairs, minutes=ASK_MINUTES):
     """pairs: [(time label, slide text)] of the slides shown BEFORE the minutes that are sent, oldest first. The newest 12
     that have text, at most ~8000 characters: the lecturer often builds on something shown earlier without saying so."""
@@ -8247,6 +8258,10 @@ def _app_handler():
                     return self._json(out)
                 if p == "/api/ask":   # the built-in tutor (a whole lecture can be sent with a task: a bigger body)
                     return self._ask(self._body_json(limit=8 << 20))
+                if p == "/api/mini_context":   # the small window: the text to COPY to another AI app - the question with the last minutes. Sends nothing.
+                    d = self._body_json()
+                    question, minutes = mini_question(d)
+                    return self._json({"context": mini_context(question, minutes or ASK_MINUTES)})
                 d = self._body_json()  # always read it: the connection is reused
                 if p == "/api/place":
                     rec, live = APP.rec, APP.live
@@ -8273,12 +8288,7 @@ def _app_handler():
             reader = math_reader()
             try:
                 if d.get("where") == "mini":   # the small window: the server knows what was said
-                    try:   # "what I missed" (3 / 7 / 15 minutes): a ready question over more minutes than the usual 5
-                        minutes = int(d.get("minutes") or 0)
-                    except (TypeError, ValueError):
-                        minutes = 0
-                    minutes = min(minutes, 30) if minutes > 0 else 0
-                    question = missed_question(minutes) if minutes else str(d.get("question") or "")
+                    question, minutes = mini_question(d)   # ("what I missed" - 3 / 7 / 15 minutes: a ready question over more minutes than the usual 5)
                     if APP.live is None and APP.rec is not None:   # a recording: the place the player reports
                         d = dict(d, context=mini_context(question, minutes or ASK_MINUTES), where="rec", question=question,
                                  n=_rec_shot_before(APP.rec, float(APP.rec.pos or 0.0)))

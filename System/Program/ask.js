@@ -194,7 +194,7 @@
       const st = doc.createElement("style"); st.id = "askp-css"; st.textContent = css; doc.head.appendChild(st);
     }
   }
-  // opts: context(question) -> the text for an AI site; toast(text); hasImage() -> true when there is a
+  // opts: copyContext(question, minutes) -> the text to copy, when it is not context(question) (the small window); context(question) -> the text for an AI site; toast(text); hasImage() -> true when there is a
   //       screenshot/slide the person may want to add; win: the window the box lives in (the floating window);
   //       onSource(label) -> open the transcript at the line with that time label (the sources in an answer)
   function mount(box, opts) {
@@ -343,7 +343,12 @@
     }
     async function sendQ0(a, q, extra) {
       let text = "";
-      try { text = extra && extra.context ? await extra.context() : await opts.context(q); } catch (e) { text = q; }   // (may read the slides' text first)
+      // (may read the slides' text first). The small window does not keep the lecture: copyContext asks Hevanti for the question
+      // with the last minutes - the same text the lecture page copies. Nothing is sent anywhere; it is only copied.
+      try {
+        text = extra && extra.context ? await extra.context()
+          : opts.copyContext ? await opts.copyContext(q, extra && extra.minutes || 0) : await opts.context(q);
+      } catch (e) { text = q; }
       const ok = await copyText(text, opts.win);
       if (!ok) { opts.toast("לא הצלחתי להעתיק. לנסות שוב."); return false; }
       setLast(a.id); refresh();

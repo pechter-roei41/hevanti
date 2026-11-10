@@ -107,7 +107,16 @@ async function mark() {
 $("#markImp").addEventListener("click", () => mark());
 let box = null;
 if (window.BZMAsk) box = BZMAsk.mount($("#box"), {compact: true, title: "שאלה", placeholder: "מה לא ברור? (Enter לשליחה)",
-  context: q => q, toast, hasImage: () => !!shot, image: () => shot, where: () => "mini",
+  context: q => q,   // (for "answer here" Hevanti builds the context itself)
+  // what is copied to ChatGPT / Gemini / Claude: the question with the last minutes of the lecture, built by Hevanti like the page's own
+  copyContext: async (q, minutes) => {   // (when Hevanti cannot answer, this throws and the bare question is copied: a copy never fails for that)
+    const r = await fetch("/api/mini_context", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
+      body: JSON.stringify({question: q, minutes: minutes || 0}), signal: AbortSignal.timeout(8000)});
+    const d = await r.json();
+    if (!r.ok || typeof d.context !== "string" || !d.context) throw new Error("no context");
+    return d.context;
+  },
+  toast, hasImage: () => !!shot, image: () => shot, where: () => "mini",
   at: () => new Date().toLocaleTimeString("he-IL")});
 // "what I missed": a ready question about the last 3 / 7 / 15 minutes (Hevanti sends them with it; see missed_question)
 for (const b of document.querySelectorAll("#miss button")) b.addEventListener("click", () => {

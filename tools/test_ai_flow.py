@@ -148,6 +148,17 @@ def post(payload, timeout=30):
         return e.code, e.read().decode("utf-8")
 
 
+def post_ctx(payload):
+    """The small window asks for the text to COPY to another AI app: the question with the last minutes. Nothing is sent to Google."""
+    req = urllib.request.Request(srv.url + "api/mini_context", method="POST", headers={"Content-Type": "application/json", "X-BZM": "1"},
+                                 data=json.dumps(payload).encode("utf-8"))
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return r.status, json.loads(r.read().decode("utf-8")).get("context", "")
+    except urllib.error.HTTPError as e:
+        return e.code, ""
+
+
 def ask(question="מה זה מומנט?", **kw):
     return post(dict({"context": question, "question": question}, **kw))
 
@@ -279,6 +290,21 @@ code, body = post({"where": "mini", "question": "מה אמר?"})
 check("the floating window with no lecture running: still answered, and Gemini is told there is no lecture",
       code == 200 and asked() and "אין עכשיו הרצאה פעילה" in user_text(asked()[0]), (code, body))
 
+code, c = post_ctx({"question": "מה אמר?"})
+check("copy to another AI with no lecture: the question, and a line saying there is no lecture",
+      code == 200 and "אין עכשיו הרצאה פעילה" in c and c.endswith("השאלה שלי: מה אמר?"), (code, c))
+check("...it is the same text 'answer here' sends from the floating window", c == user_text(asked()[0]), (c, user_text(asked()[0])))
+n_before = len(asked())
+post_ctx({"question": "עוד שאלה"})
+check("...and copying sends nothing to Gemini", len(asked()) == n_before, (len(asked()), n_before))
+req = urllib.request.Request(srv.url + "api/mini_context", method="POST", data=b"{}", headers={"Content-Type": "application/json"})
+try:
+    urllib.request.urlopen(req, timeout=10)
+    refused = False
+except urllib.error.HTTPError as e:
+    refused = e.code == 403
+check("...a request without the page's header is refused (another website cannot read the lecture through it)", refused)
+
 # ---------------------------------------------------------------------------------- 8. a lecture in progress: from sound to answer
 SR = 16000
 rng = np.random.default_rng(7)
@@ -377,6 +403,21 @@ live_dir = os.path.dirname(sess.transcript)
 qa_live = os.path.join(live_dir, L.QA_NAME)
 check("...and the question and answer are kept in the folder of the lecture that is running",
       os.path.isfile(qa_live) and "מה הוא אמר עכשיו?" in open(qa_live, encoding="utf-8").read(), os.listdir(live_dir))
+
+n_asked = len(asked())
+code, cx = post_ctx({"question": "מה הוא אמר עכשיו?"})
+check("copy to another AI during a lecture: the question WITH the last 5 minutes of the transcript",
+      code == 200 and "המרצה הסביר משפט מספר 1" in cx and "5 הדקות האחרונות" in cx and cx.endswith("השאלה שלי: מה הוא אמר עכשיו?"), cx[:300])
+check("...the lines Gemini got from the floating window are in the copied text too (the same context)",
+      all(l in cx for l in user_text(sent).splitlines() if l.startswith("[") and "המרצה הסביר" in l) and "המרצה הסביר" in user_text(sent), cx[:300])
+check("...copying sends nothing to Gemini", len(asked()) == n_asked, (len(asked()), n_asked))
+code, cx7 = post_ctx({"question": "ignored", "minutes": 7})
+check("'what I missed' (7 minutes) copied: 7 minutes, the ready question, the words",
+      code == 200 and "7 הדקות האחרונות" in cx7 and cx7.endswith("השאלה שלי: " + L.missed_question(7)) and "המרצה הסביר משפט מספר 1" in cx7, cx7[:300])
+code, cxb = post_ctx({"question": "q", "minutes": "abc"})
+check("minutes that are not a number: the usual 5", code == 200 and "5 הדקות האחרונות" in cxb and cxb.endswith("השאלה שלי: q"), cxb[:200])
+code, cxm = post_ctx({"question": "q", "minutes": 900})
+check("too many minutes: 30 at most", code == 200 and "30 הדקות האחרונות" in cxm, cxm[:200])
 
 del LOG[:]
 code, body = post({"where": "mini", "minutes": 7, "question": "ignored"})

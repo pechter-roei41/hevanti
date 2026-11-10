@@ -197,25 +197,112 @@ with sync_playwright() as p:
     check("the ask box: no script errors", pg.errs == [], pg.errs)
 
     # ---------------------------------------------------------------- the floating window
+    # It does not keep the lecture: what is copied to ChatGPT / Gemini / Claude is asked from Hevanti (/api/mini_context) - the
+    # question with the last minutes, the same text the lecture page copies. (The text itself is tested in test_ai_flow.py; here
+    # the page's side: what it asks for, and what lands in the clipboard.)
+    mini_state = {"ask": True, "ctx": "ok"}
+    ctx_asked = []
+
+    def mini_app(route):   # (the window follows what Hevanti says: a lecture is running, and "answer here" is on or off)
+        resp = route.fetch()
+        d = resp.json()
+        d["session"] = {"kind": "live", "done": False, "course": "פיזיקה"}
+        d["math"] = dict(d.get("math") or {}, ask=mini_state["ask"])
+        route.fulfill(response=resp, body=json.dumps(d))
+
+    def mini_ctx(route):
+        body = json.loads(route.request.post_data or "{}")
+        ctx_asked.append(body)
+        if mini_state["ctx"] == "down":
+            return route.fulfill(status=500, content_type="application/json", body="{}")
+        route.fulfill(status=200, content_type="application/json", body=json.dumps(
+            {"context": f"הקשר מההרצאה ({body.get('minutes') or 5} דקות): [00:01:02] המרצה אמר שהנגזרת היא קצב שינוי\nהשאלה שלי: {body.get('question')}"}))
+
     reset()
     MODE["stream"] = "quota-min"
-    mini = page("/mini")
+    mini = ctx.new_page()
+    mini.errs, mini.cmds, mini.asks = [], [], []
+    mini.on("pageerror", lambda e: mini.errs.append(str(e)))
+    mini.on("request", lambda r: mini.cmds.append(r.post_data) if r.url.endswith("/api/cmd") and r.post_data else None)
+    mini.on("request", lambda r: mini.asks.append(r.url) if r.url.endswith("/api/ask") else None)
+    mini.route("**/api/app*", mini_app)
+    mini.route("**/api/mini_context", mini_ctx)
+    mini.goto(url + "/mini")
+    mini.evaluate("localStorage.removeItem('bzm.ai')")
     mini.wait_for_selector("textarea")
     mini.wait_for_function("[...document.querySelectorAll('.ais button')].some(b => !b.hidden && b.textContent === 'תשובה כאן')", timeout=8000)
+
+    def last_alt():
+        return "[...document.querySelectorAll('.alt-box')].pop()"
+
+    # a typed question; the quota is used up; the student goes on in ChatGPT
     mini.fill("textarea", "שאלה מהחלון הצף")
     mini.press("textarea", "Enter")
     mini.wait_for_selector(".alt-box", timeout=15000)
     check("floating window: the quota is used up - it offers the AI apps too",
-          mini.evaluate("[...document.querySelectorAll('.alt-box .ais button')].map(b => b.textContent)") == ["ChatGPT", "Gemini", "Claude"])
+          mini.evaluate(f"[...{last_alt()}.querySelectorAll('.ais button')].map(b => b.textContent)") == ["ChatGPT", "Gemini", "Claude"])
     with mini.expect_popup() as pop:
         mini.click(".alt-box .ais button:has-text('ChatGPT')")
     pop.value.close()
     mini.wait_for_timeout(1200)
     copied = mini.evaluate("navigator.clipboard.readText()")
-    print("   (copied from the floating window:", repr(copied), ")")
-    check("floating window: the question is copied", "שאלה מהחלון הצף" in copied, copied)
+    check("floating window: the copy asks Hevanti for the question with the last minutes (the question, over the usual minutes)",
+          ctx_asked and ctx_asked[-1] == {"question": "שאלה מהחלון הצף", "minutes": 0}, ctx_asked)
+    check("floating window: what is copied is the question WITH the lecture's last minutes, not the bare question",
+          "[00:01:02] המרצה אמר שהנגזרת היא קצב שינוי" in copied and copied.endswith("השאלה שלי: שאלה מהחלון הצף"), copied)
     check("floating window: it goes away so the AI's window is not opened behind it",
           any('"hide_mini"' in (c or "") for c in mini.cmds), mini.cmds)
+
+    # "what I missed" (7 minutes), the quota again: the copy has those minutes
+    reset()
+    del ctx_asked[:]
+    mini.wait_for_selector("#miss button[data-m='7']", state="visible", timeout=10000)
+    mini.click("#miss button[data-m='7']")
+    mini.wait_for_function("document.querySelectorAll('.alt-box').length >= 2", timeout=15000)
+    with mini.expect_popup() as pop:
+        mini.evaluate(f"{last_alt()}.querySelector('.ais button:nth-child(2)').click()")
+    pop.value.close()
+    mini.wait_for_timeout(1200)
+    copied = mini.evaluate("navigator.clipboard.readText()")
+    check("floating window: 'what I missed' (7): the copy asks for those 7 minutes", ctx_asked and ctx_asked[-1].get("minutes") == 7, ctx_asked)
+    check("floating window: ...and what is copied is that text", copied.startswith("הקשר מההרצאה (7 דקות)") and "[00:01:02]" in copied, copied)
+
+    # no key: the copy buttons are the way, and they carry the minutes too
+    mini_state["ask"] = False
+    del ctx_asked[:]
+    mini.evaluate("pollApp()")
+    mini.wait_for_selector("button[data-ai=claude]", state="visible", timeout=10000)
+    mini.fill("textarea", "מה זה אינטגרל?")
+    asks_before = len(mini.asks)
+    with mini.expect_popup() as pop:
+        mini.click("button[data-ai=claude]")
+    pop.value.close()
+    mini.wait_for_timeout(1200)
+    copied = mini.evaluate("navigator.clipboard.readText()")
+    check("floating window without a key: the copy button also copies the question with the last minutes",
+          "[00:01:02]" in copied and copied.endswith("השאלה שלי: מה זה אינטגרל?") and ctx_asked[-1] == {"question": "מה זה אינטגרל?", "minutes": 0}, (copied, ctx_asked))
+    check("floating window: copying sends nothing to Gemini or anywhere (no /api/ask for the copy buttons)", len(mini.asks) == asks_before, mini.asks)
+
+    # the same, with nothing made up: the window talks to the real Hevanti (the address, the page's header, the shape of the answer)
+    mini.unroute("**/api/mini_context")
+    mini.fill("textarea", "שאלה אמיתית")
+    with mini.expect_popup() as pop:
+        mini.click("button[data-ai=claude]")
+    pop.value.close()
+    mini.wait_for_timeout(1200)
+    copied = mini.evaluate("navigator.clipboard.readText()")
+    check("floating window, the real Hevanti: the copy is Hevanti's text (the hint, the question) and not the bare question",
+          copied.endswith("השאלה שלי: שאלה אמיתית") and "לענות בעברית" in copied and copied != "שאלה אמיתית", copied)
+    mini.route("**/api/mini_context", mini_ctx)
+
+    # Hevanti cannot give the context: the question is still copied (a copy never fails for that)
+    mini_state["ctx"] = "down"
+    mini.fill("textarea", "שאלה בלי הקשר")
+    with mini.expect_popup() as pop:
+        mini.click("button[data-ai=gemini]")
+    pop.value.close()
+    mini.wait_for_timeout(1200)
+    check("floating window: if the context cannot be had, the bare question is still copied", mini.evaluate("navigator.clipboard.readText()") == "שאלה בלי הקשר")
     check("floating window: no script errors", mini.errs == [], mini.errs)
 
     b.close()
