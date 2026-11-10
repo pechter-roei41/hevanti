@@ -36,6 +36,8 @@ jobs:
       - name: The page offers the student's own AI apps when the quota is used up (browser, made-up Gemini)
         if: runner.os == 'Windows'
         run: python tools/test_ai_flow_ui.py
+      - name: Saving the settings and the key - whole or not at all, a damaged file, two threads at once, no key without encryption
+        run: python tools/test_settings.py
       - name: The AI connector
         run: python tools/test_mcp.py
       - name: The AI of each course

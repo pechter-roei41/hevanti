@@ -2011,16 +2011,29 @@ def _dpapi(data, protect):
         k32.LocalFree(ctypes.cast(out.pbData, ctypes.c_void_p))
 
 
+DPAPI_REQUIRED = os.name == "nt"   # Hevanti is for Windows. (Elsewhere - tests, development - there is no DPAPI, and the key stays plain.)
+
+
+class SecretError(Exception):
+    """The key could not be encrypted: it is not saved."""
+
+
+SECRET_ERROR = "לא הצלחתי להצפין את המפתח. לנסות שוב, ואם זה חוזר: \"דיווח על תקלה\" בתחתית מסך הבית."
+
+
 def keep_secret(s):
+    """The text to save for a secret (the Gemini key): encrypted for this Windows user. When the encryption fails the key is
+    NOT saved - SecretError, never a quiet fall back to plain text (the guide and the README say the key is encrypted)."""
     import base64
     s = str(s or "").strip()
     if not s:
         return ""
-    if os.name == "nt":
+    if DPAPI_REQUIRED:
         try:
             return "dpapi:" + base64.b64encode(_dpapi(s.encode("utf-8"), True)).decode("ascii")
         except Exception:
             save_error("keep secret")
+            raise SecretError(SECRET_ERROR)
     return "plain:" + s
 
 
@@ -2423,6 +2436,10 @@ def math_set(d):
     s = dict(math_settings())
     if "key" in d:
         key = str(d.get("key") or "").strip()
+        try:
+            secret = keep_secret(key)   # first: a key that cannot be kept encrypted is not even sent to Google
+        except SecretError as e:
+            return {"ok": False, "error": str(e)}
         if key:
             try:
                 model = math_reader().probe(key)   # checks the key, and which models answer now
@@ -2432,7 +2449,7 @@ def math_set(d):
                 return {"ok": False, "error": "המפתח תקין, אבל כרגע אף מודל של Gemini לא עונה (עומס). לנסות שוב עוד כמה דקות."}
             with math_reader().lock:
                 math_reader().error = ""
-        s["key"] = keep_secret(key)
+        s["key"] = secret
         if not key:
             s.pop("on", None)   # (a new key later starts with the default: on)
         elif "on" not in s and "on" not in d:
@@ -5512,30 +5529,107 @@ def lecture_summary(f):
         return ""
 
 
+_SETTINGS_LOCK = threading.RLock()   # one reader-changer-writer at a time (the page, the slide reader and the hotkeys all save settings)
+
+
+def _read_settings():
+    """The settings as a dict ({} when there is no file yet), or None when the file is there but cannot be read right now
+    (Windows: another program - a virus scanner, a sync tool - holds it for a moment). A damaged file: see _settings_damaged."""
+    for _ in range(4):
+        try:
+            with open(SETTINGS_FILE, encoding="utf-8") as f:
+                d = json.load(f)
+            return d if isinstance(d, dict) else {}
+        except FileNotFoundError:
+            return {}
+        except ValueError:
+            return _settings_damaged()
+        except OSError:
+            time.sleep(0.05)
+    return None
+
+
 def load_settings():
+    d = _read_settings()
+    return d if d is not None else {}
+
+
+def _settings_damaged():
+    import shutil
+    with _SETTINGS_LOCK:
+        try:   # (another thread may have put a good file back meanwhile)
+            with open(SETTINGS_FILE, encoding="utf-8") as f:
+                d = json.load(f)
+            return d if isinstance(d, dict) else {}
+        except (OSError, ValueError):
+            pass
+        try:
+            shutil.copy2(SETTINGS_FILE, SETTINGS_FILE + ".corrupt")
+        except OSError:
+            pass
+        try:
+            with open(SETTINGS_FILE + ".bak", encoding="utf-8") as f:
+                d = json.load(f)
+            if not isinstance(d, dict):
+                raise ValueError("not a dict")
+        except (OSError, ValueError):
+            d = {}
+        save_error_text("settings damaged", f"{SETTINGS_FILE} could not be read; a copy is in settings.json.corrupt; "
+                        + ("the last good copy was restored." if d else "there is no good copy: settings start empty."))
+        log("קובץ ההגדרות היה פגום. " + ("שחזרתי את ההעתק האחרון התקין." if d else "אין העתק תקין, ולכן ההגדרות התחילו מחדש (גם המפתח).")
+            + " הקובץ הפגום נשמר ליד, בשם settings.json.corrupt.")
+        if d:
+            try:
+                _write_settings(d)
+            except OSError:
+                pass
+        return d
+
+
+def _write_settings(d):
+    """A temporary file, then one replace: a crash in the middle leaves the old file whole. The last good file is kept as .bak."""
+    import shutil
+    os.makedirs(LOCAL_DIR, exist_ok=True)
+    tmp = SETTINGS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(d, f, ensure_ascii=False)
+        f.flush()
+        os.fsync(f.fileno())
     try:
-        with open(SETTINGS_FILE, encoding="utf-8") as f:
-            d = json.load(f)
-        return d if isinstance(d, dict) else {}
-    except (OSError, ValueError):
-        return {}
+        shutil.copy2(SETTINGS_FILE, SETTINGS_FILE + ".bak")   # (the file as it was: it was read as good just before)
+    except OSError:
+        pass
+    for i in range(5):   # (Windows: the file may be open in another program for a moment)
+        try:
+            os.replace(tmp, SETTINGS_FILE)
+            return
+        except PermissionError:
+            if i == 4:
+                raise
+            time.sleep(0.05)
+
+
+def save_settings(**kw):
+    """Read, change and write under one lock. Returns False (and writes to error_log.txt) when it could not be saved.
+    A file that exists but cannot be read is never overwritten from an empty start: nothing is saved then."""
+    with _SETTINGS_LOCK:
+        d = _read_settings()
+        if d is None:
+            save_error_text("save settings", f"{SETTINGS_FILE} could not be read, so nothing was saved: {sorted(kw)}")
+            return False
+        d.update(kw)
+        try:
+            _write_settings(d)
+            return True
+        except OSError:
+            save_error("save settings")
+            return False
 
 
 def ui_theme():
     """"light", "dark", or "" (follow Windows) - the button in the app's top bar."""
     t = load_settings().get("theme")
     return t if t in ("light", "dark") else ""
-
-
-def save_settings(**kw):
-    d = load_settings()
-    d.update(kw)
-    try:
-        os.makedirs(LOCAL_DIR, exist_ok=True)
-        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-            json.dump(d, f, ensure_ascii=False)
-    except OSError:
-        pass
 
 
 OLD_LIVE_STEM = re.compile(r"(\d{4}-\d\d-\d\d)_(\d\d-\d\d)(_en)?")
