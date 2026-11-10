@@ -85,6 +85,37 @@ with sync_playwright() as p:
     check("marks tab: ...and from a few seconds BEFORE the mark (a mark is made after the lecturer said it)",
           pg.evaluate("[MARK_LEAD_S, document.querySelector('#pastLines li.hit')._x.t]") == [8, 10], pg.evaluate("document.querySelector('#pastLines li.hit')._x.t"))
     check("marks tab: no script errors", pg.errs == [], pg.errs)
+    # a marked moment: the highlighter band over the line said before the mark and over the mark row, a ★ and "מסומנת" for the screen reader
+    MARKED = """() => { const probe = document.createElement('i'); probe.style.background = 'var(--mark-line)'; probe.style.color = 'var(--fg)'; document.body.appendChild(probe);
+        const band = getComputedStyle(probe).backgroundColor, ink = getComputedStyle(probe).color; probe.remove();
+        const rows = [...document.querySelectorAll('#pastLines li.mark')];
+        return {band, rows: rows.map(r => { const p = r.previousElementSibling, b = getComputedStyle(r), pb = p && getComputedStyle(p), ts = p && p.querySelector('.ts');
+          return {row: b.backgroundColor === band, text: r.textContent, prevMarked: !!p && p.classList.contains('marked'), prevBand: !!p && pb.backgroundColor === band,
+                  star: p ? (p.querySelector('.mstar') || {}).textContent : null, starHidden: p && p.querySelector('.mstar') ? p.querySelector('.mstar').getAttribute('aria-hidden') : null,
+                  sr: p ? (p.querySelector('.sr-only') || {}).textContent : null, tsInk: !!ts && getComputedStyle(ts).color === ink, prevText: p ? p.textContent : ''}; }),
+          plain: [...document.querySelectorAll('#pastLines li:not(.marked):not(.mark):not(.note)')].filter(l => getComputedStyle(l).backgroundColor === band).length }; }"""
+    for theme, scheme in (("light", "light"), ("dark", "dark")):
+        for motion in ("no-preference", "reduce"):
+            mk = b.new_context(viewport={"width": 1100, "height": 900}, locale="he-IL", color_scheme=scheme, reduced_motion=motion).new_page()
+            mk.route("**/api/transcript*", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"entry": entry, "lines": lines, "summary": ""})))
+            mk.goto(url + "/")
+            mk.wait_for_timeout(900)
+            mk.evaluate(f"document.documentElement.dataset.theme = '{theme}'; document.querySelectorAll('.modal').forEach(m => m.hidden = true); openPast('c/t')")
+            mk.wait_for_timeout(900)
+            m = mk.evaluate(MARKED)
+            check(f"marked moments, {theme}, motion {motion}: each mark row and the line before it are one highlighter band (mark-line)",
+                  len(m["rows"]) == 2 and all(r["row"] and r["prevMarked"] and r["prevBand"] for r in m["rows"]), m)
+            check(f"...the first is an old '?' mark and the second a ★ mark: the same band, the glyph tells them apart",
+                  m["rows"][0]["star"] == "?" and m["rows"][1]["star"] == "★" and "? סימנת" in m["rows"][0]["text"] and "★ סימנת" in m["rows"][1]["text"], m["rows"])
+            check("...the ★ is hidden from the screen reader and the words 'מסומנת' are said instead (so it never relies on yellow alone)",
+                  all(r["starHidden"] == "true" and r["sr"] == "מסומנת: " for r in m["rows"]), m["rows"])
+            check("...the time on a marked line is ink (not muted), and no ordinary line has the band", all(r["tsInk"] for r in m["rows"]) and m["plain"] == 0, m)
+            if theme == "light" and motion == "no-preference":
+                mk.evaluate("document.documentElement.classList.add('a-contrast')")
+                check("...in high-contrast mode a marked line also has an outline (not colour alone)",
+                      mk.evaluate("getComputedStyle(document.querySelector('#pastLines li.mark')).outlineStyle") == "solid")
+            mk.context.close()
+
     # the course page's list of marks opens the lecture a few seconds before the mark
     pg = page()
     pg.route("**/api/marks*", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(

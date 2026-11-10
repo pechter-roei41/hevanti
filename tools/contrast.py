@@ -55,7 +55,7 @@ VAR_TO_TOKEN = {
     "--bg": ("paper", "night-paper"), "--surface": ("sheet", "night-sheet"), "--sunk": ("sunk-paper", "night-sunk"),
     "--fg": ("ink", "night-ink"), "--muted": ("ink-muted", "night-muted"), "--line": ("hairline", "night-hairline"),
     "--accent": ("board-green", "night-green"), "--accent-soft": ("board-green-soft", "night-green-soft"),
-    "--rec": ("recording-red", "night-recording"), "--warn-bg": ("caution-paper", None), "--warn-fg": ("caution-ink", None),
+    "--rec": ("recording-red", "night-recording"), "--mark-line": ("mark-line", "night-mark-line"), "--warn-bg": ("caution-paper", None), "--warn-fg": ("caution-ink", None),
 }
 
 

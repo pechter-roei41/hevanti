@@ -29,7 +29,7 @@ try { bzmTheme(localStorage.getItem("bzm.theme") || ""); } catch (e) {}</script>
 :root{
   --bg:#F6F3E9; --surface:#FFFFFF; --sunk:#ECE7D8; --fg:#17261F; --muted:#56625B; --line:#DDD7C4;
   --accent:#1B6E4B; --accent-ink:#FFFFFF; --accent-soft:#DCEBDF; --mark:#F7D44C; --rec:#C2412D; --ok:#1B6E4B; --ok-soft:#DCEBDF;
-  --warn-bg:#FBF0DA; --warn-fg:#6B5020; --now:#FBEFB5; --now-ink:#17261F;
+  --warn-bg:#FBF0DA; --warn-fg:#6B5020; --now:#FBEFB5; --now-ink:#17261F; --mark-line:#F7DD7B;
   --f-body:"Assistant","Segoe UI","Arial Hebrew",Arial,system-ui,sans-serif; --f-display:"Secular One","Assistant","Segoe UI",sans-serif;
   --f-mono:Consolas,"Cascadia Mono",ui-monospace,monospace;
   --r:14px;
@@ -37,11 +37,11 @@ try { bzmTheme(localStorage.getItem("bzm.theme") || ""); } catch (e) {}</script>
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#1C1B16; --surface:#26241D; --sunk:#2F2C23; --fg:#F1ECDF; --muted:#B5AFA0; --line:#3E3A2E;
   --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --mark:#E8C547; --rec:#FF7A63; --ok:#5BC79A; --ok-soft:#1F3A2E;
-  --warn-bg:#3A3122; --warn-fg:#EBD08E; --now:#3D3816; --now-ink:#FFF6CF; color-scheme:dark}}
+  --warn-bg:#3A3122; --warn-fg:#EBD08E; --now:#3D3816; --now-ink:#FFF6CF; --mark-line:#594E25; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#1C1B16; --surface:#26241D; --sunk:#2F2C23; --fg:#F1ECDF; --muted:#B5AFA0; --line:#3E3A2E;
   --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --mark:#E8C547; --rec:#FF7A63; --ok:#5BC79A; --ok-soft:#1F3A2E;
-  --warn-bg:#3A3122; --warn-fg:#EBD08E; --now:#3D3816; --now-ink:#FFF6CF; color-scheme:dark}
+  --warn-bg:#3A3122; --warn-fg:#EBD08E; --now:#3D3816; --now-ink:#FFF6CF; --mark-line:#594E25; color-scheme:dark}
 :root[data-theme="light"]{color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -453,7 +453,13 @@ kbd{font-family:var(--f-mono);font-size:13px;background:var(--surface);border:1p
 /* display and accessibility (2.2): chosen in the settings (gear) > accessibility, kept in this browser */
 .lines{font-size:calc(17px * var(--tx, 1))}
 .lines li.note,.lines li.gap{font-size:calc(14px * var(--tx, 1))}
-.lines li.mark{background:var(--accent-soft);font-weight:700}
+/* a moment the student marked: the line said just before the mark, and the mark row under it, are one highlighter band (mark-line). The ★ and the words "מסומנת" say it too: never yellow alone. The line opened from a mark or a search (.hit) keeps its own colour. */
+.lines li.marked,.lines li.mark{background:var(--mark-line);color:var(--fg)}
+.lines li.marked .ts,.lines li.mark .ts{color:var(--fg)}
+.lines li.mark{font-weight:600}
+.lines li.marked.hit,.lines li.mark.hit{background:var(--now);color:var(--now-ink)}
+.mstar{font-weight:800;margin-inline-end:6px}
+html.a-contrast .lines li.marked,html.a-contrast .lines li.mark{outline:2px solid var(--fg);outline-offset:-2px}
 html.a-read body{line-height:1.95;letter-spacing:.015em;word-spacing:.14em}
 html.a-read .lines li{padding-block:8px}
 html.a-read p,html.a-read .lines li span{max-width:75ch}
@@ -2362,11 +2368,28 @@ function renderLiveHead(s) {
   $("#markImp").hidden = s.done || !s.ready || !!s.yt;
   if (s.error) { $("#liveSub").textContent = "נעצר בגלל שגיאה"; }
 }
+// a marked moment: the line said just before the mark gets the highlighter band, a ★ ("?" for the old "didn't understand" marks - the same band,
+// one colour one meaning) and, for the screen reader, the words "מסומנת"
+function markPrev(li) {
+  const glyph = /\?\s*סימנת/.test(li.textContent) ? "?" : "★";
+  let p = li.previousElementSibling;
+  for (let n = 0; p && n < 8; p = p.previousElementSibling, n++) {
+    if (p.classList.contains("mark")) return;   // (that line already belongs to an earlier mark)
+    if (p._x && p._x.x && !p._x.img) {
+      if (p.classList.contains("marked")) return;
+      p.classList.add("marked");
+      const sp = p.children[1];
+      if (sp) { const st = el("span", "mstar", glyph); st.setAttribute("aria-hidden", "true"); sp.prepend(st, el("span", "sr-only", "מסומנת: ")); }
+      return;
+    }
+  }
+}
+function appendLine(parent, x) { const li = lineEl(x); parent.appendChild(li); if (li.classList.contains("mark")) markPrev(li); return li; }
 function lineEl(x) {
   const mk = markOf(x);
   if (mk) {   // a moment the student marked in the lecture
     const li = el("li", "mark"); li.appendChild(el("span", "ts", x.c));
-    li.appendChild(el("span", "", (mk === "חשוב" ? "⭐ סימנת: חשוב" : "❓ סימנת: לא הבנתי"))); li._x = x; return li;
+    li.appendChild(el("span", "", (mk === "חשוב" ? "★ סימנת: חשוב" : "? סימנת: " + mk))); li._x = x; return li;
   }
   const li = el("li", x.img ? "shot" : (x.note ? "note" : (x.gap ? "gap" : "")));
   li.appendChild(el("span", "ts", x.c));
@@ -2395,7 +2418,7 @@ async function pollLive() {
   liveLast = d;
   const box = $("#liveLines"), atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
   const draftEl = box.querySelector("li.draft"); if (draftEl) draftEl.remove();
-  for (const x of d.items) { liveItems.push(x); box.appendChild(lineEl(x)); }
+  for (const x of d.items) { liveItems.push(x); appendLine(box, x); }
   if (liveSince && d.items.length) srSay(d.items.filter(x => x.x && !markOf(x)).map(x => x.x).join(" "));
   liveSince = d.total;
   if (d.draft) { const li = el("li", "draft"); li.appendChild(el("span", "ts", "עכשיו")); const sp = el("span", "", "טיוטה: " + d.draft); sp.dir = "auto"; li.appendChild(sp); box.appendChild(li); }
@@ -2507,7 +2530,7 @@ async function openPast(f, at) {
   $("#pastSub").textContent = [e.course, e.when_in_title ? "" : e.when, langName(e.lang), e.length ? "אורך " + e.length : "", nLine(e.lines)].filter(Boolean).join(" · ");
   $("#pastPlay").hidden = !(e.kind === "rec" && e.has_media);
   const box = $("#pastLines"), frag = document.createDocumentFragment();
-  for (const x of d.lines) frag.appendChild(lineEl(x));
+  for (const x of d.lines) appendLine(frag, x);
   if (!d.lines.length) frag.appendChild(el("li", "note", "אין שורות בתמלול הזה."));
   box.replaceChildren(frag); box.scrollTop = 0;
   $("#pastTrCount").textContent = nLine(e.lines);

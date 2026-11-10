@@ -55,6 +55,8 @@ PAIRS = [
     ("placeholder (ink-muted) on sunk paper", "ink-muted", "sunk-paper", "night-muted", "night-sunk", TEXT),
     ("ghost button (green text) on the caution bar", "board-green", "css:--warn-bg", "night-green", "cssdark:--warn-bg", TEXT),
     ("transcript timestamp (ink-muted, mono) on the highlighted line (the one opened from a mark or a search)", "ink-muted", "css:--now", "night-muted", "cssdark:--now", TEXT),
+    ("text (ink) on the highlighter band of a marked transcript line (mark-line)", "ink", "mark-line", "night-ink", "night-mark-line", TEXT),
+    ("the ★ mark (ink, a graphic part) on the mark-line", "ink", "mark-line", "night-ink", "night-mark-line", GRAPHIC),
     ("a time that can be opened (green link) on paper, where answers are", "board-green", "paper", "night-green", "night-paper", TEXT),
     ("a time that can be opened (green link), hovered, on the soft green", "board-green", "board-green-soft", "night-green", "night-green-soft", TEXT),
     ("caution text on the caution bar", "css:--warn-fg", "css:--warn-bg", "cssdark:--warn-fg", "cssdark:--warn-bg", TEXT),
@@ -64,6 +66,14 @@ for what, lf, lb, df, db, need in PAIRS:
     print(f"   {what}: light {r_light:.2f}:1, dark {r_dark:.2f}:1 (needs {need}:1)")
     check(f"contrast, light: {what}", r_light >= need, f"{r_light:.2f}")
     check(f"contrast, dark: {what}", r_dark >= need, f"{r_dark:.2f}")
+
+# ---- one colour, one meaning: the mark-line is not the now-line (the line being played, or opened at a moment) ----
+check("mark-line is a colour of its own: not the now-line, in DESIGN.md and in the page (light and dark)",
+      D["mark-line"] != D["now-line"] and APP_LIGHT["--mark-line"] != APP_LIGHT["--now"] and APP_DARK["--mark-line"] != APP_DARK["--now"],
+      (D["mark-line"], D["now-line"]))
+bands = [("light", C.ratio(D["mark-line"], D["paper"]), C.ratio(D["mark-line"], D["now-line"])), ("dark", C.ratio(D["night-mark-line"], D["night-paper"]), C.ratio(D["night-mark-line"], APP_DARK["--now"]))]
+for theme, vs_paper, vs_now in bands:
+    print(f"   mark-line, {theme}: {vs_paper:.2f}:1 against the paper, {vs_now:.2f}:1 against the now-line")
 
 print()
 print("all passed" if not fails else "FAILED: " + ", ".join(fails))
