@@ -387,6 +387,21 @@ with sync_playwright() as p:
     check("a saved lecture: the line under its title does not repeat the date and time either", "10:00" not in sub and "2026-11-02" not in sub and "שורה אחת" in sub, sub)
     check("2.18 page: no script errors", pg.errs == [], pg.errs)
 
+    # ---- 2.19, stage 1: the placeholder of every field is ink-muted (not the browser's grey) ----
+    PH = """() => { const out = []; for (const tag of ['input', 'textarea']) { const e = document.createElement(tag); if (tag === 'input') e.type = 'search'; e.placeholder = 'x';
+          document.body.appendChild(e); const c = getComputedStyle(e, '::placeholder'); const m = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim();
+          const probe = document.createElement('i'); probe.style.color = m; document.body.appendChild(probe);
+          out.push([c.color === getComputedStyle(probe).color, c.opacity]); e.remove(); probe.remove(); } return out; }"""
+    for page_name, path in (("app", "/"), ("floating window", "/mini"), ("player", "/player")):
+        for theme in ("light", "dark"):
+            ph = b.new_context(viewport={"width": 900, "height": 700}, locale="he-IL", color_scheme=theme).new_page()
+            ph.goto(url + path)
+            ph.evaluate(f"document.documentElement.dataset.theme = '{theme}'")
+            ph.wait_for_timeout(300)
+            r = ph.evaluate(PH)
+            check(f"placeholder, {page_name}, {theme}: ink-muted at full strength (a text box and a search box)", r == [[True, "1"], [True, "1"]], r)
+            ph.context.close()
+
     # ---- the transcript is behind: the floating window says so, in seconds, over 10 ----
     lagp = b.new_context(viewport={"width": 420, "height": 760}, locale="he-IL").new_page()
     lag_errs = []

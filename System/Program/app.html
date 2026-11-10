@@ -388,6 +388,8 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 .cfiles{margin-top:16px;display:grid;gap:12px}
 /* an empty box starts right-to-left (caret and placeholder on the right); once text is typed, dir="auto" follows the language typed */
 textarea:placeholder-shown,input:not([dir="ltr"]):not([type=password]):not([type=checkbox]):not([type=radio]):placeholder-shown{direction:rtl;text-align:right}
+/* the placeholder is ink-muted (DESIGN.md), never the browser's own grey (#757575: 3.74:1 on the dark paper): 5.74:1 by day, 7.89:1 at night on paper */
+::placeholder{color:var(--muted);opacity:1}
 input[dir="ltr"]::placeholder{direction:rtl;text-align:right}
 .cfiles h3{margin:0;font-size:17px}
 .cfrow{display:flex;gap:12px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding:12px 2px 0}
