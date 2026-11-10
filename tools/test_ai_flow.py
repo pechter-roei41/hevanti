@@ -223,7 +223,7 @@ code, body = ask()
 d = as_json(body)
 check("every model busy: said so, and it is not the quota (no other AI is offered for it)",
       code == 400 and d.get("ok") is False and not d.get("quota") and "עמוס" in d.get("error", ""), (code, body))
-check("...every model was tried once", sorted(x["model"] for x in asked()) == sorted(MODELS), [x["model"] for x in asked()])
+check("...a live question tried two models, not all three", [x["model"] for x in asked()] == MODELS[:2], [x["model"] for x in asked()])
 
 reset()
 BEHAVE[MODELS[0]] = "401"
@@ -244,7 +244,8 @@ with open(os.path.join(lecdir, "הרצאה 1.txt"), "w", encoding="utf-8") as f:
 rel = course + "/הרצאה 1"
 qa = os.path.join(lecdir, L.QA_NAME)
 code, body = ask("שאלה שנחסמת", f=rel)
-check("a blocked answer is not an error, and nothing is written to the lecture's folder", code == 200 and body == "" and not os.path.exists(qa), (code, body, os.path.exists(qa)))
+check("a blocked answer is not an error: the page gets a line saying why, and nothing is written to the lecture's folder",
+      code == 200 and body.strip().startswith("⚠") and "SAFETY" in body and not os.path.exists(qa), (code, body, os.path.exists(qa)))
 
 # ---------------------------------------------------------------------------------- 5. what is kept in the lecture's folder
 reset()

@@ -2117,15 +2117,28 @@ def gemini_call(path, key, body=None, timeout=90):
         raise MathError(f"אין חיבור ל-Gemini ({e.__class__.__name__}). ממשיך לבד אחר כך.", 60)
 
 
+def _google_error(raw):
+    """What Google's error body says: (the short message, the status like PERMISSION_DENIED, the reasons like API_KEY_INVALID)."""
+    try:
+        err = json.loads(raw).get("error") or {}
+    except (ValueError, AttributeError):
+        err = {}
+    msg = " ".join(str(err.get("message") or "").split())
+    reasons = [str(d.get("reason") or "") for d in err.get("details") or [] if isinstance(d, dict) and d.get("reason")]
+    return msg, str(err.get("status") or ""), reasons
+
+
+def _short(msg, n=140):
+    return msg if len(msg) <= n else msg[:n].rstrip() + "..."
+
+
 def _gemini_http_error(e):
     try:
         raw = e.read().decode("utf-8", "replace")
     except Exception:
         raw = ""
-    try:
-        msg = (json.loads(raw).get("error") or {}).get("message") or ""
-    except Exception:
-        msg = ""
+    msg, status, reasons = _google_error(raw)
+    low = msg.lower()
     if e.code == 429:   # (the free quota is per model: another model may still answer)
         if "perday" in raw.lower().replace("_", "").replace(" ", ""):   # the day's quota: a minute will not help
             return MathError("המכסה החינמית של Gemini נגמרה להיום.", 900, other=True, kind="quota")
@@ -2134,11 +2147,20 @@ def _gemini_http_error(e):
         return MathError("הגעת למכסה החינמית של Gemini לדקה הזו.", wait, other=True, kind="quota")
     if e.code == 404:
         return MathError("המודל הזה של Gemini כבר לא זמין.", other=True)
-    if e.code in (400, 401, 403) and ("key" in msg.lower() or e.code != 400):
+    key_bad = "API_KEY_INVALID" in reasons or "api key not valid" in low or "api key expired" in low or "api_key_invalid" in raw.lower()
+    if e.code in (400, 401, 403) and (key_bad or e.code == 401):
         return MathError("Gemini לא קיבל את המפתח. לבדוק אותו (aistudio.google.com/apikey).")
+    if "location is not supported" in low or "user location" in low:   # (Google's 400 FAILED_PRECONDITION, or a 403)
+        return MathError("Gemini לא זמין באזור שבו המחשב נמצא (" + _short(msg) + ").")
+    if e.code == 403:   # a key that is fine, and Google still says no: say why, in Google's words
+        if "SERVICE_DISABLED" in reasons or "has not been used in project" in low or "is disabled" in low:
+            return MathError("ה-API של Gemini לא מופעל בפרויקט של המפתח. להפעיל אותו ב-Google AI Studio ולנסות שוב (" + _short(msg) + ").")
+        if "model" in low or "resource" in low:   # (this model, not the key: another model may answer)
+            return MathError("אין למפתח הרשאה למודל הזה של Gemini (" + _short(msg) + ").", other=True)
+        return MathError("Gemini סירב (403): " + (_short(msg) or status or "בלי פירוט") + ".")
     if e.code >= 500:
         return MathError(f"Gemini עמוס כרגע ({e.code}). לנסות שוב עוד רגע.", 60, other=True)
-    return MathError(f"Gemini החזיר שגיאה {e.code}: {msg[:160]}")
+    return MathError(f"Gemini החזיר שגיאה {e.code}: {_short(msg, 160)}")
 
 
 def gemini_models(key):
@@ -2577,23 +2599,82 @@ def log_tokens(model, usage, body_chars, ok, started, quota=False, kind="ask"):
         pass
 
 
-def gemini_stream(key, model, body, usage=None, timeout=15):
-    """Yields the answer's text as Gemini writes it (server-sent events). `usage` (a dict) gets the token counts."""
+# How long a question to Gemini may take (seconds). The start (connecting and the first words) and the silence between two pieces of
+# the answer are separate: a model that "thinks" before it starts is not the same as one that stopped in the middle.
+GEMINI_START_S = 15           # a live question: until Gemini starts to answer
+GEMINI_TASK_START_S = 60      # a whole lecture takes longer to start
+GEMINI_READ_S = 45            # once it has started: the longest silence between two pieces
+GEMINI_LIVE_MODELS = 2        # a live question tries at most this many models (each try is a request of the free quota)
+GEMINI_LIVE_DEADLINE_S = 25   # ...and at most this long, all together, before the answer starts
+GEMINI_TASK_DEADLINE_S = 90
+
+_FINISH_WHY = {   # why Gemini stopped, in words (finishReason / promptFeedback.blockReason)
+    "SAFETY": "מסנן הבטיחות של Gemini עצר אותה",
+    "BLOCKLIST": "מסנן הבטיחות של Gemini עצר אותה",
+    "PROHIBITED_CONTENT": "מסנן הבטיחות של Gemini עצר אותה",
+    "IMAGE_SAFETY": "מסנן הבטיחות של Gemini עצר אותה בגלל התמונה",
+    "RECITATION": "Gemini עצר אותה כי היא חזרה על טקסט מוגן",
+    "MAX_TOKENS": "היא ארוכה מהמותר",
+    "LANGUAGE": "השפה לא נתמכת ב-Gemini",
+}
+
+
+def _stream_warning(text_seen, block, finish):
+    """The line to show when the answer did not come out whole (None when it did): why, and the code Google gave."""
+    why_code = block or (finish if finish not in ("", "STOP", "FINISH_REASON_UNSPECIFIED") else "")
+    if not why_code:
+        return None if text_seen else "Gemini לא החזיר תשובה."
+    why = _FINISH_WHY.get(why_code, "Gemini עצר אותה (" + why_code + ")")
+    if text_seen:
+        return "התשובה נקטעה: " + why + " (" + why_code + ")."
+    return ("Gemini לא ענה: השאלה נחסמה. " if block else "Gemini לא ענה: ") + why + " (" + why_code + ")."
+
+
+def _set_read_timeout(r, secs):
+    try:
+        r.fp.raw._sock.settimeout(secs)   # (the socket of the open answer: what is waited for from now on)
+    except Exception:
+        pass
+
+
+def gemini_stream(key, model, body, usage=None, timeout=None, read_timeout=None, info=None):
+    """Yields the answer's text as Gemini writes it (server-sent events). `usage` (a dict) gets the token counts; `info` (a
+    dict) gets "warn" - a line saying why the answer is empty or cut (blocked, too long...) - when it did not come out whole.
+    `timeout`: until the answer starts. `read_timeout`: the longest silence after it started."""
+    import http.client
     import urllib.error
     import urllib.request
+    timeout = GEMINI_START_S if timeout is None else timeout
+    read_timeout = GEMINI_READ_S if read_timeout is None else read_timeout
     req = urllib.request.Request(f"{GEMINI_URL}/models/{model}:streamGenerateContent?alt=sse", method="POST",
                                  data=json.dumps(body).encode("utf-8"),
                                  headers={"x-goog-api-key": key, "Content-Type": "application/json"})
     try:
-        r = urllib.request.urlopen(req, timeout=timeout)   # (a live question that has not started in 15 s: the next model)
+        r = urllib.request.urlopen(req, timeout=timeout)   # (a live question that has not started in time: the next model)
     except urllib.error.HTTPError as e:
         raise _gemini_http_error(e)
     except TimeoutError:
         raise MathError("Gemini לא ענה בזמן. לנסות שוב עוד רגע.", other=True)
     except (urllib.error.URLError, OSError) as e:
+        if isinstance(getattr(e, "reason", None), TimeoutError):
+            raise MathError("Gemini לא ענה בזמן. לנסות שוב עוד רגע.", other=True)
         raise MathError(f"אין חיבור ל-Gemini ({e.__class__.__name__}). לבדוק את האינטרנט.")
+    text_seen, block, finish = False, "", ""
     with r:
-        for raw in _lines_or_timeout(r):
+        lines = iter(r)
+        while True:
+            try:
+                raw = next(lines)
+            except StopIteration:
+                if getattr(r, "length", None):   # (an answer of a known size that ended before its size: the connection was cut)
+                    raise MathError("החיבור ל-Gemini נותק באמצע התשובה. לנסות שוב.", other=not text_seen)
+                break
+            except TimeoutError:
+                if text_seen:
+                    raise MathError("Gemini הפסיק לענות באמצע. לנסות שוב.")
+                raise MathError("Gemini לא ענה בזמן. לנסות שוב עוד רגע.", other=True)
+            except (http.client.HTTPException, OSError):
+                raise MathError("החיבור ל-Gemini נותק באמצע התשובה. לנסות שוב.", other=not text_seen)
             line = raw.decode("utf-8", "replace").strip()
             if not line.startswith("data:"):
                 continue
@@ -2601,19 +2682,22 @@ def gemini_stream(key, model, body, usage=None, timeout=15):
                 d = json.loads(line[5:].strip())
             except ValueError:
                 continue
+            if not isinstance(d, dict):
+                continue
             if usage is not None and isinstance(d.get("usageMetadata"), dict):
                 usage.update(d["usageMetadata"])
+            block = block or str((d.get("promptFeedback") or {}).get("blockReason") or "")
             for c in d.get("candidates") or []:
+                finish = str(c.get("finishReason") or "") or finish
                 for p in (c.get("content") or {}).get("parts") or []:
                     if isinstance(p, dict) and p.get("text") and not p.get("thought"):
+                        if not text_seen:
+                            text_seen = True
+                            _set_read_timeout(r, read_timeout)   # it started: from now on only silence in the middle counts
                         yield p["text"]
-
-
-def _lines_or_timeout(r):
-    try:
-        yield from r
-    except TimeoutError:
-        raise MathError("Gemini הפסיק לענות באמצע. לנסות שוב.")
+    warn = _stream_warning(text_seen, block, finish)
+    if warn and info is not None:
+        info["warn"] = warn
 
 
 def tutor_image(d):
@@ -8169,10 +8253,19 @@ def _app_handler():
                         d = dict(d, context=str(d.get("context") or "") + "\n" + note)
                 body = tutor_body(d)
                 pieces, first, last_err, quota_err = None, "", None, None
-                usage, started, chars, used = {}, time.time(), len(json.dumps(body, ensure_ascii=False)), ""
-                for model in reader.models_to_try(key):   # busy / retired / slow today: the next model
+                usage, started, chars, used, info = {}, time.time(), len(json.dumps(body, ensure_ascii=False)), "", {}
+                task = bool(d.get("task"))   # (a whole lecture takes longer to start, and may try more models)
+                models = reader.models_to_try(key)
+                if not task:
+                    models = models[:GEMINI_LIVE_MODELS]   # a live question: two models at most - each try costs quota and time
+                deadline = started + (GEMINI_TASK_DEADLINE_S if task else GEMINI_LIVE_DEADLINE_S)   # ...and this long all together
+                for model in models:   # busy / retired / slow today: the next model
+                    left = deadline - time.time()
+                    if last_err is not None and left < 1:
+                        break
                     try:
-                        pieces = gemini_stream(key, model, body, usage, 60 if d.get("task") else 15)   # (a whole lecture takes longer to start)
+                        pieces = gemini_stream(key, model, body, usage, min(GEMINI_TASK_START_S if task else GEMINI_START_S, max(1.0, left)),
+                                               info=info)
                         first = next(pieces, "")
                         reader.worked(model)
                         used = model
@@ -8217,6 +8310,11 @@ def _app_handler():
             except (ConnectionError, OSError):
                 ok = False   # the page stopped it, or was closed
             answer = "".join(out).strip()
+            if ok and info.get("warn"):   # blocked, or cut (too long...): the page shows why instead of "no answer"
+                try:
+                    self.wfile.write(("\n\n⚠ " + info["warn"]).encode("utf-8"))
+                except OSError:
+                    pass
             log_tokens(used, usage, chars, ok and bool(answer), started)
             if ok and answer:
                 tutor_save(d, answer)
