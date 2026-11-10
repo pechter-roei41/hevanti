@@ -259,6 +259,18 @@ with sync_playwright() as p:
     mini = b.new_context(viewport={"width": 420, "height": 760}, locale="he-IL").new_page()
     errs = []
     mini.on("pageerror", lambda e: errs.append(str(e)))
+    # The window asks Hevanti every 4 seconds what is running and whether "answer here" is set up, and shows or hides its parts by
+    # that. A test that only flips those parts by hand races with that poll (the button it clicks is hidden again): so the test says
+    # what Hevanti answers - a lecture is running, and "answer here" is on or off - and the window follows it, as in real use.
+    mini_state = {"live": True, "ask": True}
+
+    def mini_app(route):
+        resp = route.fetch()
+        d = resp.json()
+        d["session"] = {"kind": "live", "done": False, "course": "פיזיקה"} if mini_state["live"] else None
+        d["math"] = dict(d.get("math") or {}, ask=mini_state["ask"])
+        route.fulfill(response=resp, body=json.dumps(d))
+    mini.route("**/api/app*", mini_app)
     mini.goto(url + "/mini")
     mini.wait_for_timeout(1200)
     check("floating window: the question box and the ★ mark (no '?')", mini.is_visible("textarea") and mini.is_visible("#markImp") and mini.query_selector("#markLost") is None)
@@ -278,9 +290,12 @@ with sync_playwright() as p:
     # "what I missed": three buttons, each a ready question over the last 3 / 7 / 15 minutes
     asked = []
     mini.route("**/api/ask", lambda r: (asked.append(json.loads(r.request.post_data or "{}")), r.fulfill(status=200, content_type="text/plain", body="סיכום"))[1])
-    mini.evaluate("BZMAsk.setBuiltin(true); document.querySelector('#miss').hidden = false")
+    mini_state["ask"] = True
+    mini.evaluate("pollApp()")
+    mini.wait_for_selector("#miss button[data-m='3']", state="visible", timeout=10000)
     check("floating window: three 'what I missed' buttons", mini.evaluate("[...document.querySelectorAll('#miss button')].map(b => b.dataset.m).join()") == "3,7,15")
     for n in (3, 7, 15):
+        mini.wait_for_selector(f"#miss button[data-m='{n}']", state="visible", timeout=10000)
         mini.click(f"#miss button[data-m='{n}']")
         mini.wait_for_timeout(600)
     check("floating window: each sends its minutes, from the small window, with a ready question",
@@ -288,7 +303,9 @@ with sync_playwright() as p:
     check("floating window: a ready question does not ask for a picture of its own", [m.get("action") for m in marked].count("snap_question") == 1, marked)
     # an AI chosen in the floating window: the window goes away (it stays on top, the AI would open behind it)
     marked.clear()
-    mini.evaluate("BZMAsk.setBuiltin(false)")
+    mini_state["ask"] = False
+    mini.evaluate("pollApp()")
+    mini.wait_for_selector("button[data-ai=gemini]", state="visible", timeout=10000)
     mini.fill("textarea", "מה זה?")
     mini.click("button[data-ai=gemini]")
     mini.wait_for_timeout(1500)

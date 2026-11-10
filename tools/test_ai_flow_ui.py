@@ -21,7 +21,8 @@ TMP = tempfile.mkdtemp()
 os.environ["BZM_DATA_DIR"] = os.path.join(TMP, "data")
 os.environ["LOCALAPPDATA"] = os.path.join(TMP, "local")
 os.environ["BZM_GEMINI_DIR"] = os.path.join(TMP, "gemini")
-os.environ["HOME"] = os.environ["USERPROFILE"] = os.path.join(TMP, "home")
+# (HOME and USERPROFILE are NOT changed here: Playwright finds Edge and keeps its own files under them on Windows, and with them
+# moved the browser was not found there - the test skipped, green, without running)
 os.environ["BZM_NO_BROWSER"] = "1"
 os.makedirs(os.environ["BZM_DATA_DIR"])
 os.makedirs(os.environ["LOCALAPPDATA"])
@@ -108,17 +109,23 @@ def reset():
 def launch(p):
     exe = os.environ.get("HEVANTI_TEST_CHROMIUM")
     tries = ([{"executable_path": exe}] if exe else []) + [{"channel": "msedge"}, {"channel": "chrome"}, {}]
+    why = []
     for kw in tries:
         try:
             return p.chromium.launch(headless=True, args=["--no-sandbox"] if exe else [], **kw)
-        except Exception:
-            continue
+        except Exception as e:
+            why.append(f"{kw or 'default'}: {str(e).splitlines()[0][:160] if str(e) else e.__class__.__name__}")
+    print("no browser could be started:\n  " + "\n  ".join(why))
     return None
 
 
 with sync_playwright() as p:
     b = launch(p)
     if b is None:
+        if os.environ.get("GITHUB_ACTIONS"):   # in CI a missing browser is a failure: a skip would look green and test nothing
+            print("::error title=no browser::the browser test could not start a browser")
+            print("FAILED: no browser")
+            sys.exit(1)
         print("SKIP no browser for Playwright")
         sys.exit(0)
     ctx = b.new_context(viewport={"width": 1100, "height": 900}, locale="he-IL", permissions=["clipboard-read", "clipboard-write"])
