@@ -68,6 +68,8 @@ header{position:sticky;top:0;z-index:5;padding:10px 16px 0;background:linear-gra
 .brand small{font-family:var(--f-body);font-weight:600;font-size:13px;color:var(--muted);background:var(--sunk);border-radius:999px;padding:1px 9px}
 .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--accent)}
 .pill{font-size:14px;padding:3px 12px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.pill.gpu{background:var(--warn-bg);color:var(--warn-fg);display:inline-flex;align-items:center;gap:10px}   /* a caution capsule with a text link: only while there is a card that is not used, and something to press */
+.pill.gpu .linkish{color:var(--warn-fg);font-weight:700}
 .pill.live{background:color-mix(in srgb,var(--rec) 16%,transparent);color:var(--rec);font-weight:600}
 .pill.live::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--rec);margin-inline-end:7px;vertical-align:1px}
 @media (prefers-reduced-motion:no-preference){.pill.live::before{animation:pulse 1.4s ease-in-out infinite}}
@@ -512,7 +514,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <button type="button" data-nav="settings" data-hash="settings" id="setBtn">הגדרות</button>
     </nav>
     <span class="pill" id="statePill" aria-live="polite">מוכן</span>
-    <span class="pill" id="devPill" hidden></span>
+    <span class="pill gpu" id="gpuPill" hidden><span>יש כרטיס מסך של NVIDIA</span><button class="linkish" id="gpuPillGo" type="button"></button></span>
     <button class="iconbtn" id="themeBtn" type="button" aria-label="מעבר למצב כהה" title="מעבר למצב כהה"></button>
   </div>
 </header>
@@ -1600,6 +1602,7 @@ drawThemeBtn();
 function show(v) {
   const was = view;
   view = v;
+  if (app && typeof drawGpu === "function") drawGpu(app);   // (the capsule in the top bar is for every page but the home page)
   if (was === "yt" && v !== "yt") ytLeave();
   if (was === "how" && v !== "how") HOW.stop();
   // (the sections are not called "home"/"live": a #live link would scroll the page to them)
@@ -1711,7 +1714,12 @@ async function drawResume() {
 function drawGpu(d) {
   const g = d && d.gpu, bar = $("#gpuBar"); if (!bar) return;
   const txt = $("#gpuText"), go = $("#gpuGo");
-  if (!g || !(g.cards > 0) || (g.libs_ok && g.state !== "done" && g.state !== "installing")) { bar.hidden = true; return; }
+  const needs = !!g && g.cards > 0 && !(g.libs_ok && g.state !== "done" && g.state !== "installing");
+  // the capsule in the top bar: only when there is something to press (not while it installs), and not on the home page - there the bar below says it, with its own button
+  const pill = $("#gpuPill");
+  pill.hidden = !(needs && g.state !== "installing" && view !== "home");
+  if (!pill.hidden) $("#gpuPillGo").textContent = g.state === "failed" ? "לנסות שוב" : g.state === "done" ? "סגירה והפעלה מחדש" : "התקנה";
+  if (!needs) { bar.hidden = true; return; }
   bar.hidden = false; txt.replaceChildren(); go.hidden = false; go.disabled = false;
   if (g.state === "installing") { txt.append(el("b", "", "מתקין את מה שהכרטיס צריך... "), "כ-1GB, כמה דקות. אפשר להמשיך להשתמש בהבנתי בינתיים."); go.hidden = true; }
   else if (g.state === "done") { txt.append(el("b", "", "ההתקנה הסתיימה. "), "כדי שהתמלול ישתמש בכרטיס המסך, סוגרים את הבנתי ופותחים אותה שוב."); go.textContent = "סגירת האפליקציה"; go.dataset.act = "quit"; }
@@ -1720,6 +1728,7 @@ function drawGpu(d) {
     go.textContent = g.state === "failed" ? "לנסות שוב" : "להתקין עכשיו"; go.dataset.act = "install";
   }
 }
+$("#gpuPillGo").addEventListener("click", () => $("#gpuGo").click());   // (one set of states and actions)
 $("#gpuGo").addEventListener("click", async () => {
   if ($("#gpuGo").dataset.act === "quit") { $("#quitBtn").click(); return; }
   $("#gpuGo").disabled = true;
@@ -1746,7 +1755,6 @@ function render(d) {
   else if (active) { pill.className = "pill"; pill.textContent = s.ready ? "הקלטה פתוחה" : "מכין הקלטה..."; }
   else { pill.className = "pill"; pill.textContent = "מוכן"; }
   liveTip(s);
-  const dp = $("#devPill"); dp.hidden = !d.device; dp.textContent = d.device === "GPU" ? "כרטיס מסך" : "מעבד";
   // what is running (home)
   const rb = $("#runBanner");
   rb.hidden = !active;

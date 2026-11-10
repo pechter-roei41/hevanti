@@ -433,6 +433,55 @@ with sync_playwright() as p:
     check("a saved lecture: the line under its title does not repeat the date and time either", "10:00" not in sub and "2026-11-02" not in sub and "שורה אחת" in sub, sub)
     check("2.18 page: no script errors", pg.errs == [], pg.errs)
 
+    # ---- 2.19, stage 5: the graphics card capsule in the top bar exists only when there is something to press ----
+    gpu_state = {"gpu": {"cards": 0, "libs_ok": False, "state": "", "msg": ""}, "device": "CPU"}
+    cmds = []
+    gp = b.new_context(viewport={"width": 1100, "height": 800}, locale="he-IL").new_page()
+    gp.errs = []
+    gp.on("pageerror", lambda e: gp.errs.append(str(e)))
+
+    def gpu_app(route):
+        resp = route.fetch()
+        d = resp.json()
+        d["gpu"], d["device"] = gpu_state["gpu"], gpu_state["device"]
+        route.fulfill(response=resp, body=json.dumps(d))
+    gp.route("**/api/app*", gpu_app)
+    gp.route("**/api/cmd", lambda r: (cmds.append(json.loads(r.request.post_data or "{}")), r.fulfill(content_type="application/json", body=json.dumps({"ok": True, "gpu": {"cards": 1, "libs_ok": False, "state": "installing", "msg": ""}})))[1])
+    gp.goto(url + "/")
+    gp.evaluate("document.querySelectorAll('.modal').forEach(m => m.hidden = true)")
+
+    def gpu_seen(hash_):
+        gp.evaluate(f"location.hash = '{hash_}'")
+        gp.wait_for_timeout(1700)
+        return gp.evaluate("""() => { const vis = e => !!e && !e.hidden && e.offsetParent !== null;
+            return {pill: vis(document.querySelector('#gpuPill')), pillText: document.querySelector('#gpuPill').innerText, bar: vis(document.querySelector('#gpuBar')),
+                    barBtn: vis(document.querySelector('#gpuGo')), dev: !!document.querySelector('#devPill'),
+                    installs: [...document.querySelectorAll('#gpuPillGo, #gpuGo')].filter(vis).length}; }""")
+    for name, g, dev in (("no NVIDIA card (the computer works on the processor)", {"cards": 0, "libs_ok": False, "state": "", "msg": ""}, "CPU"),
+                         ("a card that is in use", {"cards": 1, "libs_ok": True, "state": "", "msg": ""}, "GPU"),
+                         ("a card and the processor works on the card's libraries being installed", {"cards": 1, "libs_ok": False, "state": "installing", "msg": ""}, "CPU")):
+        gpu_state["gpu"], gpu_state["device"] = g, dev
+        for h in ("how", "courses"):
+            r = gpu_seen(h)
+            check(f"graphics-card capsule, {name}, page {h}: not in the top bar, and no status pill for the device", not r["pill"] and not r["dev"], r)
+    gpu_state["gpu"], gpu_state["device"] = {"cards": 1, "libs_ok": False, "state": "", "msg": ""}, "CPU"
+    r = gpu_seen("how")
+    check("a card that is not used, on another page: the capsule is in the top bar with the install button", r["pill"] and "NVIDIA" in r["pillText"] and r["installs"] == 1, r)
+    r = gpu_seen("")
+    check("...on the home page the bar below says it with its own button, and the capsule is gone (one install button, never two)",
+          r["bar"] and r["barBtn"] and not r["pill"] and r["installs"] == 1, r)
+    gpu_seen("how")
+    del cmds[:]
+    gp.click("#gpuPillGo")
+    gp.wait_for_timeout(500)
+    check("the capsule's button installs (the same action as the home bar's)", any(c.get("action") == "install_gpu" for c in cmds), cmds)
+    for st, word in (("failed", "לנסות שוב"), ("done", "סגירה")):
+        gpu_state["gpu"] = {"cards": 1, "libs_ok": False, "state": st, "msg": ""}
+        r = gpu_seen("how")
+        check(f"capsule, state {st}: its button says '{word}'", r["pill"] and word in r["pillText"] and r["installs"] == 1, r)
+    check("graphics-card capsule: no script errors", gp.errs == [], gp.errs)
+    gp.context.close()
+
     # ---- 2.19, stage 2: the live lecture screen has one solid green: "answer here" ----
     live_now = {"yes": True}
     lv = b.new_context(viewport={"width": 1280, "height": 900}, locale="he-IL").new_page()
