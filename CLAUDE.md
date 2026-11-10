@@ -63,6 +63,34 @@ It lives in `app.html`, section `#vHow`, and is also published as an online arti
 
 Shortcuts (global, registered with `RegisterHotKey`): Ctrl+Alt+Q floating window, Ctrl+Alt+M mark ★, Ctrl+Alt+P pause screenshots (transcription continues).
 
+## Running the app to check the UI (works on Linux)
+
+The server and every page run on Linux; only the Windows-specific parts (hotkeys, the floating button, DPAPI, window capture, audio capture) do not. Verified on 10.11.2026 with a seeded library:
+
+```
+mkdir -p /tmp/h/data/"הקורסים שלי"/"קורס בדיקה"/"הרצאה 1" /tmp/h/local
+# put a "<lecture>.txt" with lines like "[09:01:00 | +0:01:00] text" in the lecture folder
+PYTHONUTF8=1 BZM_NO_BROWSER=1 BZM_DATA_DIR=/tmp/h/data LOCALAPPDATA=/tmp/h/local python3 System/Program/live_transcribe.py --app &
+```
+
+Then open `http://127.0.0.1:8765/` (and `/mini` for the floating window) with Playwright (`require('playwright')`, Chromium, no install needed in the cloud container). Notes:
+- First load shows the "בואו נתחיל" modal over everything; click "לא עכשיו" or nothing else is clickable.
+- Top tabs are `[data-nav="home|courses|how|settings"]`; settings tabs are `#setTabs > *`; the course page opens from the "דף הקורס" button on the home page; the guide's video chapters are `#howChapters button`.
+- Without a Gemini key the home page says "חסר מפתח Gemini". No network or model is needed to render any page.
+- The console output looks reversed on Linux (Hebrew without bidi), which is harmless.
+- Stop it with `pkill -f "live_transcribe.py --app"`. A real lecture, the transcript, the answers and the Windows features cannot be checked this way.
+
+## The how-to video
+
+`System/Program/media/howto.mp4`: 58.8 s, 1920x1080, **no audio**. A dark caption bar on top carries the Hebrew narration text, so changing a step means re-recording footage and caption. Chapters (in `app.html`, `#howChapters`, `data-t` seconds): 0 key, 5 start, 8 live transcript and screenshots, 14 full screen and button, 19 floating window, 24 answer, 27 "what did I miss", 32 mark ★, 38 course page, 41 marks, 45 syllabus and glossary, 51 files and management, 54 summary slide. It shows version 2.17, the lecture "חשבון אינפיניטסימלי 2", an answer with a ⏱ time source, and the three "what did I miss" buttons.
+
+Known mismatches found on 10.11.2026 (not fixed, listed in `DECISIONS.md`):
+- The last slide (0:54) says step 4 is "אחרי ההרצאה: דף הקורס והכנה למבחן", but the "הכנה למבחן" tab was removed from the course page (5.11.2026). The course page has three tabs: ההרצאות, סימונים, סילבוס ומילון.
+- At 0:38 the course page shows "עוד אין הרצאות בקורס." above a list of two lectures. In 2.17 the line is the lecture count, so this looks like the line before it was filled in.
+- Settings > תשובות numbers its boxes 1, 2, 4: box 3 ("יש לי מנוי בתשלום") is hidden, so the visible numbering skips a number.
+- The course page says "1 הרצאות" for one lecture (no singular form).
+- `README.md`, `PRODUCT.md` and `README.txt` used to describe two marks (★ and ?). Since 2.13 only ★ exists; old "?" marks are still read and shown.
+
 ## Testing
 
 Plain Python scripts, no pytest. Each prints `all passed` or the failures and exits non-zero. Set `PYTHONUTF8=1` (Hebrew, Windows).
