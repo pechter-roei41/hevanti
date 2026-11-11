@@ -336,10 +336,14 @@ with sync_playwright() as p:
     def mini_app(route):
         resp = route.fetch()
         d = resp.json()
-        d["session"] = {"kind": "live", "done": False, "course": "פיזיקה"} if mini_state["live"] else None
+        d["session"] = {"kind": "rec" if mini_state.get("rec") else "live", "done": False, "course": "פיזיקה"} if mini_state["live"] else None
         d["math"] = dict(d.get("math") or {}, ask=mini_state["ask"])
         if "run" in mini_state:
             d["run"] = mini_state.pop("run")   # (once: one look at Hevanti that says another run)
+        if mini_state.get("stopping") and d["session"]:
+            d["session"].update(stopping=True, stopping_for=8)
+        if mini_state.get("saved"):
+            d["session"] = {"kind": "live", "done": True, "course": "פיזיקה", "saved": {"course": "פיזיקה", "minutes": 46, "slides": 9, "f": "פיזיקה/הרצאה 3"}}
         if mini_state.get("suggest") and d["session"]:
             d["session"]["suggest"] = {"course": "אלגוריתמים", "why": "slide", "detail": ""}
         d["mark_n"] = mini_state["mark_n"]   # (Hevanti's count of marks: a mark made with the keyboard raises it)
@@ -378,6 +382,48 @@ with sync_playwright() as p:
     mini.wait_for_function("() => !document.querySelector('#toast').classList.contains('on')", timeout=8000)
     mini.wait_for_timeout(4600)   # (a whole look later)
     check("floating window: ...and only once for one mark", not mini.evaluate("() => document.querySelector('#toast').classList.contains('on')"))
+    # ---- stop from the small window: two presses, then a card says the lecture was saved ----
+    marked.clear()
+    mini.evaluate("pollApp()")
+    mini.wait_for_selector("#stopBtn", state="visible", timeout=5000)
+    check("floating window: a live lecture has a stop button in the title row", mini.inner_text("#stopBtn") == "עצירה")
+    mini.click("#stopBtn")
+    check("floating window: the first press only asks (a short word, so the course name is not cut), and nothing stops yet",
+          mini.inner_text("#stopBtn") == "לעצור?" and not any(m.get("action") == "stop" for m in marked), marked)
+    mini.wait_for_timeout(3400)
+    check("floating window: not pressed again - it goes back to \"עצירה\" after 3 seconds", mini.inner_text("#stopBtn") == "עצירה" and not any(m.get("action") == "stop" for m in marked))
+    mini.click("#stopBtn"); mini.click("#stopBtn")
+    mini.wait_for_timeout(500)
+    check("floating window: the second press stops", any(m.get("action") == "stop" for m in marked), marked)
+    mini_state["stopping"] = True
+    mini.evaluate("pollApp()")
+    mini.wait_for_timeout(300)
+    check("floating window: while it stops and saves it says so (with the seconds), and the stop button is gone", "עוצר ושומר" in mini.inner_text("#lec") and "8" in mini.inner_text("#lec") and mini.is_hidden("#stopBtn"), mini.inner_text("#lec"))
+    mini_state["stopping"] = False
+    mini_state["saved"] = True
+    mini.evaluate("pollApp()")
+    mini.wait_for_selector("#saved", state="visible", timeout=5000)
+    sv_txt = mini.inner_text("#saved")
+    check("floating window: the lecture was saved - a card says so, with the course, minutes and slides, instead of the question box",
+          "נשמרה בהצלחה" in sv_txt and "פיזיקה" in sv_txt and "46 דקות" in sv_txt and "9 שקפים" in sv_txt and mini.is_hidden("#box"), sv_txt)
+    marked.clear()
+    mini.click("#savedOpen")
+    mini.wait_for_timeout(400)
+    check("floating window: 'open the lecture in the app' sends the lecture, and the window goes", any(m.get("action") == "open_lecture" and m.get("f") == "פיזיקה/הרצאה 3" for m in marked) and any(m.get("action") == "hide_mini" for m in marked), marked)
+    mini.evaluate("pollApp()")
+    mini.wait_for_timeout(300)
+    check("floating window: the card does not come back for the same lecture", mini.is_hidden("#saved"))
+    mini_state["saved"] = False
+    mini.evaluate("pollApp()")
+    mini.wait_for_timeout(300)
+    mini_state["rec"] = True
+    mini.evaluate("pollApp()")
+    mini.wait_for_timeout(300)
+    check("floating window: a recording being watched in the player is not stopped from here (no stop button)", mini.is_hidden("#stopBtn"))
+    mini_state["rec"] = False
+    mini.evaluate("pollApp()")
+    mini.wait_for_timeout(300)
+
     # ---- a course read from the first slide is offered in the small window: one press takes it, or says no ----
     mini_state["suggest"] = True
     mini.evaluate("pollApp()")
@@ -822,7 +868,7 @@ with sync_playwright() as p:
 
     # ---- the quick-start window (F1): course, kind, start in the background, open the app ----
     def quick_page(theme="light", guess=None, last="פיזיקה", start_ok=True, delay_guess=0):
-        qp = b.new_context(viewport={"width": 440, "height": 640}, locale="he-IL").new_page()
+        qp = b.new_context(viewport={"width": 380, "height": 408}, locale="he-IL").new_page()
         qp.errs, qp.posts = [], []
         qp.on("pageerror", lambda e: qp.errs.append(str(e)))
         qp.route("**/api/library*", lambda r: r.fulfill(content_type="application/json", body=json.dumps(

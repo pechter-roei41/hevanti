@@ -216,6 +216,8 @@ A small always-on-top window with the same tokens: a title bar, the course name 
 
 The course offer (a course read from the first slide) is a quiet strip: Sunk Paper, Ink text, a ghost "להעביר" and a ghost "לא עכשיו" (green text and edge), in the small window under the title and in the live view next to the course field.
 
+The stop button of the small window is a quiet ghost button in the title row ("עצירה"); the first press turns it to "לעצור?" with a Recording Red edge and text for 3 seconds, the second stops. When the lecture is saved a card replaces the question box: a Green Soft round chip with a green check, "ההרצאה נשמרה בהצלחה" (bold), the course, minutes and slides in Muted, a ghost "פתיחת ההרצאה באפליקציה" and a ghost "סגירה". The same card shape (Sheet, 1px Hairline, a Green Soft chip with a check, never yellow) shows above the place of the round button, drawn as a native window, when the small window is closed.
+
 ### The Quick-Start Window
 A small window in the middle of the screen when Hevanti opens: a title row (the name, "הקלטה חדשה"), the field "איזה קורס?" with a note under it ("זוהה מכותרת החלון. אפשר להחליף." with a small sparkle), three kinds of lecture as a radio group (the chosen one Green Soft with Ink and a Green edge, never a second solid green), the one solid-green action "התחל תמלול" (it becomes "המשך באפליקציה" for a recording, which only opens the app), and a ghost button "פתח את האפליקציה". Tokens as everywhere, light and night.
 

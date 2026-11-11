@@ -417,6 +417,22 @@ check("course while recording: the chosen course is the one shown, the lecture i
 check("course while recording: choosing the course it is already in cancels the move", r_same["ok"] and info2["moving"] is False and info2["course"] == L.NO_COURSE, info2)
 check("course while recording: a course offered is in the session info until the student says no", shown and shown["course"] == "אלגוריתמים" and hidden is None and r_no["ok"], (shown, hidden))
 check("course while recording: no lecture running - refused in words", r_done["ok"] is False and "אין עכשיו" in r_done["error"], r_done)
+# ---- F3/F4: the quick window's place, its own profile, the saved card, "open the lecture" ----
+check("quick window: centred in the work area (also when the area starts away from 0,0)", L._center_xy((0, 0, 1920, 1040), 380, 440) == (770, 300) and L._center_xy((-1920, 0, 0, 1040), 380, 440) == (-1150, 300) and L._center_xy((0, 0, 300, 300), 380, 440) == (0, 0))
+check("quick window: its size is small (380 x 440) and it has a browser profile of its own, in the local folder", L.QUICK_SIZE == (380, 440) and os.path.dirname(L.quick_profile_dir()) == L.LOCAL_DIR and L.quick_profile_dir() != L.mini_profile_dir())
+im_c, wc_, hc_ = L._toast_image("ההרצאה נשמרה", 1.0, False, "check")
+chip_c = tuple(im_c.getpixel((wc_ - 17, 22))[:3])
+chip_cd = tuple(L._toast_image("ההרצאה נשמרה", 1.0, True, "check")[0].getpixel((wc_ - 17, 22))[:3])
+check("saved card above the floating button: a Green Soft chip (never yellow), light and night, and a card wide enough for the words", chip_c == (220, 235, 223) and chip_cd == (37, 56, 43) and wc_ > 150, (chip_c, chip_cd, wc_))
+check("open the lecture: a lecture that is not there is refused in words", L.APP.command({"action": "open_lecture", "f": "אין/כזו"}).get("ok") is False)
+_lec = os.path.join(L.course_dir("אלגוריתמים"), "הרצאה לפתיחה")
+os.makedirs(_lec, exist_ok=True)
+open(os.path.join(_lec, "הרצאה לפתיחה.txt"), "w", encoding="utf-8").write("# x\n")
+check("open the lecture: a lecture that is there is accepted (the window itself opens only on Windows)", L.APP.command({"action": "open_lecture", "f": "אלגוריתמים/הרצאה לפתיחה"}).get("ok") is True)
+_ss = L.Session("live", "he", "", L.NO_COURSE)
+_ss.saved = {"course": "פיזיקה", "minutes": 46, "slides": 9, "f": "פיזיקה/x"}
+check("saved: the session info carries what was saved (course, minutes, slides, the lecture)", _ss.info()["saved"] == {"course": "פיזיקה", "minutes": 46, "slides": 9, "f": "פיזיקה/x"} and L.Session("live", "he").info()["saved"] is None)
+check("saved: the count the floating button watches is in /api/app", "saved_n" in json.loads(get("/api/app")[1]))
 check("a command without the page's header is refused (another site cannot drive Hevanti)", refused)
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
