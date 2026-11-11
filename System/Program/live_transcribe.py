@@ -5423,6 +5423,82 @@ def _logo_rgba(S):
     return np.clip(out + 0.5, 0, 255).astype(np.uint8).tobytes()
 
 
+def _premultiplied_bgra(im):
+    """A PIL RGBA picture as premultiplied BGRA bytes (top-down), as UpdateLayeredWindow wants them."""
+    import numpy as np
+    a = np.asarray(im, dtype=np.float32)
+    alpha = a[..., 3:4] / 255.0
+    out = np.concatenate([a[..., 2:3] * alpha, a[..., 1:2] * alpha, a[..., 0:1] * alpha, a[..., 3:4]], axis=2)
+    return np.clip(out + 0.5, 0, 255).astype(np.uint8).tobytes()
+
+
+def _windows_dark():
+    """Does Windows use the dark theme for apps? (False when it cannot be read.)"""
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as k:
+            return winreg.QueryValueEx(k, "AppsUseLightTheme")[0] == 0
+    except Exception:
+        return False
+
+
+def _toast_image(text="סומן", scale=1.0, dark=False):
+    """The message that shows above the floating button when a mark is made with the keyboard: a small card, like the one in the
+    small window - a yellow chip with the ★ (the highlighter of a mark, the only yellow) and the word, on a sheet with a hairline.
+    Colours are the tokens of DESIGN.md (sheet, ink, hairline, mark-line; light and night). Returns (RGBA picture, width, height)."""
+    from PIL import Image, ImageDraw, ImageFont
+    sheet, ink, line, band = ((38, 36, 29), (241, 236, 223), (62, 58, 46), (89, 78, 37)) if dark else \
+                             ((255, 255, 255), (23, 38, 31), (221, 215, 196), (247, 221, 123))
+    K = 4   # drawn four times larger, then reduced: smooth edges
+    k = scale * K
+    size = int(round(19 * k))
+    font = None
+    try:
+        font = ImageFont.truetype(os.path.join(SCRIPT_DIR, "fonts", "Assistant-Variable.ttf"), size)
+        try:
+            font.set_variation_by_axes([700])
+        except Exception:
+            pass
+    except Exception:
+        try:
+            font = ImageFont.truetype("arial.ttf", size)
+        except Exception:
+            font = ImageFont.load_default()
+    raqm = False
+    try:
+        from PIL import features
+        raqm = bool(features.check("raqm"))
+    except Exception:
+        pass
+    shown = text if raqm else text[::-1]   # (without Raqm Pillow draws left to right: a Hebrew word is turned around)
+    tw = int(round(font.getlength(shown))) if hasattr(font, "getlength") else int(11 * k * len(text))
+    pad, chip_w, chip_h, gap = int(round(14 * k)), int(round(30 * k)), int(round(26 * k)), int(round(9 * k))
+    W, H = pad + tw + gap + chip_w + pad, int(round(44 * k))
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    bw = max(1, int(round(1.2 * k)))
+    d.rounded_rectangle([0, 0, W - 1, H - 1], radius=int(round(12 * k)), fill=sheet + (255,), outline=line + (255,), width=bw)
+    cx0 = W - pad - chip_w   # (right to left: the chip first, on the right)
+    cy0 = (H - chip_h) // 2
+    d.rounded_rectangle([cx0, cy0, cx0 + chip_w, cy0 + chip_h], radius=int(round(6 * k)), fill=band + (255,))
+    import math
+    mx, my, ro, ri = cx0 + chip_w / 2, cy0 + chip_h / 2 + 0.5 * k, 9.5 * k, 4.0 * k   # the ★, five points
+    pts = [(mx + (ro if i % 2 == 0 else ri) * math.sin(i * math.pi / 5), my - (ro if i % 2 == 0 else ri) * math.cos(i * math.pi / 5)) for i in range(10)]
+    d.polygon(pts, fill=ink + (255,))
+    bbox = font.getbbox(shown) if hasattr(font, "getbbox") else (0, 0, tw, size)
+    d.text((pad - bbox[0], (H - (bbox[3] - bbox[1])) / 2 - bbox[1]), shown, font=font, fill=ink + (255,))
+    w, h = int(round(W / K)), int(round(H / K))
+    return im.resize((w, h), Image.LANCZOS), w, h
+
+
+def _toast_xy(btn_x, btn_y, S, w, h, corner, area, gap=8):
+    """Where the message sits: centred over the floating button (below it when the button is at the top of the screen), inside the work area."""
+    x = btn_x + S // 2 - w // 2
+    x = max(area.left + 4, min(x, area.right - w - 4))
+    y = btn_y - h - gap if corner in ("br", "bl") else btn_y + S + gap
+    return x, y
+
+
 class MiniButton(threading.Thread):
     SIZE = 56   # in "96 dpi" pixels; on a scaled screen the button has the same size on the screen, drawn sharp
 
@@ -5489,7 +5565,8 @@ class MiniButton(threading.Thread):
         g.SelectObject.restype = wintypes.HANDLE
         g.DeleteObject.argtypes = [wintypes.HANDLE]
         g.DeleteDC.argtypes = [wintypes.HDC]
-        st = {"down": None, "shown": False, "hold": 0.0, "corner": "", "pulsed": None, "pulse_until": 0.0, "pulse_on": False}
+        st = {"down": None, "shown": False, "hold": 0.0, "corner": "", "pulsed": None, "pulse_until": 0.0, "pulse_on": False,
+              "mark_n": APP.mark_n, "toast_hwnd": 0, "toast_on": False, "toast_until": 0.0}
 
         def draw(alpha=235):
             """Put the picture on the window (per-pixel alpha: a smooth round edge, and the corners are see-through)."""
@@ -5556,8 +5633,58 @@ class MiniButton(threading.Thread):
                     if mini_btn_corner() != st["corner"]:
                         place()
                     u.SetWindowPos(hwnd, -1, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010)
+                toast_tick()
                 return 0
             return u.DefWindowProcW(hwnd, msg, wp, lp)
+
+        def toast_tick():
+            """A mark made with the keyboard while the small window is closed: a message above the floating button for a moment."""
+            if st.get("toast_bad"):
+                return
+            try:
+                n = APP.mark_n
+                if n != st["mark_n"]:
+                    st["mark_n"] = n
+                    if st["shown"]:
+                        if not st["toast_hwnd"]:
+                            twc = WNDCLASS()
+                            st["toast_cb"] = proc_t(lambda h, m, w, l: u.DefWindowProcW(h, m, w, l))   # (kept: it must not be collected)
+                            twc.lpfnWndProc, twc.lpszClassName = st["toast_cb"], "HevantiMiniToast"
+                            twc.hbrBackground = None
+                            u.RegisterClassW(ctypes.byref(twc))
+                            # TOPMOST | TOOLWINDOW | LAYERED | TRANSPARENT (a click goes through) | NOACTIVATE
+                            st["toast_hwnd"] = u.CreateWindowExW(0x8 | 0x80 | 0x80000 | 0x20 | 0x08000000, "HevantiMiniToast", "הבנתי - סומן",
+                                                                  0x80000000, 0, 0, 10, 10, None, None, None, None)
+                        im, w, h = _toast_image("סומן", scale, _windows_dark() if not ui_theme() else ui_theme() == "dark")
+                        data = _premultiplied_bgra(im)
+                        area = wintypes.RECT()
+                        u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0)
+                        corner = mini_btn_corner()
+                        bx, by = _mini_btn_xy(area, corner, S, margin)
+                        x, y = _toast_xy(bx, by, S, w, h, corner, area, gap=int(round(8 * scale)))
+                        screen = u.GetDC(None)
+                        mdc = g.CreateCompatibleDC(screen)
+                        bmi = BMIH(ctypes.sizeof(BMIH), w, -h, 1, 32, 0, 0, 0, 0, 0, 0)
+                        bits = ctypes.c_void_p()
+                        hbm = g.CreateDIBSection(mdc, ctypes.byref(bmi), 0, ctypes.byref(bits), None, 0)
+                        ctypes.memmove(bits, data, len(data))
+                        old = g.SelectObject(mdc, hbm)
+                        blend = BLEND(0, 0, 255, 1)
+                        u.UpdateLayeredWindow(st["toast_hwnd"], screen, ctypes.byref(wintypes.POINT(x, y)), ctypes.byref(wintypes.SIZE(w, h)),
+                                              mdc, ctypes.byref(wintypes.POINT(0, 0)), 0, ctypes.byref(blend), 2)
+                        g.SelectObject(mdc, old)
+                        g.DeleteObject(hbm)
+                        g.DeleteDC(mdc)
+                        u.ReleaseDC(None, screen)
+                        u.ShowWindow(st["toast_hwnd"], 4)
+                        u.SetWindowPos(st["toast_hwnd"], -1, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010)
+                        st["toast_until"], st["toast_on"] = time.time() + 2.4, True
+                if st["toast_on"] and (time.time() > st["toast_until"] or not st["shown"]):
+                    u.ShowWindow(st["toast_hwnd"], 0)
+                    st["toast_on"] = False
+            except Exception:
+                st["toast_bad"] = True   # (once: the message is a nicety, and the button must go on working)
+                save_error("mini button toast")
 
         cb = proc_t(wndproc)
         wc = WNDCLASS()
@@ -7043,7 +7170,7 @@ class App:
                     "screens": SCREEN_ENABLED, "capture": capture_control().public(), "math": math_reader().status(), "gpu": gpu_public(),
                     "product": PRODUCT, "migrated": self.migrated,
                     "course": load_settings().get("course") or "", "connect": self.connect_info(),
-                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme(), "save_failed": save_failed_public(), "mark_n": self.mark_n}
+                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme(), "save_failed": save_failed_public(), "mark_n": self.mark_n, "run": RUN_ID}
 
     def connect_info(self):
         """Which AI apps are connected (reading two small config files - at most every few seconds)."""
@@ -7493,6 +7620,7 @@ class App:
         _remove_quietly(APP_FILE)
 
 
+RUN_ID = str(int(time.time() * 1000))   # this run of Hevanti: a small window that stayed open from an earlier run reloads itself
 APP = App()
 
 
@@ -8141,7 +8269,8 @@ def _app_handler():
 
         def _page(self, path):
             with open(path, "rb") as f:
-                return self._send(200, f.read(), "text/html; charset=utf-8",
+                body = f.read().replace(b"__RUN__", RUN_ID.encode("ascii"))   # (the small window knows which run of Hevanti gave it the page)
+                return self._send(200, body, "text/html; charset=utf-8",
                                   {"X-Frame-Options": "DENY", "Content-Security-Policy": "frame-ancestors 'none'"})
 
         def _file(self, path, ctype):

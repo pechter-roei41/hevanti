@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import tempfile
+import urllib.request
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 try:
@@ -312,12 +313,24 @@ with sync_playwright() as p:
         d = resp.json()
         d["session"] = {"kind": "live", "done": False, "course": "פיזיקה"} if mini_state["live"] else None
         d["math"] = dict(d.get("math") or {}, ask=mini_state["ask"])
+        if "run" in mini_state:
+            d["run"] = mini_state["run"]
         d["mark_n"] = mini_state["mark_n"]   # (Hevanti's count of marks: a mark made with the keyboard raises it)
         route.fulfill(response=resp, body=json.dumps(d))
     mini.route("**/api/app*", mini_app)
     mini.goto(url + "/mini")
     mini.wait_for_timeout(1200)
     check("floating window: the question box and the ★ mark (no '?')", mini.is_visible("textarea") and mini.is_visible("#markImp") and mini.query_selector("#markLost") is None)
+    run_meta = mini.evaluate("() => document.querySelector('meta[name=bzm-run]').content")
+    live_run = json.loads(urllib.request.urlopen(url + "/api/app").read().decode("utf-8")).get("run")
+    check("floating window: it knows which run of Hevanti gave it the page (a window left open from an earlier run reloads itself)", run_meta == live_run and live_run, (run_meta, live_run))
+    mini.evaluate("() => { window.__same_page = true; }")
+    mini_state["run"] = "another-run"
+    mini.wait_for_timeout(4800)
+    reloaded = mini.evaluate("() => window.__same_page !== true")
+    check("floating window: a different run answers - it loads the page again", reloaded)
+    mini_state.pop("run")
+    mini.wait_for_timeout(4800)   # (the page that was loaded again learns Hevanti's count of marks from its first look)
     marked = []
     mini.route("**/api/cmd", lambda r: (marked.append(json.loads(r.request.post_data or "{}")), r.fulfill(status=200, content_type="application/json", body=json.dumps({"ok": True, "kind": "חשוב"})))[1])
     mini.click("#markImp")
