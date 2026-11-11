@@ -440,6 +440,35 @@ with sync_playwright() as p:
     check("a saved lecture with a name: the course, the date in one format, the length, the slides", pg.inner_text("#pastSub") == course + " · 09.11.2026 · אורך 00:00:05 · שתי שקופיות", pg.inner_text("#pastSub"))
     check("2.18 page: no script errors", pg.errs == [], pg.errs)
 
+    # ---- 2.19 colours: a search match is soft green (yellow is only the student's ★), the ask box has one solid green, the AI used last is a ghost button ----
+    for theme in ("light", "dark"):
+        cp = b.new_context(viewport={"width": 1100, "height": 900}, locale="he-IL", color_scheme=theme).new_page()
+        cp.errs = []
+        cp.on("pageerror", lambda e: cp.errs.append(str(e)))
+        cp.route("**/api/ask", lambda r: r.fulfill(status=200, content_type="text/plain", body="תשובה"))
+        cp.goto(url + "/")
+        cp.wait_for_timeout(900)
+        cp.evaluate(f"""() => {{ document.documentElement.dataset.theme = '{theme}'; document.querySelectorAll('.modal').forEach(m => m.hidden = true);
+            localStorage.setItem('bzm.ai', 'claude');
+            window.__d = document.createElement('div'); document.body.appendChild(window.__d);
+            window.__a = BZMAsk.mount(window.__d, {{context: q => q, toast() {{}}}}); BZMAsk.setBuiltin(true); BZMAsk.setExternal(true); }}""")
+        cp.evaluate("__a.askHere('שאלה')")
+        r = cp.evaluate("""() => { const col = v => { const i = document.createElement('i'); i.style.background = v; document.body.appendChild(i); const c = getComputedStyle(i).backgroundColor; i.remove(); return c; };
+            const soft = col('var(--accent-soft)'), green = col('var(--accent)'), yellow = col('var(--mark)');
+            const m = document.createElement('mark'); m.textContent = 'x'; document.body.appendChild(m); const ms = getComputedStyle(m); const mark = {bg: ms.backgroundColor, shadow: ms.boxShadow}; m.remove();
+            const q = getComputedStyle(__d.querySelector('.qa .q')).backgroundColor;
+            const last = __d.querySelector('.ais button.last'), ls = last && getComputedStyle(last), la = last && getComputedStyle(last, '::after').content;
+            const rules = [...document.styleSheets].flatMap(s => { try { return [...s.cssRules]; } catch (e) { return []; } }).filter(r => r.selectorText && r.selectorText.includes('a-contrast') && r.selectorText.includes('focus-visible')).map(r => r.cssText);
+            return {soft, green, yellow, mark, q, lastBg: last ? ls.backgroundColor : null, lastAfter: la, rules,
+                    solid: [...__d.querySelectorAll('button')].filter(b => b.offsetParent !== null && getComputedStyle(b).backgroundColor === green).map(b => b.textContent.trim())}; }""")
+        check(f"search match, {theme}: soft green with a green underline, not yellow", r["mark"]["bg"] == r["soft"] and r["mark"]["bg"] != r["yellow"] and r["mark"]["shadow"] != "none", r["mark"])
+        check(f"high-contrast focus ring, {theme}: ink, not yellow", r["rules"] and all("var(--fg)" in x and "--mark" not in x for x in r["rules"]), r["rules"])
+        check(f"the question bubble, {theme}: soft green, not solid", r["q"] == r["soft"] and r["q"] != r["green"], (r["q"], r["soft"]))
+        check(f"the ask box after a question, {theme}: 'answer here' is the one solid green control", r["solid"] == ["תשובה כאן"], r["solid"])
+        check(f"the AI used last, {theme}: a ghost button that says 'אחרון', not solid green", r["lastBg"] == "rgba(0, 0, 0, 0)" and "אחרון" in (r["lastAfter"] or ""), (r["lastBg"], r["lastAfter"]))
+        check(f"colours, {theme}: no script errors", cp.errs == [], cp.errs)
+        cp.context.close()
+
     # ---- 2.19, stage 9: the guide's text is about 70 characters a line, and the video, the chapters and the "something is wrong" table hold ----
     for theme in ("light", "dark"):
         gd = b.new_context(viewport={"width": 1280, "height": 900}, locale="he-IL", color_scheme=theme).new_page()

@@ -183,7 +183,7 @@ h2{font-size:21px;margin:0;text-wrap:balance}
 .hits ol{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:2px}
 .hits ol button{all:unset;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:3px 6px;border-radius:8px}
 .hits ol button:hover,.hits ol button:focus-visible{background:var(--sunk)}
-mark{background:var(--mark);color:#17261F;border-radius:3px;padding:0 1px}
+mark{background:var(--accent-soft);color:var(--fg);border-radius:3px;padding:0 1px;box-shadow:inset 0 -2px 0 var(--accent)}   /* a search match: soft green with a green underline (yellow is only the student's ★ mark) */
 .card h2{margin-bottom:6px}
 .card .sub{color:var(--muted);font-size:15px;margin:0 0 10px}
 /* suggested terms for a course: "+" adds one to the glossary */
@@ -476,7 +476,7 @@ html.a-read .lines li{padding-block:8px}
 html.a-read p,html.a-read .lines li span{max-width:75ch}
 html.a-contrast{--muted:var(--fg);--line:#7d7d7d}
 html.a-contrast .card,html.a-contrast .btn.ghost,html.a-contrast .start{border-width:2px}
-html.a-contrast :focus-visible{outline:3px solid var(--mark)!important;outline-offset:2px}
+html.a-contrast :focus-visible{outline:3px solid var(--fg)!important;outline-offset:2px}   /* (ink, not yellow) */
 html.a-still *,html.a-still *::before,html.a-still *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .a11y-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
