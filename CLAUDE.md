@@ -11,6 +11,7 @@ Answers come from Gemini, called straight from the student's computer with the s
 Read before larger changes:
 - `PRODUCT.md`: users, purpose, positioning
 - `DESIGN.md`: visual system ("The Open Notebook": cream paper, white cards, one green action, yellow only for marks and the logo)
+- `TASKS.md`: open work, split between Roei's tasks (what Claude cannot do) and Claude's. **Update it whenever a task opens or closes.**
 - `DECISIONS.md`: what was decided and why (Hebrew, dated). **Add every new decision there.** It is the project's memory.
 - `README.md`: features, privacy, file map
 - `docs/distribution.md`: how it is spread. `docs/real-lecture-test.md`: the manual checklist before each release.
