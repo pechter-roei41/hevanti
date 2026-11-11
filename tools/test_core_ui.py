@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import tempfile
+import urllib.parse
 import urllib.request
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -267,6 +268,11 @@ with sync_playwright() as p:
     rep = pg.evaluate("document.querySelector('#repText').value")
     check("report a problem: the details are shown, with a place to say what happened", pg.is_visible("#report") and rep.startswith("מה קרה") and "הבנתי " in rep, rep[:200])
     check("report a problem: the GitHub button opens a new issue", pg.evaluate("document.querySelector('#repGit').href").endswith("/issues/new"))
+    mail_href = urllib.parse.unquote(pg.evaluate("document.querySelector('#repMail').href"))
+    check("report a problem: a button writes to the e-mail address, with the version in the subject, and nothing of the details in the link (they are pasted)",
+          mail_href.startswith("mailto:340937874+pechter-roei41@users.noreply.github.com?subject=הבנתי ") and "דיווח על תקלה" in mail_href and "מחשב" not in mail_href.split("body=")[0] and len(mail_href) < 300, mail_href)
+    check("report a problem: the address is shown (for those without a mail program), with a copy button",
+          pg.evaluate("document.querySelector('#repAddr').textContent") == "340937874+pechter-roei41@users.noreply.github.com" and pg.is_visible("#repAddrCopy"))
     pg.click("#repClose")
     check("report a problem: closes, no script errors", not pg.is_visible("#report") and perr == [], perr)
 

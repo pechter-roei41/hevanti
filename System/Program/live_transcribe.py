@@ -5778,6 +5778,7 @@ def course_ai_info(course):
 
 # ---------- is there a newer version? (the GitHub releases of the open-source project) ----------
 GITHUB_REPO = "pechter-roei41/hevanti"
+REPORT_EMAIL = "340937874+pechter-roei41@users.noreply.github.com"   # "report a problem" by e-mail (the student presses send: Hevanti sends nothing). Public, like this file: decided by Roei, 11.11.2026
 RELEASES_URL = os.environ.get("BZM_RELEASES_URL") or f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 
@@ -8395,7 +8396,7 @@ def _app_handler():
                                            math_every=bool(load_settings().get("math_every_slide", False)),
                                            external_ai=bool(load_settings().get("external_ai", False))))
                 if p == "/api/diag":   # "report a problem": shown to the student, who copies it into a report
-                    return self._json({"text": diag_text(), "issues": f"https://github.com/{GITHUB_REPO}/issues/new"})
+                    return self._json({"text": diag_text(), "issues": f"https://github.com/{GITHUB_REPO}/issues/new", "mail": REPORT_EMAIL, "version": VERSION})
                 if p == "/api/marks":   # the marked moments of a course
                     c = clean_name(q.get("c", [""])[0])
                     return self._json({"marks": course_marks(c) if c and os.path.isdir(course_dir(c)) else []})

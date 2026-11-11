@@ -165,6 +165,7 @@ L.save_settings(math={"key": "plain:AIzaTOPSECRET123", "on": True})
 diag = json.loads(get("/api/diag")[1])
 txt = diag["text"]
 check("report a problem: the version, the computer and the newest error", L.VERSION in txt and "Windows" in txt and "OSError" in txt, txt[:300])
+check("report a problem: the e-mail address to write to comes with it, and is not inside the details", diag.get("mail") == L.REPORT_EMAIL and L.REPORT_EMAIL not in txt and diag.get("version") == L.VERSION, diag.get("mail"))
 check("report a problem: never the key", "AIzaTOPSECRET123" not in txt and "plain:" not in txt and "מפתח Gemini: יש" in txt)
 check("report a problem: the user's own folder name is hidden", home not in txt and "%USERPROFILE%" in txt, txt[-200:])
 check("report a problem: the link opens a new GitHub issue", diag["issues"].endswith("/issues/new"))
