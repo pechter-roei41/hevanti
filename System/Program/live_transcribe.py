@@ -36,8 +36,8 @@ try:
 except Exception:  # lets "uninstall" run even if the install never finished
     np = None
 
-VERSION = "2.18"
-VERSION_DATE = "10.11.2026"
+VERSION = "2.19"
+VERSION_DATE = "11.11.2026"
 PRODUCT = "הבנתי"
 GUIDE_URL = "https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD"
 
@@ -5394,6 +5394,28 @@ def mini_button_wanted():
         return True
 
 
+def mini_button_why():
+    """Why the floating button is not shown right now (for the black window: a report of a button that stays when it should go)."""
+    if not load_settings().get("mini_button", True):
+        return "כבוי בהגדרות"
+    s = APP.session
+    if s is None:
+        return "אין הרצאה"
+    if s.done:
+        return "ההרצאה נגמרה"
+    if not s.ready:
+        return "ההרצאה עוד נטענת"
+    if s.stop.is_set():
+        return "נלחצה עצירה"
+    if s.kind == "rec":
+        rec = APP.rec
+        if rec is None or not rec.page_alive():
+            return "הנגן של ההקלטה סגור"
+    elif s.kind != "live":
+        return "סוג הרצאה אחר"
+    return "החלון הקטן פתוח"
+
+
 def _logo_rgba(S):
     """The logo on a round cream disc with a green ring, as premultiplied BGRA bytes (top-down) for UpdateLayeredWindow:
     the edge of the disc is smoothed by the alpha channel, and outside the disc the window is transparent."""
@@ -5612,6 +5634,9 @@ class MiniButton(threading.Thread):
                 return 0
             if msg == 0x0113:   # WM_TIMER (ten times a second): show / hide as the lecture and the window change
                 raw = bool(self.wanted())
+                if raw != st.get("raw_was"):   # (said in the black window when it changes: if the button stays when it should go, the reason is there)
+                    st["raw_was"] = raw
+                    log("הכפתור הצף: " + ("מוצג" if raw else "מוסתר (" + mini_button_why() + ")"))
                 if not raw:   # the window is up: the hold after the click is over (a minimize brings the button back at once)
                     st["hold"] = 0.0
                 want = raw and time.time() >= st["hold"]

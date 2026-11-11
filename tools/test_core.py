@@ -293,6 +293,15 @@ try:
 finally:
     L.APP.session = old_session
 check("floating button: shown while a lecture runs (the window is not up), gone the moment stop is pressed", before is True and after is False, (before, after))
+L.APP.session = fs2 = _FakeSess()
+try:
+    fs2.stop.set()
+    why_stop = L.mini_button_why()
+    L.APP.session = None
+    why_none = L.mini_button_why()
+finally:
+    L.APP.session = old_session
+check("floating button: the reason it is hidden can be told (for the black window)", why_stop == "נלחצה עצירה" and why_none == "אין הרצאה", (why_stop, why_none))
 check("a command without the page's header is refused (another site cannot drive Hevanti)", refused)
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")

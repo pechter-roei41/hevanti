@@ -1,6 +1,6 @@
 # Hevanti (הבנתי)
 
-Open-source (MIT) lecture companion for Israeli university students, Windows only. Beta (released number 2.18; the 2.19 work is merged to `main` but not yet released, and the version in code stays 2.18 until Roei says to bump).
+Open-source (MIT) lecture companion for Israeli university students, Windows only. Beta (currently 2.19: it holds all the work of 2.18 and 2.19, which were never released apart; the last GitHub release is still v2.17 until a `v2.19` tag is pushed).
 
 It transcribes a lecture on the student's computer (Hebrew or English, live or recorded), saves a picture of every new slide, and has two core features:
 - **The floating window** (`mini.html`, Ctrl+Alt+Q, or the round button at the screen edge): always on top, also over a full-screen lecture. Type a question, get an answer based on the last minutes and the slide on screen. Three "what did I miss" buttons (3, 7, 15 minutes).
