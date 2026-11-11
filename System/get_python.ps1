@@ -6,11 +6,14 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ver = '3.12.10'
-$zip = Join-Path $env:TEMP "python-$ver-embed-amd64.zip"
+# The zip goes next to the target folder, not to %TEMP%: with a Hebrew user name %TEMP% is a short 8.3 name (C:\Users\131B~1)
+# that Remove-Item and some other commands reject.
+New-Item -ItemType Directory -Force -Path $Dest | Out-Null
+$zip = Join-Path $Dest "python-$ver-embed-amd64.zip"
 Invoke-WebRequest -UseBasicParsing "https://www.python.org/ftp/python/$ver/python-$ver-embed-amd64.zip" -OutFile $zip
 New-Item -ItemType Directory -Force -Path $Dest | Out-Null
 Expand-Archive -Path $zip -DestinationPath $Dest -Force
-Remove-Item $zip -ErrorAction SilentlyContinue
+try { [IO.File]::Delete($zip) } catch { }
 # let it use installed packages (site-packages), which the embeddable Python turns off
 $pth = Get-ChildItem $Dest -Filter 'python*._pth' | Select-Object -First 1
 (Get-Content $pth.FullName) -replace '^#\s*import site', 'import site' | Set-Content $pth.FullName -Encoding ascii

@@ -10,6 +10,8 @@ set "PY="
 if not exist "%PYDIR%\python.exe" (
   echo Getting Python for Hevanti ^(about 11MB, only once^)...
   powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0System\get_python.ps1" "%PYDIR%"
+  rem a download that stopped half way must not leave a Python without pip: remove it, so the next Install starts clean
+  if errorlevel 1 rmdir /s /q "%PYDIR%" >nul 2>&1
 )
 if exist "%PYDIR%\python.exe" set "PY="%PYDIR%\python.exe""
 rem no Hevanti Python (no internet to python.org?): a Python that is already installed
