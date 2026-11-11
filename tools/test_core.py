@@ -165,7 +165,12 @@ L.save_settings(math={"key": "plain:AIzaTOPSECRET123", "on": True})
 diag = json.loads(get("/api/diag")[1])
 txt = diag["text"]
 check("report a problem: the version, the computer and the newest error", L.VERSION in txt and "Windows" in txt and "OSError" in txt, txt[:300])
-check("report a problem: the e-mail address to write to comes with it, and is not inside the details", diag.get("mail") == L.REPORT_EMAIL and L.REPORT_EMAIL not in txt and diag.get("version") == L.VERSION, diag.get("mail"))
+_real_mail = L.REPORT_EMAIL
+L.REPORT_EMAIL = "support@example.test"   # (made up: the real address is set when Hevanti has one)
+diag2 = json.loads(get("/api/diag")[1])
+L.REPORT_EMAIL = _real_mail
+check("report a problem: the support address comes with it (when there is one), and is not inside the details", diag2.get("mail") == "support@example.test" and "support@example.test" not in diag2["text"] and diag2.get("version") == L.VERSION, diag2.get("mail"))
+check("report a problem: no personal address ships in the program (REPORT_EMAIL is empty until Hevanti has a support address)", L.REPORT_EMAIL == "" and diag.get("mail") == "", (L.REPORT_EMAIL, diag.get("mail")))
 check("report a problem: never the key", "AIzaTOPSECRET123" not in txt and "plain:" not in txt and "מפתח Gemini: יש" in txt)
 check("report a problem: the user's own folder name is hidden", home not in txt and "%USERPROFILE%" in txt, txt[-200:])
 check("report a problem: the link opens a new GitHub issue", diag["issues"].endswith("/issues/new"))

@@ -2,7 +2,7 @@
 
 **Ask during the lecture, mark the moments that matter.** An open-source lecture companion for students on Windows.
 
-> **Beta.** Hevanti is still being tested, and things may change or break. If something does not work, use "Report a problem" at the bottom of the home screen (it shows the details to copy; you send them in a GitHub issue or by e-mail, Hevanti sends nothing by itself), or open an [issue](https://github.com/pechter-roei41/hevanti/issues)).
+> **Beta.** Hevanti is still being tested, and things may change or break. If something does not work, use "Report a problem" at the bottom of the home screen (it shows the details to copy; you send them in a GitHub issue or to whoever gave you Hevanti (an e-mail option comes with a support address), Hevanti sends nothing by itself), or open an [issue](https://github.com/pechter-roei41/hevanti/issues)).
 
 Hevanti writes down everything said in the lecture, in Hebrew or English, while it runs on your computer. Its core is two things:
 

@@ -263,16 +263,29 @@ with sync_playwright() as p:
     pg.on("pageerror", lambda e: perr.append(str(e)))
     top, foot = pg.evaluate("document.querySelector('#verTop').textContent"), pg.evaluate("document.querySelector('#ver').textContent")
     check("beta: the header and the footer say it is a beta, with the version", top.startswith("בטא ") and "בטא" in foot and L.VERSION in top and L.VERSION in foot, (top, foot))
+    TEST_MAIL = "support@example.test"   # (a made-up address: the real one is set in REPORT_EMAIL when Hevanti has one)
+    mail_now = {"v": ""}
+
+    def diag_route(route):
+        resp = route.fetch(); d = resp.json(); d["mail"] = mail_now["v"]
+        route.fulfill(response=resp, body=json.dumps(d))
+    pg.route("**/api/diag", diag_route)
     pg.click("#repBtn")
     pg.wait_for_function("document.querySelector('#repText').value.includes('Windows')", timeout=8000)
     rep = pg.evaluate("document.querySelector('#repText').value")
     check("report a problem: the details are shown, with a place to say what happened", pg.is_visible("#report") and rep.startswith("מה קרה") and "הבנתי " in rep, rep[:200])
     check("report a problem: the GitHub button opens a new issue", pg.evaluate("document.querySelector('#repGit').href").endswith("/issues/new"))
+    check("report a problem: no support address - no e-mail button, no address, and the way to send says so in words",
+          pg.is_hidden("#repMail") and pg.is_hidden("#repMailHelp") and pg.is_visible("#repNoMail") and "מי שנתן לכם" in pg.inner_text("#repNoMail"), pg.inner_text("#repNoMail"))
+    pg.click("#repClose")
+    mail_now["v"] = TEST_MAIL
+    pg.click("#repBtn")
+    pg.wait_for_function("document.querySelector('#repText').value.includes('Windows')", timeout=8000)
     mail_href = urllib.parse.unquote(pg.evaluate("document.querySelector('#repMail').href"))
-    check("report a problem: a button writes to the e-mail address, with the version in the subject, and nothing of the details in the link (they are pasted)",
-          mail_href.startswith("mailto:340937874+pechter-roei41@users.noreply.github.com?subject=הבנתי ") and "דיווח על תקלה" in mail_href and "מחשב" not in mail_href.split("body=")[0] and len(mail_href) < 300, mail_href)
-    check("report a problem: the address is shown (for those without a mail program), with a copy button",
-          pg.evaluate("document.querySelector('#repAddr').textContent") == "340937874+pechter-roei41@users.noreply.github.com" and pg.is_visible("#repAddrCopy"))
+    check("report a problem: with a support address, a button writes to it, with the version in the subject, and nothing of the details in the link (they are pasted)",
+          mail_href.startswith("mailto:" + TEST_MAIL + "?subject=הבנתי ") and "דיווח על תקלה" in mail_href and "מחשב" not in mail_href.split("body=")[0] and len(mail_href) < 300 and pg.is_visible("#repMail"), mail_href)
+    check("report a problem: ...and the address is shown (for those without a mail program), with a copy button",
+          pg.evaluate("document.querySelector('#repAddr').textContent") == TEST_MAIL and pg.is_visible("#repAddrCopy") and pg.is_hidden("#repNoMail"))
     pg.click("#repClose")
     check("report a problem: closes, no script errors", not pg.is_visible("#report") and perr == [], perr)
 
