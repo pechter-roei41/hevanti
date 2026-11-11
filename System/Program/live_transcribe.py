@@ -8366,7 +8366,9 @@ def _app_handler():
                 usage, started, chars, used, info = {}, time.time(), len(json.dumps(body, ensure_ascii=False)), "", {}
                 task = bool(d.get("task"))   # (a whole lecture takes longer to start, and may try more models)
                 models = reader.models_to_try(key)
+                spare = []   # the light model, tried once more only when the quota stopped the others (it has a quota of its own)
                 if not task:
+                    spare = [m for m in models[GEMINI_LIVE_MODELS:] if "lite" in m][:1]
                     models = models[:GEMINI_LIVE_MODELS]   # a live question: two models at most - each try costs quota and time
                 deadline = started + (GEMINI_TASK_DEADLINE_S if task else GEMINI_LIVE_DEADLINE_S)   # ...and this long all together
                 for model in models:   # busy / retired / slow today: the next model
@@ -8386,6 +8388,8 @@ def _app_handler():
                         last_err, pieces = e, None
                         if e.kind == "quota":
                             quota_err = e
+                            if spare and not any("lite" in m for m in models):   # (a quota says nothing about the light model)
+                                models.append(spare.pop())
                         reader.failed(model, e)
                         log_tokens(model, None, chars, False, started, e.kind == "quota")
                 if pieces is None:

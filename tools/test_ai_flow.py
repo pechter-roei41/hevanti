@@ -220,6 +220,13 @@ code, body = ask()
 check("the next question goes straight to the model that answers (Google is not asked again for the one that rests)",
       code == 200 and [x["model"] for x in asked()] == [MODELS[1]], [x["model"] for x in asked()])
 
+# the two strong models are out of quota (seen on a real key: the two newest models said "quota" at once, the light one still answered)
+reset()
+BEHAVE[MODELS[0]] = BEHAVE[MODELS[1]] = "quota-min"
+code, body = ask()
+check("the two strong models are out of quota: the light model is tried as well, and answers", code == 200 and body == "שלום לכולם", (code, body))
+check("...in that order: the two models, then the light one", [x["model"] for x in asked()] == MODELS, [x["model"] for x in asked()])
+
 for mode, what in (("503", "busy"), ("404", "gone (retired)")):
     reset()
     BEHAVE[MODELS[0]] = mode
