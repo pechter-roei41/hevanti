@@ -5378,7 +5378,7 @@ def mini_button_wanted():
     if not load_settings().get("mini_button", True):
         return False
     s = APP.session
-    if s is None or s.done or not s.ready:
+    if s is None or s.done or not s.ready or s.stop.is_set():   # (stop pressed: the button goes at once, not when the last seconds are written)
         return False
     if s.kind == "rec":   # a recording: only while its player page is open
         rec = APP.rec

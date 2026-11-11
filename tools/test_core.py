@@ -278,6 +278,21 @@ x2, y2 = L._toast_xy(bx, by, 56, tw_, th_, "tr", _Area)
 x3, _ = L._toast_xy(0, by, 56, tw_, th_, "bl", _Area)
 check("floating-button message: above the button for a bottom corner, below it for a top one, and never off the screen",
       y1 + th_ <= by and y2 >= by + 56 and x1 >= 0 and x1 + tw_ <= 1920 and x3 >= 0, (x1, y1, x2, y2, x3))
+# ---- the floating button goes when the lecture is stopped (at once, while the last seconds are still being written) ----
+class _FakeSess:
+    kind, ready, done = "live", True, False
+    def __init__(self):
+        self.stop = threading.Event()
+old_session = L.APP.session
+L.APP.session = fs = _FakeSess()
+try:
+    L.save_settings(mini_button=True)
+    before = L.mini_button_wanted()
+    fs.stop.set()
+    after = L.mini_button_wanted()
+finally:
+    L.APP.session = old_session
+check("floating button: shown while a lecture runs (the window is not up), gone the moment stop is pressed", before is True and after is False, (before, after))
 check("a command without the page's header is refused (another site cannot drive Hevanti)", refused)
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
