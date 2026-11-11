@@ -224,6 +224,41 @@ L.log_tokens("gemini-3.6-flash", None, 10, False, time.time(), True)
 L._USAGE["at"] = 0
 ut = L.usage_today()
 check("today's counts: questions, slides read, slides not sent, quota", ut == {"asks": 1, "reads": 1, "skipped": 1, "failed": 1, "quota": 1}, ut)
+# ---- the keyboard shortcuts keep listening: a slow beep (a Bluetooth device) or a slow mark must not stop them ----
+gate = threading.Event()
+orig_mark, orig_toggle = L.PauseHotkey._mark, L.PauseHotkey._toggle
+L.PauseHotkey._mark = lambda self: gate.wait(5)
+L.PauseHotkey._toggle = lambda self: gate.wait(5)
+t0 = time.time()
+hk = L.PauseHotkey()
+hk.mark()
+hk.toggle()
+check("hotkeys: a mark and a pause return at once (they run on their own thread, the message loop keeps listening)", time.time() - t0 < 0.5, time.time() - t0)
+gate.set()
+L.PauseHotkey._mark, L.PauseHotkey._toggle = orig_mark, orig_toggle
+# ---- the count of marks that the small window watches ----
+a0 = L.APP.mark_n if getattr(L, "APP", None) is not None else 0
+check("a refused mark (nothing is running) does not count", (lambda r: r.get("ok") is False and L.APP.mark_n == a0)(L.APP.mark_moment("important")) if getattr(L, "APP", None) is not None else True)
+# ---- a live question does not wait long to find the models ----
+seen_timeouts = []
+orig_call, orig_models, orig_cands = L.gemini_call, L.gemini_models, L.gemini_candidates
+L.gemini_models = lambda key: ["gemini-flash-latest"]
+L.gemini_candidates = lambda models: ["gemini-flash-latest", "gemini-flash-lite-latest"]
+L.gemini_call = lambda path, key, body, timeout=None, **kw: (seen_timeouts.append(timeout), {"candidates": []})[1]
+r1 = L.MathReader()
+r1.restore = lambda key: False
+try:
+    r1.models_to_try("k", quick=True)
+    quick_t = list(seen_timeouts)
+    del seen_timeouts[:]
+    r2 = L.MathReader()
+    r2.restore = lambda key: False
+    r2.models_to_try("k")
+    slow_t = list(seen_timeouts)
+finally:
+    L.gemini_call, L.gemini_models, L.gemini_candidates = orig_call, orig_models, orig_cands
+check("a live question looks for the models for PROBE_LIVE_S at most; other callers for the usual 20 s",
+      quick_t and all(x == L.PROBE_LIVE_S for x in quick_t) and slow_t and all(x == 20 for x in slow_t), (quick_t, slow_t))
 check("a command without the page's header is refused (another site cannot drive Hevanti)", refused)
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")

@@ -1775,8 +1775,8 @@ function render(d) {
   if (cn !== lastConn) { lastConn = cn; drawConnState(d.connect || {}); }
   const s = d.session, active = s && !s.done;
   const pill = $("#statePill");
-  if (active && s.yt) { pill.className = "pill live"; pill.textContent = s.ready ? (s.stopping ? "עוצר..." : "מתמלל את הסרטון") : "מתחיל..."; }
-  else if (active && s.kind === "live") { pill.className = "pill live"; pill.textContent = s.ready ? (s.stopping ? "עוצר..." : "מקליט") : "מתחיל..."; }
+  if (active && s.yt) { pill.className = "pill live"; pill.textContent = s.ready ? (s.stopping ? "עוצר..." + (s.stopping_for > 5 ? " " + s.stopping_for + " שנ'" : "") : "מתמלל את הסרטון") : "מתחיל..."; }
+  else if (active && s.kind === "live") { pill.className = "pill live"; pill.textContent = s.ready ? (s.stopping ? "עוצר..." + (s.stopping_for > 5 ? " " + s.stopping_for + " שנ'" : "") : "מקליט") : "מתחיל..."; }
   else if (active) { pill.className = "pill"; pill.textContent = s.ready ? "הקלטה פתוחה" : "מכין הקלטה..."; }
   else { pill.className = "pill"; pill.textContent = "מוכן"; }
   liveTip(s);

@@ -305,13 +305,14 @@ with sync_playwright() as p:
     # The window asks Hevanti every 4 seconds what is running and whether "answer here" is set up, and shows or hides its parts by
     # that. A test that only flips those parts by hand races with that poll (the button it clicks is hidden again): so the test says
     # what Hevanti answers - a lecture is running, and "answer here" is on or off - and the window follows it, as in real use.
-    mini_state = {"live": True, "ask": True}
+    mini_state = {"live": True, "ask": True, "mark_n": 0}
 
     def mini_app(route):
         resp = route.fetch()
         d = resp.json()
         d["session"] = {"kind": "live", "done": False, "course": "פיזיקה"} if mini_state["live"] else None
         d["math"] = dict(d.get("math") or {}, ask=mini_state["ask"])
+        d["mark_n"] = mini_state["mark_n"]   # (Hevanti's count of marks: a mark made with the keyboard raises it)
         route.fulfill(response=resp, body=json.dumps(d))
     mini.route("**/api/app*", mini_app)
     mini.goto(url + "/mini")
@@ -322,6 +323,18 @@ with sync_playwright() as p:
     mini.click("#markImp")
     mini.wait_for_timeout(300)
     check("floating window: ★ sends an 'important' mark to Hevanti", any(m.get("action") == "mark" and m.get("kind") == "important" for m in marked), marked)
+    toast = mini.evaluate("""() => { const e = document.querySelector('#toast'), s = e.querySelector('.star'), c = getComputedStyle(s);
+        return {on: e.classList.contains('on'), text: e.textContent, star: s.textContent, band: c.backgroundColor,
+                want: getComputedStyle(document.documentElement).getPropertyValue('--mark-line').trim(), centred: Math.abs((e.getBoundingClientRect().left + e.getBoundingClientRect().right) / 2 - innerWidth / 2) < 3,
+                narrower: e.getBoundingClientRect().width < innerWidth - 20}; }""")
+    check("floating window: the mark message is a card with a yellow ★ (the highlighter colour) and the word, in the middle, not a bar across", toast["on"] and toast["star"] == "★" and "סומן" in toast["text"] and toast["centred"] and toast["narrower"], toast)
+    mini.wait_for_timeout(3300)   # (the message goes away)
+    mini_state["mark_n"] = 1   # a mark made with Ctrl+Alt+M: Hevanti's count goes up, and the window says it too
+    mini.wait_for_timeout(4600)
+    check("floating window: a mark made with the keyboard shows the same message", mini.evaluate("() => document.querySelector('#toast').classList.contains('on') && document.querySelector('#toast .star') !== null"))
+    mini.wait_for_timeout(3300)
+    mini.wait_for_timeout(4600)
+    check("floating window: ...and only once for one mark", not mini.evaluate("() => document.querySelector('#toast').classList.contains('on')"))
     # the first key of a question asks Hevanti for a picture of the screen of that moment - once per question
     marked.clear()
     mini.fill("textarea", "מ")

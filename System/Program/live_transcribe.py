@@ -1536,6 +1536,12 @@ class PauseHotkey(threading.Thread):
         self.stop_evt = threading.Event()
 
     def toggle(self):
+        threading.Thread(target=self._toggle, daemon=True).start()   # (not in the message loop: it must keep listening)
+
+    def mark(self):
+        threading.Thread(target=self._mark, daemon=True).start()
+
+    def _toggle(self):
         paused = capture_control().set_paused(not capture_control().paused)
         log("צילום המסך הושהה. לא נשמר שום צילום עד שממשיכים (" + PAUSE_HOTKEY + " או הכפתור בדף)." if paused
             else "צילום המסך חזר.")
@@ -1545,7 +1551,7 @@ class PauseHotkey(threading.Thread):
         except Exception:
             pass
 
-    def mark(self):
+    def _mark(self):
         r = APP.mark_moment("important")
         log("סומן ★. אחרי ההרצאה אפשר לבקש מה-AI הסבר לכל הרגעים שסימנת." if r.get("ok") else r.get("error", ""))
         try:
@@ -2229,18 +2235,18 @@ class MathReader(threading.Thread):
             self.order, self.model, self.quota_err, self.misses = list(c["order"]), c["order"][0], None, 0
         return True
 
-    def ensure_model(self, key):
+    def ensure_model(self, key, quick=False):
         if not self.model and not self.restore(key):
             if self.quota_err is not None and time.time() < self.quota_until:   # (do not spend more quota to ask again)
                 raise MathError(str(self.quota_err), int(self.quota_until - time.time()) + 1, kind="quota")
-            self.probe(key)
+            self.probe(key, timeout=PROBE_LIVE_S if quick else 20)
         if not self.model:
             if self.quota_err is not None:
                 raise MathError(str(self.quota_err), max(1, int(self.quota_until - time.time()) + 1), kind="quota")
             raise MathError("לא נמצא ב-Gemini מודל שעונה כרגע. לנסות שוב עוד כמה דקות.", other=True)
         return self.model
 
-    def probe(self, key):
+    def probe(self, key, timeout=20):
         """Which models answer right now: a one-word question to the best few at once (models are retired, busy or
         slow from day to day). The ones that answered, best first, then the rest - the order to try them in.
         Four models (each question costs one request of the day's quota): the best three flash and the best light one
@@ -2255,7 +2261,7 @@ class MathReader(threading.Thread):
         def one(m):   # (answered?, seconds)
             t0 = time.time()
             try:
-                gemini_call(f"models/{m}:generateContent", key, body, timeout=20)
+                gemini_call(f"models/{m}:generateContent", key, body, timeout=timeout)
                 return True, time.time() - t0
             except MathError as e:
                 if e.kind == "quota":
@@ -2280,10 +2286,10 @@ class MathReader(threading.Thread):
             probe_cache_write(key, order)
         return self.model
 
-    def models_to_try(self, key, prefer_lite=False):
+    def models_to_try(self, key, prefer_lite=False, quick=False):
         """prefer_lite: reading slides goes to the light model first - it has a quota of its own, so the questions
         (which want the stronger model) are not left without one."""
-        self.ensure_model(key)
+        self.ensure_model(key, quick=quick)
         with self.lock:
             now, order = time.time(), list(self.order or [self.model])
             if prefer_lite:
@@ -2632,6 +2638,7 @@ def log_tokens(model, usage, body_chars, ok, started, quota=False, kind="ask"):
 GEMINI_START_S = 15           # a live question: until Gemini starts to answer
 GEMINI_TASK_START_S = 60      # a whole lecture takes longer to start
 GEMINI_READ_S = 45            # once it has started: the longest silence between two pieces
+PROBE_LIVE_S = 8             # looking for the models that answer, when a live question has to do it: this long at most (20 s for the rest)
 GEMINI_LIVE_MODELS = 2        # a live question tries at most this many models (each try is a request of the free quota)
 GEMINI_LIVE_DEADLINE_S = 25   # ...and at most this long, all together, before the answer starts
 GEMINI_TASK_DEADLINE_S = 90
@@ -6963,12 +6970,14 @@ class Session:
         self.yt = None         # a YouTube video in Hevanti's player: {"id", "url", "start"}
         self.ready_at = None   # when it started transcribing (a stop within QUICK_STOP_S offers to delete it)
         self.discard = False   # stopped right after starting, and the student chose to delete it
+        self.stop_at = None    # when the stop was asked (the page says how long it has been stopping)
 
     def info(self):
         return {"kind": self.kind, "lang": self.lang, "title": self.title, "course": self.course, "ready": self.ready,
                 "done": self.done, "stopping": self.stop.is_set() and not self.done, "error": self.error,
                 "started": self.started, "transcript": self.transcript, "yt": self.yt,
-                "ready_at": self.ready_at, "discard": self.discard}
+                "ready_at": self.ready_at, "discard": self.discard,
+                "stopping_for": int(time.time() - self.stop_at) if self.stop_at and not self.done else 0}
 
 
 NOTE_WARN = ("אזהרה", "שגיאה", "נכשל", "לא הצלחתי", "חסם", "לא נמצא", "לא מגיע", "שים לב", "נקטעה", "נעצר")
@@ -6996,6 +7005,7 @@ class App:
         self.quit_evt = threading.Event()
         self.url = None
         self.lib_rev = 0
+        self.mark_n = 0
         self.first_view = ""
         self._connect, self._connect_at = {}, 0.0
 
@@ -7033,7 +7043,7 @@ class App:
                     "screens": SCREEN_ENABLED, "capture": capture_control().public(), "math": math_reader().status(), "gpu": gpu_public(),
                     "product": PRODUCT, "migrated": self.migrated,
                     "course": load_settings().get("course") or "", "connect": self.connect_info(),
-                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme(), "save_failed": save_failed_public()}
+                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme(), "save_failed": save_failed_public(), "mark_n": self.mark_n}
 
     def connect_info(self):
         """Which AI apps are connected (reading two small config files - at most every few seconds)."""
@@ -7085,6 +7095,8 @@ class App:
             s = self.session
         if s is not None and not s.done:
             s.discard = bool(discard)
+            if not s.stop.is_set():
+                s.stop_at = time.time()
             s.stop.set()
             if s.kind == "live" and not s.ready:
                 # still loading (the model, packages): nothing was recorded yet - done now for the page, instead of
@@ -7301,10 +7313,16 @@ class App:
             rec = self.rec
         fn = getattr(s, "mark_fn", None) if s is not None and not s.done and s.ready else None
         if fn is None and s is not None and s.kind == "rec" and rec is not None and not s.done:
-            return mark_recording(rec, kind)
+            r = mark_recording(rec, kind)
+            if r.get("ok"):
+                with self.lock:
+                    self.mark_n += 1
+            return r
         if fn is None:
             return {"ok": False, "error": "אפשר לסמן רגע בהרצאה חיה או בהקלטה שצופים בה."}
         fn(kind)
+        with self.lock:
+            self.mark_n += 1   # (the small window shows "★ סומן" when this changes: also for a mark made with Ctrl+Alt+M)
         return {"ok": True, "kind": kind}
 
     def delete_shots(self, a, d):
@@ -8365,7 +8383,7 @@ def _app_handler():
                 pieces, first, last_err, quota_err = None, "", None, None
                 usage, started, chars, used, info = {}, time.time(), len(json.dumps(body, ensure_ascii=False)), "", {}
                 task = bool(d.get("task"))   # (a whole lecture takes longer to start, and may try more models)
-                models = reader.models_to_try(key)
+                models = reader.models_to_try(key, quick=not task)   # (a live question does not wait long to find the models)
                 spare = []   # the light model, tried once more only when the quota stopped the others (it has a quota of its own)
                 if not task:
                     spare = [m for m in models[GEMINI_LIVE_MODELS:] if "lite" in m][:1]
@@ -9518,7 +9536,12 @@ def run_live(sess, lang, course=""):
     else:
         finish_tail()
     finally:
+        t_end = time.time()
+        def step(what):   # (where the time of a stop goes: shown in the black window, to find a slow step)
+            log(f"עצירה: {what} ({time.time() - t_end:.0f} שניות מתחילת הסיום)")
+        step("התמלול של הרגעים האחרונים הסתיים")
         audio.close()
+        step("התקן השמע נסגר")
         if MEDIA_PROC is not None:
             try:
                 MEDIA_PROC.terminate()
@@ -9528,9 +9551,11 @@ def run_live(sess, lang, course=""):
             watcher.stop()
             watcher.join(5)   # it may keep the last board first (SlideJudge) - before the transcript is closed
             log(f"צילומי מסך שנשמרו: {watcher.count}")
+            step("הצילומים הסתיימו")
         if getattr(sess, "hotkey", None) is not None:
             sess.hotkey.stop()
         closing()
+        step("סוף התמלול נכתב")
         now_file.ended = True
         if not os.path.isdir(ldir):
             sess.transcript = None

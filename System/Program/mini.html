@@ -25,15 +25,15 @@ try { bzmTheme(localStorage.getItem("bzm.theme") || ""); } catch (e) {}</script>
 <style>
 :root{
   --bg:#F6F3E9; --surface:#FFFFFF; --sunk:#ECE7D8; --fg:#17261F; --muted:#56625B; --line:#DDD7C4;
-  --accent:#1B6E4B; --accent-ink:#FFFFFF; --accent-soft:#DCEBDF; --rec:#C2412D; --warn-bg:#FBF0DA; --warn-fg:#6B5020;
+  --accent:#1B6E4B; --accent-ink:#FFFFFF; --accent-soft:#DCEBDF; --rec:#C2412D; --warn-bg:#FBF0DA; --warn-fg:#6B5020; --mark-line:#F7DD7B;
   --f-body:"Assistant","Segoe UI","Arial Hebrew",Arial,system-ui,sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#1C1B16; --surface:#26241D; --sunk:#2F2C23; --fg:#F1ECDF; --muted:#B5AFA0; --line:#3E3A2E;
-  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; color-scheme:dark}}
+  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; --mark-line:#594E25; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#1C1B16; --surface:#26241D; --sunk:#2F2C23; --fg:#F1ECDF; --muted:#B5AFA0; --line:#3E3A2E;
-  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; color-scheme:dark}
+  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; --mark-line:#594E25; color-scheme:dark}
 :root[data-theme="light"]{color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -68,7 +68,8 @@ body.on #lec::before{background:var(--rec)}
 #box.askp .head{display:none}
 #box.askp textarea{font-size:17px;padding:10px 12px;min-height:3.6em;border-radius:12px}
 #box.askp .ais button.here{padding:8px 18px;font-size:15px;border-radius:12px;margin-inline-start:auto}
-#toast{position:fixed;inset-inline:10px;bottom:10px;background:var(--fg);color:var(--bg);padding:8px 12px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);max-width:calc(100% - 20px);width:max-content;box-sizing:border-box;background:var(--surface);color:var(--fg);border:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.18);padding:9px 16px;border-radius:12px;font-size:15px;line-height:1.4;font-weight:600;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast .star{display:inline-block;background:var(--mark-line);color:var(--fg);border-radius:6px;padding:0 7px;margin-inline-end:8px}   /* the ★ is the only yellow: the highlighter of a mark */
 #toast.on{opacity:1}
 </style>
 </head>
@@ -92,9 +93,13 @@ body.on #lec::before{background:var(--rec)}
 <script>
 "use strict";
 const $ = s => document.querySelector(s);
-let shot = null, total = 0, live = false, kind0 = "";
+let shot = null, total = 0, live = false, kind0 = "", lastMark = null;
+const MARKED = "★ סומן";
 function toast(t) {
-  const e = $("#toast"); e.textContent = t; e.classList.add("on");
+  const e = $("#toast"); e.textContent = "";
+  if (t === MARKED) { const s = document.createElement("span"); s.className = "star"; s.textContent = "★"; e.append(s, "סומן"); }   // the mark: a yellow ★ and the word, one line
+  else e.textContent = t;
+  e.classList.add("on");
   clearTimeout(toast.h); toast.h = setTimeout(() => e.classList.remove("on"), Math.max(2800, t.length * 50));
 }
 const hide = () => fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
@@ -104,10 +109,11 @@ $("#hide").addEventListener("click", hide);
 async function mark() {
   let r; try { r = await (await fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
     body: JSON.stringify({action: "mark", kind: "important"})})).json(); } catch (e) { r = {ok: false}; }
-  toast(r.ok ? "★ סומן" : (r.error || "לא הצלחתי לסמן."));
+  markedHere = !!r.ok;   // (the next look at the counter must not say it twice)
+  toast(r.ok ? MARKED : (r.error || "לא הצלחתי לסמן."));
 }
 $("#markImp").addEventListener("click", () => mark());
-let box = null;
+let box = null, markedHere = false;
 if (window.BZMAsk) box = BZMAsk.mount($("#box"), {compact: true, title: "שאלה", placeholder: "מה לא ברור? (Enter לשליחה)",
   context: q => q,   // (for "answer here" Hevanti builds the context itself)
   // what is copied to ChatGPT / Gemini / Claude: the question with the last minutes of the lecture, built by Hevanti like the page's own
@@ -133,6 +139,10 @@ async function pollApp() {
   try {
     const d = await getJson("/api/app"), s = d.session;
     if (d.save_failed && d.save_failed.n !== lastSaveFail) { lastSaveFail = d.save_failed.n; toast(d.save_failed.msg); }   // (a settings save that failed: said once)
+    if (typeof d.mark_n === "number") {   // a mark made with Ctrl+Alt+M (or in the app): said here too, as a click on ★ here says it
+      if (lastMark !== null && d.mark_n > lastMark && !markedHere) toast(MARKED);
+      lastMark = d.mark_n; markedHere = false;
+    }
     if ("theme" in d && (d.theme || "") !== (document.documentElement.dataset.theme || "")) bzmTheme(d.theme || "");
     live = !!(s && !s.done && (s.kind === "live" || s.kind === "rec"));   // a live lecture, a video, or a recording being watched
     // "הרצאה חיה - <the course>", e.g. "הרצאה חיה - מכניקת מוצקים"
