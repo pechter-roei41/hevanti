@@ -293,11 +293,14 @@ L.APP.session = fs = _FakeSess()
 try:
     L.save_settings(mini_button=True)
     before = L.mini_button_wanted()
+    fs.ready = False   # (the model is still loading: the button is already there)
+    loading = L.mini_button_wanted()
+    fs.ready = True
     fs.stop.set()
     after = L.mini_button_wanted()
 finally:
     L.APP.session = old_session
-check("floating button: shown while a lecture runs (the window is not up), gone the moment stop is pressed", before is True and after is False, (before, after))
+check("floating button: shown the moment a lecture starts (while the model loads too), gone the moment stop is pressed", before is True and loading is True and after is False, (before, loading, after))
 L.APP.session = fs2 = _FakeSess()
 try:
     fs2.stop.set()

@@ -164,7 +164,7 @@ async function pollApp() {
     live = !!(s && !s.done && (s.kind === "live" || s.kind === "rec"));   // a live lecture, a video, or a recording being watched
     // "הרצאה חיה - <the course>", e.g. "הרצאה חיה - מכניקת מוצקים"
     const kind = live ? (s.kind === "rec" ? "הרצאה מוקלטת" : s.yt ? "סרטון יוטיוב" : "הרצאה חיה") : "";
-    $("#lec").textContent = live ? kind + (s.course && s.course !== "ללא קורס" ? " - " + s.course : "") : "אין עכשיו הרצאה פעילה";
+    $("#lec").textContent = live ? kind + (s.course && s.course !== "ללא קורס" ? " - " + s.course : "") + (s.ready ? "" : " · מתחילה...") : "אין עכשיו הרצאה פעילה";   // (the button is there from the first second; the transcript starts when the model has loaded)
     kind0 = s ? s.kind : "";
     $("#note").hidden = live; document.body.classList.toggle("on", live);
     const sg = live && s && s.suggest;   // a course read from the first slide: offered, one press to take it

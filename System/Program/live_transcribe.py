@@ -5445,7 +5445,7 @@ def mini_button_wanted():
     if not load_settings().get("mini_button", True):
         return False
     s = APP.session
-    if s is None or s.done or not s.ready or s.stop.is_set():   # (stop pressed: the button goes at once, not when the last seconds are written)
+    if s is None or s.done or s.stop.is_set():   # (stop pressed: the button goes at once, not when the last seconds are written. Not waiting for "ready": the button is there the moment the lecture starts, while the model still loads)
         return False
     if s.kind == "rec":   # a recording: only while its player page is open
         rec = APP.rec
@@ -5470,8 +5470,6 @@ def mini_button_why():
         return "אין הרצאה"
     if s.done:
         return "ההרצאה נגמרה"
-    if not s.ready:
-        return "ההרצאה עוד נטענת"
     if s.stop.is_set():
         return "נלחצה עצירה"
     if s.kind == "rec":
