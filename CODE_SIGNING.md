@@ -64,5 +64,5 @@ The installer adds an entry in Windows Settings, Apps. Removing it deletes the p
 
 ## Reporting a problem
 
-If you think a signed file is wrong or harmful, open an
+If you think a signed file is wrong or harmful, write to <hevanti.support@gmail.com> or open an
 [issue](https://github.com/pechter-roei41/hevanti/issues). Reports about a signed release are answered first.
