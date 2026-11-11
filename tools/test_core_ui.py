@@ -718,10 +718,11 @@ with sync_playwright() as p:
         return lagp.evaluate("[!document.querySelector('#lag').hidden, document.querySelector('#lag').textContent]")
     shown, txt = poll()
     check("floating window: the transcript is 25 seconds behind - it says so, in seconds", shown and "מאחר ב-25 שניות" in txt, (shown, txt))
-    check("...in the header row, with the ★ and the minimize button (not a row of its own that competes with them)",
-          lagp.evaluate("document.querySelector('#lag').parentElement.tagName") == "HEADER"
-          and lagp.evaluate("""() => { const h = document.querySelector('header').getBoundingClientRect(), l = document.querySelector('#lag').getBoundingClientRect();
-              return l.top >= h.top - 1 && l.bottom <= h.bottom + 1; }"""))
+    check("...in the row of \"תשובה כאן\" (where one decides to ask), not in the title row that a long course name needs",
+          lagp.evaluate("document.querySelector('#lag').closest('header')") is None
+          and lagp.evaluate("""() => { const l = document.querySelector('#lag').getBoundingClientRect(), b = document.querySelector('#box .ais button.here').getBoundingClientRect();
+              return Math.abs((l.top + l.bottom) / 2 - (b.top + b.bottom) / 2) < 12 && l.right <= innerWidth && l.left >= 0 && l.right < b.left || l.left > b.right; }"""))
+    check("...and the title row is whole: the course name is not cut by it", lagp.evaluate("""() => { const t = document.querySelector('#lec'); return t.scrollWidth <= t.clientWidth + 1; }"""))
     check("...with the whole sentence for the screen reader and the pointer",
           "התמלול מאחר ב-25 שניות" in lagp.evaluate("document.querySelector('#lag').getAttribute('aria-label')"))
     check("...a caution pill: not green", lagp.evaluate("""() => { const p = document.createElement('div'); p.style.cssText = 'background:var(--warn-bg);color:var(--warn-fg)'; document.body.appendChild(p);

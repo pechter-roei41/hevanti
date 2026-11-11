@@ -60,7 +60,7 @@ body.on #lec::before{background:var(--rec)}
 .miss{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 10px 0;font-size:13px;color:var(--muted)}
 .miss button{border:1px solid var(--accent);background:none;color:var(--accent);border-radius:999px;padding:1px 11px;cursor:pointer;font-size:13px;font-weight:600}
 .miss button:hover{background:var(--accent-soft)}
-#lag{flex:none;padding:2px 10px;border-radius:999px;background:var(--warn-bg);color:var(--warn-fg);font-size:13px;line-height:1.5;font-weight:700;white-space:nowrap}   /* in the row of the actions (the title gives way), a caution pill: never green, never a second row */
+#lag{flex:none;padding:2px 10px;border-radius:999px;background:var(--warn-bg);color:var(--warn-fg);font-size:13px;line-height:1.5;font-weight:700;white-space:nowrap;align-self:center}   /* in the row of "תשובה כאן", a caution pill: never green */
 #note{margin:8px 10px 0;padding:6px 10px;border-radius:10px;background:var(--sunk);color:var(--muted);font-size:13.5px;line-height:1.45}
 .miss button{padding:3px 12px;min-height:28px}
 #box{flex:1;min-height:0;padding:8px 10px 10px}
@@ -77,7 +77,6 @@ body.on #lec::before{background:var(--rec)}
 <body>
 <header>
   <span id="lec">אין עכשיו הרצאה פעילה</span>
- <span id="lag" role="status" hidden></span>
  <button class="hb" id="markImp" type="button" title="סימון ★ של הרגע הזה (Ctrl+Alt+M)" aria-label="סימון ★ של הרגע הזה">★</button>
  <button class="hb" id="hide" type="button" title="להסתיר (Ctrl+Alt+Q או Esc)" aria-label="להסתיר">—</button>
 </header>
@@ -164,13 +163,22 @@ async function pollApp() {
     }
   } catch (e) {}
 }
+// the warning that the transcript is behind sits in the row of "תשובה כאן" (where one decides to ask), not in the title row, which a long course name needs.
+// The ask box can build its row again: the chip is put back in the current one.
+function lagChip() {
+  let c = document.getElementById("lag");
+  if (!c) { c = document.createElement("span"); c.id = "lag"; c.setAttribute("role", "status"); c.hidden = true; }
+  const row = document.querySelector("#box .ais");
+  if (row && c.parentElement !== row) row.appendChild(c);
+  return c;
+}
 async function pollLive() {
-  if (!live || kind0 === "rec") { shot = null; total = 0; $("#lag").hidden = true; return; }   // (a recording: the server finds the slide)
+  if (!live || kind0 === "rec") { shot = null; total = 0; lagChip().hidden = true; return; }   // (a recording: the server finds the slide)
   try {
     const d = await getJson("/api/live?since=" + total);
-    if (d.none) { shot = null; total = 0; $("#lag").hidden = true; return; }
+    if (d.none) { shot = null; total = 0; lagChip().hidden = true; return; }
     // the transcript is behind what is being said: always shown over 10 seconds (the answers rest on what was already written)
-    const lag = Math.round(d.lag || 0), lagBox = $("#lag");
+    const lag = Math.round(d.lag || 0), lagBox = lagChip();
     lagBox.hidden = !(lag > LAG_SHOW_S);
     if (!lagBox.hidden) {
       lagBox.textContent = "מאחר ב-" + lag + " שניות";
