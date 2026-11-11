@@ -296,6 +296,25 @@ check("...the lecture goes on after the gap, and ends properly", len(words) >= 3
 after = [x for x in tr[tr.index(notes[0]) + 1:] if x in words] if notes else []
 check("...and words are written after the note (the lecture went on from \"now\")", len(after) >= 1, (len(words), len(after)))
 
+# ------------------------------------------------------------------ H: the sound stops - "behind by N seconds" does not stay on the screen
+lags = {"high": 0.0, "end": None}
+
+
+def watch_lag(live, audio):
+    end = time.time() + 20
+    while time.time() < end:
+        lags["high"] = max(lags["high"], live.lag)
+        if lags["high"] > 0.5 and live.lag == 0.0:
+            break
+        time.sleep(0.1)
+    lags["end"] = live.lag
+
+
+wH = FakeWhisper(delay=1.5)
+live, audio, tr = run("הפסקת קול", [speech(10.0)], wH, speed=20, during=watch_lag)
+check("slow transcription: the transcript was behind while the sound played", lags["high"] > 0.5, lags)
+check("...and when the sound stops and everything was transcribed, it says it is not behind (0), not the last value", lags["end"] == 0.0, lags)
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.stdout.flush()
 os._exit(1 if fails else 0)

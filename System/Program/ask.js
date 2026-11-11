@@ -86,7 +86,9 @@
   // The sources of an answer: a time in square brackets, as in the transcript ("[00:20:44]"). It becomes a chip; where the page can
   // open the transcript at that line (src.go), and the time really is one of those that were sent with the question
   // (src.known), a click goes there. A time the AI made up stays plain text - it is never a link to nowhere.
-  const TIME_RE = /(\[\d{1,2}:\d{2}(?::\d{2})?\])/;
+  // (the AI sometimes puts several times in one pair of brackets, "[12:36:33, 12:40:58]" or "[12:36:33-12:40:58]": each time is its own chip, and no
+  // bracket stays in the text)
+  const TIME_RE = /(\[\d{1,2}:\d{2}(?::\d{2})?(?:\s*[,;\u05BE\u2013\-]\s*\d{1,2}:\d{2}(?::\d{2})?)*\])/;
   const normT = s => s.split(":").map(x => x.padStart(2, "0")).join(":");
   function timesIn(text) {
     const known = new Set();
@@ -95,14 +97,17 @@
   }
   function appendRich(doc, p, str, src) {
     for (const piece of str.split(TIME_RE)) {
-      const m = /^\[(\d{1,2}:\d{2}(?::\d{2})?)\]$/.exec(piece);
-      if (!m) { if (piece) p.appendChild(doc.createTextNode(piece)); continue; }
-      const label = normT(m[1]), ok = !!(src && src.go && (!src.known || src.known.has(label)));
-      const b = doc.createElement(ok ? "button" : "span");
-      b.className = "src"; b.textContent = "⏱ " + label;
-      if (ok) { b.type = "button"; b.title = "לפתוח בתמלול ברגע הזה"; b.addEventListener("click", () => src.go(label)); }
-      else b.title = "הזמן בתמלול";
-      p.appendChild(b);
+      const times = /^\[.+\]$/.test(piece) ? piece.match(/\d{1,2}:\d{2}(?::\d{2})?/g) : null;
+      if (!times) { if (piece) p.appendChild(doc.createTextNode(piece)); continue; }
+      times.forEach((time, i) => {
+        if (i) p.appendChild(doc.createTextNode(" "));
+        const label = normT(time), ok = !!(src && src.go && (!src.known || src.known.has(label)));
+        const b = doc.createElement(ok ? "button" : "span");
+        b.className = "src"; b.textContent = "⏱ " + label;
+        if (ok) { b.type = "button"; b.title = "לפתוח בתמלול ברגע הזה"; b.addEventListener("click", () => src.go(label)); }
+        else b.title = "הזמן בתמלול";
+        p.appendChild(b);
+      });
     }
   }
   // an answer as a few simple blocks: "# heading", "- item", **bold** - always as text (never HTML)

@@ -2551,7 +2551,7 @@ TUTOR_SYSTEM = (
     "\"המרצה הסביר ש...\" או \"במצגת הופיע ש...\" (אם לא ברור אם המרצה גבר או אישה, נסח בלי זה: "
     "\"בהרצאה הוסבר ש...\", \"בהרצאה נאמר ש...\"). מתי נאמר משהו - רק אם שואלים על זה. "
     "מקורות: בסוף משפט שמסתמך על שורה בתמלול, הוסף את השעה של אותה שורה כפי שהיא כתובה בתמלול, בסוגריים מרובעים "
-    "(למשל [00:20:44] או [11:04:05]) - עד שלושה מקורות בתשובה, ורק שעות שבאמת מופיעות בתמלול שנשלח אליך. לעולם אל "
+    "(למשל [00:20:44] או [11:04:05]; כל שעה בסוגריים משלה, לא [11:04:05, 11:09:12]) - עד שלושה מקורות בתשובה, ורק שעות שבאמת מופיעות בתמלול שנשלח אליך. לעולם אל "
     "תכתוב שעה שלא מופיעה שם, ואל תחשב כמה זמן עבר. תשובה מהידע הכללי או מהשקופית - בלי שעה. "
     "כתוב בעברית פשוטה וברורה; מונח מקצועי גם באנגלית בסוגריים. שאלה בזמן הרצאה: תשובה קצרה, 3-6 שורות, כי "
     "הסטודנט מקשיב - ובסוף אפשר להציע בשורה אחת להרחיב. נוסחאות כתוב ב-LaTeX: בתוך שורה בין $...$ "
@@ -9607,6 +9607,8 @@ def run_live(sess, lang, course=""):
             except queue.Empty:
                 g = None
             if g is None or g != audio.gen:  # nothing new, or audio from a device we already left
+                if g is None and q.qsize() == 0 and not inflight and (state["lag"] or now_file.lag):
+                    state["lag"] = now_file.lag = 0.0   # nothing waits to be transcribed: not behind (a value left from the last piece must not stay on the screen when the sound stops)
                 continue
             last_audio = time.time(); warned_silent = False
             a = to_mono(data, ch)

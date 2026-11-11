@@ -144,6 +144,12 @@ with sync_playwright() as p:
       out.noGo = [u.querySelectorAll('button.src').length, u.querySelectorAll('span.src').length, u.textContent];
       return out; }""")
     check("sources: a time that was sent is a button, a made-up time is only text", r["buttons"] == ["⏱ 00:20:44", "⏱ 01:05"] and r["plain"] == ["⏱ 00:99:99"], r)
+    r2 = pg.evaluate("""() => { const t = document.createElement('div'); document.body.appendChild(t);
+      BZMAsk.render(document, t, "הנקודה קבועה [12:36:33, 12:40:58] והשני [12:36:54-12:40:11] ועוד [12:36:33; 99:99:99] וסתם [ממש].", {go: () => {}, known: new Set(["12:36:33", "12:40:58", "12:36:54", "12:40:11"])});
+      return {buttons: [...t.querySelectorAll('button.src')].map(b => b.textContent), plain: [...t.querySelectorAll('span.src')].map(b => b.textContent), text: t.textContent}; }""")
+    check("sources: several times in one pair of brackets are separate chips, and no square bracket is left around a time",
+          r2["buttons"] == ["⏱ 12:36:33", "⏱ 12:40:58", "⏱ 12:36:54", "⏱ 12:40:11", "⏱ 12:36:33"] and r2["plain"] == ["⏱ 99:99:99"]
+          and "[12" not in r2["text"] and "[ממש]" in r2["text"], r2)
     check("sources: a click goes to that line of the transcript", r["went"] == ["00:20:44"], r)
     for theme in ("light", "dark"):
         pg.evaluate(f"document.documentElement.dataset.theme = '{theme}'")
