@@ -48,6 +48,7 @@ Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsx
 | `System/Program/app.html` | The app (opens in the browser) |
 | `System/Program/player.html` | The player for recorded lectures |
 | `System/Program/mini.html` | The small always-on-top question window (Ctrl+Alt+Q) |
+| `System/Program/quick.html` | The quick-start window: course, kind of lecture, "Start" (opens in the middle of the screen when Hevanti starts) |
 | `System/Program/media/howto.mp4` | The explainer video on the how-to page (key, lecture, floating window, marks, course page). The lecture in it is ["פתרון משוואה דיפרנציאלית מסדר ראשון בעזרת הפרדת משתנים"](https://www.youtube.com/watch?v=F1_uOZeYLVE) by Dvir Ross, licensed [CC BY](https://creativecommons.org/licenses/by/3.0/); a short silent excerpt is shown with Hevanti's window over it |
 | `System/Program/fonts/` | The two fonts of the app, Secular One and Assistant (SIL Open Font License, the licences are in the folder) |
 | `System/Program/katex/` | [KaTeX](https://katex.org) (MIT), draws the formulas in the answers |

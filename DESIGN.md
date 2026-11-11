@@ -212,7 +212,10 @@ Sunk Paper pills with muted text. The recording pill is tinted red with a pulsin
 A pill-shaped top bar on a Sheet: logo and name on the right, tabs (בית, הקורסים שלי, איך משתמשים, הגדרות) in the middle, theme switch and status pills on the left. The current tab is a Sunk Paper pill with 800 weight. Below 700px the tabs wrap onto their own row.
 
 ### The Floating Window
-A small always-on-top window with the same tokens: a title bar, the course name with a recording dot, a ★ button, three "what did I miss" pills (3, 7, 15 minutes), a conversation area, and a text box with one green "תשובה כאן" button. It shows exactly one thing to do: ask.
+A small always-on-top window with the same tokens: a title bar, the course name with a recording dot, a ★ button, three "what did I miss" pills (3, 7, 15 minutes), a conversation area, and a text box with one green "תשובה כאן" button. It shows exactly one thing to do: ask. Two quiet notices live in it: the warning that the transcript is behind ("מאחר ב-N שניות", a caution pill in the row of the green button, never in the title row, which a long course name needs), and the mark message: a small centred card (Sheet, 1px Hairline) with a Mark Line chip holding the ★ in Ink and the word "סומן". The same card, drawn as a native window, shows above the round floating button when a mark is made with the keyboard while the small window is closed.
+
+### The Quick-Start Window
+A small window in the middle of the screen when Hevanti opens: a title row (the name, "הקלטה חדשה"), the field "איזה קורס?" with a note under it ("זוהה מכותרת החלון. אפשר להחליף." with a small sparkle), three kinds of lecture as a radio group (the chosen one Green Soft with Ink and a Green edge, never a second solid green), the one solid-green action "התחל תמלול" (it becomes "המשך באפליקציה" for a recording, which only opens the app), and a ghost button "פתח את האפליקציה". Tokens as everywhere, light and night.
 
 ### Logo
 One mark, everywhere: a green bubble with a short tail at its lower right and a thick yellow check (viewBox 120; bubble `M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z`, check `M33 52L52 71L87 33`, stroke width 17). The floating button and the installer icon place the same mark on a cream disc.
