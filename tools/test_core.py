@@ -302,6 +302,59 @@ try:
 finally:
     L.APP.session = old_session
 check("floating button: the reason it is hidden can be told (for the black window)", why_stop == "נלחצה עצירה" and why_none == "אין הרצאה", (why_stop, why_none))
+# ---- the quick-start window (F1): when it opens instead of the home screen, and its commands ----
+_saved_env = dict(os.environ)
+os.environ.pop("BZM_NO_BROWSER", None)
+os.environ["BZM_QUICK"] = "1"   # (it is Windows only: this lets the decision be checked on any OS)
+_gpu = dict(L.GPU)
+_sess = L.APP.session
+try:
+    L.APP.session = None
+    L.GPU["state"] = ""
+    L.save_settings(consent_ok=False, quick_start=True, math={})
+    r0 = L.quick_start_wanted({"kind": "home"})
+    L.save_settings(consent_ok=True)
+    r1 = L.quick_start_wanted({"kind": "home"})
+    L.save_settings(math={"key": L.keep_secret("AIzaQUICKTEST1234")})
+    r2 = L.quick_start_wanted({"kind": "home"})
+    r3 = L.quick_start_wanted(None)
+    r_file = L.quick_start_wanted({"kind": "offer", "source": "x.mp4"})
+    r_rec = L.quick_start_wanted({"kind": "home", "view": "rec"})
+    L.GPU["state"] = "failed"
+    r_gpu = L.quick_start_wanted({"kind": "home"})
+    L.GPU["state"] = "installing"
+    r_gpu2 = L.quick_start_wanted({"kind": "home"})
+    L.GPU["state"] = ""
+    L.APP.session = _FakeSess()
+    r_run = L.quick_start_wanted({"kind": "home"})
+    L.APP.session = None
+    L.save_settings(quick_start=False)
+    r_off = L.quick_start_wanted({"kind": "home"})
+    L.save_settings(quick_start=True)
+    os.environ["BZM_NO_BROWSER"] = "1"
+    r_nb = L.quick_start_wanted({"kind": "home"})
+finally:
+    L.APP.session = _sess
+    L.GPU.clear(); L.GPU.update(_gpu)
+    os.environ.clear(); os.environ.update(_saved_env)
+check("quick start: the first start (no agreement yet) is the home screen", r0[0] is False and "first start" in r0[1], r0)
+check("quick start: no Gemini key - the home screen", r1[0] is False and "key" in r1[1], r1)
+check("quick start: agreed, with a key, nothing running - the quick-start window (also for a second launch with no arguments)", r2 == (True, "") and r3 == (True, ""), (r2, r3))
+check("quick start: a file, or the recordings view, was asked for - the home screen", r_file[0] is False and r_rec[0] is False, (r_file, r_rec))
+check("quick start: the GPU install failed or is running - the home screen", r_gpu[0] is False and r_gpu2[0] is False, (r_gpu, r_gpu2))
+check("quick start: something is running - the home screen", r_run[0] is False and "running" in r_run[1], r_run)
+check("quick start: the student turned it off - the home screen", r_off[0] is False and "settings" in r_off[1], r_off)
+check("quick start: no browser (a test, a server) - never", r_nb[0] is False, r_nb)
+L.save_settings(consent_ok=False, quick_start=True)
+L.APP.command({"action": "consent_seen"})
+check("quick start: the page tells the tool the student agreed (kept in the settings)", L.load_settings().get("consent_ok") is True)
+L.APP.command({"action": "quick_start", "on": False})
+check("quick start: the setting is saved and is in what the settings page reads", L.load_settings().get("quick_start") is False and json.loads(get("/api/mirror")[1]).get("quick_start") is False)
+L.APP.command({"action": "quick_start", "on": True})
+code_q, body_q = get("/quick")
+check("quick start: the page is served, with its title", code_q == 200 and "<title>התחלה מהירה · הבנתי</title>".encode("utf-8") in body_q, code_q)
+check("quick start: \"close\" and \"open the app\" are harmless when no window is open (and off Windows)",
+      L.APP.command({"action": "quick_close"}).get("ok") is True and L.APP.command({"action": "quick_open_app"}).get("ok") is True)
 check("a command without the page's header is refused (another site cannot drive Hevanti)", refused)
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")

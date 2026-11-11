@@ -924,7 +924,8 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <section id="g-live" aria-labelledby="g-liveT">
         <h2 id="g-liveT">בהרצאה</h2>
         <ol class="gsteps">
-          <li>ב<b>בית</b> בוחרים קורס (הוא נבחר לבד אם על המסך יש חלון עם שם הקורס) ולוחצים <b>הרצאה חיה בעברית</b> (או <b>באנגלית</b>).</li>
+          <li><b>פתיחה מהירה:</b> כשפותחים את הבנתי (אחרי שהסכמתם פעם אחת ויש מפתח) נפתח חלון קטן באמצע המסך: בוחרים קורס וסוג ולוחצים <b>התחל תמלול</b>, והתמלול רץ ברקע. <b>פתח את האפליקציה</b> פותח את מסך הבית בלי להתחיל כלום. אפשר לכבות את החלון הקטן ב<b>הגדרות</b>.</li>
+          <li>או ב<b>בית</b>: בוחרים קורס (הוא נבחר לבד אם על המסך יש חלון עם שם הקורס) ולוחצים <b>הרצאה חיה בעברית</b> (או <b>באנגלית</b>).</li>
           <li>מפעילים את ההרצאה, גם במסך מלא. בקצה המסך מופיע כפתור עגול עם הלוגו.</li>
           <li>לוחצים עליו (או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>), כותבים שאלה ו-<kbd>Enter</kbd>. התשובה מופיעה מתחת.</li>
           <li>בסוף: <b>עצירה</b> (במסך ההרצאה או בבית). הכל נשמר בקורס.</li>
@@ -1542,6 +1543,10 @@ const setPanels = {};
   mc.addEventListener("change", () => api("/api/cmd", {action: "mini_auto", on: mc.checked}));
   ml.append(mc, el("b", "", "לפתוח את חלון השאלות עצמו (ולא רק את הכפתור הצף) כשהרצאה מתחילה"));
   setPanels.cap.appendChild(ml);
+  const ql = el("label", "row miniopt"), qc = el("input"); qc.type = "checkbox"; qc.id = "quickStart";
+  qc.addEventListener("change", () => api("/api/cmd", {action: "quick_start", on: qc.checked}));
+  ql.append(qc, el("b", "", "כשפותחים את הבנתי: חלון קטן להתחלה מהירה באמצע המסך (ולא מסך הבית)"));
+  setPanels.cap.appendChild(ql);
   const bl = el("label", "row miniopt"), bc = el("input"); bc.type = "checkbox"; bc.id = "miniBtn";
   bc.addEventListener("change", () => api("/api/cmd", {action: "mini_button", on: bc.checked}));
   const bt = el("b"); bt.append("כפתור ");   // (the button looks like the Hevanti logo on a round cream disc)
@@ -1609,7 +1614,7 @@ function openSettings(id) {
   setTab = id;
   if (view !== "settings") { if (location.hash !== "#settings") history.pushState(null, "", "#settings"); show("settings"); }
   for (const [t] of SET_TABS) { setPanels[t].hidden = t !== id; $("#settab-" + t).setAttribute("aria-selected", t === id ? "true" : "false"); }
-  if (id === "cap") { api("/api/mirror").then(m => { $("#miniAuto").checked = m.mini_auto === true; $("#miniBtn").checked = m.mini_button !== false; drawCorner(m.mini_btn_corner || "br"); const o = m.mini_opacity || 60; $("#miniOp").value = o; $("#miniOp").nextElementSibling.textContent = o + "%"; }).catch(() => {}); capSig = ""; drawCaps(); if (capOf().mode === "window" && !capWinsAt) capLoadWins(); }
+  if (id === "cap") { api("/api/mirror").then(m => { $("#miniAuto").checked = m.mini_auto === true; $("#quickStart").checked = m.quick_start !== false; $("#miniBtn").checked = m.mini_button !== false; drawCorner(m.mini_btn_corner || "br"); const o = m.mini_opacity || 60; $("#miniOp").value = o; $("#miniOp").nextElementSibling.textContent = o + "%"; }).catch(() => {}); capSig = ""; drawCaps(); if (capOf().mode === "window" && !capWinsAt) capLoadWins(); }
   if (id === "key") { mathSig = ""; drawMath(); }
   if (id === "a11y") a11yDraw();
   if (id === "ai") api("/api/mirror").then(m => { $("#extAi").checked = m.external_ai === true; $("#mathEvery").checked = m.math_every === true; }).catch(() => {});
@@ -1870,12 +1875,15 @@ document.querySelectorAll("[data-offer]").forEach(b => b.addEventListener("click
 
 // ---------- starting ----------
 // the first time (kept in this browser), the student confirms that they checked the institution's rules and the lecturer's permission
+// the agreement is kept in the browser; the tool is told too (once per page), so it knows when the quick-start window may open instead of this page
+function tellConsent() { try { api("/api/cmd", {action: "consent_seen"}).catch(() => {}); } catch (e) {} }
+try { if (localStorage.getItem("bzm.consent") === "1") setTimeout(tellConsent, 500); } catch (e) {}
 function consentOk() {
   try { if (localStorage.getItem("bzm.consent") === "1") return Promise.resolve(true); } catch (e) {}
   return new Promise(res => {
     const m = $("#consent"), ck = $("#consCheck"), ok = $("#consOk");
     ck.checked = false; ok.disabled = true; m.hidden = false; ck.focus();
-    const done = v => { m.hidden = true; ck.onchange = ok.onclick = $("#consNo").onclick = null; if (v) { try { localStorage.setItem("bzm.consent", "1"); } catch (e) {} } res(v); };
+    const done = v => { m.hidden = true; ck.onchange = ok.onclick = $("#consNo").onclick = null; if (v) { try { localStorage.setItem("bzm.consent", "1"); } catch (e) {} tellConsent(); } res(v); };
     ck.onchange = () => { ok.disabled = !ck.checked; };
     ok.onclick = () => done(true); $("#consNo").onclick = () => done(false);
   });

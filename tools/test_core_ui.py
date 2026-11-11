@@ -765,6 +765,93 @@ with sync_playwright() as p:
         sp.wait_for_function("document.querySelector('#toast').textContent.includes('לא הצלחתי לשמור')", timeout=8000)
         check(f"{page_name}: a new failure is shown", True)
         sp.context.close()
+
+    # ---- the quick-start window (F1): course, kind, start in the background, open the app ----
+    def quick_page(theme="light", guess=None, last="פיזיקה", start_ok=True, delay_guess=0):
+        qp = b.new_context(viewport={"width": 440, "height": 640}, locale="he-IL").new_page()
+        qp.errs, qp.posts = [], []
+        qp.on("pageerror", lambda e: qp.errs.append(str(e)))
+        qp.route("**/api/library*", lambda r: r.fulfill(content_type="application/json", body=json.dumps(
+            {"items": [], "courses": [{"name": "אלגוריתמים", "lectures": 3}, {"name": "פיזיקה", "lectures": 2}, {"name": "ללא קורס", "lectures": 1}]})))
+
+        def app_route(r):
+            resp = r.fetch(); d = resp.json(); d["course"] = last; d["theme"] = theme
+            r.fulfill(response=resp, body=json.dumps(d))
+        qp.route("**/api/app*", app_route)
+
+        def cmd(r):
+            body = json.loads(r.request.post_data or "{}")
+            qp.posts.append(body)
+            a = body.get("action")
+            if a == "guess_course":
+                if delay_guess:
+                    time.sleep(delay_guess)
+                out = {"ok": True, **(guess or {})}
+            elif a == "start_live":
+                out = {"ok": bool(start_ok)} if start_ok else {"ok": False, "error": "הבנתי עוד מסיימת לתמלל את ההרצאה הקודמת."}
+            else:
+                out = {"ok": True}
+            r.fulfill(content_type="application/json", body=json.dumps(out))
+        qp.route("**/api/cmd", cmd)
+        qp.goto(url + "/quick")
+        qp.wait_for_timeout(900)
+        return qp
+
+    q = quick_page(guess={"course": "אלגוריתמים", "why": "title", "detail": "זום - אלגוריתמים"})
+    check("quick start: the window's title ends with the product (the tool knows it as its window)", q.title() == "התחלה מהירה · הבנתי", q.title())
+    check("quick start: the courses, and \"ללא קורס\" last",
+          q.evaluate("[...document.querySelectorAll('#course option')].map(o => o.textContent)") == ["אלגוריתמים", "פיזיקה", "ללא קורס"])
+    check("quick start: the course is chosen from the title of a window, with the reason and \"you can change it\"",
+          q.evaluate("document.querySelector('#course').value") == "אלגוריתמים" and "זוהה מכותרת החלון" in q.inner_text("#noteText") and "אפשר להחליף" in q.inner_text("#noteText"), q.inner_text("#noteText"))
+    q.select_option("#course", "פיזיקה")
+    check("quick start: the student chooses a course himself - the note goes away", q.is_hidden("#note"))
+    check("quick start: \"חיה עברית\" is chosen first", q.evaluate("document.querySelector('[data-kind=he]').getAttribute('aria-checked')") == "true" and q.inner_text("#go") == "התחל תמלול")
+    q.focus("[data-kind=he]")
+    q.keyboard.press("ArrowLeft")
+    check("quick start: the arrows move between the kinds (a radio group)", q.evaluate("document.querySelector('[data-kind=en]').getAttribute('aria-checked')") == "true")
+    q.click("#go")
+    q.wait_for_timeout(500)
+    starts = [p_ for p_ in q.posts if p_.get("action") == "start_live"]
+    check("quick start: \"start\" starts a live lecture in the chosen language and course", starts == [{"action": "start_live", "lang": "en", "course": "פיזיקה"}], starts)
+    check("quick start: ...and then the small window is closed (the lecture runs in the background)", [p_.get("action") for p_ in q.posts][-1] == "quick_close", q.posts)
+    q.context.close()
+
+    q = quick_page(guess={})
+    check("quick start: no guess - the course of the last lecture, said so", q.evaluate("document.querySelector('#course').value") == "פיזיקה" and "הקורס של ההרצאה הקודמת" in q.inner_text("#noteText"))
+    q.click("[data-kind=rec]")
+    check("quick start: \"מוקלטת\" - the main button says it goes on in the app (nothing starts here)", q.inner_text("#go") == "המשך באפליקציה")
+    q.click("#go")
+    q.wait_for_timeout(400)
+    check("quick start: \"מוקלטת\" opens the app at the recording box and starts nothing",
+          any(p_.get("action") == "quick_open_app" and p_.get("view") == "rec" for p_ in q.posts) and not any(p_.get("action") == "start_live" for p_ in q.posts), q.posts)
+    q.context.close()
+
+    q = quick_page(guess={})
+    q.click("#app")
+    q.wait_for_timeout(400)
+    check("quick start: \"פתח את האפליקציה\" opens the app and starts nothing",
+          any(p_.get("action") == "quick_open_app" and not p_.get("view") for p_ in q.posts) and not any(p_.get("action") == "start_live" for p_ in q.posts), q.posts)
+    q.context.close()
+
+    q = quick_page(guess={}, start_ok=False)
+    q.click("#go")
+    q.wait_for_timeout(500)
+    check("quick start: a start that is refused says why, and the button can be pressed again",
+          "מסיימת לתמלל" in q.inner_text("#msg") and q.is_enabled("#go") and not any(p_.get("action") == "quick_close" for p_ in q.posts))
+    q.context.close()
+
+    for theme in ("light", "dark"):
+        q = quick_page(theme=theme, guess={})
+        st = q.evaluate("""() => { const css = (e, p) => getComputedStyle(e)[p], v = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+            const rgb = c => { const d = document.createElement('div'); d.style.color = c; document.body.appendChild(d); const r = getComputedStyle(d).color; d.remove(); return r; };
+            const sel = document.querySelector('[data-kind=he]'), go = document.querySelector('#go'), app = document.querySelector('#app');
+            let solid = 0; for (const e of document.querySelectorAll('button')) if (css(e, 'backgroundColor') === rgb(v('--accent'))) solid++;
+            return {solid, goBg: css(go, 'backgroundColor') === rgb(v('--accent')), selBg: css(sel, 'backgroundColor') === rgb(v('--accent-soft')), appBg: css(app, 'backgroundColor'),
+                    noOverflow: document.documentElement.scrollWidth <= innerWidth, small: document.documentElement.scrollHeight <= 640}; }""")
+        check(f"quick start, {theme}: one solid green button (start); the chosen kind is the soft green; the app button is a ghost", st["solid"] == 1 and st["goBg"] and st["selBg"] and st["appBg"] == "rgba(0, 0, 0, 0)", st)
+        check(f"quick start, {theme}: it fits a small window, without a sideways scroll", st["noOverflow"] and st["small"], st)
+        check(f"quick start, {theme}: no script errors", q.errs == [], q.errs)
+        q.context.close()
     b.close()
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")

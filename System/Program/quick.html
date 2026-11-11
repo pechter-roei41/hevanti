@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>התחלה מהירה · הבנתי</title>
+<script>/* light / dark as chosen in the app (the same key as the app and the small window) */
+function bzmTheme(t) { if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
+try { bzmTheme(localStorage.getItem("bzm.theme") || ""); } catch (e) {}</script>
+<!-- Hevanti (הבנתי) - the quick-start window: a small window in the middle of the screen when Hevanti opens (F1, step 1) - (c) 2026 Roei Pechter. MIT License, see LICENSE.txt -->
+<style>
+/* the two fonts of the app come with the program (System/Program/fonts, SIL Open Font License): nothing is loaded from the internet */
+@font-face{font-family:"Secular One";src:url("/fonts/SecularOne-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Assistant";src:url("/fonts/Assistant-Variable.ttf") format("truetype");font-weight:200 800;font-style:normal;font-display:swap}
+</style>
+<style>
+:root{
+  --bg:#F6F3E9; --surface:#FFFFFF; --sunk:#ECE7D8; --fg:#17261F; --muted:#56625B; --line:#DDD7C4;
+  --accent:#1B6E4B; --accent-ink:#FFFFFF; --accent-soft:#DCEBDF; --rec:#C2412D; --warn-bg:#FBF0DA; --warn-fg:#6B5020; --mark-line:#F7DD7B;
+  --f-body:"Assistant","Segoe UI","Arial Hebrew",Arial,system-ui,sans-serif; --f-head:"Secular One","Assistant",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1C1B16; --surface:#26241D; --sunk:#2F2C23; --fg:#F1ECDF; --muted:#B5AFA0; --line:#3E3A2E;
+  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; --mark-line:#594E25; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1C1B16; --surface:#26241D; --sunk:#2F2C23; --fg:#F1ECDF; --muted:#B5AFA0; --line:#3E3A2E;
+  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; --mark-line:#594E25; color-scheme:dark}
+:root[data-theme="light"]{color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.5;padding:22px 24px 24px;display:flex;flex-direction:column;gap:18px}
+button,select{font:inherit;color:inherit}
+[hidden]{display:none!important}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+html.a-contrast :focus-visible{outline-color:var(--fg)}
+.top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.top b{font-family:var(--f-head);font-size:22px;font-weight:400}
+.top span{color:var(--muted);font-size:14px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>label,.field>.lab{font-size:15px;font-weight:700}
+select{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);font-size:17px;min-height:46px}
+select:hover{border-color:var(--accent)}
+.note{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px;min-height:21px}
+.note svg{flex:none;color:var(--muted)}
+.kinds{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kinds button{border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:11px 6px;font-size:16px;font-weight:600;cursor:pointer;min-height:46px;line-height:1.25}
+.kinds button:hover{border-color:var(--accent)}
+.kinds button[aria-checked="true"]{background:var(--accent-soft);color:var(--fg);border-color:var(--accent);font-weight:800}   /* the chosen one is the soft green with ink, never a second solid green */
+.go{width:100%;border:1.5px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:12px;padding:13px 16px;font-size:19px;font-weight:800;cursor:pointer;min-height:50px}
+.go:hover{filter:brightness(1.06)}
+.go:disabled{opacity:.6;cursor:default}
+.app{width:100%;border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:12px;padding:11px 16px;font-size:17px;font-weight:600;cursor:pointer;min-height:46px}
+.app:hover{background:var(--accent-soft)}
+.msg{padding:8px 12px;border-radius:10px;background:var(--warn-bg);color:var(--warn-fg);font-size:14.5px;line-height:1.45}
+</style>
+</head>
+<body>
+<div class="top"><b>הבנתי</b><span>הקלטה חדשה</span></div>
+
+<div class="field">
+  <label for="course">איזה קורס?</label>
+  <select id="course"></select>
+  <div class="note" id="note" role="status" aria-live="polite" hidden>
+    <svg id="noteIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6zM19 14l.9 2.6L22.5 17.5l-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 2 2 .7-2 .7L5 20.4l-.7-2-2-.7 2-.7z"/></svg>
+    <span id="noteText"></span>
+  </div>
+</div>
+
+<div class="field">
+  <span class="lab" id="kindLab">סוג ההרצאה</span>
+  <div class="kinds" id="kinds" role="radiogroup" aria-labelledby="kindLab">
+    <button type="button" role="radio" aria-checked="true" data-kind="he" tabindex="0">חיה עברית</button>
+    <button type="button" role="radio" aria-checked="false" data-kind="en" tabindex="-1">חיה אנגלית</button>
+    <button type="button" role="radio" aria-checked="false" data-kind="rec" tabindex="-1">מוקלטת</button>
+  </div>
+</div>
+
+<div class="msg" id="msg" role="alert" hidden></div>
+
+<div class="field" style="gap:10px">
+  <button class="go" id="go" type="button">התחל תמלול</button>
+  <button class="app" id="app" type="button">פתח את האפליקציה</button>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const NO_COURSE = "ללא קורס";
+let touched = false, kind = "he";
+const post = body => fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify(body)}).then(r => r.json());
+function note(text) { $("#note").hidden = !text; $("#noteText").textContent = text || ""; }
+function say(text) { const m = $("#msg"); m.textContent = text || ""; m.hidden = !text; }
+function drawGo() { $("#go").textContent = kind === "rec" ? "המשך באפליקציה" : "התחל תמלול"; }   // a recording is not started here: it needs a file, in the app
+function setKind(k, focus) {
+  kind = k;
+  for (const b of document.querySelectorAll("#kinds button")) {
+    const on = b.dataset.kind === k;
+    b.setAttribute("aria-checked", String(on)); b.tabIndex = on ? 0 : -1;
+    if (on && focus) b.focus();
+  }
+  try { localStorage.setItem("bzm.quick.kind", k); } catch (e) {}
+  drawGo();
+}
+for (const b of document.querySelectorAll("#kinds button")) b.addEventListener("click", () => setKind(b.dataset.kind));
+$("#kinds").addEventListener("keydown", e => {   // a radio group by keyboard: arrows move (right to left: the right arrow goes to the previous)
+  const ks = ["he", "en", "rec"], i = ks.indexOf(kind);
+  const d = e.key === "ArrowLeft" || e.key === "ArrowDown" ? 1 : e.key === "ArrowRight" || e.key === "ArrowUp" ? -1 : 0;
+  if (d) { e.preventDefault(); setKind(ks[(i + d + ks.length) % ks.length], true); }
+});
+$("#course").addEventListener("change", () => { touched = true; note(""); });
+
+async function load() {
+  let names = [], last = "";
+  try {
+    const lib = await (await fetch("/api/library", {cache: "no-store"})).json();
+    names = (lib.courses || []).map(c => c.name);
+    const st = await (await fetch("/api/app", {cache: "no-store"})).json();
+    last = st.course || "";
+    if ("theme" in st) { try { localStorage.setItem("bzm.theme", st.theme || ""); } catch (e) {} bzmTheme(st.theme || ""); }
+  } catch (e) {}
+  const list = names.filter(n => n !== NO_COURSE).concat([NO_COURSE]);
+  const sel = $("#course");
+  for (const n of list) { const o = document.createElement("option"); o.value = n; o.textContent = n; sel.appendChild(o); }
+  sel.value = list.includes(last) ? last : NO_COURSE;
+  if (last && last !== NO_COURSE && list.includes(last)) note("הקורס של ההרצאה הקודמת. אפשר להחליף.");
+  try { const k = localStorage.getItem("bzm.quick.kind"); if (k === "he" || k === "en" || k === "rec") setKind(k); } catch (e) {}
+  drawGo();
+  // the course of the lecture about to start, guessed (a window on the screen, or the weekly schedule): chosen here until the student chooses
+  try {
+    const g = await post({action: "guess_course"});
+    if (!touched && g && g.ok && g.course && list.includes(g.course)) {
+      sel.value = g.course;
+      note(g.why === "title" ? "זוהה מכותרת החלון. אפשר להחליף." : "נבחר לפי המערכת השבועית. אפשר להחליף.");
+    }
+  } catch (e) {}
+}
+
+$("#go").addEventListener("click", async () => {
+  say("");
+  const course = $("#course").value === NO_COURSE ? "" : $("#course").value;
+  if (kind === "rec") {   // a recording needs a file or a link: the app opens at that place, nothing starts
+    $("#go").disabled = true;
+    try { await post({action: "quick_open_app", view: "rec"}); } catch (e) { say("לא הצלחתי לפתוח את האפליקציה."); $("#go").disabled = false; }
+    return;
+  }
+  $("#go").disabled = true;
+  let r;
+  try { r = await post({action: "start_live", lang: kind, course}); } catch (e) { r = {ok: false, error: "לא הצלחתי להתחיל. אפשר לנסות שוב."}; }
+  if (!r || !r.ok) { say((r && r.error) || "לא הצלחתי להתחיל. אפשר לנסות שוב."); $("#go").disabled = false; return; }
+  try { await post({action: "quick_close"}); } catch (e) {}   // the lecture runs in the background; the floating button stays
+});
+$("#app").addEventListener("click", async () => {
+  $("#app").disabled = true;
+  try { await post({action: "quick_open_app"}); } catch (e) { say("לא הצלחתי לפתוח את האפליקציה."); $("#app").disabled = false; }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") window.close(); });
+$("#go").focus();
+load();
+</script>
+</body>
+</html>

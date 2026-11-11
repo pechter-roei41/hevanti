@@ -4941,6 +4941,9 @@ def mirror_status():
 MINI_HTML = os.path.join(SCRIPT_DIR, "mini.html")
 MINI_TITLE = "הבנתי"   # the page's title; the window is found by an exact match
 MINI_SIZE = (380, 460)   # small: it stays in a corner of the screen
+QUICK_HTML = os.path.join(SCRIPT_DIR, "quick.html")   # the quick-start window (F1): a small window in the middle of the screen when Hevanti opens
+QUICK_TITLE = "התחלה מהירה · הבנתי"   # its page's title (found by an exact match; it also ends with "· הבנתי", so the app-window watcher takes it as the app's window)
+QUICK_SIZE = (440, 500)
 _MINI_LOCK = threading.Lock()
 
 
@@ -4997,6 +5000,70 @@ def _find_mini(u):
         return True
     u.EnumWindows(ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)(each), 0)
     return found[0] if found else 0
+
+
+def _find_quick(u):
+    """The quick-start window, or 0."""
+    import ctypes
+    from ctypes import wintypes
+    found = []
+
+    def each(hwnd, _):
+        try:
+            buf = ctypes.create_unicode_buffer(200)
+            u.GetWindowTextW(hwnd, buf, 200)
+            if buf.value.strip("\u202a\u202b\u202c\u200e\u200f ") == QUICK_TITLE and _is_chrome_window(u, hwnd):
+                found.append(hwnd)
+        except Exception:
+            pass
+        return True
+    u.EnumWindows(ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)(each), 0)
+    return found[0] if found else 0
+
+
+def close_quick_window():
+    """Close the quick-start window as if the student closed it (a no-op when it is not open, and everywhere but Windows)."""
+    if os.name != "nt":
+        return False
+    try:
+        import ctypes
+        u = _mini_user32()
+        hwnd = _find_quick(u)
+        if not hwnd:
+            return False
+        u.PostMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_size_t, ctypes.c_ssize_t]
+        if _APP_WIN.get("hwnd") == hwnd:
+            _APP_WIN["hwnd"] = 0   # (it is not "the student closed the app": the tool must not close itself because this window went away)
+        u.PostMessageW(hwnd, 0x0010, 0, 0)   # WM_CLOSE
+        return True
+    except Exception:
+        save_error("close quick window")
+        return False
+
+
+def quick_start_wanted(act=None):
+    """(True, "") when Hevanti opens with the quick-start window instead of the home screen; else (False, why).
+    The home screen is for the first start (the student has not agreed yet), a missing Gemini key, a GPU install that failed or
+    is running, a file or a view that was asked for, something already running, and a student who turned the window off."""
+    if os.environ.get("BZM_NO_BROWSER") == "1":
+        return False, "no browser"
+    if os.name != "nt" and os.environ.get("BZM_QUICK") != "1":
+        return False, "Windows only"
+    if act and (act.get("kind") != "home" or act.get("view")):
+        return False, "a file or a view was asked for"
+    s = load_settings()
+    if not s.get("quick_start", True):
+        return False, "off in the settings"
+    if not s.get("consent_ok"):
+        return False, "first start: the home screen asks first"
+    if not (s.get("math") or {}).get("key"):
+        return False, "no Gemini key"
+    if GPU["state"] in ("failed", "installing"):
+        return False, "the GPU install needs a look"
+    sess = APP.session
+    if sess is not None and not sess.done:
+        return False, "something is running"
+    return True, ""
 
 
 MINI_CORNERS = ("br", "bl", "tl", "tr")   # bottom right / bottom left / top left / top right of the main screen
@@ -7324,6 +7391,20 @@ class App:
             return toggle_mini(hide_only=(a == "hide_mini"), show_only=(a == "show_mini"))
         if a == "mini_opacity":
             return set_mini_opacity(d.get("value"))
+        if a == "consent_seen":   # the student agreed (the page keeps it in the browser; the server needs to know too, to open the quick-start window)
+            if not load_settings().get("consent_ok"):
+                save_settings(consent_ok=True)
+            return {"ok": True}
+        if a == "quick_start":   # the quick-start window instead of the home screen when Hevanti opens (a setting)
+            save_settings(quick_start=bool(d.get("on")))
+            return {"ok": True}
+        if a == "quick_close":   # the quick-start window is done (a lecture started)
+            return {"ok": True, "closed": close_quick_window()}
+        if a == "quick_open_app":   # "open the app": the home screen in its own window, and the small one goes away; nothing starts
+            _APP_WIN["hwnd"] = 0   # (the app's window is found again by the watcher: until then nothing is "closed")
+            ok = open_app_window(self.url + ("#rec" if d.get("view") == "rec" else "")) if self.url and os.environ.get("BZM_NO_BROWSER") != "1" else False
+            close_quick_window()
+            return {"ok": True, "opened": ok}
         if a == "mini_button":   # the floating "?" button while the small window is closed
             save_settings(mini_button=bool(d.get("on")))
             return {"ok": True}
@@ -8390,6 +8471,8 @@ def _app_handler():
                         return self._send(404, b"", "text/javascript")
                 if p == "/mini":   # the small question window (opened by toggle_mini)
                     return self._page(MINI_HTML)
+                if p == "/quick":   # the quick-start window (opened when Hevanti starts)
+                    return self._page(QUICK_HTML)
                 if p == "/player":
                     if APP.rec is None:
                         return self._send(302, b"", "text/plain", {"Location": "/"})
@@ -8417,6 +8500,7 @@ def _app_handler():
                     return self._json(dict(mirror_status(), place_ai=load_settings().get("place_ai", True),
                                            mini_auto=bool(load_settings().get("mini_open_start", False)), mini_opacity=mini_opacity(),
                                            mini_button=load_settings().get("mini_button", True), mini_btn_corner=mini_btn_corner(),
+                                           quick_start=load_settings().get("quick_start", True),
                                            check_updates=load_settings().get("check_updates", True),
                                            math_every=bool(load_settings().get("math_every_slide", False)),
                                            external_ai=bool(load_settings().get("external_ai", False))))
@@ -8762,7 +8846,7 @@ def _watch_app_window(u, before):
                 return
 
 
-def open_app_window(url):
+def open_app_window(url, size=None, center=False):
     """Windows: the app in a window of its own (the default browser, Edge or Chrome, without tabs and address bar, with
     the student's own profile) and not a tab among the others: the tool knows when it is closed, and closes it when the
     tool closes."""
@@ -8773,7 +8857,19 @@ def open_app_window(url):
     try:
         u = _mini_user32()
         before = set(_chrome_windows(u))
-        subprocess.Popen([exe, "--app=" + url])
+        args = [exe, "--app=" + url]
+        if size:
+            args.append(f"--window-size={size[0]},{size[1]}")
+            if center:
+                with _real_pixels(u) as rp:   # the middle of the work area of the main screen (in the pixels the browser counts in)
+                    import ctypes
+                    from ctypes import wintypes
+                    area = wintypes.RECT()
+                    u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0)
+                    x = area.left + (area.right - area.left - int(size[0] * rp.scale)) // 2
+                    y = area.top + (area.bottom - area.top - int(size[1] * rp.scale)) // 2
+                    args.append(f"--window-position={max(0, int(x / rp.scale))},{max(0, int(y / rp.scale))}")
+        subprocess.Popen(args)
         threading.Thread(target=_watch_app_window, args=(u, before), daemon=True).start()
         return True
     except Exception:
@@ -8822,6 +8918,16 @@ def close_our_windows(wait=True):
             k.wait(3)
         except Exception:
             pass
+
+
+def open_start_window(url, act=None):
+    """What opens when Hevanti starts (or is started again): the quick-start window, or the home screen of the app."""
+    wanted, why = quick_start_wanted(act)
+    if wanted and open_app_window(url + "quick", size=QUICK_SIZE, center=True):
+        return True
+    if not wanted:
+        log(f"נפתח מסך הבית ולא חלון ההתחלה המהירה ({why}).")
+    return open_browser(url + ("#rec" if (act or {}).get("view") == "rec" else ""))
 
 
 def open_browser(url):
@@ -9090,7 +9196,7 @@ def main():
                     post_json(url + "api/cmd", {"action": "start_recording", "source": act["source"], "lang": act["lang"]})
             except Exception:
                 save_error("forward")
-            open_browser(url + ("#rec" if act.get("view") == "rec" else ""))
+            open_start_window(url, act)
             log(f"{PRODUCT} כבר פועלת. פתחתי שוב את האפליקציה בדפדפן: {url}")
             return "forwarded"
         log("שים לב: נראה שהכלי כבר פתוח בחלון אחר (אולי גרסה ישנה). כדאי לסגור אותו - שני חלונות מתמללים פעמיים.")
@@ -9129,7 +9235,7 @@ def main():
     elif act["kind"] == "offer":
         APP.pending = {"source": act["source"], "name": display_name(act["source"])}
     APP.first_view = act.get("view", "")
-    if not open_browser(server.url + ("#rec" if act.get("view") == "rec" else "")) and \
+    if not open_start_window(server.url, act) and \
             os.environ.get("BZM_NO_BROWSER") != "1":
         console_show()  # no browser opened: the address is written in this window
     show("=" * 50)
