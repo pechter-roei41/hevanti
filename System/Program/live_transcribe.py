@@ -36,8 +36,8 @@ try:
 except Exception:  # lets "uninstall" run even if the install never finished
     np = None
 
-VERSION = "2.18"
-VERSION_DATE = "10.11.2026"
+VERSION = "2.19"
+VERSION_DATE = "11.11.2026"
 PRODUCT = "הבנתי"
 GUIDE_URL = "https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD"
 
@@ -2551,7 +2551,7 @@ TUTOR_SYSTEM = (
     "\"המרצה הסביר ש...\" או \"במצגת הופיע ש...\" (אם לא ברור אם המרצה גבר או אישה, נסח בלי זה: "
     "\"בהרצאה הוסבר ש...\", \"בהרצאה נאמר ש...\"). מתי נאמר משהו - רק אם שואלים על זה. "
     "מקורות: בסוף משפט שמסתמך על שורה בתמלול, הוסף את השעה של אותה שורה כפי שהיא כתובה בתמלול, בסוגריים מרובעים "
-    "(למשל [00:20:44] או [11:04:05]) - עד שלושה מקורות בתשובה, ורק שעות שבאמת מופיעות בתמלול שנשלח אליך. לעולם אל "
+    "(למשל [00:20:44] או [11:04:05]; כל שעה בסוגריים משלה, לא [11:04:05, 11:09:12]) - עד שלושה מקורות בתשובה, ורק שעות שבאמת מופיעות בתמלול שנשלח אליך. לעולם אל "
     "תכתוב שעה שלא מופיעה שם, ואל תחשב כמה זמן עבר. תשובה מהידע הכללי או מהשקופית - בלי שעה. "
     "כתוב בעברית פשוטה וברורה; מונח מקצועי גם באנגלית בסוגריים. שאלה בזמן הרצאה: תשובה קצרה, 3-6 שורות, כי "
     "הסטודנט מקשיב - ובסוף אפשר להציע בשורה אחת להרחיב. נוסחאות כתוב ב-LaTeX: בתוך שורה בין $...$ "
@@ -5378,7 +5378,7 @@ def mini_button_wanted():
     if not load_settings().get("mini_button", True):
         return False
     s = APP.session
-    if s is None or s.done or not s.ready:
+    if s is None or s.done or not s.ready or s.stop.is_set():   # (stop pressed: the button goes at once, not when the last seconds are written)
         return False
     if s.kind == "rec":   # a recording: only while its player page is open
         rec = APP.rec
@@ -5392,6 +5392,28 @@ def mini_button_wanted():
         return not (hwnd and u.IsWindowVisible(hwnd) and not u.IsIconic(hwnd))
     except Exception:
         return True
+
+
+def mini_button_why():
+    """Why the floating button is not shown right now (for the black window: a report of a button that stays when it should go)."""
+    if not load_settings().get("mini_button", True):
+        return "כבוי בהגדרות"
+    s = APP.session
+    if s is None:
+        return "אין הרצאה"
+    if s.done:
+        return "ההרצאה נגמרה"
+    if not s.ready:
+        return "ההרצאה עוד נטענת"
+    if s.stop.is_set():
+        return "נלחצה עצירה"
+    if s.kind == "rec":
+        rec = APP.rec
+        if rec is None or not rec.page_alive():
+            return "הנגן של ההקלטה סגור"
+    elif s.kind != "live":
+        return "סוג הרצאה אחר"
+    return "החלון הקטן פתוח"
 
 
 def _logo_rgba(S):
@@ -5612,6 +5634,9 @@ class MiniButton(threading.Thread):
                 return 0
             if msg == 0x0113:   # WM_TIMER (ten times a second): show / hide as the lecture and the window change
                 raw = bool(self.wanted())
+                if raw != st.get("raw_was"):   # (said in the black window when it changes: if the button stays when it should go, the reason is there)
+                    st["raw_was"] = raw
+                    log("הכפתור הצף: " + ("מוצג" if raw else "מוסתר (" + mini_button_why() + ")"))
                 if not raw:   # the window is up: the hold after the click is over (a minimize brings the button back at once)
                     st["hold"] = 0.0
                 want = raw and time.time() >= st["hold"]
@@ -5778,6 +5803,7 @@ def course_ai_info(course):
 
 # ---------- is there a newer version? (the GitHub releases of the open-source project) ----------
 GITHUB_REPO = "pechter-roei41/hevanti"
+REPORT_EMAIL = "340937874+pechter-roei41@users.noreply.github.com"   # "report a problem" by e-mail (the student presses send: Hevanti sends nothing). Public, like this file: decided by Roei, 11.11.2026
 RELEASES_URL = os.environ.get("BZM_RELEASES_URL") or f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 
@@ -5893,12 +5919,12 @@ def _write_settings(d):
         shutil.copy2(SETTINGS_FILE, SETTINGS_FILE + ".bak")   # (the file as it was: it was read as good just before)
     except OSError:
         pass
-    for i in range(5):   # (Windows: the file may be open in another program for a moment)
+    for i in range(40):   # (Windows: the file may be open for a moment - by another program, or by a page asking for the settings: up to 2 seconds)
         try:
             os.replace(tmp, SETTINGS_FILE)
             return
         except PermissionError:
-            if i == 4:
+            if i == 39:
                 raise
             time.sleep(0.05)
 
@@ -8395,7 +8421,7 @@ def _app_handler():
                                            math_every=bool(load_settings().get("math_every_slide", False)),
                                            external_ai=bool(load_settings().get("external_ai", False))))
                 if p == "/api/diag":   # "report a problem": shown to the student, who copies it into a report
-                    return self._json({"text": diag_text(), "issues": f"https://github.com/{GITHUB_REPO}/issues/new"})
+                    return self._json({"text": diag_text(), "issues": f"https://github.com/{GITHUB_REPO}/issues/new", "mail": REPORT_EMAIL, "version": VERSION})
                 if p == "/api/marks":   # the marked moments of a course
                     c = clean_name(q.get("c", [""])[0])
                     return self._json({"marks": course_marks(c) if c and os.path.isdir(course_dir(c)) else []})
@@ -9607,6 +9633,8 @@ def run_live(sess, lang, course=""):
             except queue.Empty:
                 g = None
             if g is None or g != audio.gen:  # nothing new, or audio from a device we already left
+                if g is None and q.qsize() == 0 and not inflight and (state["lag"] or now_file.lag):
+                    state["lag"] = now_file.lag = 0.0   # nothing waits to be transcribed: not behind (a value left from the last piece must not stay on the screen when the sound stops)
                 continue
             last_audio = time.time(); warned_silent = False
             a = to_mono(data, ch)

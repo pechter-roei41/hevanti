@@ -2,7 +2,7 @@
 
 **Ask during the lecture, mark the moments that matter.** An open-source lecture companion for students on Windows.
 
-> **Beta.** Hevanti is still being tested, and things may change or break. If something does not work, use "Report a problem" at the bottom of the home screen (or open an [issue](https://github.com/pechter-roei41/hevanti/issues)).
+> **Beta.** Hevanti is still being tested, and things may change or break. If something does not work, use "Report a problem" at the bottom of the home screen (it shows the details to copy; you send them in a GitHub issue or by e-mail, Hevanti sends nothing by itself), or open an [issue](https://github.com/pechter-roei41/hevanti/issues)).
 
 Hevanti writes down everything said in the lecture, in Hebrew or English, while it runs on your computer. Its core is two things:
 
@@ -19,7 +19,7 @@ Everything else supports these two.
 - **After the lecture:** one click for a summary, a mock exam or a formula sheet (and an explanation of the moments you marked). Every question and answer is kept in the lecture's folder (`שאלות ותשובות.md`).
 - **Courses:** a folder per course in "הקורסים שלי", a course page (lectures, marks, and the syllabus and glossary that improve transcription: the course name and its terms are given to the model as hotwords), search across everything that was said, and suggested terms for 55 common courses ([`course_terms.json`](System/Program/course_terms.json)) that improve transcription.
 - **Connect your own AI:** a small MCP server lets Claude for desktop, ChatGPT (Codex) or Gemini (`agy`) read the lecture themselves ("what is he saying now?"). Optional cloud sync copies transcripts to your own Google Drive or OneDrive for AIs that cannot read your computer.
-- **Keeping up:** when the transcript is more than 10 seconds behind what is being said, the floating window says so ("התמלול מאחר ב-N שניות"). On a computer too slow for the lecture, sound that has waited more than about five minutes is skipped (Hevanti says how many seconds) so the transcript goes on from now instead of falling further behind.
+- **Keeping up:** when the transcript is more than 10 seconds behind what is being said, the floating window says so, beside the "answer here" button ("מאחר ב-N שניות"). On a computer too slow for the lecture, sound that has waited more than about five minutes is skipped (Hevanti says how many seconds) so the transcript goes on from now instead of falling further behind.
 - **Accessibility:** text and interface size, reading spacing, high contrast, no motion, screen-reader announcements, a keyboard-friendly floating window.
 - **How to use:** a one-minute video inside the app (the "איך משתמשים?" button). What changed in each version: [`System/VERSION.txt`](System/VERSION.txt).
 

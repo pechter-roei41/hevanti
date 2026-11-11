@@ -86,7 +86,9 @@
   // The sources of an answer: a time in square brackets, as in the transcript ("[00:20:44]"). It becomes a chip; where the page can
   // open the transcript at that line (src.go), and the time really is one of those that were sent with the question
   // (src.known), a click goes there. A time the AI made up stays plain text - it is never a link to nowhere.
-  const TIME_RE = /(\[\d{1,2}:\d{2}(?::\d{2})?\])/;
+  // (the AI sometimes puts several times in one pair of brackets, "[12:36:33, 12:40:58]" or "[12:36:33-12:40:58]": each time is its own chip, and no
+  // bracket stays in the text)
+  const TIME_RE = /(\[\d{1,2}:\d{2}(?::\d{2})?(?:\s*[,;\u05BE\u2013\-]\s*\d{1,2}:\d{2}(?::\d{2})?)*\])/;
   const normT = s => s.split(":").map(x => x.padStart(2, "0")).join(":");
   function timesIn(text) {
     const known = new Set();
@@ -95,14 +97,17 @@
   }
   function appendRich(doc, p, str, src) {
     for (const piece of str.split(TIME_RE)) {
-      const m = /^\[(\d{1,2}:\d{2}(?::\d{2})?)\]$/.exec(piece);
-      if (!m) { if (piece) p.appendChild(doc.createTextNode(piece)); continue; }
-      const label = normT(m[1]), ok = !!(src && src.go && (!src.known || src.known.has(label)));
-      const b = doc.createElement(ok ? "button" : "span");
-      b.className = "src"; b.textContent = "⏱ " + label;
-      if (ok) { b.type = "button"; b.title = "לפתוח בתמלול ברגע הזה"; b.addEventListener("click", () => src.go(label)); }
-      else b.title = "הזמן בתמלול";
-      p.appendChild(b);
+      const times = /^\[.+\]$/.test(piece) ? piece.match(/\d{1,2}:\d{2}(?::\d{2})?/g) : null;
+      if (!times) { if (piece) p.appendChild(doc.createTextNode(piece)); continue; }
+      times.forEach((time, i) => {
+        if (i) p.appendChild(doc.createTextNode(" "));
+        const label = normT(time), ok = !!(src && src.go && (!src.known || src.known.has(label)));
+        const b = doc.createElement(ok ? "button" : "span");
+        b.className = "src"; b.textContent = "⏱ " + label;
+        if (ok) { b.type = "button"; b.title = "לפתוח בתמלול ברגע הזה"; b.addEventListener("click", () => src.go(label)); }
+        else b.title = "הזמן בתמלול";
+        p.appendChild(b);
+      });
     }
   }
   // an answer as a few simple blocks: "# heading", "- item", **bold** - always as text (never HTML)
@@ -335,19 +340,18 @@
     // the small window goes away (its button comes back) and the AI's window stays.
     function leaveMini() {
       if (!opts.compact) return;
-      setTimeout(() => { fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
-        body: JSON.stringify({action: "hide_mini"})}).catch(() => {}); }, 500);
+      fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
+        body: JSON.stringify({action: "hide_mini"})}).catch(() => {});   // at once, as soon as the question is copied: the AI that opens after it is not behind the window
     }
     async function sendQ(a, q, extra) {   // true when the question was copied (and the AI opened)
-      const ok = await sendQ0(a, q, extra);
-      if (ok) leaveMini();
-      return ok;
+      return sendQ0(a, q, extra);
     }
     async function sendQ0(a, q, extra) {
       let text = "";
       // (may read the slides' text first). The small window does not keep the lecture: copyContext asks Hevanti for the question
       // with the last minutes - the same text the lecture page copies. Nothing is sent anywhere; it is only copied.
       let bare = "";   // said in the message when only the question could be copied (the lecture could not be attached)
+      const linksP = courseLinks();   // (asked at the same time as the context: one wait, not two)
       try {
         text = extra && extra.context ? await extra.context()
           : opts.copyContext ? await opts.copyContext(q, extra && extra.minutes || 0) : await opts.context(q);
@@ -355,10 +359,11 @@
       const ok = await copyText(text, opts.win);
       if (!ok) { opts.toast("לא הצלחתי להעתיק. לנסות שוב."); return false; }
       setLast(a.id); refresh();
+      leaveMini();   // (the copy is done: the small window goes away now, not after the AI opened - the AI opens on its own, in front)
       // (not the "noopener" feature: with it window.open always returns null, and a blocked popup looks the same)
       const img = opts.hasImage && opts.hasImage() ? " צריך גם את המסך? \"העתקת " + (opts.imageName || "צילום המסך") + "\" ולהדביק שוב." : "";
       // the course's own project when it has one; else the app when it is installed, otherwise the website
-      const link = (await courseLinks())[a.id] || "";
+      const link = (await linksP)[a.id] || "";
       const appFirst = AI.apps[a.id] && (!link || (a.id === "claude" && AI.connected.claude));
       if (link && !appFirst) {
         const {w} = openAi(a, opts.win, link);

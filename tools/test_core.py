@@ -165,6 +165,7 @@ L.save_settings(math={"key": "plain:AIzaTOPSECRET123", "on": True})
 diag = json.loads(get("/api/diag")[1])
 txt = diag["text"]
 check("report a problem: the version, the computer and the newest error", L.VERSION in txt and "Windows" in txt and "OSError" in txt, txt[:300])
+check("report a problem: the e-mail address to write to comes with it, and is not inside the details", diag.get("mail") == L.REPORT_EMAIL and L.REPORT_EMAIL not in txt and diag.get("version") == L.VERSION, diag.get("mail"))
 check("report a problem: never the key", "AIzaTOPSECRET123" not in txt and "plain:" not in txt and "מפתח Gemini: יש" in txt)
 check("report a problem: the user's own folder name is hidden", home not in txt and "%USERPROFILE%" in txt, txt[-200:])
 check("report a problem: the link opens a new GitHub issue", diag["issues"].endswith("/issues/new"))
@@ -277,6 +278,30 @@ x2, y2 = L._toast_xy(bx, by, 56, tw_, th_, "tr", _Area)
 x3, _ = L._toast_xy(0, by, 56, tw_, th_, "bl", _Area)
 check("floating-button message: above the button for a bottom corner, below it for a top one, and never off the screen",
       y1 + th_ <= by and y2 >= by + 56 and x1 >= 0 and x1 + tw_ <= 1920 and x3 >= 0, (x1, y1, x2, y2, x3))
+# ---- the floating button goes when the lecture is stopped (at once, while the last seconds are still being written) ----
+class _FakeSess:
+    kind, ready, done = "live", True, False
+    def __init__(self):
+        self.stop = threading.Event()
+old_session = L.APP.session
+L.APP.session = fs = _FakeSess()
+try:
+    L.save_settings(mini_button=True)
+    before = L.mini_button_wanted()
+    fs.stop.set()
+    after = L.mini_button_wanted()
+finally:
+    L.APP.session = old_session
+check("floating button: shown while a lecture runs (the window is not up), gone the moment stop is pressed", before is True and after is False, (before, after))
+L.APP.session = fs2 = _FakeSess()
+try:
+    fs2.stop.set()
+    why_stop = L.mini_button_why()
+    L.APP.session = None
+    why_none = L.mini_button_why()
+finally:
+    L.APP.session = old_session
+check("floating button: the reason it is hidden can be told (for the black window)", why_stop == "נלחצה עצירה" and why_none == "אין הרצאה", (why_stop, why_none))
 check("a command without the page's header is refused (another site cannot drive Hevanti)", refused)
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")

@@ -934,7 +934,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <li><b>מה פספסתי:</b> שלושה כפתורים בחלון הקטן (3, 7, 15 דקות) מסכמים את הדקות האחרונות.</li>
           <li><b>להסתיר את החלון:</b> הכפתור — או <kbd>Esc</kbd>. הכפתור העגול חוזר, ולחיצה עליו פותחת אותו שוב.</li>
           <li><b>מקורות:</b> ליד משפט בתשובה מופיעה השעה שבה זה נאמר. בהרצאה שמורה ובנגן, לחיצה עליה קופצת לשם.</li>
-          <li><b>התמלול מאחר?</b> בכותרת החלון הקטן מופיע "מאחר ב-N שניות" כשהאיחור מעל 10 שניות, והתשובות מבוססות על מה שכבר נכתב. אם המחשב איטי מדי להרצאה, הבנתי מדלגת על קול שחיכה יותר מדי (בערך 5 דקות) ואומרת על כמה שניות דילגה.</li>
+          <li><b>התמלול מאחר?</b> בחלון הקטן, ליד "תשובה כאן", מופיע "מאחר ב-N שניות" כשהאיחור מעל 10 שניות, והתשובות מבוססות על מה שכבר נכתב. אם המחשב איטי מדי להרצאה, הבנתי מדלגת על קול שחיכה יותר מדי (בערך 5 דקות) ואומרת על כמה שניות דילגה.</li>
           <li><b>משהו פרטי על המסך?</b> <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd></span> עוצר את הצילום. התמלול ממשיך.</li>
           <li><b>הקלטה או יוטיוב:</b> ב<b>בית</b> ← <b>הרצאה מוקלטת</b>, גוררים קובץ או מדביקים קישור. שואלים באותה דרך.</li>
         </ul>
@@ -979,7 +979,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <dt>"לא הצלחתי להצפין את המפתח"</dt><dd>המפתח לא נשמר (הבנתי לא שומרת מפתח בלי הצפנה). מנסים שוב, ואם זה חוזר: "דיווח על תקלה" בתחתית מסך הבית.</dd>
           <dt>החלון הקטן לא נפתח</dt><dd>מנסים את הכפתור "חלון שאלות קטן" במסך ההרצאה החיה, או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>.</dd>
           <dt>האפליקציה לא נפתחת</dt><dd>פותחים בדפדפן <span class="say">http://127.0.0.1:8765/</span></dd>
-          <dt>משהו אחר</dt><dd>ב<b>בית</b>, למטה: <b>דיווח על תקלה</b>.</dd>
+          <dt>משהו אחר</dt><dd>ב<b>בית</b>, למטה: <b>דיווח על תקלה</b>. אפשר לשלוח אותו ב-GitHub או במייל.</dd>
         </dl>
       </section>
       <p class="howcredit">הבנתי · קוד פתוח (MIT) © 2026 רועי פכטר · <a href="https://github.com/pechter-roei41/hevanti" target="_blank" rel="noopener">GitHub</a> · <a href="https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD" target="_blank" rel="noopener">המדריך באינטרנט</a></p>
@@ -1013,8 +1013,8 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <p class="sub" style="margin:0">אלה הפרטים שעוזרים להבין מה קרה: הגרסה, המחשב ומה פועל, והשגיאות האחרונות. <b>שום דבר לא נשלח לבד</b>, ואין כאן את המפתח, תמלולים או שאלות. אפשר למחוק או להוסיף מה שרוצים. כתבו למעלה מה קרה, מה עשיתם רגע לפני ומה ציפיתם שיקרה.</p>
   <label for="repText" class="sub" style="display:block;margin:0">מה נכנס לדיווח</label>
   <textarea class="gloss" id="repText" dir="auto" spellcheck="false" style="min-height:220px;font-size:13px"></textarea>
-  <div class="row"><button class="btn" id="repCopy" type="button">העתקה</button><a class="btn ghost" id="repGit" href="#" target="_blank" rel="noopener">פתיחת דיווח ב-GitHub</a><button class="btn quiet" id="repClose" type="button" style="margin-inline-start:auto">סגירה</button></div>
-  <p class="sub" style="margin:0">ב-GitHub: מדביקים (Ctrl+V) ושולחים (צריך חשבון GitHub). אפשר גם לשלוח את הטקסט למי שנתן לכם את הבנתי.</p>
+  <div class="row"><button class="btn" id="repCopy" type="button">העתקה</button><a class="btn ghost" id="repGit" href="#" target="_blank" rel="noopener">פתיחת דיווח ב-GitHub</a><a class="btn ghost" id="repMail" href="#">שליחה במייל</a><button class="btn quiet" id="repClose" type="button" style="margin-inline-start:auto">סגירה</button></div>
+  <p class="sub" style="margin:0">ב-GitHub: מדביקים (Ctrl+V) ושולחים (צריך חשבון GitHub). במייל: נפתחת הודעה חדשה והטקסט מועתק, מדביקים בה (Ctrl+V) ושולחים בעצמכם. אין תוכנת דואר? כתובת: <span id="repAddr" dir="ltr"></span> <button class="btn quiet small" id="repAddrCopy" type="button">העתקת הכתובת</button></p>
 </div></div>
 <div class="modal" id="confirm" hidden role="dialog" aria-modal="true" aria-labelledby="confT"><div class="card">
   <h3 id="confT"></h3><p id="confP" style="margin:0;color:var(--muted)"></p>
@@ -1195,11 +1195,19 @@ async function openReport() {
   let d; try { d = await api("/api/diag"); } catch (e) { d = {text: "לא הצלחתי לקרוא את הפרטים מהבנתי.", issues: "https://github.com/pechter-roei41/hevanti/issues/new"}; }
   $("#repText").value = "מה קרה: \n\n---\n" + d.text;
   $("#repGit").href = d.issues;
+  if (d.mail) {   // by e-mail: a new message with a short subject; the details are copied (a long body does not fit in a link), the student pastes and sends
+    $("#repMail").href = "mailto:" + d.mail + "?subject=" + encodeURIComponent("הבנתי " + (d.version || "") + " - דיווח על תקלה")
+      + "&body=" + encodeURIComponent("להדביק כאן (Ctrl+V) את הטקסט שהועתק מהבנתי:\n\n");
+    $("#repAddr").textContent = d.mail;
+  }
+  $("#repMail").hidden = $("#repAddrCopy").hidden = !d.mail;
   $("#repText").focus(); $("#repText").setSelectionRange(9, 9);
 }
 $("#repBtn").addEventListener("click", openReport);
 $("#repCopy").addEventListener("click", async () => toast((await copyText($("#repText").value)) ? "הועתק. עכשיו להדביק (Ctrl+V) בדיווח." : "לא הצלחתי להעתיק. לסמן את הטקסט ולהעתיק ידנית."));
 $("#repGit").addEventListener("click", () => { copyText($("#repText").value); });
+$("#repMail").addEventListener("click", async () => { toast((await copyText($("#repText").value)) ? "הועתק. בהודעה שנפתחת: להדביק (Ctrl+V) ולשלוח." : "לא הצלחתי להעתיק. לסמן את הטקסט ולהעתיק ידנית."); });
+$("#repAddrCopy").addEventListener("click", async () => toast((await copyText($("#repAddr").textContent)) ? "הכתובת הועתקה." : "לא הצלחתי להעתיק."));
 $("#repClose").addEventListener("click", () => { $("#report").hidden = true; });
 async function copyImage(src) {
   try {

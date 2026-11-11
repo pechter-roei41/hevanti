@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import tempfile
+import urllib.parse
 import urllib.request
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -144,6 +145,12 @@ with sync_playwright() as p:
       out.noGo = [u.querySelectorAll('button.src').length, u.querySelectorAll('span.src').length, u.textContent];
       return out; }""")
     check("sources: a time that was sent is a button, a made-up time is only text", r["buttons"] == ["⏱ 00:20:44", "⏱ 01:05"] and r["plain"] == ["⏱ 00:99:99"], r)
+    r2 = pg.evaluate("""() => { const t = document.createElement('div'); document.body.appendChild(t);
+      BZMAsk.render(document, t, "הנקודה קבועה [12:36:33, 12:40:58] והשני [12:36:54-12:40:11] ועוד [12:36:33; 99:99:99] וסתם [ממש].", {go: () => {}, known: new Set(["12:36:33", "12:40:58", "12:36:54", "12:40:11"])});
+      return {buttons: [...t.querySelectorAll('button.src')].map(b => b.textContent), plain: [...t.querySelectorAll('span.src')].map(b => b.textContent), text: t.textContent}; }""")
+    check("sources: several times in one pair of brackets are separate chips, and no square bracket is left around a time",
+          r2["buttons"] == ["⏱ 12:36:33", "⏱ 12:40:58", "⏱ 12:36:54", "⏱ 12:40:11", "⏱ 12:36:33"] and r2["plain"] == ["⏱ 99:99:99"]
+          and "[12" not in r2["text"] and "[ממש]" in r2["text"], r2)
     check("sources: a click goes to that line of the transcript", r["went"] == ["00:20:44"], r)
     for theme in ("light", "dark"):
         pg.evaluate(f"document.documentElement.dataset.theme = '{theme}'")
@@ -261,6 +268,11 @@ with sync_playwright() as p:
     rep = pg.evaluate("document.querySelector('#repText').value")
     check("report a problem: the details are shown, with a place to say what happened", pg.is_visible("#report") and rep.startswith("מה קרה") and "הבנתי " in rep, rep[:200])
     check("report a problem: the GitHub button opens a new issue", pg.evaluate("document.querySelector('#repGit').href").endswith("/issues/new"))
+    mail_href = urllib.parse.unquote(pg.evaluate("document.querySelector('#repMail').href"))
+    check("report a problem: a button writes to the e-mail address, with the version in the subject, and nothing of the details in the link (they are pasted)",
+          mail_href.startswith("mailto:340937874+pechter-roei41@users.noreply.github.com?subject=הבנתי ") and "דיווח על תקלה" in mail_href and "מחשב" not in mail_href.split("body=")[0] and len(mail_href) < 300, mail_href)
+    check("report a problem: the address is shown (for those without a mail program), with a copy button",
+          pg.evaluate("document.querySelector('#repAddr').textContent") == "340937874+pechter-roei41@users.noreply.github.com" and pg.is_visible("#repAddrCopy"))
     pg.click("#repClose")
     check("report a problem: closes, no script errors", not pg.is_visible("#report") and perr == [], perr)
 
@@ -712,10 +724,11 @@ with sync_playwright() as p:
         return lagp.evaluate("[!document.querySelector('#lag').hidden, document.querySelector('#lag').textContent]")
     shown, txt = poll()
     check("floating window: the transcript is 25 seconds behind - it says so, in seconds", shown and "מאחר ב-25 שניות" in txt, (shown, txt))
-    check("...in the header row, with the ★ and the minimize button (not a row of its own that competes with them)",
-          lagp.evaluate("document.querySelector('#lag').parentElement.tagName") == "HEADER"
-          and lagp.evaluate("""() => { const h = document.querySelector('header').getBoundingClientRect(), l = document.querySelector('#lag').getBoundingClientRect();
-              return l.top >= h.top - 1 && l.bottom <= h.bottom + 1; }"""))
+    check("...in the row of \"תשובה כאן\" (where one decides to ask), not in the title row that a long course name needs",
+          lagp.evaluate("document.querySelector('#lag').closest('header')") is None
+          and lagp.evaluate("""() => { const l = document.querySelector('#lag').getBoundingClientRect(), b = document.querySelector('#box .ais button.here').getBoundingClientRect();
+              return Math.abs((l.top + l.bottom) / 2 - (b.top + b.bottom) / 2) < 12 && l.right <= innerWidth && l.left >= 0 && l.right < b.left || l.left > b.right; }"""))
+    check("...and the title row is whole: the course name is not cut by it", lagp.evaluate("""() => { const t = document.querySelector('#lec'); return t.scrollWidth <= t.clientWidth + 1; }"""))
     check("...with the whole sentence for the screen reader and the pointer",
           "התמלול מאחר ב-25 שניות" in lagp.evaluate("document.querySelector('#lag').getAttribute('aria-label')"))
     check("...a caution pill: not green", lagp.evaluate("""() => { const p = document.createElement('div'); p.style.cssText = 'background:var(--warn-bg);color:var(--warn-fg)'; document.body.appendChild(p);
