@@ -360,6 +360,60 @@ code_q, body_q = get("/quick")
 check("quick start: the page is served, with its title", code_q == 200 and "<title>התחלה מהירה · הבנתי</title>".encode("utf-8") in body_q, code_q)
 check("quick start: \"close\" and \"open the app\" are harmless when no window is open (and off Windows)",
       L.APP.command({"action": "quick_close"}).get("ok") is True and L.APP.command({"action": "quick_open_app"}).get("ok") is True)
+# ---- a course from the first slide (offered, never applied), and a course chosen while it records ----
+import tempfile as _tf
+for _c in ("אלגוריתמים", "פיזיקה"):
+    L.create_course(_c)
+
+
+class _Sess2:
+    def __init__(self):
+        self.stop, self.suggest, self.suggest_off, self.pending_course = threading.Event(), None, False, ""
+
+
+def _suggestion(slide_text_value, **flags):
+    d = _tf.mkdtemp()
+    os.makedirs(os.path.join(d, L.SLIDES_NAME))
+    open(os.path.join(d, L.SLIDES_NAME, "09-00-00.jpg"), "wb").write(b"x")
+    s = _Sess2()
+    for k, v in flags.items():
+        setattr(s, k, v)
+    old = (L.slide_text, L.SUGGEST_POLL_S)
+    L.slide_text, L.SUGGEST_POLL_S = (lambda p: slide_text_value), 0.05
+    try:
+        L.suggest_course_from_slide(s, d, timeout_s=3)
+    finally:
+        L.slide_text, L.SUGGEST_POLL_S = old
+    return s.suggest
+
+
+sg = _suggestion("אלגוריתמים - הרצאה 3\nסיבוכיות זמן")
+check("course from the first slide: a course name on it is offered, with why", sg and sg["course"] == "אלגוריתמים" and sg["why"] == "slide", sg)
+check("course from the first slide: a slide with no course name offers nothing", _suggestion("ברוכים הבאים\nמבוא כללי") is None)
+check("course from the first slide: nothing is offered after a 'no', or after the student chose", _suggestion("פיזיקה 1", suggest_off=True) is None and _suggestion("פיזיקה 1", pending_course="אלגוריתמים") is None)
+check("course from the first slide: two courses on the slide - no guess", _suggestion("אלגוריתמים ופיזיקה") is None)
+ls = L.Session("live", "he", "", L.NO_COURSE)
+ls.ready = True
+_sess_before = L.APP.session
+L.APP.session = ls
+try:
+    r_set = L.APP.command({"action": "set_lecture_course", "course": "פיזיקה"})
+    info1, pending1, saved1 = ls.info(), ls.pending_course, L.load_settings().get("course")
+    r_same = L.APP.command({"action": "set_lecture_course", "course": L.NO_COURSE})
+    info2 = ls.info()
+    ls.suggest, ls.suggest_off = {"course": "אלגוריתמים", "why": "slide", "detail": ""}, False
+    shown = ls.info()["suggest"]
+    r_no = L.APP.command({"action": "suggest_dismiss"})
+    hidden = ls.info()["suggest"]
+    ls.done = True
+    r_done = L.APP.command({"action": "set_lecture_course", "course": "פיזיקה"})
+finally:
+    L.APP.session = _sess_before
+check("course while recording: the chosen course is the one shown, the lecture is marked as moving, and the course is remembered for next time",
+      r_set["ok"] and pending1 == "פיזיקה" and info1["course"] == "פיזיקה" and info1["moving"] is True and info1["course_now"] == L.NO_COURSE and saved1 == "פיזיקה", (r_set, info1, saved1))
+check("course while recording: choosing the course it is already in cancels the move", r_same["ok"] and info2["moving"] is False and info2["course"] == L.NO_COURSE, info2)
+check("course while recording: a course offered is in the session info until the student says no", shown and shown["course"] == "אלגוריתמים" and hidden is None and r_no["ok"], (shown, hidden))
+check("course while recording: no lecture running - refused in words", r_done["ok"] is False and "אין עכשיו" in r_done["error"], r_done)
 check("a command without the page's header is refused (another site cannot drive Hevanti)", refused)
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")

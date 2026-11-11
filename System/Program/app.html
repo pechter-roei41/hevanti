@@ -297,6 +297,10 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}   /* the boar
 .fold>.card,.fold>.tbox{border:0;border-top:1px solid var(--line);border-radius:0 0 var(--r) var(--r)}
 .livebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 .livebar .what{margin-inline-end:auto;min-width:0}
+.courserow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-4px 0 12px;font-size:15px}
+.courserow select{padding:6px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);font:inherit;min-height:36px}
+.courserow .sub{margin:0}
+.sugbox{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 10px;border-radius:10px;background:var(--sunk)}
 .livebar .acts{display:flex;align-items:center;gap:10px;flex:none}   /* the actions stay one row: they wrap together, never "stop" alone */
 .livebar .what b{font-size:22px;font-family:var(--f-display);font-weight:400}
 #liveStop{border-color:var(--line);color:var(--muted)}
@@ -712,6 +716,11 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <button class="btn ghost" id="liveStop" type="button">עצירה</button>
       </div>
     </div>
+    <div class="courserow" id="liveCourseRow" hidden>
+      <label for="liveCourse">קורס:</label><select id="liveCourse"></select>
+      <span class="sub" id="liveCourseNote"></span>
+      <span class="sugbox" id="liveSug" hidden><span id="liveSugText"></span> <button class="btn ghost small" id="liveSugYes" type="button">להעביר</button> <button class="btn quiet small" id="liveSugNo" type="button">לא עכשיו</button></span>
+    </div>
     <div class="ended" id="liveEnded" hidden></div>
     <div class="card study" id="liveStudy" hidden><h2 style="margin:0 0 6px">ההרצאה נשמרה. מה עושים איתה?</h2>
       <p class="sub" style="margin-top:0">לחיצה אחת: הבנתי שולחת ל-AI שלך את ההרצאה הזו עם המשימה (סיכום, מבחן דמה או דף נוסחאות).</p>
@@ -927,6 +936,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <li><b>פתיחה מהירה:</b> כשפותחים את הבנתי (אחרי שהסכמתם פעם אחת ויש מפתח) נפתח חלון קטן באמצע המסך: בוחרים קורס וסוג ולוחצים <b>התחל תמלול</b>, והתמלול רץ ברקע. <b>פתח את האפליקציה</b> פותח את מסך הבית בלי להתחיל כלום. אפשר לכבות את החלון הקטן ב<b>הגדרות</b>.</li>
           <li>או ב<b>בית</b>: בוחרים קורס (הוא נבחר לבד אם על המסך יש חלון עם שם הקורס) ולוחצים <b>הרצאה חיה בעברית</b> (או <b>באנגלית</b>).</li>
           <li>מפעילים את ההרצאה, גם במסך מלא. בקצה המסך מופיע כפתור עגול עם הלוגו.</li>
+          <li>התחלתם בלי קורס? אם על השקף הראשון כתוב שם של קורס שלכם, מופיעה הצעה (בחלון הקטן ובמסך ההרצאה): <b>להעביר</b> או <b>לא עכשיו</b>. אפשר גם לבחור קורס אחר במסך ההרצאה. ההרצאה עוברת לקורס כשעוצרים ושומרים אותה. שום דבר לא משתנה לבד.</li>
           <li>לוחצים עליו (או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>), כותבים שאלה ו-<kbd>Enter</kbd>. התשובה מופיעה מתחת.</li>
           <li>בסוף: <b>עצירה</b> (במסך ההרצאה או בבית). הכל נשמר בקורס.</li>
         </ol>
@@ -2423,7 +2433,26 @@ function renderLiveHead(s) {
   $("#liveStop").hidden = s.done;
   $("#markImp").hidden = s.done || !s.ready || !!s.yt;
   if (s.error) { $("#liveSub").textContent = "נעצר בגלל שגיאה"; }
+  drawLiveCourse(s);
 }
+// the course of the lecture that is recording: the student can change it; the lecture moves there when it is stopped and saved
+function drawLiveCourse(s) {
+  const row = $("#liveCourseRow"), sel = $("#liveCourse");
+  row.hidden = !!(s.done || !s.ready || s.yt);
+  if (row.hidden) return;
+  const names = courses.map(c => c.name).filter(n => n !== NO_COURSE).concat([NO_COURSE]);
+  if (sel.options.length !== names.length || [...sel.options].some((o, i) => o.value !== names[i])) {
+    sel.replaceChildren(...names.map(n => { const o = el("option", "", n); o.value = n; return o; }));
+  }
+  if (document.activeElement !== sel) sel.value = names.includes(s.course) ? s.course : NO_COURSE;
+  $("#liveCourseNote").textContent = s.moving ? "ההרצאה תועבר לקורס \"" + s.course + "\" כשתיעצר ותישמר." : "";
+  const sg = s.suggest;
+  $("#liveSug").hidden = !sg;
+  if (sg) { $("#liveSugText").textContent = "נראה שזה הקורס \"" + sg.course + "\" (לפי השקף הראשון). להעביר?"; $("#liveSug").dataset.course = sg.course; }
+}
+$("#liveCourse").addEventListener("change", async () => { await api("/api/cmd", {action: "set_lecture_course", course: $("#liveCourse").value}); });
+$("#liveSugYes").addEventListener("click", async () => { await api("/api/cmd", {action: "set_lecture_course", course: $("#liveSug").dataset.course}); $("#liveSug").hidden = true; });
+$("#liveSugNo").addEventListener("click", async () => { await api("/api/cmd", {action: "suggest_dismiss"}); $("#liveSug").hidden = true; });
 // a marked moment: the line said just before the mark gets the highlighter band, a ★ ("?" for the old "didn't understand" marks - the same band,
 // one colour one meaning) and, for the screen reader, the words "מסומנת"
 function markPrev(li) {

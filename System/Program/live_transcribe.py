@@ -7191,9 +7191,14 @@ class Session:
         self.ready_at = None   # when it started transcribing (a stop within QUICK_STOP_S offers to delete it)
         self.discard = False   # stopped right after starting, and the student chose to delete it
         self.stop_at = None    # when the stop was asked (the page says how long it has been stopping)
+        self.pending_course = ""   # the student chose another course while it records: the lecture moves there when it is stopped and saved
+        self.suggest = None        # {"course", "why": "slide", "detail"}: a course read from the first slide (offered, never applied by itself)
+        self.suggest_off = False   # the student said no (or chose a course himself)
 
     def info(self):
-        return {"kind": self.kind, "lang": self.lang, "title": self.title, "course": self.course, "ready": self.ready,
+        return {"kind": self.kind, "lang": self.lang, "title": self.title, "course": self.pending_course or self.course,
+                "course_now": self.course, "moving": bool(self.pending_course),
+                "suggest": self.suggest if (self.suggest and not self.suggest_off and not self.pending_course) else None, "ready": self.ready,
                 "done": self.done, "stopping": self.stop.is_set() and not self.done, "error": self.error,
                 "started": self.started, "transcript": self.transcript, "yt": self.yt,
                 "ready_at": self.ready_at, "discard": self.discard,
@@ -7391,6 +7396,21 @@ class App:
             return toggle_mini(hide_only=(a == "hide_mini"), show_only=(a == "show_mini"))
         if a == "mini_opacity":
             return set_mini_opacity(d.get("value"))
+        if a in ("set_lecture_course", "suggest_dismiss"):   # the course of the lecture that is recording right now (it moves when the lecture is saved)
+            with self.lock:
+                s = self.session
+            if s is None or s.done or s.kind != "live":
+                return {"ok": False, "error": "אין עכשיו הרצאה חיה."}
+            if a == "suggest_dismiss":
+                s.suggest_off = True
+                return {"ok": True}
+            new = clean_name(d.get("course"), NO_COURSE)
+            s.pending_course = "" if new == s.course else new
+            s.suggest_off = True   # (he chose: the offer is over)
+            save_settings(course=new)
+            with self.lock:
+                self.lib_rev += 1
+            return {"ok": True, "course": new, "moves": bool(s.pending_course)}
         if a == "consent_seen":   # the student agreed (the page keeps it in the browser; the server needs to know too, to open the quick-start window)
             if not load_settings().get("consent_ok"):
                 save_settings(consent_ok=True)
@@ -9275,6 +9295,36 @@ def rms(x):
     return float(np.sqrt(np.mean(x ** 2))) if len(x) else 0.0
 
 
+SUGGEST_POLL_S = 3   # how often the first slide is looked for (a test makes it short)
+
+
+def suggest_course_from_slide(sess, ldir, timeout_s=15 * 60):
+    """A lecture that started with no course: the text of its first slide (read here, with Tesseract) may carry a course name. The
+    course is OFFERED (sess.suggest), never applied by itself, once per lecture."""
+    slides = os.path.join(ldir, SLIDES_NAME)
+    end = time.time() + timeout_s
+    while time.time() < end and not sess.stop.is_set() and not sess.suggest_off and not sess.pending_course:
+        time.sleep(SUGGEST_POLL_S)
+        try:
+            files = sorted(f for f in os.listdir(slides) if f.lower().endswith((".jpg", ".jpeg", ".png")))
+        except OSError:
+            continue
+        if not files:
+            continue
+        try:
+            text = slide_text(os.path.join(slides, files[0])) or ""
+        except Exception:
+            save_error("course from the first slide")
+            return
+        courses = [c for c in course_names() if c != NO_COURSE]
+        titles = [ln.strip() for ln in text.splitlines() if ln.strip()] + [" ".join(text.split())]
+        g = guess_by_title(titles, courses) if courses and text.strip() else None
+        if g and not sess.suggest_off and not sess.pending_course:
+            sess.suggest = {"course": g[0], "why": "slide", "detail": g[1][:80]}
+            log(f"נראה שזה הקורס \"{g[0]}\" (לפי השקף הראשון). ההצעה מוצגת בחלון, ולא מתבצע שינוי לבד.")
+        return
+
+
 def run_live(sess, lang, course=""):
     """A live lecture: whatever the computer plays is transcribed (and the screen photographed) until sess.stop."""
     set_language(lang)
@@ -9410,6 +9460,8 @@ def run_live(sess, lang, course=""):
                        f"+{datetime.timedelta(seconds=int(max(0, t - start.timestamp())))}] {text}")
             now_file.add(t, text)
         sess.mark_fn = mark
+    if watcher is not None and course == NO_COURSE and not yt:   # no course chosen: the first slide may say which one it is (offered, not applied)
+        threading.Thread(target=suggest_course_from_slide, args=(sess, ldir), daemon=True).start()
     sess.watcher = watcher   # a question begun in the small window / the page asks it for a picture (App.command: snap_question)
     hotkey = PauseHotkey()   # Ctrl+Alt+P: pause the pictures, Ctrl+Alt+M: mark ★
     hotkey.start()
@@ -9819,6 +9871,25 @@ def run_live(sess, lang, course=""):
             sess.hotkey.stop()
         closing()
         step("סוף התמלול נכתב")
+        if sess.pending_course and sess.pending_course != course and os.path.isdir(ldir):   # the student chose another course while it recorded
+            import shutil
+            try:
+                new_parent = course_dir(sess.pending_course)
+                os.makedirs(new_parent, exist_ok=True)
+                old_name = os.path.basename(ldir)
+                new_name = free_folder(new_parent, old_name)
+                new_dir = os.path.join(new_parent, new_name)
+                shutil.move(ldir, new_dir)
+                if new_name != old_name:
+                    os.replace(os.path.join(new_dir, old_name + ".txt"), lecture_txt(new_dir))
+                ldir, path = new_dir, lecture_txt(new_dir)
+                sess.course, sess.transcript = sess.pending_course, path
+                with APP.lock:
+                    APP.lib_rev += 1
+                log(f"ההרצאה הועברה לקורס \"{sess.course}\".")
+            except OSError:
+                save_error("move the lecture to the chosen course")
+                log(f"לא הצלחתי להעביר את ההרצאה לקורס \"{sess.pending_course}\": היא נשארה ב\"{course}\". אפשר להעביר אותה מדף ההרצאה.")
         now_file.ended = True
         if not os.path.isdir(ldir):
             sess.transcript = None

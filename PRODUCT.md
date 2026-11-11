@@ -20,6 +20,7 @@ Hevanti (הבנתי) is a lecture companion. It transcribes lectures on the stud
 - A small always-on-top floating window (Ctrl+Alt+Q), also over a full-screen lecture: type a question and get an answer based on the last minutes of the lecture and the slide on screen.
 - One-click marks (★ only, since 2.13; Ctrl+Alt+M) that mark the moment without stopping to listen, then list every mark with what was said just before it. In a transcript the line said just before the mark carries a highlighter band, a ★ and the words "מסומנת" for a screen reader. "?" marks from older lectures are still read and shown, with the same band.
 - A quick-start window in the middle of the screen when Hevanti opens: the course (guessed from a window title or the weekly schedule, never silently) and the kind of lecture, then "start" runs the transcript in the background; the home screen stays one click away and is what a first start, a missing key or a GPU problem shows.
+- A lecture that started with no course offers the course named on its first slide (local OCR; offered, never applied by itself), and the course of a recording lecture can be changed at any moment: the lecture moves there when it is saved.
 - Three "what did I miss" buttons (3, 7, 15 minutes) in the floating window, and answers that cite the time of the transcript line they rely on (a link only when the page can open that line).
 
 Success is measured by study time saved, number of users, and being a project worth showing.

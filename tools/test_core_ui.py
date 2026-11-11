@@ -340,6 +340,8 @@ with sync_playwright() as p:
         d["math"] = dict(d.get("math") or {}, ask=mini_state["ask"])
         if "run" in mini_state:
             d["run"] = mini_state.pop("run")   # (once: one look at Hevanti that says another run)
+        if mini_state.get("suggest") and d["session"]:
+            d["session"]["suggest"] = {"course": "אלגוריתמים", "why": "slide", "detail": ""}
         d["mark_n"] = mini_state["mark_n"]   # (Hevanti's count of marks: a mark made with the keyboard raises it)
         route.fulfill(response=resp, body=json.dumps(d))
     mini.route("**/api/app*", mini_app)
@@ -376,6 +378,24 @@ with sync_playwright() as p:
     mini.wait_for_function("() => !document.querySelector('#toast').classList.contains('on')", timeout=8000)
     mini.wait_for_timeout(4600)   # (a whole look later)
     check("floating window: ...and only once for one mark", not mini.evaluate("() => document.querySelector('#toast').classList.contains('on')"))
+    # ---- a course read from the first slide is offered in the small window: one press takes it, or says no ----
+    mini_state["suggest"] = True
+    mini.evaluate("pollApp()")
+    mini.wait_for_selector("#sug", state="visible", timeout=5000)
+    check("floating window: a course read from the first slide is offered, with the name", "אלגוריתמים" in mini.inner_text("#sugText") and "השקף הראשון" in mini.inner_text("#sugText"), mini.inner_text("#sugText"))
+    marked.clear()
+    mini.click("#sugYes")
+    mini.wait_for_timeout(500)
+    check("floating window: 'move' sends the course (the lecture moves when it is saved) and tells when", any(m.get("action") == "set_lecture_course" and m.get("course") == "אלגוריתמים" for m in marked) and mini.is_hidden("#sug"), marked)
+    mini.evaluate("pollApp()")
+    mini.wait_for_selector("#sug", state="visible", timeout=5000)
+    marked.clear()
+    mini.click("#sugNo")
+    mini.wait_for_timeout(400)
+    check("floating window: 'not now' tells Hevanti, and the offer goes", any(m.get("action") == "suggest_dismiss" for m in marked) and mini.is_hidden("#sug"), marked)
+    mini_state["suggest"] = False
+    mini.evaluate("pollApp()")
+    mini.wait_for_timeout(300)
     # the first key of a question asks Hevanti for a picture of the screen of that moment - once per question
     marked.clear()
     mini.fill("textarea", "מ")
@@ -778,6 +798,27 @@ with sync_playwright() as p:
         sp.wait_for_function("document.querySelector('#toast').textContent.includes('לא הצלחתי לשמור')", timeout=8000)
         check(f"{page_name}: a new failure is shown", True)
         sp.context.close()
+
+    # ---- the live view: the course of the lecture that records can be changed, and an offer from the first slide ----
+    lc = page()
+    lc.posts = []
+    lc.route("**/api/cmd", lambda r: (lc.posts.append(json.loads(r.request.post_data or "{}")), r.fulfill(content_type="application/json", body=json.dumps({"ok": True})))[1])
+    lc.evaluate("""() => { courses = [{name: 'אלגוריתמים'}, {name: 'פיזיקה'}, {name: 'ללא קורס'}]; document.querySelector('#vLive').hidden = false;
+        drawLiveCourse({kind: 'live', done: false, ready: true, yt: null, course: 'פיזיקה', moving: false, suggest: {course: 'אלגוריתמים', why: 'slide'}}); }""")
+    check("live view: the course of the recording lecture is shown and can be changed (every course, and without a course)",
+          lc.is_visible("#liveCourse") and lc.evaluate("[...document.querySelectorAll('#liveCourse option')].map(o => o.value)") == ["אלגוריתמים", "פיזיקה", "ללא קורס"] and lc.evaluate("document.querySelector('#liveCourse').value") == "פיזיקה")
+    check("live view: a course offered from the first slide is shown, with the name", lc.is_visible("#liveSug") and "אלגוריתמים" in lc.inner_text("#liveSugText"))
+    lc.select_option("#liveCourse", "אלגוריתמים")
+    lc.wait_for_timeout(300)
+    check("live view: choosing a course sends it", any(p_.get("action") == "set_lecture_course" and p_.get("course") == "אלגוריתמים" for p_ in lc.posts), lc.posts)
+    lc.click("#liveSugYes")
+    lc.wait_for_timeout(300)
+    check("live view: 'move' on the offer sends that course and the offer goes", [p_ for p_ in lc.posts if p_.get("action") == "set_lecture_course"][-1].get("course") == "אלגוריתמים" and lc.is_hidden("#liveSug"))
+    lc.evaluate("drawLiveCourse({kind: 'live', done: false, ready: true, yt: null, course: 'אלגוריתמים', moving: true, suggest: null})")
+    check("live view: a lecture that will move says so, in words", "תועבר לקורס" in lc.inner_text("#liveCourseNote") and "אלגוריתמים" in lc.inner_text("#liveCourseNote"), lc.inner_text("#liveCourseNote"))
+    lc.evaluate("drawLiveCourse({kind: 'live', done: false, ready: true, yt: {id: 'x'}, course: 'פיזיקה', moving: false, suggest: null})")
+    check("live view: a YouTube video has no course row (it opens in the player)", lc.is_hidden("#liveCourseRow"))
+    lc.context.close()
 
     # ---- the quick-start window (F1): course, kind, start in the background, open the app ----
     def quick_page(theme="light", guess=None, last="פיזיקה", start_ok=True, delay_guess=0):

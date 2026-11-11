@@ -214,6 +214,8 @@ A pill-shaped top bar on a Sheet: logo and name on the right, tabs (בית, הק
 ### The Floating Window
 A small always-on-top window with the same tokens: a title bar, the course name with a recording dot, a ★ button, three "what did I miss" pills (3, 7, 15 minutes), a conversation area, and a text box with one green "תשובה כאן" button. It shows exactly one thing to do: ask. Two quiet notices live in it: the warning that the transcript is behind ("מאחר ב-N שניות", a caution pill in the row of the green button, never in the title row, which a long course name needs), and the mark message: a small centred card (Sheet, 1px Hairline) with a Mark Line chip holding the ★ in Ink and the word "סומן". The same card, drawn as a native window, shows above the round floating button when a mark is made with the keyboard while the small window is closed.
 
+The course offer (a course read from the first slide) is a quiet strip: Sunk Paper, Ink text, a ghost "להעביר" and a ghost "לא עכשיו" (green text and edge), in the small window under the title and in the live view next to the course field.
+
 ### The Quick-Start Window
 A small window in the middle of the screen when Hevanti opens: a title row (the name, "הקלטה חדשה"), the field "איזה קורס?" with a note under it ("זוהה מכותרת החלון. אפשר להחליף." with a small sparkle), three kinds of lecture as a radio group (the chosen one Green Soft with Ink and a Green edge, never a second solid green), the one solid-green action "התחל תמלול" (it becomes "המשך באפליקציה" for a recording, which only opens the app), and a ghost button "פתח את האפליקציה". Tokens as everywhere, light and night.
 
