@@ -1,6 +1,6 @@
 # Hevanti (הבנתי)
 
-Open-source (MIT) lecture companion for Israeli university students, Windows only. Beta (currently 2.18).
+Open-source (MIT) lecture companion for Israeli university students, Windows only. Beta (released number 2.18; the 2.19 work is merged to `main` but not yet released, and the version in code stays 2.18 until Roei says to bump).
 
 It transcribes a lecture on the student's computer (Hebrew or English, live or recorded), saves a picture of every new slide, and has two core features:
 - **The floating window** (`mini.html`, Ctrl+Alt+Q, or the round button at the screen edge): always on top, also over a full-screen lecture. Type a question, get an answer based on the last minutes and the slide on screen. Three "what did I miss" buttons (3, 7, 15 minutes).
@@ -11,6 +11,7 @@ Answers come from Gemini, called straight from the student's computer with the s
 Read before larger changes:
 - `PRODUCT.md`: users, purpose, positioning
 - `DESIGN.md`: visual system ("The Open Notebook": cream paper, white cards, one green action, yellow only for marks and the logo)
+- `TASKS.md`: open work, split between Roei's tasks (what Claude cannot do) and Claude's. **Update it whenever a task opens or closes.**
 - `DECISIONS.md`: what was decided and why (Hebrew, dated). **Add every new decision there.** It is the project's memory.
 - `README.md`: features, privacy, file map
 - `docs/distribution.md`: how it is spread. `docs/real-lecture-test.md`: the manual checklist before each release.
@@ -56,7 +57,7 @@ Read before larger changes:
 - `System/Program/hevanti_mcp.py`: MCP server, standard library only. Tools `now`, `transcript`, `slide`, `search`, `moment`, `lectures`; prompts `exam`, `summary`, `find_moment`. Every tool takes `course`. Claude for desktop, Codex and `agy` connect to it. Optional cloud sync (Google Drive / OneDrive) for AIs that cannot read the computer.
 - `System/Program/course_terms.json`: suggested glossary per course name (55 courses).
 - `System/VERSION.txt`: release notes in Hebrew, newest first. Setup and removal: `Install.bat`, `System/get_python.ps1`, `System/install_ocr.*`, `System/install_gpu.bat`, `System/uninstall.bat`.
-- Packaging: `tools/build_zip.py`, `tools/build_setup_dir.py`, `installer/hevanti.iss` (Inno Setup). Workflows: `tests.yml`, `release.yml` (tag `v*` builds the ZIP and the installer), `installer-smoke.yml` (installs on a clean Windows runner).
+- Packaging: `tools/build_zip.py`, `tools/build_setup_dir.py`, `installer/hevanti.iss` (Inno Setup). Workflows: `tests.yml`, `release.yml` (tag `v*` builds the ZIP and the installer), `installer-smoke.yml` (installs on a clean Windows runner; runs only when `installer/**`, the setup build/smoke tools or the workflow change, so a merge of pages-only changes does not start it, use `gh workflow run installer-smoke.yml --ref <branch>`).
 - Design files for the Impeccable tool: `.impeccable/config.json`, `design.json` (shared). Private ones are ignored.
 
 ## The in-app guide ("איך משתמשים")
@@ -89,7 +90,7 @@ Then open `http://127.0.0.1:8765/` (and `/mini` for the floating window) with Pl
 Known mismatches that remain in the video (found on 10.11.2026, listed in `DECISIONS.md`):
 - The last slide (0:54) says step 4 is "אחרי ההרצאה: דף הקורס והכנה למבחן", but the "הכנה למבחן" tab was removed from the course page (5.11.2026). The course page has three tabs: ההרצאות, סימונים, סילבוס ומילון.
 - At 0:38 the course page shows "עוד אין הרצאות בקורס." above a list of two lectures. The app no longer does this (fixed in 2.18: the summary line is built from the same list, and a link straight to a course page loads the list), but the footage still shows it.
-- The video shows version 2.17 and the home page without the missing-key bar; re-record when the flow changes.
+- The video shows version 2.17, the old look (before the 2.19 design round: one-green rule, `mark-line` highlighter, GPU capsule, lag chip) and the home page without the missing-key bar. Re-record once, after the look is stable.
 
 ## Testing
 
