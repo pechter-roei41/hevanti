@@ -314,7 +314,7 @@ with sync_playwright() as p:
         d["session"] = {"kind": "live", "done": False, "course": "פיזיקה"} if mini_state["live"] else None
         d["math"] = dict(d.get("math") or {}, ask=mini_state["ask"])
         if "run" in mini_state:
-            d["run"] = mini_state["run"]
+            d["run"] = mini_state.pop("run")   # (once: one look at Hevanti that says another run)
         d["mark_n"] = mini_state["mark_n"]   # (Hevanti's count of marks: a mark made with the keyboard raises it)
         route.fulfill(response=resp, body=json.dumps(d))
     mini.route("**/api/app*", mini_app)
@@ -329,7 +329,6 @@ with sync_playwright() as p:
     mini.wait_for_timeout(4800)
     reloaded = mini.evaluate("() => window.__same_page !== true")
     check("floating window: a different run answers - it loads the page again", reloaded)
-    mini_state.pop("run")
     mini.wait_for_timeout(4800)   # (the page that was loaded again learns Hevanti's count of marks from its first look)
     marked = []
     mini.route("**/api/cmd", lambda r: (marked.append(json.loads(r.request.post_data or "{}")), r.fulfill(status=200, content_type="application/json", body=json.dumps({"ok": True, "kind": "חשוב"})))[1])
@@ -343,10 +342,14 @@ with sync_playwright() as p:
     check("floating window: the mark message is a card with a yellow ★ (the highlighter colour) and the word, in the middle, not a bar across", toast["on"] and toast["star"] == "★" and "סומן" in toast["text"] and toast["centred"] and toast["narrower"], toast)
     mini.wait_for_timeout(3300)   # (the message goes away)
     mini_state["mark_n"] = 1   # a mark made with Ctrl+Alt+M: Hevanti's count goes up, and the window says it too
-    mini.wait_for_timeout(4600)
-    check("floating window: a mark made with the keyboard shows the same message", mini.evaluate("() => document.querySelector('#toast').classList.contains('on') && document.querySelector('#toast .star') !== null"))
-    mini.wait_for_timeout(3300)
-    mini.wait_for_timeout(4600)
+    try:   # (the window looks every 4 seconds: wait for the message, not for a fixed time)
+        mini.wait_for_function("() => document.querySelector('#toast').classList.contains('on') && document.querySelector('#toast .star') !== null", timeout=7000)
+        seen_key = True
+    except Exception:
+        seen_key = False
+    check("floating window: a mark made with the keyboard shows the same message", seen_key)
+    mini.wait_for_function("() => !document.querySelector('#toast').classList.contains('on')", timeout=8000)
+    mini.wait_for_timeout(4600)   # (a whole look later)
     check("floating window: ...and only once for one mark", not mini.evaluate("() => document.querySelector('#toast').classList.contains('on')"))
     # the first key of a question asks Hevanti for a picture of the screen of that moment - once per question
     marked.clear()

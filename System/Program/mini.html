@@ -141,7 +141,11 @@ async function pollApp() {
     const d = await getJson("/api/app"), s = d.session;
     if (d.save_failed && d.save_failed.n !== lastSaveFail) { lastSaveFail = d.save_failed.n; toast(d.save_failed.msg); }   // (a settings save that failed: said once)
     const mine = (document.querySelector('meta[name="bzm-run"]') || {}).content;   // a window left open from an earlier run of Hevanti has the old page: it loads the new one
-    if (d.run && mine && mine !== "__" + "RUN__" && mine !== d.run) { location.reload(); return; }
+    if (d.run && mine && mine !== "__" + "RUN__" && mine !== d.run) {
+      let again = true;   // (never more often than every 20 seconds: a mismatch that does not go away must not make the window reload without end)
+      try { again = Date.now() - (+sessionStorage.getItem("bzm.reload") || 0) > 20000; if (again) sessionStorage.setItem("bzm.reload", Date.now()); } catch (e) {}
+      if (again) { location.reload(); return; }
+    }
     if (typeof d.mark_n === "number") {   // a mark made with Ctrl+Alt+M (or in the app): said here too, as a click on ★ here says it
       if (lastMark !== null && d.mark_n > lastMark && !markedHere) toast(MARKED);
       lastMark = d.mark_n; markedHere = false;
