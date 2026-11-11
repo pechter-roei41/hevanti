@@ -5803,7 +5803,7 @@ def course_ai_info(course):
 
 # ---------- is there a newer version? (the GitHub releases of the open-source project) ----------
 GITHUB_REPO = "pechter-roei41/hevanti"
-REPORT_EMAIL = ""   # a support address for "report a problem" by e-mail (the student presses send: Hevanti sends nothing). Empty: no e-mail option is shown. To be set when Hevanti has its own address (TASKS.md, S1)
+REPORT_EMAIL = "hevanti.support@gmail.com"   # the support address of Hevanti, for "report a problem" by e-mail (the student presses send: Hevanti sends nothing). Empty: no e-mail option is shown
 RELEASES_URL = os.environ.get("BZM_RELEASES_URL") or f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 

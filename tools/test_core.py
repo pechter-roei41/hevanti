@@ -170,7 +170,7 @@ L.REPORT_EMAIL = "support@example.test"   # (made up: the real address is set wh
 diag2 = json.loads(get("/api/diag")[1])
 L.REPORT_EMAIL = _real_mail
 check("report a problem: the support address comes with it (when there is one), and is not inside the details", diag2.get("mail") == "support@example.test" and "support@example.test" not in diag2["text"] and diag2.get("version") == L.VERSION, diag2.get("mail"))
-check("report a problem: no personal address ships in the program (REPORT_EMAIL is empty until Hevanti has a support address)", L.REPORT_EMAIL == "" and diag.get("mail") == "", (L.REPORT_EMAIL, diag.get("mail")))
+check("report a problem: the support address of Hevanti is the one in the program, and no personal address", L.REPORT_EMAIL == "hevanti.support@gmail.com" and "pechter" not in L.REPORT_EMAIL.lower() and diag.get("mail") == L.REPORT_EMAIL, (L.REPORT_EMAIL, diag.get("mail")))
 check("report a problem: never the key", "AIzaTOPSECRET123" not in txt and "plain:" not in txt and "מפתח Gemini: יש" in txt)
 check("report a problem: the user's own folder name is hidden", home not in txt and "%USERPROFILE%" in txt, txt[-200:])
 check("report a problem: the link opens a new GitHub issue", diag["issues"].endswith("/issues/new"))
