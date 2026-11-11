@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>הבנתי</title>
+<meta name="bzm-run" content="__RUN__">
 <!-- one logo, as real PNG icons (a browser app window shows the largest as its taskbar icon; an SVG favicon came out blocky) -->
 <link rel="icon" type="image/png" sizes="16x16" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAClklEQVR42nWTT4iWdRDHP/P78zzvq7vpIppK7noQCsI8ZH9I1CQi1ktYSbdAEilI7ZKYFu+KF6VjlyIiBLskZCAYgsTmggc7SCELGYGpCK37+rf0fZ7n95vp8JYtsjswzGHmy8z3OzMCMLxvyzIJxV7UnkPVYSLMYsGZIUIWd6FuqkPXDn13UVbuf23ECKddK66yJjOXOYE7dT8OtD25Stct6Wgw9Z+4eXGV3qsawM8FvtsIm1dm/m5g4prLAwPF4pz1s2DCeuslRSR4QQCy/Q+ODqbuC289nvj0xQrLwuiJljs/3dj8yNoAgODMsFuVoMCCwv7lDN2e8PKKzOEXanIS/mqgl8EJgoH7r1NWeH9Nw8Fna5JCELjRE9Yty3z1UsW8AHcbePNUyeRNoR1AgRCkn9iwNPPxuhoMaoU9Zws2LFe+2FQxGPsCvv1Dybkpz1BpD2gGNSgD/Hbb8dNVzzOPKrueSkQHo8OZpfMhZXh3vOT0Vc+SttHoDIFNsOhguidsOVly/HdPCMbO1YnhQaPJsPNMwcnLnsUPgQFzZnhTrPT9db0zXnLqUoBoFNEYOxc5ejGwqGWkmWDDECSI2Xkp/Su5p3UQC0ngg7MREeOXacfnFwJLWipJZ1ynWSNFiFrnX+Wxj7au9siEbxULtE44gUbhfhJEjIEIpoYlzUj/0Fy7QKtUW06b/Z0zk1OPPP/ECXFuCFWfs3adWbct2i3FujlZ19TUt+OgJTXgnsH3VPX2y4e/nRA6HceBAzrrAxjCWEeWVz8PRV+Muejf05Qrrvy58I8jP/b4Zqvv8+p0HJOTwrFjc38TsOLD19f7svySuv76Unzy4EbG3cM1Mov3J+lsDAAju19dOLL3jW1P79gRAfkHJFkvO6NluHoAAAAASUVORK5CYII=">
 <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAF0klEQVR42rWXXWwcVxXHf+feO7Prj41TAiFNQ9yKqCS2lAiVqqYSidKoEULiITKbKBWoD1ErhPgSamkbFdwohVhUqFKlSnzIT3xIxAkPPDVVElqHqlCQKAVMqQQ0joVF2lD8uTszd+7hYXY3dmynjq0cabWzs3fm/z//c/5zzwjNqFYtw8M5QPfA4e2C7iTo+pAHVFVYRYiIGmtQZSbP9Y3xEyf/ci1WceOTVcvB4bz76IE+caVvawi7xZoOEUFZWwigCvi8rkZeC5n/zqXB0y82SUjzoPvx/sMSuZ9KZE1IMggaEFkrfhGqgogxsQMRQj195OKJU9/nZNUKwNYn+veZOD6rPleC5gi2pc4qw8jVGwSlUFLJEcG0xzafqX9+bPDUz2TbVz5dSiudr5s42q6Jb4KzVvCZDLJQUOiIlNgURFAN4qyEPLwbK70uqazbb53ZrkkWEFkzuBWYTIU9m3P6t3neqQlDo453a0LZQUCM+pDbcvShpJ494IzqfrFG1a+93pGByzWh+lHPD+9LsUbBwt7Ngc+9UKKeFwRVgKBq4H6D0VtZpc3mhzNwpS7s25Lz3O6UPIfpujA5I+z8cM7+rTnTmWAKW0jD2psMunzm0qjnSsCnUti1ITB0X0JswIdCEWeKNZOpYBdDqbleLbMANQ8iy1vCCUynsLVT+fn+hHUxJHlBPFfoKCvDf3ecu2SoRMW5BQ27XOaTKWxsU+5cr9Q9eC2IXEty1sMH2+An9yfc2lGsdVIo0FFSfvmW48sjMdEyqbrlLPRwr+fRj2e0OTg/bvnqSEwaCkmDFuvSAG0OhvYm7NgQmKkLkSmU6ywr58YsXxqJKbuCbFii2OZa8NkMPrEx8N2+jEoEIcBntnmO35MylUor81wLoB/vTei7LV8E/tqE5aFfl4jM8uCLCAiQBKHnFgWjzGUNRWaFw9s9g59MmUyEXGEug+d3p+zbmjNTK8C9QmcMb14xHDkfU/NcfQCxghIEhQ6njPzb8L+a0BXDnC9kn02EL+7KEOCbr8Y8c29K/52e2brgGuBlBxNzwoNnS/ynJqyLivPXfWou8ARQsvD2tPCFsyUu14sa51rIWEuEh3s9Zz5b58gOTy2RlrwlW1jxgTMl/jktrIvfH3xJFwSFSgSvTFgOvlDmck1aJITCln2bAmle/A5aKJQEOHK+xBtXDF1x4YIV7RssseXnChvKyl//Kxw6U1pAwkhRf5FCMREwBr42EnNu3PKBsq4YHEGNqi65AWUB1peYR4IFJLSRfVusPPZKzMl/ODa2KVm4sY3TiMpMo/yLwi8gUeadRk9koZhyOsrK8d/FDP1tFeCFo+cMyqt6neHDB7ilBH++YnjofIn3UqiUlfZYef71iGf/FN2Y7MWwqGIMKL+VLUertxnlTTHSTlBBliZjBaYzuKOi3Ls5Z2zK8JsJS7vTloNWOqAhEkAF5S47dWF0uutTPdZV2vaFxGcimKXGsaZF30uE31+2jM8KnRE3PLSqkrnOchTq/gdjJ4aHLNWqndzUe6FSm/iYq5R3aepR1VwQbTik9VFFnUHbHRpbNOjC/xvEZYmcVdFcEFxn2fla/aWwgQenunq1uKBxaffR6iDWfN3ELi4mySW2wGXSAghZzryhtiWdOIOJHSHxAfiRnw3fGH92uIZevXvzW7ufPLQD4YCgd2mgq9EX71NUFVQEtM+W43KoZx7Boqg4Ixp0VKwZ1pD96uLTp//Y7ASEa0axeW8sq4k7nujfGSL3nIncnlDPIGhqSi7O69mFscFTu+dhhGbfLs5tYMDAS4bRjUpPz8p7bHRUGuTl9m8dfBTkKbGmLU+yzEQuEp/f86+o5w/z1sFaXz6WJP/UMUXQlhrW7sEY/Gzte5cGTz/GwB7HsZf9zSHQItICkdufPPQIzhzXLJ+8+JZubqrULIG5KQSOvewZGDAovP30L57xNX83Ihc/so3+Rh/cHNxl1QB6BqrxlscP3H2t8v8HsnLRXyjrUckAAAAASUVORK5CYII=">
@@ -25,15 +26,15 @@ try { bzmTheme(localStorage.getItem("bzm.theme") || ""); } catch (e) {}</script>
 <style>
 :root{
   --bg:#F6F3E9; --surface:#FFFFFF; --sunk:#ECE7D8; --fg:#17261F; --muted:#56625B; --line:#DDD7C4;
-  --accent:#1B6E4B; --accent-ink:#FFFFFF; --accent-soft:#DCEBDF; --rec:#C2412D; --warn-bg:#FBF0DA; --warn-fg:#6B5020;
+  --accent:#1B6E4B; --accent-ink:#FFFFFF; --accent-soft:#DCEBDF; --rec:#C2412D; --warn-bg:#FBF0DA; --warn-fg:#6B5020; --mark-line:#F7DD7B;
   --f-body:"Assistant","Segoe UI","Arial Hebrew",Arial,system-ui,sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#1C1B16; --surface:#26241D; --sunk:#2F2C23; --fg:#F1ECDF; --muted:#B5AFA0; --line:#3E3A2E;
-  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; color-scheme:dark}}
+  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; --mark-line:#594E25; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#1C1B16; --surface:#26241D; --sunk:#2F2C23; --fg:#F1ECDF; --muted:#B5AFA0; --line:#3E3A2E;
-  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; color-scheme:dark}
+  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; --mark-line:#594E25; color-scheme:dark}
 :root[data-theme="light"]{color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -68,7 +69,8 @@ body.on #lec::before{background:var(--rec)}
 #box.askp .head{display:none}
 #box.askp textarea{font-size:17px;padding:10px 12px;min-height:3.6em;border-radius:12px}
 #box.askp .ais button.here{padding:8px 18px;font-size:15px;border-radius:12px;margin-inline-start:auto}
-#toast{position:fixed;inset-inline:10px;bottom:10px;background:var(--fg);color:var(--bg);padding:8px 12px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);max-width:calc(100% - 20px);width:max-content;box-sizing:border-box;background:var(--surface);color:var(--fg);border:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.18);padding:9px 16px;border-radius:12px;font-size:15px;line-height:1.4;font-weight:600;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast .star{display:inline-block;background:var(--mark-line);color:var(--fg);border-radius:6px;padding:0 7px;margin-inline-end:8px}   /* the ★ is the only yellow: the highlighter of a mark */
 #toast.on{opacity:1}
 </style>
 </head>
@@ -92,9 +94,13 @@ body.on #lec::before{background:var(--rec)}
 <script>
 "use strict";
 const $ = s => document.querySelector(s);
-let shot = null, total = 0, live = false, kind0 = "";
+let shot = null, total = 0, live = false, kind0 = "", lastMark = null;
+const MARKED = "★ סומן";
 function toast(t) {
-  const e = $("#toast"); e.textContent = t; e.classList.add("on");
+  const e = $("#toast"); e.textContent = "";
+  if (t === MARKED) { const s = document.createElement("span"); s.className = "star"; s.textContent = "★"; e.append(s, "סומן"); }   // the mark: a yellow ★ and the word, one line
+  else e.textContent = t;
+  e.classList.add("on");
   clearTimeout(toast.h); toast.h = setTimeout(() => e.classList.remove("on"), Math.max(2800, t.length * 50));
 }
 const hide = () => fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
@@ -104,10 +110,11 @@ $("#hide").addEventListener("click", hide);
 async function mark() {
   let r; try { r = await (await fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
     body: JSON.stringify({action: "mark", kind: "important"})})).json(); } catch (e) { r = {ok: false}; }
-  toast(r.ok ? "★ סומן" : (r.error || "לא הצלחתי לסמן."));
+  markedHere = !!r.ok;   // (the next look at the counter must not say it twice)
+  toast(r.ok ? MARKED : (r.error || "לא הצלחתי לסמן."));
 }
 $("#markImp").addEventListener("click", () => mark());
-let box = null;
+let box = null, markedHere = false;
 if (window.BZMAsk) box = BZMAsk.mount($("#box"), {compact: true, title: "שאלה", placeholder: "מה לא ברור? (Enter לשליחה)",
   context: q => q,   // (for "answer here" Hevanti builds the context itself)
   // what is copied to ChatGPT / Gemini / Claude: the question with the last minutes of the lecture, built by Hevanti like the page's own
@@ -133,6 +140,16 @@ async function pollApp() {
   try {
     const d = await getJson("/api/app"), s = d.session;
     if (d.save_failed && d.save_failed.n !== lastSaveFail) { lastSaveFail = d.save_failed.n; toast(d.save_failed.msg); }   // (a settings save that failed: said once)
+    const mine = (document.querySelector('meta[name="bzm-run"]') || {}).content;   // a window left open from an earlier run of Hevanti has the old page: it loads the new one
+    if (d.run && mine && mine !== "__" + "RUN__" && mine !== d.run) {
+      let again = true;   // (never more often than every 20 seconds: a mismatch that does not go away must not make the window reload without end)
+      try { again = Date.now() - (+sessionStorage.getItem("bzm.reload") || 0) > 20000; if (again) sessionStorage.setItem("bzm.reload", Date.now()); } catch (e) {}
+      if (again) { location.reload(); return; }
+    }
+    if (typeof d.mark_n === "number") {   // a mark made with Ctrl+Alt+M (or in the app): said here too, as a click on ★ here says it
+      if (lastMark !== null && d.mark_n > lastMark && !markedHere) toast(MARKED);
+      lastMark = d.mark_n; markedHere = false;
+    }
     if ("theme" in d && (d.theme || "") !== (document.documentElement.dataset.theme || "")) bzmTheme(d.theme || "");
     live = !!(s && !s.done && (s.kind === "live" || s.kind === "rec"));   // a live lecture, a video, or a recording being watched
     // "הרצאה חיה - <the course>", e.g. "הרצאה חיה - מכניקת מוצקים"

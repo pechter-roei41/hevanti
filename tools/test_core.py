@@ -224,6 +224,59 @@ L.log_tokens("gemini-3.6-flash", None, 10, False, time.time(), True)
 L._USAGE["at"] = 0
 ut = L.usage_today()
 check("today's counts: questions, slides read, slides not sent, quota", ut == {"asks": 1, "reads": 1, "skipped": 1, "failed": 1, "quota": 1}, ut)
+# ---- the keyboard shortcuts keep listening: a slow beep (a Bluetooth device) or a slow mark must not stop them ----
+gate = threading.Event()
+orig_mark, orig_toggle = L.PauseHotkey._mark, L.PauseHotkey._toggle
+L.PauseHotkey._mark = lambda self: gate.wait(5)
+L.PauseHotkey._toggle = lambda self: gate.wait(5)
+t0 = time.time()
+hk = L.PauseHotkey()
+hk.mark()
+hk.toggle()
+check("hotkeys: a mark and a pause return at once (they run on their own thread, the message loop keeps listening)", time.time() - t0 < 0.5, time.time() - t0)
+gate.set()
+L.PauseHotkey._mark, L.PauseHotkey._toggle = orig_mark, orig_toggle
+# ---- the count of marks that the small window watches ----
+a0 = L.APP.mark_n if getattr(L, "APP", None) is not None else 0
+check("a refused mark (nothing is running) does not count", (lambda r: r.get("ok") is False and L.APP.mark_n == a0)(L.APP.mark_moment("important")) if getattr(L, "APP", None) is not None else True)
+# ---- a live question does not wait long to find the models ----
+seen_timeouts = []
+orig_call, orig_models, orig_cands = L.gemini_call, L.gemini_models, L.gemini_candidates
+L.gemini_models = lambda key: ["gemini-flash-latest"]
+L.gemini_candidates = lambda models: ["gemini-flash-latest", "gemini-flash-lite-latest"]
+L.gemini_call = lambda path, key, body, timeout=None, **kw: (seen_timeouts.append(timeout), {"candidates": []})[1]
+r1 = L.MathReader()
+r1.restore = lambda key: False
+try:
+    r1.models_to_try("k", quick=True)
+    quick_t = list(seen_timeouts)
+    del seen_timeouts[:]
+    r2 = L.MathReader()
+    r2.restore = lambda key: False
+    r2.models_to_try("k")
+    slow_t = list(seen_timeouts)
+finally:
+    L.gemini_call, L.gemini_models, L.gemini_candidates = orig_call, orig_models, orig_cands
+check("a live question looks for the models for PROBE_LIVE_S at most; other callers for the usual 20 s",
+      quick_t and all(x == L.PROBE_LIVE_S for x in quick_t) and slow_t and all(x == 20 for x in slow_t), (quick_t, slow_t))
+# ---- the message above the floating button (Windows draws it; the picture and the place are made here, and can be checked anywhere) ----
+im, tw_, th_ = L._toast_image("סומן", 1.0, False)
+imd, _, _ = L._toast_image("סומן", 1.0, True)
+im2, tw2, th2 = L._toast_image("סומן", 2.0, False)
+chip = tuple(im.getpixel((tw_ - 17, 22))[:3])   # (inside the chip, to the side of the star)
+chip_dark = tuple(imd.getpixel((tw_ - 17, 22))[:3])
+check("floating-button message: a card of a sensible size, bigger on a scaled screen", 80 <= tw_ <= 140 and 36 <= th_ <= 50 and tw2 > tw_ * 1.8 and th2 > th_ * 1.8, (tw_, th_, tw2, th2))
+check("floating-button message: the chip behind the star is the highlighter colour (light), and a darker one at night", chip == (247, 221, 123)
+      and chip_dark == (89, 78, 37), (chip, chip_dark))
+check("floating-button message: the corners are see-through (a rounded card)", im.getpixel((0, 0))[3] == 0 and im.getpixel((tw_ // 2, th_ // 2))[3] == 255)
+class _Area:
+    left, top, right, bottom = 0, 0, 1920, 1040
+bx, by = L._mini_btn_xy(_Area, "br", 56, 12)
+x1, y1 = L._toast_xy(bx, by, 56, tw_, th_, "br", _Area)
+x2, y2 = L._toast_xy(bx, by, 56, tw_, th_, "tr", _Area)
+x3, _ = L._toast_xy(0, by, 56, tw_, th_, "bl", _Area)
+check("floating-button message: above the button for a bottom corner, below it for a top one, and never off the screen",
+      y1 + th_ <= by and y2 >= by + 56 and x1 >= 0 and x1 + tw_ <= 1920 and x3 >= 0, (x1, y1, x2, y2, x3))
 check("a command without the page's header is refused (another site cannot drive Hevanti)", refused)
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")

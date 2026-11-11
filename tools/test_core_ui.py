@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import tempfile
+import urllib.request
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 try:
@@ -305,23 +306,51 @@ with sync_playwright() as p:
     # The window asks Hevanti every 4 seconds what is running and whether "answer here" is set up, and shows or hides its parts by
     # that. A test that only flips those parts by hand races with that poll (the button it clicks is hidden again): so the test says
     # what Hevanti answers - a lecture is running, and "answer here" is on or off - and the window follows it, as in real use.
-    mini_state = {"live": True, "ask": True}
+    mini_state = {"live": True, "ask": True, "mark_n": 0}
 
     def mini_app(route):
         resp = route.fetch()
         d = resp.json()
         d["session"] = {"kind": "live", "done": False, "course": "פיזיקה"} if mini_state["live"] else None
         d["math"] = dict(d.get("math") or {}, ask=mini_state["ask"])
+        if "run" in mini_state:
+            d["run"] = mini_state.pop("run")   # (once: one look at Hevanti that says another run)
+        d["mark_n"] = mini_state["mark_n"]   # (Hevanti's count of marks: a mark made with the keyboard raises it)
         route.fulfill(response=resp, body=json.dumps(d))
     mini.route("**/api/app*", mini_app)
     mini.goto(url + "/mini")
     mini.wait_for_timeout(1200)
     check("floating window: the question box and the ★ mark (no '?')", mini.is_visible("textarea") and mini.is_visible("#markImp") and mini.query_selector("#markLost") is None)
+    run_meta = mini.evaluate("() => document.querySelector('meta[name=bzm-run]').content")
+    live_run = json.loads(urllib.request.urlopen(url + "/api/app").read().decode("utf-8")).get("run")
+    check("floating window: it knows which run of Hevanti gave it the page (a window left open from an earlier run reloads itself)", run_meta == live_run and live_run, (run_meta, live_run))
+    mini.evaluate("() => { window.__same_page = true; }")
+    mini_state["run"] = "another-run"
+    mini.wait_for_timeout(4800)
+    reloaded = mini.evaluate("() => window.__same_page !== true")
+    check("floating window: a different run answers - it loads the page again", reloaded)
+    mini.wait_for_timeout(4800)   # (the page that was loaded again learns Hevanti's count of marks from its first look)
     marked = []
     mini.route("**/api/cmd", lambda r: (marked.append(json.loads(r.request.post_data or "{}")), r.fulfill(status=200, content_type="application/json", body=json.dumps({"ok": True, "kind": "חשוב"})))[1])
     mini.click("#markImp")
     mini.wait_for_timeout(300)
     check("floating window: ★ sends an 'important' mark to Hevanti", any(m.get("action") == "mark" and m.get("kind") == "important" for m in marked), marked)
+    toast = mini.evaluate("""() => { const e = document.querySelector('#toast'), s = e.querySelector('.star'), c = getComputedStyle(s);
+        return {on: e.classList.contains('on'), text: e.textContent, star: s.textContent, band: c.backgroundColor,
+                want: getComputedStyle(document.documentElement).getPropertyValue('--mark-line').trim(), centred: Math.abs((e.getBoundingClientRect().left + e.getBoundingClientRect().right) / 2 - innerWidth / 2) < 3,
+                narrower: e.getBoundingClientRect().width < innerWidth - 20}; }""")
+    check("floating window: the mark message is a card with a yellow ★ (the highlighter colour) and the word, in the middle, not a bar across", toast["on"] and toast["star"] == "★" and "סומן" in toast["text"] and toast["centred"] and toast["narrower"], toast)
+    mini.wait_for_timeout(3300)   # (the message goes away)
+    mini_state["mark_n"] = 1   # a mark made with Ctrl+Alt+M: Hevanti's count goes up, and the window says it too
+    try:   # (the window looks every 4 seconds: wait for the message, not for a fixed time)
+        mini.wait_for_function("() => document.querySelector('#toast').classList.contains('on') && document.querySelector('#toast .star') !== null", timeout=7000)
+        seen_key = True
+    except Exception:
+        seen_key = False
+    check("floating window: a mark made with the keyboard shows the same message", seen_key)
+    mini.wait_for_function("() => !document.querySelector('#toast').classList.contains('on')", timeout=8000)
+    mini.wait_for_timeout(4600)   # (a whole look later)
+    check("floating window: ...and only once for one mark", not mini.evaluate("() => document.querySelector('#toast').classList.contains('on')"))
     # the first key of a question asks Hevanti for a picture of the screen of that moment - once per question
     marked.clear()
     mini.fill("textarea", "מ")

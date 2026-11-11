@@ -152,7 +152,7 @@ code, body = ask()
 d = asked_json(body, code)
 check("quota: the page is told (429, quota, wait)", code == 429 and d.get("quota") is True and 0 < d.get("wait", 0) <= 60 and "מכסה" in d.get("error", ""), (code, body))
 tried = HITS["stream"]
-check("quota: a live question tries two models at most (each try costs quota)", 1 <= tried <= L.GEMINI_LIVE_MODELS, tried)
+check("quota: a live question tries two models, and the light one once more when the quota stopped them (each try costs quota)", 1 <= tried <= L.GEMINI_LIVE_MODELS + 1, tried)
 
 # ... the next question tries the model that was not asked yet; then every model rests, and Google is not asked again
 code, body = ask()
