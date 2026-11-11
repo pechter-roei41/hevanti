@@ -5919,12 +5919,12 @@ def _write_settings(d):
         shutil.copy2(SETTINGS_FILE, SETTINGS_FILE + ".bak")   # (the file as it was: it was read as good just before)
     except OSError:
         pass
-    for i in range(5):   # (Windows: the file may be open in another program for a moment)
+    for i in range(40):   # (Windows: the file may be open for a moment - by another program, or by a page asking for the settings: up to 2 seconds)
         try:
             os.replace(tmp, SETTINGS_FILE)
             return
         except PermissionError:
-            if i == 4:
+            if i == 39:
                 raise
             time.sleep(0.05)
 
