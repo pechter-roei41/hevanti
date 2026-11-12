@@ -3090,6 +3090,64 @@ try { $("#howBar").hidden = !!localStorage.getItem("bzm.how"); } catch (e) { $("
 
 route();
 poll();
+// ---------- dialogs and the keyboard (audit 12.11.2026, #37) ----------
+// Every .modal is a real dialog for a keyboard and a screen reader: when it opens, the page behind it cannot be reached (inert) and the
+// focus goes into it; Tab stays inside it; Escape is its own cancel / close button; when it closes, the focus goes back to where it was.
+// One place for all of them: a modal is still opened and closed as before (its "hidden" attribute), this only watches that.
+(function () {
+  const CANCEL = 'button[id$="No"], button[id$="Close"], button[id$="Cancel"], button[data-offer=""], button[data-close], #liveTipOk';
+  const FOCUSABLE = 'button:not([disabled]):not([hidden]), [href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  const openers = new Map();
+  let lastOutside = null;   // the last thing that had the focus outside every dialog: where the focus goes back (a dialog's own code may move the focus before this sees it open)
+  document.addEventListener("focusin", e => { if (!e.target.closest || !e.target.closest(".modal")) lastOutside = e.target; }, true);
+  const open = () => [...document.querySelectorAll(".modal")].filter(m => !m.hidden);
+  const visible = el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+  function setInert() {
+    const top = open().pop();
+    for (const c of document.body.children) {
+      const lock = !!top && !c.contains(top) && !c.classList.contains("toast") && c.id !== "srLive";
+      if (lock) c.setAttribute("inert", ""); else c.removeAttribute("inert");
+    }
+  }
+  function shown(m) {
+    openers.set(m, m.contains(document.activeElement) ? lastOutside : document.activeElement);
+    setInert();
+    setTimeout(() => {   // (after the code that opened it has put the focus where it wants)
+      if (m.hidden || m.contains(document.activeElement)) return;
+      const f = [...m.querySelectorAll(FOCUSABLE)].find(visible);
+      if (f) f.focus();
+    }, 0);
+  }
+  function gone(m) {
+    setInert();
+    const back = openers.get(m);
+    openers.delete(m);
+    if (back && back.isConnected && typeof back.focus === "function" && !open().length) { try { back.focus(); } catch (e) {} }
+  }
+  const watch = new MutationObserver(list => {
+    for (const r of list) { const m = r.target; if (m.hidden) gone(m); else shown(m); }
+  });
+  for (const m of document.querySelectorAll(".modal")) {
+    watch.observe(m, {attributes: true, attributeFilter: ["hidden"]});
+    if (!m.hidden) shown(m);
+  }
+  document.addEventListener("keydown", e => {
+    const m = open().pop();
+    if (!m) return;
+    if (e.key === "Escape" && !e.defaultPrevented) {
+      const c = [...m.querySelectorAll(CANCEL)].find(visible);
+      if (c) { e.preventDefault(); c.click(); }
+      return;
+    }
+    if (e.key !== "Tab") return;
+    const f = [...m.querySelectorAll(FOCUSABLE)].filter(visible);
+    if (!f.length) { e.preventDefault(); return; }
+    const first = f[0], last = f[f.length - 1];
+    if (!m.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+    else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+})();
 </script>
 </body>
 </html>

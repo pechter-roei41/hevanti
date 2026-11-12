@@ -12,7 +12,7 @@ for %%V in (3.12 3.13 3.14 3.11 3.10) do (
 )
 if not defined PY ( python -c "import sys" >nul 2>&1 && set "PY=python" )
 if not defined PY (
-  echo Python not found. To finish removing: delete the folder C:\Users\Public\whisper_models and this folder.
+  echo Python not found. To finish removing: delete the folders %LOCALAPPDATA%\Hevanti\models and C:\Users\Public\whisper_models, and this folder.
   pause
   exit /b 1
 )

@@ -52,6 +52,9 @@ jobs:
       - name: Design round 3 - one green on the home page, the selected shapes, the lecture menu, the split settings (browser)
         if: runner.os == 'Windows'
         run: python tools/test_design3.py
+      - name: Every dialog works with the keyboard - the focus goes in, Tab stays inside, Escape cancels, the focus comes back (browser)
+        if: runner.os == 'Windows'
+        run: python tools/test_modals.py
       - name: Nothing scrolls sideways at 320 px, and the focus ring of the floating window (browser)
         if: runner.os == 'Windows'
         run: python tools/test_narrow.py
