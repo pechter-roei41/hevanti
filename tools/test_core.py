@@ -597,5 +597,73 @@ _m = open(os.path.join(L.SCRIPT_DIR, "mini.html"), encoding="utf-8").read()
 check("small window: after stop and delete no saved card is drawn", "!discardedHere ? s.saved : null" in _m)
 check("a lecture starting prepares the small window in the background", "prewarm_mini" in _src[_src.index("    def start(self, kind, lang, fn"):_src.index("    def _run(self, sess, fn")])
 
+# audit phase B (12.11.2026)
+import hashlib as _hl, tempfile as _tf, shutil as _sh
+_ROOT = os.path.dirname(os.path.dirname(L.SCRIPT_DIR))
+_txt = lambda *p: open(os.path.join(_ROOT, *p), encoding="utf-8").read()
+
+# the error log: no key, no query string of a link, and a size limit
+_s = L.scrub_log("failed https://panopto.example/Podcast/Stream?token=SECRET123&x=1 key AIzaSyA-leaked-google-key-0123456789abc")
+check("error log: a link loses its query string and a key is taken out", "SECRET123" not in _s and "AIzaSyA" not in _s and "panopto.example/Podcast/Stream?…" in _s, _s)
+_tmpd = _tf.mkdtemp()
+_old_log, _old_max = L.ERROR_LOG, L.ERROR_LOG_MAX
+L.ERROR_LOG, L.ERROR_LOG_MAX = os.path.join(_tmpd, "error_log.txt"), 200
+for _i in range(10):
+    L.append_error_log("x" * 100 + "\n")
+check("error log: past its limit it moves to error_log.old.txt and starts again (it never fills the disk)",
+      os.path.getsize(L.ERROR_LOG) <= 400 and os.path.isfile(os.path.join(_tmpd, "error_log.old.txt")))
+L.ERROR_LOG, L.ERROR_LOG_MAX = _old_log, _old_max
+check("errors nobody caught (the program or a thread) are written to the log", "install_crash_log()" in _src and "threading.excepthook" in _src)
+
+# a download keeps the name a site gives, never its kind of file
+class _Resp:
+    def __init__(self, cd, url):
+        self.headers, self._u = {"Content-Disposition": cd}, url
+    def geturl(self):
+        return self._u
+_n1 = L._download_name(_Resp('attachment; filename="lecture.exe"', "https://x/y"), "https://x/y")
+_n2 = L._download_name(_Resp('attachment; filename="lecture.m4a"', "https://x/y"), "https://x/y")
+check("a download named .exe is saved as a recording (.mp4); a real recording keeps its kind", _n1.endswith(".mp4") and _n2.endswith(".m4a"), (_n1, _n2))
+check("a download checks that there is room on the disk", "def _room_for(" in _src and "אין מספיק מקום פנוי" in _src)
+check("a recording offer from a page shows the site it comes from", "function offerHost(" in _txt("System", "Program", "app.html"))
+
+# the speech model: a pinned file, checked; the models move to the student's own folder
+_md = os.path.join(_tmpd, "m")
+os.makedirs(_md)
+with open(os.path.join(_md, "model.bin"), "wb") as _f:
+    _f.write(b"abc")
+L.MODEL_PINS["test/model"] = ("rev1", _hl.sha256(b"abc").hexdigest())
+_ok1 = L.verify_model(_md, "test/model")
+with open(os.path.join(_md, "model.bin"), "wb") as _f:
+    _f.write(b"abcd")
+_ok2 = L.verify_model(_md, "test/model")
+del L.MODEL_PINS["test/model"]
+check("a pinned model is loaded only when model.bin is exactly the pinned file", _ok1 and not _ok2, (_ok1, _ok2))
+check("both models Hevanti uses are pinned (a version and a SHA-256)",
+      all(len(v[0]) == 40 and len(v[1]) == 64 for v in L.MODEL_PINS.values()) and "ivrit-ai/whisper-large-v3-turbo-ct2" in L.MODEL_PINS)
+_old, _new = os.path.join(_tmpd, "old"), os.path.join(_tmpd, "new")
+os.makedirs(os.path.join(_old, "models--a--b"))
+os.makedirs(_new)
+_keep = (L.OLD_MODEL_DIR, L.MODEL_DIR, L.MODEL_DIR_SHARED)
+L.OLD_MODEL_DIR, L.MODEL_DIR, L.MODEL_DIR_SHARED = _old, _new, False
+L.migrate_models()
+check("the models move from the shared folder to the student's own folder", os.path.isdir(os.path.join(_new, "models--a--b")) and not os.path.exists(_old))
+L.OLD_MODEL_DIR, L.MODEL_DIR, L.MODEL_DIR_SHARED = _keep
+_sh.rmtree(_tmpd, ignore_errors=True)
+
+# pinned installs: every package with a version and a hash; every download with a SHA-256
+_req = [ln for ln in _txt("System", "requirements.txt").splitlines() if ln.strip() and not ln.startswith("#")]
+_pins = [ln for ln in _req if "==" in ln]
+check("System/requirements.txt: every package has an exact version and a SHA-256",
+      len(_pins) >= 20 and len([ln for ln in _req if "--hash=sha256:" in ln]) == len(_pins) and "faster-whisper==" in "".join(_pins))
+_rel, _smk, _bat = _txt(".github", "workflows", "release.yml"), _txt(".github", "workflows", "installer-smoke.yml"), _txt("Install.bat")
+check("the release, the installer test and Install.bat install exactly that file (--require-hashes)",
+      all("--require-hashes" in t for t in (_rel, _smk, _bat)) and "sha256sum -c" in _rel)
+_ocr, _gp = _txt("System", "install_ocr.ps1"), _txt("System", "get_python.ps1")
+check("Tesseract, its language files and Python are checked by SHA-256 before use (no 'latest' release)",
+      "Assert-Sha $setup" in _ocr and "releases/latest" not in _ocr and "tessdata_fast/4.1.0/" in _ocr and "Assert-Sha $zip" in _gp)
+check("the release runs every test first; the tests run lint, pip-audit and a key search",
+      "uses: ./.github/workflows/tests.yml" in _rel and "needs: tests" in _rel and all(w in _txt(".github", "workflows", "tests.yml") for w in ("ruff check", "pip-audit", "scan_secrets.py", "workflow_call")))
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)

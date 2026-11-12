@@ -158,8 +158,37 @@ SLIDES_NAME = "שקופיות"
 GLOSSARY_NAME = "מילון מונחים.txt"
 STATE_NAME = ".state.json"               # a recording's progress and your place, kept in its own folder
 OUT_DIR = os.path.join(HERE, "transcripts")  # the 1.x layout - moved into LIB_DIR on the first start
-# ASCII-only path for the model (CTranslate2 can fail on non-English Windows paths)
-MODEL_DIR = os.path.join(os.environ.get("PUBLIC", r"C:\Users\Public"), "whisper_models")
+# Where the speech models live. Until 2.21 it was C:\Users\Public\whisper_models: an ASCII path (CTranslate2 can fail on a path with
+# Hebrew letters), but any user of the computer can write there, so on a shared computer someone could replace the model (audit #26).
+# Now: %LOCALAPPDATA%\Hevanti\models, under its short (8.3) name, which is ASCII even for a Hebrew user name. Where Windows has no
+# short names, the old folder is kept - and the model is then checked in full at every start (verify_model).
+OLD_MODEL_DIR = os.path.join(os.environ.get("PUBLIC", r"C:\Users\Public"), "whisper_models")
+
+
+def _pick_model_dir():
+    if os.environ.get("BZM_MODEL_DIR"):
+        return os.environ["BZM_MODEL_DIR"]
+    if os.name != "nt":
+        return OLD_MODEL_DIR
+    try:
+        import ctypes
+        long_dir = os.path.join(os.environ.get("LOCALAPPDATA") or "", "Hevanti", "models")
+        if not os.environ.get("LOCALAPPDATA"):
+            return OLD_MODEL_DIR
+        os.makedirs(long_dir, exist_ok=True)
+        if long_dir.isascii():
+            return long_dir
+        buf = ctypes.create_unicode_buffer(1024)
+        n = ctypes.windll.kernel32.GetShortPathNameW(long_dir, buf, 1024)
+        if 0 < n < 1024 and buf.value.isascii() and os.path.isdir(buf.value):
+            return buf.value
+    except Exception:
+        pass
+    return OLD_MODEL_DIR
+
+
+MODEL_DIR = _pick_model_dir()
+MODEL_DIR_SHARED = os.path.normcase(os.path.abspath(MODEL_DIR)) == os.path.normcase(os.path.abspath(OLD_MODEL_DIR))
 # Language: "he" or "en" - chosen on the page for each lecture
 LANG, MODELS = "he", []
 TARGET_SR = 16000
@@ -445,13 +474,52 @@ def wait_enter(text):
         pass
 
 
-def save_error(context):
-    """Add the current exception to error_log.txt (for problems the tool recovers from)."""
+ERROR_LOG_MAX = 1_000_000   # bytes: then the log becomes error_log.old.txt (one old copy) and a new one starts - a failure that repeats every few seconds must not fill the disk (audit #23)
+_LOG_LOCK = threading.Lock()
+_URL_QUERY = re.compile(r"""(https?://[^\s?#"'<>]+)\?[^\s"'<>]*""")
+_KEY_LOOKS = re.compile(r"AIza[0-9A-Za-z_\-]{20,}|AQ\.[0-9A-Za-z_\-]{16,}|(?:dpapi|plain):[A-Za-z0-9+/=_\-]{6,}")
+
+
+def scrub_log(text):
+    """What goes into error_log.txt: no key in any form, and no query string of a link (Panopto, Drive and signed links carry tokens there)."""
+    text = _KEY_LOOKS.sub("<מפתח הוסר>", str(text))
+    return _URL_QUERY.sub(lambda m: m.group(1) + "?…", text)
+
+
+def append_error_log(block):
+    """Add a block to error_log.txt (scrubbed), keeping it under ERROR_LOG_MAX."""
     try:
-        with open(ERROR_LOG, "a", encoding="utf-8") as f:
-            f.write(f"\n--- {datetime.datetime.now()} (גרסה {VERSION}) {context} ---\n{traceback.format_exc()}")
+        with _LOG_LOCK:
+            try:
+                if os.path.getsize(ERROR_LOG) > ERROR_LOG_MAX:
+                    os.replace(ERROR_LOG, os.path.splitext(ERROR_LOG)[0] + ".old.txt")
+            except OSError:
+                pass
+            with open(ERROR_LOG, "a", encoding="utf-8") as f:
+                f.write(scrub_log(block))
     except Exception:
         pass
+
+
+def save_error(context):
+    """Add the current exception to error_log.txt (for problems the tool recovers from)."""
+    append_error_log(f"\n--- {datetime.datetime.now()} (גרסה {VERSION}) {context} ---\n{traceback.format_exc()}")
+
+
+def _log_uncaught(kind, exc_type, exc, tb):
+    """A thread or the program died of an error nobody caught: it is written to the log (until now it vanished)."""
+    if exc_type is not None and issubclass(exc_type, (KeyboardInterrupt, SystemExit)):
+        return
+    append_error_log(f"\n--- {datetime.datetime.now()} (גרסה {VERSION}) {kind} ---\n" + "".join(traceback.format_exception(exc_type, exc, tb)))
+
+
+def install_crash_log():
+    """Errors nobody caught (in the program or in a thread) go to the log too."""
+    def hook(t, e, tb):
+        _log_uncaught("לא נתפס", t, e, tb)
+        sys.__excepthook__(t, e, tb)
+    sys.excepthook = hook
+    threading.excepthook = lambda a: _log_uncaught(f"חוט {getattr(a.thread, 'name', '')}", a.exc_type, a.exc_value, a.exc_traceback)
 
 
 # ---------- Windows blocking a component (Smart App Control) ----------
@@ -792,6 +860,78 @@ def _fetch_big(repo, rev, fname, dest, size, label):
         pass
 
 
+# The models Hevanti uses, at a fixed version, with the SHA-256 of model.bin (from Hugging Face, 12.11.2026). A model that is not exactly
+# this file is downloaded again, never loaded (audit #26). A new version reaches students only after it is pinned here and tested.
+MODEL_PINS = {
+    "ivrit-ai/whisper-large-v3-turbo-ct2": ("72ad623a37947395efcc3933132353790e5a12f5",
+                                            "db2a2265aa012c16c7db9edda3d699c99f984efdd3f2e22a72a8ce7e9720f3a2"),
+    "mobiuslabsgmbh/faster-whisper-large-v3-turbo": ("0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf",
+                                                     "e76620f83d5f5b69efd3d87e3dc180c1bd21df9fbebacfd4335e5e1efcc018da"),
+}
+
+
+def _sha256_file(path):
+    import hashlib
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for buf in iter(lambda: f.read(8 << 20), b""):
+            h.update(buf)
+    return h.hexdigest()
+
+
+def verify_model(folder, repo):
+    """True when model.bin in `folder` is exactly the pinned one (or the model is not pinned). Checked in full once, then remembered by
+    size and time in .hevanti_ok - in the student's own folder nobody else can change it. In the shared old folder: in full every time."""
+    pin = MODEL_PINS.get(repo)
+    mb = os.path.join(folder, "model.bin")
+    if not pin or not os.path.isfile(mb):
+        return os.path.isfile(mb) or not pin
+    st = os.stat(os.path.realpath(mb))
+    mark = os.path.join(folder, ".hevanti_ok")
+    stamp = f"{pin[1]} {st.st_size} {st.st_mtime_ns}"
+    if not MODEL_DIR_SHARED:
+        try:
+            with open(mark, encoding="utf-8") as f:
+                if f.read().strip() == stamp:
+                    return True
+        except OSError:
+            pass
+    log("בודק שקובץ מודל התמלול שלם ונכון (כמה שניות)...")
+    ok = _sha256_file(os.path.realpath(mb)) == pin[1]
+    if ok:
+        try:
+            with open(mark, "w", encoding="utf-8") as f:
+                f.write(stamp)
+        except OSError:
+            pass
+    else:
+        log("קובץ מודל התמלול לא תואם למה שצריך להיות (אולי ההורדה נפגמה, או שמישהו החליף אותו). מוריד אותו מחדש.")
+    return ok
+
+
+def migrate_models():
+    """Move the models from the old shared folder to the student's own folder (the same disk: a rename, nothing is copied).
+    Whatever cannot be moved is left, and downloaded again where it belongs."""
+    if MODEL_DIR_SHARED or not os.path.isdir(OLD_MODEL_DIR):
+        return
+    moved = 0
+    for name in os.listdir(OLD_MODEL_DIR):
+        src, dst = os.path.join(OLD_MODEL_DIR, name), os.path.join(MODEL_DIR, name)
+        if os.path.exists(dst):
+            continue
+        try:
+            os.replace(src, dst)
+            moved += 1
+        except OSError:
+            pass
+    if moved:
+        log("מודלי התמלול הועברו לתיקייה של המשתמש שלך (בטוח יותר במחשב משותף).")
+    try:
+        os.rmdir(OLD_MODEL_DIR)   # (only when it is empty)
+    except OSError:
+        pass
+
+
 def fast_download(name):
     """Return a local folder with the model, downloading it in parallel if needed.
     Returns None when the fast path can't be used (the normal download is used then)."""
@@ -801,13 +941,17 @@ def fast_download(name):
         return None
     dest_dir = os.path.join(MODEL_DIR, "fast", repo.replace("/", "__"))
     marker = os.path.join(dest_dir, ".complete")
-    if os.path.exists(marker):
+    if os.path.exists(marker) and verify_model(dest_dir, repo):
         return dest_dir
+    try:
+        os.remove(marker)
+    except OSError:
+        pass
     label = "מודל העברית" if "ivrit" in repo else "המודל"
     try:
         with _http(f"{HF}/api/models/{repo}?blobs=true") as r:
             info = json.load(r)
-        rev = info.get("sha") or "main"
+        rev = (MODEL_PINS.get(repo) or (info.get("sha") or "main",))[0]   # (a pinned model: always its fixed version)
         files = {s["rfilename"]: s.get("size") for s in info.get("siblings", [])}
         wanted = [f for f in files if f in MODEL_FILES or f.startswith("vocabulary.")]
         if "model.bin" not in wanted or not files.get("model.bin"):
@@ -823,6 +967,9 @@ def fast_download(name):
                 _fetch_small(repo, rev, f, path)
         if os.path.getsize(os.path.join(dest_dir, "model.bin")) != files["model.bin"]:
             raise IOError("size mismatch")
+        if not verify_model(dest_dir, repo):
+            os.remove(os.path.join(dest_dir, "model.bin"))
+            raise IOError("model.bin is not the pinned file")
         with open(marker, "w", encoding="utf-8") as fm:
             json.dump({"repo": repo, "revision": rev}, fm)
         log(f"ההורדה של {label} הסתיימה.")
@@ -853,11 +1000,16 @@ def _drop_unresumable(dest_dir):
 
 def model_path(name):
     """Where to load `name` from: an existing download, a fast download, or the name itself."""
+    repo = _repo_of(name)
+    pin = MODEL_PINS.get(repo or "")
     try:
         from faster_whisper.utils import download_model
-        p = download_model(name, local_files_only=True, cache_dir=MODEL_DIR)
+        p = download_model(repo if pin else name, local_files_only=True, cache_dir=MODEL_DIR, revision=pin[0] if pin else None)
+        if p and os.path.exists(os.path.join(p, "model.bin")) and not verify_model(p, repo):
+            import shutil
+            shutil.rmtree(p, ignore_errors=True)   # not the pinned file: never loaded
+            p = None
         if p and os.path.exists(os.path.join(p, "model.bin")):
-            repo = _repo_of(name)
             if repo:  # a half-finished fast download is no longer needed
                 d = os.path.join(MODEL_DIR, "fast", repo.replace("/", "__"))
                 if os.path.isdir(d) and not os.path.exists(os.path.join(d, ".complete")):
@@ -866,7 +1018,16 @@ def model_path(name):
             return p  # downloaded before (the normal way)
     except Exception:
         pass
-    return fast_download(name) or name
+    fast = fast_download(name)
+    if fast:
+        return fast
+    if pin:   # the normal download, at the pinned version, and checked
+        from faster_whisper.utils import download_model
+        p = download_model(repo, cache_dir=MODEL_DIR, revision=pin[0])
+        if not verify_model(p, repo):
+            raise IOError("model.bin is not the pinned file")
+        return p
+    return name
 
 
 # The NVIDIA card (if any) and whether Hevanti can use it. Shown on the home page with a one-click install.
@@ -4950,6 +5111,9 @@ def set_mirror(path):
         return {"ok": True, "mirror": ""}
     if not os.path.isdir(path):
         return {"ok": False, "error": "התיקייה לא נמצאה. צריך את Google Drive למחשב (או OneDrive) מותקן ומחובר."}
+    norm = lambda x: os.path.normcase(os.path.realpath(x))
+    if norm(path) not in {norm(b) for _a, b in find_cloud_folders()}:   # only a cloud folder Hevanti found itself: never any folder or a network share (audit #29)
+        return {"ok": False, "error": "אפשר לסנכרן רק לתיקייה של Google Drive או OneDrive שהבנתי מצאה במחשב."}
     save_settings(mirror=path)
     MIRROR.start()
     MIRROR.lectures_changed()
@@ -6486,11 +6650,7 @@ def migrate_old_layout():
 
 def save_error_text(context, text):
     """Like save_error, for a problem that is not a Python exception (e.g. what a helper program said)."""
-    try:
-        with open(ERROR_LOG, "a", encoding="utf-8") as f:
-            f.write(f"\n--- {datetime.datetime.now()} (גרסה {VERSION}) {context} ---\n{str(text)[-4000:]}\n")
-    except Exception:
-        pass
+    append_error_log(f"\n--- {datetime.datetime.now()} (גרסה {VERSION}) {context} ---\n{str(text)[-4000:]}\n")
 
 
 def _ram_gb():
@@ -6552,7 +6712,7 @@ def diag_text():
     except OSError:
         pass
     text = "\n".join(lines) + "\n\nשגיאות אחרונות:\n" + (tail.strip() or "(אין)")
-    text = scrub_secrets(text)
+    text = scrub_log(scrub_secrets(text))   # (links lose their query string: it can carry a token)
     home, user = os.path.expanduser("~"), os.environ.get("USERNAME") or ""
     for a, b in ((home, "%USERPROFILE%"), (home.replace("\\", "/"), "%USERPROFILE%")):
         if a and len(a) > 3:
@@ -6601,7 +6761,20 @@ def _download_name(resp, url):
     stem, ext = os.path.splitext(name)
     if not ext or len(ext) > 6:
         stem, ext = name or "video", ".mp4"
+    if ext.lower() not in RECORDING_EXTS:   # a link chooses the name, never the kind of file: no .exe, .bat or .lnk in the videos folder (audit #30)
+        ext = ".mp4"
     return safe_stem(stem)[:70].strip(" .") + " [" + url_tag(url) + "]" + ext
+
+
+DISK_SPARE = 500 << 20   # bytes left free after a download (the transcript, the slides and Windows need room too)
+
+
+def _room_for(size):
+    import shutil
+    try:
+        return shutil.disk_usage(VIDEO_DIR).free >= size + DISK_SPARE
+    except OSError:
+        return True
 
 
 def save_download(resp, url):
@@ -6612,6 +6785,10 @@ def save_download(resp, url):
     if size and os.path.isfile(path) and os.path.getsize(path) == size:
         resp.close()
         return path  # downloaded before
+    if size and not _room_for(size):
+        resp.close()
+        problem(f"אין מספיק מקום פנוי בדיסק להקלטה הזו ({size >> 20}MB). לפנות מקום ולנסות שוב.")
+        return None
     part, got, t0 = path + ".part", 0, time.time()
     try:
         with resp, open(part, "wb") as f:
@@ -6621,6 +6798,8 @@ def save_download(resp, url):
                     break
                 f.write(buf)
                 got += len(buf)
+                if not size and got % (256 << 20) < len(buf) and not _room_for(0):   # (no size given: the disk is checked every 256MB)
+                    raise OSError("disk full")
                 rate = got / max(time.time() - t0, 0.1)
                 if size:
                     _progress_line(f"מוריד את ההקלטה: {got * 100 // size}% ({got >> 20}/{size >> 20}MB) {_fmt_eta((size - got) / max(rate, 1))}")
@@ -9709,6 +9888,11 @@ def initial_action(argv, env):
 
 
 def main():
+    install_crash_log()
+    try:
+        migrate_models()
+    except Exception:
+        save_error("move the models")
     log(f"{PRODUCT} - גרסה {VERSION} ({VERSION_DATE})")
     act = initial_action(sys.argv[1:], os.environ)
     if another_window_open():
@@ -10476,10 +10660,11 @@ def uninstall():
                            ("Gemini CLI", gemini_set(False) if gemini_connected() else None)):
         if done is not None:
             show(f"החיבור של הבנתי הוסר מ-{app_name}" + ("" if done.get("ok") else " (לא הצליח - לנתק ידנית בהגדרות שלו)"))
-    if os.path.isdir(MODEL_DIR):
-        gb = _size_gb(MODEL_DIR)
-        shutil.rmtree(MODEL_DIR, ignore_errors=True)
-        show(f"נמחקו מודלי התמלול ({gb:.1f}GB) מ- {MODEL_DIR}")
+    for md in dict.fromkeys((MODEL_DIR, OLD_MODEL_DIR)):
+        if os.path.isdir(md):
+            gb = _size_gb(md)
+            shutil.rmtree(md, ignore_errors=True)
+            show(f"נמחקו מודלי התמלול ({gb:.1f}GB) מ- {md}")
     show("מסיר את רכיבי Python של הכלי...")
     subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", *TOOL_PKGS])
     if _ask("להסיר גם ספריות כלליות שהכלי התקין (" + ", ".join(SHARED_PKGS) + ")? אם יש לך תוכנות Python אחרות, עדיף לבחור N."):
@@ -10541,8 +10726,7 @@ if __name__ == "__main__":
     except Exception:
         console_show()  # the window started minimized - the user must see this
         tb = traceback.format_exc()
-        with open(ERROR_LOG, "a", encoding="utf-8") as f:
-            f.write(f"\n--- {datetime.datetime.now()} (גרסה {VERSION}) ---\n{tb}")
+        append_error_log(f"\n--- {datetime.datetime.now()} (גרסה {VERSION}) ---\n{tb}")
         if is_blocked(tb):
             explain_block(tb)
         elif "No module named" in tb:

@@ -36,7 +36,7 @@ jobs:
         run: |
           $py = "build/app/python/python.exe"
           & $py build/app/python/get-pip.py --no-warn-script-location
-          & $py -m pip install "faster-whisper>=1.1" pyaudiowpatch numpy mss pillow comtypes sherpa-onnx --no-warn-script-location
+          & $py -m pip install -r System/requirements.txt --require-hashes --only-binary=:all: --no-warn-script-location
           Remove-Item build/app/python/get-pip.py
       - name: Inno Setup
         shell: pwsh
