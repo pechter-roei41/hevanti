@@ -845,6 +845,18 @@ with sync_playwright() as p:
         check(f"{page_name}: a new failure is shown", True)
         sp.context.close()
 
+    # ---- "no animations and motion": the app tells the tool (the floating button is drawn by the tool, not by the page) ----
+    st_ = page()
+    st_.posts = []
+    st_.route("**/api/cmd", lambda r: (st_.posts.append(json.loads(r.request.post_data or "{}")), r.fulfill(content_type="application/json", body=json.dumps({"ok": True})))[1])
+    st_.evaluate("a11ySet('still', true)")
+    st_.wait_for_timeout(300)
+    st_.evaluate("a11ySet('still', false)")
+    st_.wait_for_timeout(300)
+    seq = [p_.get("on") for p_ in st_.posts if p_.get("action") == "a11y_still"]
+    check("accessibility: choosing 'no animations and motion' (and unchoosing it) is told to the tool, for the floating button", seq == [True, False], st_.posts)
+    st_.context.close()
+
     # ---- the live view: the course of the lecture that records can be changed, and an offer from the first slide ----
     lc = page()
     lc.posts = []

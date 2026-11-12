@@ -1,5 +1,5 @@
 @echo off
-rem Hevanti - first-time setup - (c) 2026 Roei Pechter. MIT License, see System\LICENSE.txt
+rem Hevanti - first-time setup - (c) 2026 Hevanti. MIT License, see System\LICENSE.txt
 rem Uses Hevanti's own Python (System\python - comes in the ZIP, or is downloaded here once). No Python to install.
 chcp 65001 >nul
 cd /d "%~dp0"

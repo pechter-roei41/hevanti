@@ -1,5 +1,5 @@
 # Hevanti - reading the text on the slides: Tesseract OCR (free, offline) with Hebrew and English.
-# (c) 2026 Roei Pechter. MIT License, see LICENSE.txt
+# (c) 2026 Hevanti. MIT License, see LICENSE.txt
 # The language files go to %LOCALAPPDATA%\Hevanti\tessdata (no admin needed). Tesseract itself comes from
 # github.com/tesseract-ocr/tesseract (its installer asks Windows for permission once).
 $ErrorActionPreference = 'Stop'

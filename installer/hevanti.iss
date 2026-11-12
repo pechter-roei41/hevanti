@@ -1,4 +1,4 @@
-; Hevanti (הבנתי) - the Windows installer: Hevanti-Setup.exe - (c) 2026 Roei Pechter. MIT License, see LICENSE
+; Hevanti (הבנתי) - the Windows installer: Hevanti-Setup.exe - (c) 2026 Hevanti. MIT License, see LICENSE
 ; One file, no admin, nothing else to install: Hevanti's own Python with every package already inside.
 ; Installs for this user only (%LOCALAPPDATA%\Programs\Hevanti), so Windows does not ask for an administrator.
 ; The lectures are kept in Documents\הבנתי (not in the program's folder), so an update or uninstall never touches them.
@@ -15,14 +15,14 @@
 AppId={{6B0E2A4C-9F3D-4E21-A7C5-48D1E2B0C9A1}
 AppName=הבנתי (Hevanti)
 AppVersion={#AppVersion}
-AppPublisher=Roei Pechter
+AppPublisher=Hevanti
 ; the file information of Hevanti-Setup.exe: the same product name in every build, the version of the program
 VersionInfoProductName=Hevanti
 VersionInfoProductVersion={#AppVersion}
 VersionInfoVersion={#AppVersion}.0.0
-VersionInfoCompany=Roei Pechter
+VersionInfoCompany=Hevanti
 VersionInfoDescription=Hevanti Setup
-VersionInfoCopyright=(c) 2026 Roei Pechter. MIT License
+VersionInfoCopyright=(c) 2026 Hevanti. MIT License
 AppPublisherURL=https://github.com/pechter-roei41/hevanti
 AppSupportURL=https://github.com/pechter-roei41/hevanti/issues
 DefaultDirName={localappdata}\Programs\Hevanti

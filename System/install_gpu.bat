@@ -1,5 +1,5 @@
 @echo off
-rem Hevanti - NVIDIA GPU libraries - (c) 2026 Roei Pechter. MIT License, see LICENSE.txt
+rem Hevanti - NVIDIA GPU libraries - (c) 2026 Hevanti. MIT License, see LICENSE.txt
 chcp 65001 >nul
 cd /d "%~dp0"
 echo Installing NVIDIA GPU libraries (about 1GB). Only useful with an NVIDIA graphics card.

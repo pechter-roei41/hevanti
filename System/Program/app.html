@@ -8,7 +8,7 @@
 function bzmTheme(t) { if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
   try { if (t) localStorage.setItem("bzm.theme", t); else localStorage.removeItem("bzm.theme"); } catch (e) {} }
 try { bzmTheme(localStorage.getItem("bzm.theme") || ""); } catch (e) {}</script>
-<!-- Hevanti (הבנתי) - the app (the page the tool opens on this computer) - (c) 2026 Roei Pechter. MIT License, see LICENSE.txt -->
+<!-- Hevanti (הבנתי) - the app (the page the tool opens on this computer) - (c) 2026 Hevanti. MIT License, see LICENSE.txt -->
 <!-- one logo, as real PNG icons (a browser app window shows the largest as its taskbar icon; an SVG favicon came out blocky) -->
 <link rel="icon" type="image/png" sizes="16x16" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAClklEQVR42nWTT4iWdRDHP/P78zzvq7vpIppK7noQCsI8ZH9I1CQi1ktYSbdAEilI7ZKYFu+KF6VjlyIiBLskZCAYgsTmggc7SCELGYGpCK37+rf0fZ7n95vp8JYtsjswzGHmy8z3OzMCMLxvyzIJxV7UnkPVYSLMYsGZIUIWd6FuqkPXDn13UVbuf23ECKddK66yJjOXOYE7dT8OtD25Stct6Wgw9Z+4eXGV3qsawM8FvtsIm1dm/m5g4prLAwPF4pz1s2DCeuslRSR4QQCy/Q+ODqbuC289nvj0xQrLwuiJljs/3dj8yNoAgODMsFuVoMCCwv7lDN2e8PKKzOEXanIS/mqgl8EJgoH7r1NWeH9Nw8Fna5JCELjRE9Yty3z1UsW8AHcbePNUyeRNoR1AgRCkn9iwNPPxuhoMaoU9Zws2LFe+2FQxGPsCvv1Dybkpz1BpD2gGNSgD/Hbb8dNVzzOPKrueSkQHo8OZpfMhZXh3vOT0Vc+SttHoDIFNsOhguidsOVly/HdPCMbO1YnhQaPJsPNMwcnLnsUPgQFzZnhTrPT9db0zXnLqUoBoFNEYOxc5ejGwqGWkmWDDECSI2Xkp/Su5p3UQC0ngg7MREeOXacfnFwJLWipJZ1ynWSNFiFrnX+Wxj7au9siEbxULtE44gUbhfhJEjIEIpoYlzUj/0Fy7QKtUW06b/Z0zk1OPPP/ECXFuCFWfs3adWbct2i3FujlZ19TUt+OgJTXgnsH3VPX2y4e/nRA6HceBAzrrAxjCWEeWVz8PRV+Muejf05Qrrvy58I8jP/b4Zqvv8+p0HJOTwrFjc38TsOLD19f7svySuv76Unzy4EbG3cM1Mov3J+lsDAAju19dOLL3jW1P79gRAfkHJFkvO6NluHoAAAAASUVORK5CYII=">
 <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,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">
@@ -675,7 +675,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <li><b>מה נשלח ל-AI:</b> רק כשלוחצים על כפתור "שאלה ל-AI" או על אחת המשימות (סיכום, מבחן דמה, דף נוסחאות), או כשמבקשים מ-AI מחובר. אז הטקסט, והתמונה אם מצרפים אותה, עוברים לחברה של אותו AI. בלי זה, שום דבר לא יוצא מהמחשב.</li>
         <li><b>מה עוד עובר ברשת:</b> בדיקת גרסה חדשה ב-GitHub (אפשר לכבות בתיבה שלמעלה), הורדה חד-פעמית של מודל התמלול (Hugging Face) ושל קריאת השקופיות (GitHub). ורק אם הגדרת "AI מובנה": בלחיצה על "תשובה כאן" נשלחים ל-Google השאלה, הדקות האחרונות והשקופית; ובנוסף, כי "קריאת נוסחאות וכתב יד" פועלת כברירת מחדל כשיש מפתח (אפשר לכבות בהגדרות), גם שקופיות שאינן טקסט מודפס ברור. עם השאלה נשלח גם הטקסט של השקופיות הקודמות בהרצאה.</li>
         <li><b>מה בשליטתך:</b> לבחור חלון אחד או חלק מהמסך במקום כל המסך, להשהות את הצילום (גם עם <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd></span>), לטשטש אזורים קבועים, ולמחוק צילומים לצמיתות.</li>
-        <li><b>אחריות:</b> הבנתי ניתנת כמו שהיא, בלי אחריות מכל סוג. השימוש בה, כולל הקלטה, תמלול ושמירה של הרצאות ושקופיות, הוא באחריות המשתמש בלבד. <b>לפני שמשתמשים, כל משתמש צריך לבדוק מה הנהלים והכללים במוסד שלו ואצל המרצה.</b> רועי פכטר ומפתחי הכלי אינם אחראים לשימוש בה.</li>
+        <li><b>אחריות:</b> הבנתי ניתנת כמו שהיא, בלי אחריות מכל סוג. השימוש בה, כולל הקלטה, תמלול ושמירה של הרצאות ושקופיות, הוא באחריות המשתמש בלבד. <b>לפני שמשתמשים, כל משתמש צריך לבדוק מה הנהלים והכללים במוסד שלו ואצל המרצה.</b> מפתחי הכלי אינם אחראים לשימוש בה.</li>
       </ul>
     </details>
 
@@ -935,15 +935,15 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <ol class="gsteps">
           <li><b>פתיחה מהירה:</b> כשפותחים את הבנתי (אחרי שהסכמתם פעם אחת ויש מפתח) נפתח חלון קטן באמצע המסך: בוחרים קורס (או <b>+ קורס חדש</b>) וסוג ולוחצים <b>התחל תמלול</b>, והתמלול רץ ברקע. <b>פתח את האפליקציה</b> פותח את מסך הבית בלי להתחיל כלום. אפשר לכבות את החלון הקטן ב<b>הגדרות</b>.</li>
           <li>או ב<b>בית</b>: בוחרים קורס (הוא נבחר לבד אם על המסך יש חלון עם שם הקורס) ולוחצים <b>הרצאה חיה בעברית</b> (או <b>באנגלית</b>).</li>
-          <li>מפעילים את ההרצאה, גם במסך מלא. בקצה המסך מופיע כפתור עגול עם הלוגו.</li>
+          <li>מפעילים את ההרצאה, גם במסך מלא. בקצה המסך מופיע כפתור עגול ירוק עם הלוגו, ונקודה אדומה קטנה שמראה שההרצאה מוקלטת.</li>
           <li>התחלתם בלי קורס? אם על השקף הראשון כתוב שם של קורס שלכם, מופיעה הצעה (בחלון הקטן ובמסך ההרצאה): <b>להעביר</b> או <b>לא עכשיו</b>. אפשר גם לבחור קורס אחר במסך ההרצאה. ההרצאה עוברת לקורס כשעוצרים ושומרים אותה. שום דבר לא משתנה לבד.</li>
-          <li>לוחצים עליו (או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>), כותבים שאלה ו-<kbd>Enter</kbd>. התשובה מופיעה מתחת.</li>
+          <li>לוחצים עליו (או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>): החלון הקטן גדל מהכפתור, והלוגו הופך ל-X. כותבים שאלה ו-<kbd>Enter</kbd>. התשובה מופיעה מתחת.</li>
           <li>בסוף: <b>עצירה</b> (במסך ההרצאה, בבית או בחלון הקטן, שם לוחצים פעמיים). הכל נשמר בקורס, וכרטיס "ההרצאה נשמרה בהצלחה" מופיע בחלון הקטן, או מעל הכפתור העגול אם החלון הקטן סגור.</li>
         </ol>
         <ul class="glist">
           <li><b>★ רגע חשוב:</b> כפתור ★ בחלון הקטן (או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>M</kbd></span>). אחר כך חוזרים לרגע הזה מדף הקורס. בתמלול, השורה שנאמרה רגע לפני הסימון מודגשת בצהוב ועליה ★.</li>
           <li><b>מה פספסתי:</b> שלושה כפתורים בחלון הקטן (3, 7, 15 דקות) מסכמים את הדקות האחרונות.</li>
-          <li><b>להסתיר את החלון:</b> הכפתור — או <kbd>Esc</kbd>. הכפתור העגול חוזר, ולחיצה עליו פותחת אותו שוב.</li>
+          <li><b>להסתיר את החלון:</b> הכפתור — או <kbd>Esc</kbd>, או ה-X בכפתור העגול. החלון מתכווץ חזרה לכפתור, והלוגו חוזר. "בלי אנימציות ותנועה" בהגדרות הנגישות מבטל את הגדילה והסיבוב.</li>
           <li><b>מקורות:</b> ליד משפט בתשובה מופיעה השעה שבה זה נאמר. בהרצאה שמורה ובנגן, לחיצה עליה קופצת לשם.</li>
           <li><b>התמלול מאחר?</b> בחלון הקטן, ליד "תשובה כאן", מופיע "מאחר ב-N שניות" כשהאיחור מעל 10 שניות, והתשובות מבוססות על מה שכבר נכתב. אם המחשב איטי מדי להרצאה, הבנתי מדלגת על קול שחיכה יותר מדי (בערך 5 דקות) ואומרת על כמה שניות דילגה.</li>
           <li><b>משהו פרטי על המסך?</b> <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd></span> עוצר את הצילום. התמלול ממשיך.</li>
@@ -993,7 +993,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <dt>משהו אחר</dt><dd>ב<b>בית</b>, למטה: <b>דיווח על תקלה</b>. אפשר לשלוח את הפרטים ב-GitHub או במייל.</dd>
         </dl>
       </section>
-      <p class="howcredit">הבנתי · קוד פתוח (MIT) © 2026 רועי פכטר · <a href="https://github.com/pechter-roei41/hevanti" target="_blank" rel="noopener">GitHub</a> · <a href="https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD" target="_blank" rel="noopener">המדריך באינטרנט</a></p>
+      <p class="howcredit">הבנתי · קוד פתוח (MIT) © 2026 הבנתי · <a href="https://github.com/pechter-roei41/hevanti" target="_blank" rel="noopener">GitHub</a> · <a href="https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD" target="_blank" rel="noopener">המדריך באינטרנט</a></p>
     </div>
   </section>
   <details class="log" id="logBox"><summary>הודעות מהכלי</summary><ol id="log"></ol></details>
@@ -1520,8 +1520,11 @@ function a11yDraw() {
     $(id).querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", +b.dataset.v === +a11y[k] ? "true" : "false"));
   for (const [id, k] of [["#a11yRead", "read"], ["#a11yContrast", "contrast"], ["#a11yStill", "still"], ["#a11ySay", "say"]]) $(id).checked = !!a11y[k];
 }
+function tellStill() { try { api("/api/cmd", {action: "a11y_still", on: !!a11y.still}).catch(() => {}); } catch (e) {} }   // the tool needs to know (the floating button is drawn by it, not by this page)
+setTimeout(tellStill, 700);
 function a11ySet(k, v) {
   a11y[k] = v;
+  if (k === "still") tellStill();
   try { localStorage.setItem(A11Y_KEY, JSON.stringify(a11y)); } catch (e) {}
   a11yApply();
   if (pipWin && !pipWin.closed) { a11yApply(pipWin.document, true); pipWin.document.body.classList.toggle("caps", !!a11y.caps); pipKey = ""; }
@@ -1559,12 +1562,12 @@ const setPanels = {};
   setPanels.cap.appendChild(ql);
   const bl = el("label", "row miniopt"), bc = el("input"); bc.type = "checkbox"; bc.id = "miniBtn";
   bc.addEventListener("change", () => api("/api/cmd", {action: "mini_button", on: bc.checked}));
-  const bt = el("b"); bt.append("כפתור ");   // (the button looks like the Hevanti logo on a round cream disc)
+  const bt = el("b"); bt.append("כפתור ");   // (the button: the Hevanti logo as a thin line on a solid green circle)
   const logo = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   logo.setAttribute("viewBox", "0 0 120 120"); logo.setAttribute("width", "26"); logo.setAttribute("height", "26"); logo.setAttribute("aria-hidden", "true");
   logo.style.cssText = "vertical-align:middle;margin:-2px 2px";
-  logo.innerHTML = '<circle cx="60" cy="60" r="56" fill="#f6f3e9" stroke="#1f7a55" stroke-width="5"/><g transform="translate(60 60) scale(.6) translate(-60 -61)"><path d="M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z" fill="#1f7a55"/><path d="M33 52L52 71L87 33" fill="none" stroke="#f7d44c" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/></g>';
-  bt.append(logo, " צף על המסך בזמן הרצאה חיה, כשהחלון הקטן סגור (לחיצה עליו פותחת את החלון)");
+  logo.innerHTML = '<circle cx="60" cy="60" r="58" fill="#1b6e4b"/><g transform="translate(60 60) scale(.6) translate(-60 -61)"><path d="M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z" fill="none" stroke="#f6f3e9" stroke-width="9" stroke-linejoin="round"/><path d="M33 52L52 71L87 33" fill="none" stroke="#f7d44c" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/></g>';
+  bt.append(logo, " צף על המסך בזמן הרצאה חיה (לחיצה עליו פותחת את החלון הקטן, והוא הופך ל-X שסוגר אותו)");
   bl.append(bc, bt);
   setPanels.cap.appendChild(bl);
   // which corner of the screen the floating button sits in
@@ -1702,7 +1705,7 @@ async function poll() {
   setTimeout(poll, 1000);
 }
 // the small question window is the main way to use Hevanti. When a live lecture is ready only the floating button shows
-// (a click opens the window); a setting in ⚙ opens the window itself at the start (once per lecture)
+// (a click opens the window, which grows from it, and the button turns to an X that closes it); a setting in ⚙ opens the window itself at the start (once per lecture)
 async function autoMini(s) {
   if (!s || s.kind !== "live" || !s.ready || s.done) return;
   let seen = ""; try { seen = localStorage.getItem("bzm.miniFor") || ""; } catch (e) {}

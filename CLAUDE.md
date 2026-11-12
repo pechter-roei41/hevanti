@@ -3,7 +3,7 @@
 Open-source (MIT) lecture companion for Israeli university students, Windows only. Beta (currently 2.19: it holds all the work of 2.18 and 2.19, which were never released apart; the GitHub release v2.19 was published on 11.11.2026 from `main` at `3984d71`).
 
 It transcribes a lecture on the student's computer (Hebrew or English, live or recorded), saves a picture of every new slide, and has two core features:
-- **The floating window** (`mini.html`, Ctrl+Alt+Q, or the round button at the screen edge): always on top, also over a full-screen lecture. Type a question, get an answer based on the last minutes and the slide on screen. Three "what did I miss" buttons (3, 7, 15 minutes).
+- **The floating window** (`mini.html`, Ctrl+Alt+Q, or the round button at the screen edge, which stays while the window is open and turns to an X that closes it): always on top, also over a full-screen lecture. Type a question, get an answer based on the last minutes and the slide on screen. Three "what did I miss" buttons (3, 7, 15 minutes).
 - **Marks:** one click on ★ (or Ctrl+Alt+M) marks the moment. Each mark is listed later with what was said just before it, and opens 8 seconds earlier (`MARK_LEAD_S`).
 
 Answers come from Gemini, called straight from the student's computer with the student's own free API key. There is no Hevanti server, no AI of our own and no key of ours.
@@ -85,7 +85,7 @@ Then open `http://127.0.0.1:8765/` (and `/mini` for the floating window) with Pl
 
 ## The how-to video
 
-`System/Program/media/howto.mp4`: 58.8 s, 1920x1080, **no audio**. A dark caption bar on top carries the Hebrew narration text, so changing a step means re-recording footage and caption. Chapters (in `app.html`, `#howChapters`, `data-t` seconds): 0 key, 5 start, 8 live transcript and screenshots, 14 full screen and button, 19 floating window, 24 answer, 27 "what did I miss", 32 mark ★, 38 course page, 41 marks, 45 syllabus and glossary, 51 files and management, 54 summary slide. It shows version 2.17, the lecture "חשבון אינפיניטסימלי 2", an answer with a ⏱ time source, and the three "what did I miss" buttons.
+`System/Program/media/howto.mp4`: 58.8 s, 1920x1080, **no audio**. A dark caption bar on top carries the Hebrew narration text, so changing a step means re-recording footage and caption. Chapters (in `app.html`, `#howChapters`, `data-t` seconds): 0 key, 5 start, 8 live transcript and screenshots, 14 full screen and button, 19 floating window, 24 answer, 27 "what did I miss", 32 mark ★, 38 course page, 41 marks, 45 syllabus and glossary, 51 files and management, 54 summary slide. It shows version 2.17 and the old floating button (a cream disc that disappears when the window opens, a window that opens at the bottom of the screen: both changed in 2.20), the lecture "חשבון אינפיניטסימלי 2", an answer with a ⏱ time source, and the three "what did I miss" buttons.
 
 Known mismatches that remain in the video (found on 10.11.2026, listed in `DECISIONS.md`):
 - The last slide (0:54) says step 4 is "אחרי ההרצאה: דף הקורס והכנה למבחן", but the "הכנה למבחן" tab was removed from the course page (5.11.2026). The course page has three tabs: ההרצאות, סימונים, סילבוס ומילון.

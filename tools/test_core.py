@@ -433,6 +433,61 @@ _ss = L.Session("live", "he", "", L.NO_COURSE)
 _ss.saved = {"course": "פיזיקה", "minutes": 46, "slides": 9, "f": "פיזיקה/x"}
 check("saved: the session info carries what was saved (course, minutes, slides, the lecture)", _ss.info()["saved"] == {"course": "פיזיקה", "minutes": 46, "slides": 9, "f": "פיזיקה/x"} and L.Session("live", "he").info()["saved"] is None)
 check("saved: the count the floating button watches is in /api/app", "saved_n" in json.loads(get("/api/app")[1]))
+# ---- the floating button: its picture (logo, X, red dot), the animation's curve and shapes, and where the window opens ----
+def _near(im, x, y, pred):
+    return any(pred(im.getpixel((xx, yy))) for xx in range(x - 1, x + 2) for yy in range(y - 1, y + 2))
+
+
+_is_green = lambda c: abs(c[0] - 27) < 12 and abs(c[1] - 110) < 12 and abs(c[2] - 75) < 12 and c[3] == 255
+_is_yellow = lambda c: c[0] > 225 and c[1] > 185 and c[2] < 120 and c[3] == 255
+_is_cream = lambda c: c[0] > 215 and c[1] > 210 and c[2] > 190 and c[3] == 255
+_is_white = lambda c: c[0] > 235 and c[1] > 235 and c[2] > 235 and c[3] == 255
+_is_red = lambda c: abs(c[0] - 194) < 14 and abs(c[1] - 65) < 14 and abs(c[2] - 45) < 14 and c[3] == 255
+b_logo = L._button_image(56, 0.0, False)
+b_dot = L._button_image(56, 0.0, True, "right")
+b_x = L._button_image(56, 1.0, True, "right")
+b_left = L._button_image(56, 0.0, True, "left")
+b_mid = L._button_image(56, 0.5, True, "right")
+check("floating button: the circle is solid green (1B6E4B) with nothing round it, and the corners are see-through", _is_green(b_logo.getpixel((5, 28))) and _is_green(b_logo.getpixel((50, 28))) and b_logo.getpixel((0, 0))[3] == 0 and b_logo.getpixel((55, 55))[3] == 0 and b_logo.getpixel((28, 0))[3] > 150, [b_logo.getpixel(q) for q in ((5, 28), (0, 0), (28, 0))])
+check("floating button: the logo is a thin cream line (no cream disc, no fill) with the yellow check inside", _near(b_logo, 12, 25, _is_cream) and _near(b_logo, 26, 31, _is_yellow) and _is_green(b_logo.getpixel((20, 20))) and not _near(b_logo, 28, 28, _is_cream), [b_logo.getpixel(q) for q in ((12, 25), (26, 31), (20, 20))])
+check("floating button: open, the logo is gone and a white X is in its place (no yellow, no cream)", _near(b_x, 28, 28, _is_white) and _near(b_x, 20, 20, _is_white) and _near(b_x, 36, 20, _is_white) and not _near(b_x, 26, 31, _is_yellow) and not _near(b_x, 12, 25, _is_cream), [b_x.getpixel(q) for q in ((28, 28), (20, 20), (36, 20))])
+check("floating button: the red dot (C2412D) is at the top, on the side of the screen's edge, and not when nothing is recorded", _near(b_dot, 45, 11, _is_red) and not _near(b_dot, 11, 11, _is_red) and _near(b_left, 11, 11, _is_red) and not _near(b_left, 45, 11, _is_red) and not _near(b_logo, 45, 11, _is_red) and _near(b_x, 45, 11, _is_red))
+ring_light, ring_night = L._button_image(56, 0.0, True, "right", False).getpixel((53, 11)), L._button_image(56, 0.0, True, "right", True).getpixel((53, 11))
+check("floating button: the ring round the dot is the colour of the page (paper by day, night paper at night)", ring_light[0] > 235 and ring_light[2] > 220 and ring_light[3] > 230 and ring_night[0] < 60 and ring_night[3] > 230, (ring_light, ring_night))
+check("floating button: a moment of the turn is neither the logo nor the X", b_mid.tobytes() != b_logo.tobytes() and b_mid.tobytes() != b_x.tobytes())
+check("floating button: it is drawn the same at 125% and 150% (a bigger picture, the same shape: green, the dot, the X)", all(_is_green(L._button_image(S_, 0.0, False).getpixel((int(S_ * 5 / 56), S_ // 2))) and _near(L._button_image(S_, 1.0, False), S_ // 2, S_ // 2, _is_white) and _near(L._button_image(S_, 0.0, True, "right"), int(S_ * 0.8), int(S_ * 0.2), _is_red) for S_ in (70, 84)))
+check("floating button: the bytes for Windows are premultiplied BGRA, S x S x 4", len(L._button_rgba(56, 0.0, True)) == 56 * 56 * 4 and L._button_rgba(56, 0.0, True)[3] == 0)
+ease = [L._bezier_ease(k / 20.0) for k in range(21)]
+check("animation: the easing curve cubic-bezier(0.2, 0.8, 0.2, 1) starts at 0, ends at 1, never goes back, and starts fast", ease[0] == 0.0 and ease[-1] == 1.0 and all(b >= a for a, b in zip(ease, ease[1:])) and ease[2] > 0.3 and ease[10] > 0.9, ease)
+g0, g1 = L._glyph_params(0.0), L._glyph_params(1.0)
+check("animation: the logo turns a quarter, shrinks to 0.6 and fades out while the X turns in, grows from 0.6 to 1 and fades in",
+      g0["logo"] == (0.0, 1.0, 1.0) and g0["x"][2] == 0.0 and g1["logo"][2] == 0.0 and g1["logo"][0] == -90.0 and abs(g1["logo"][1] - 0.6) < 1e-9 and g1["x"] == (0.0, 1.0, 1.0) and abs(g0["x"][1] - 0.6) < 1e-9 and g0["x"][0] == 90.0, (g0, g1))
+check("animation: the window grows from the point nearest the button - nothing at the start, all of it at the end, always inside the window",
+      L._grow_rect(0.0, 380, 460, 190, 460) == (190, 460, 190, 460) and L._grow_rect(1.0, 380, 460, 190, 460) == (0, 0, 380, 460) and L._grow_rect(0.5, 380, 460, 190, 460) == (95, 230, 285, 460)
+      and L._grow_rect(0.0, 380, 460, -50, 900) == (0, 460, 0, 460) and all(0 <= v for v in L._grow_rect(0.3, 380, 460, 380, 0)))
+AREA = (0, 0, 1920, 1040)
+pos = {c: L._mini_xy_above(AREA, c, 56, 12, 380, 460, 8) for c in ("br", "bl", "tr", "tl")}
+check("window place: above the button for the two bottom corners, with 8 pixels between (the button stays where it is)", pos["br"] == (1528, 440) and pos["bl"] == (12, 440) and pos["br"][1] + 460 + 8 == 908 == L._mini_btn_xy(type("A", (), {"left": 0, "top": 0, "right": 1920, "bottom": 1040}), "br", 56, 12)[1], pos)
+check("window place: below the button for the two top corners, on the same side", pos["tr"] == (1528, 140) and pos["tl"] == (12, 140) and pos["tr"][1] == 76 + 56 + 8, pos)
+check("window place: always inside the work area (a low screen, a second screen to the left, 150% scaling)",
+      L._mini_xy_above((0, 0, 800, 400), "br", 56, 12, 380, 460, 8)[1] == 0 and L._mini_xy_above((-1920, 0, 0, 1040), "bl", 56, 12, 380, 460, 8)[0] == -1908
+      and all(0 <= x <= 1920 - 570 and 0 <= y <= 1040 - 690 for x, y in (L._mini_xy_above(AREA, c, 84, 18, 570, 690, 12) for c in ("br", "bl", "tr", "tl"))))
+_before_find = L._find_mini
+L._find_mini = lambda u: (_ for _ in ()).throw(AssertionError("the button must not look at the small window to decide to stay"))
+L.APP.session = _FakeSess()
+try:
+    L.save_settings(mini_button=True)
+    stays = L.mini_button_wanted()
+finally:
+    L._find_mini = _before_find
+    L.APP.session = _sess_before
+check("floating button: it stays while the small window is open (the decision does not look at the window)", stays is True)
+L.save_settings(a11y_still=False)
+m_on = L._motion_allowed()
+L.APP.command({"action": "a11y_still", "on": True})
+m_off = L._motion_allowed()
+L.APP.command({"action": "a11y_still", "on": False})
+check("animation: motion is allowed, unless the student chose no animations and motion in the app (the app tells the tool)", m_on is True and m_off is False and L._motion_allowed() is True)
 check("a command without the page's header is refused (another site cannot drive Hevanti)", refused)
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")

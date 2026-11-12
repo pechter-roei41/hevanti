@@ -1,5 +1,5 @@
 @echo off
-rem Hevanti - lectures, transcribed live or from a recording - (c) 2026 Roei Pechter. MIT License, see System\LICENSE.txt
+rem Hevanti - lectures, transcribed live or from a recording - (c) 2026 Hevanti. MIT License, see System\LICENSE.txt
 chcp 65001 >nul
 set PYTHONIOENCODING=utf-8
 cd /d "%~dp0"
