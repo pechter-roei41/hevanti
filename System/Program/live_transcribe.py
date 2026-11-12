@@ -36,7 +36,7 @@ try:
 except Exception:  # lets "uninstall" run even if the install never finished
     np = None
 
-VERSION = "2.20"
+VERSION = "2.21"
 VERSION_DATE = "12.11.2026"
 PRODUCT = "הבנתי"
 GUIDE_URL = "https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD"
