@@ -1,0 +1,158 @@
+{
+ "_note": "One caption per chapter: the same text as the chapters in app.html (#howChapters). dur = seconds in the video; mode: head = first seconds of the take, tail = last seconds, fit = the whole take sped up/slowed to fit; crop = [x, y, w, h] on the 1920x1080 screen (2:1), the zoom on the action. Change a line here and run: python tools/make_howto.py build (no re-recording).",
+ "chapters": [
+  {
+   "id": "c1",
+   "dur": 5,
+   "mode": "head",
+   "crop": [
+    160,
+    150,
+    1600,
+    800
+   ],
+   "text": "מדביקים מפתח Gemini חינמי (דקה, פעם אחת)"
+  },
+  {
+   "id": "c2",
+   "dur": 4,
+   "mode": "head",
+   "crop": [
+    442,
+    240,
+    1036,
+    518
+   ],
+   "text": "בוחרים קורס בחלון ההתחלה המהירה ומתחילים הרצאה"
+  },
+  {
+   "id": "c3",
+   "dur": 6,
+   "mode": "head",
+   "crop": [
+    160,
+    90,
+    1606,
+    803
+   ],
+   "text": "הבנתי מתמללת ומצלמת את ההרצאה בזמן אמת"
+  },
+  {
+   "id": "c4",
+   "dur": 5,
+   "mode": "head",
+   "crop": [
+    0,
+    120,
+    1920,
+    960
+   ],
+   "text": "ההרצאה במסך מלא, והעיגול הירוק נשאר בקצה המסך"
+  },
+  {
+   "id": "c5",
+   "dur": 5,
+   "mode": "fit",
+   "crop": [
+    620,
+    380,
+    1300,
+    650
+   ],
+   "text": "לוחצים על הכפתור של הבנתי ושואלים"
+  },
+  {
+   "id": "c6",
+   "dur": 6,
+   "mode": "tail",
+   "crop": [
+    620,
+    380,
+    1300,
+    650
+   ],
+   "text": "התשובה, לפי מה שנאמר ומה שעל הלוח"
+  },
+  {
+   "id": "c7",
+   "dur": 7,
+   "mode": "tail",
+   "crop": [
+    620,
+    380,
+    1300,
+    650
+   ],
+   "text": "\"מה פספסתי\": סיכום של 7 הדקות האחרונות"
+  },
+  {
+   "id": "c8",
+   "dur": 5,
+   "mode": "head",
+   "crop": [
+    620,
+    380,
+    1300,
+    650
+   ],
+   "text": "מסמנים ★ רגע חשוב וסוגרים את החלון"
+  },
+  {
+   "id": "c9",
+   "dur": 4,
+   "mode": "head",
+   "crop": [
+    160,
+    90,
+    1606,
+    803
+   ],
+   "text": "אחרי ההרצאה: דף הקורס עם שלוש לשוניות"
+  },
+  {
+   "id": "c10",
+   "dur": 4,
+   "mode": "head",
+   "crop": [
+    160,
+    90,
+    1606,
+    803
+   ],
+   "text": "בלשונית סימונים חוזרים לרגעים שסימנת"
+  },
+  {
+   "id": "c11",
+   "dur": 7,
+   "mode": "head",
+   "parts": [
+    {
+     "text": "התמלול רץ אצלך במחשב, אין שרת של הבנתי, והמפתח נשמר מוצפן",
+     "crop": [
+      190,
+      265,
+      1260,
+      630
+     ],
+     "dur": 3.5
+    },
+    {
+     "text": "רק שקפים עם נוסחאות או כתב יד נשלחים ל-Google, ואפשר לכבות",
+     "crop": [
+      160,
+      460,
+      1240,
+      620
+     ],
+     "dur": 3.5
+    }
+   ]
+  },
+  {
+   "id": "c12",
+   "dur": 5,
+   "mode": "slide",
+   "text": "בקיצור: ארבעה צעדים - מפתח, הרצאה, שאלה, ודף הקורס"
+  }
+ ]
+}

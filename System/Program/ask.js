@@ -45,6 +45,10 @@
 .askp .qa.err .a{color:var(--rec)}
 .askp .convbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .askp .convbar button{border:0;background:none;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;font-size:13px;padding:0}
+.askp .followbar{display:flex;gap:6px;flex-wrap:wrap}
+.askp .followbar:not(:has(button:not([hidden]))){display:none}
+.askp .more{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;padding:3px 12px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.askp .more:hover{background:var(--accent-soft)}
 .askp .plan{background:var(--accent-soft);color:var(--fg);border-radius:10px;padding:8px 11px;font-size:14px;line-height:1.5;display:grid;gap:6px}
 .askp .plan .btns{display:flex;gap:6px;flex-wrap:wrap}
 .askp .plan button{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;padding:4px 12px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
@@ -113,7 +117,10 @@
   // an answer as a few simple blocks: "# heading", "- item", **bold** - always as text (never HTML)
   function renderAnswer(doc, box, text, src) {
     box.replaceChildren();
-    text = String(text).replace(/\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]/g, m => m.replace(/\n+/g, " "));   // a formula over several lines is one
+    // the AI sometimes puts several times in one bracket ("[08:48:55, 08:51:07]" or a range "[08:48:55-08:51:07]"): each one becomes its own chip
+    text = String(text).replace(/\[(\d{1,2}:\d{2}(?::\d{2})?(?:\s*(?:[,;،]|[-–—]|עד|ו)\s*\d{1,2}:\d{2}(?::\d{2})?)+)\]/g,
+      (_, inner) => inner.match(/\d{1,2}:\d{2}(?::\d{2})?/g).map(t => "[" + t + "]").join(" "));
+    text = text.replace(/\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]/g, m => m.replace(/\n+/g, " "));   // a formula over several lines is one
     for (let line of text.split("\n")) {
       const p = doc.createElement("div"); p.dir = "auto";
       if (/^#{1,4}\s/.test(line)) { line = line.replace(/^#{1,4}\s*/, ""); p.className = "h"; }
@@ -244,12 +251,23 @@
     const convbar = mk("div", "convbar"); convbar.hidden = true;
     const newBtn = mk("button", "", "שיחה חדשה"); newBtn.type = "button";
     newBtn.title = "Gemini שוכח את השאלות הקודמות בתיבה הזו (התשובות נשמרות בתיקיית ההרצאה)";
-    newBtn.addEventListener("click", () => { hist.length = 0; conv.replaceChildren(); convbar.hidden = true; });
-    convbar.append(newBtn, mk("span", "hint", "התשובות נשמרות בתיקיית ההרצאה, ב\"שאלות ותשובות.md\"."));
+    // "עוד פרטים": asks the AI to go deeper on its last answer (the instructions say that this means exactly that); the answer
+    // itself no longer ends with an offer written as text
+    const moreBtn = mk("button", "more", "עוד פרטים"); moreBtn.type = "button"; moreBtn.hidden = true;
+    moreBtn.title = "הרחבה של התשובה האחרונה";
+    moreBtn.addEventListener("click", () => askHere("עוד פרטים"));
+    const exBtn = mk("button", "more", "תן דוגמה"); exBtn.type = "button"; exBtn.hidden = true;
+    exBtn.title = "דוגמה להסבר האחרון";
+    exBtn.addEventListener("click", () => askHere("תן דוגמה"));
+    const follow2 = mk("div", "followbar"); follow2.append(moreBtn, exBtn);   // above the box to write in: a next step for the last answer
+    newBtn.addEventListener("click", () => { hist.length = 0; conv.replaceChildren(); convbar.hidden = true; updMore(); });
+    convbar.append(newBtn);
+    if (!opts.compact) convbar.append(mk("span", "hint", "התשובות נשמרות בתיקיית ההרצאה, ב\"שאלות ותשובות.md\"."));
     const hist = [];
     let busy = false, ctl = null, typing = false;   // typing: a question was begun (and its picture asked for)
+    function updMore() { moreBtn.hidden = exBtn.hidden = busy || !hist.length; }
     function setBusy(on) {
-      busy = on; here.textContent = on ? "■ עצירה" : "תשובה כאן"; here.classList.toggle("stop", on);
+      busy = on; here.textContent = on ? "■ עצירה" : "תשובה כאן"; here.classList.toggle("stop", on); updMore();
     }
     // The free quota is used up: the same question, with what was said, goes on in the student's own AI app
     // (the last one used first) - a click copies it and opens that AI, like the three buttons above.
@@ -409,7 +427,7 @@
     row.prepend(here);
     refresh();
     // like a chat: the conversation first (it grows downward), the box to write in under it
-    box.append(head, planBox, conn, conv, convbar, ta, row, chips, hint);
+    box.append(head, planBox, conn, conv, follow2, ta, row, convbar, chips, hint);
     // a question made ready (a button of the page): for the built-in answer straight away, otherwise written in the box
     function ask(q, extra) { if (hereDefault()) askHere(q, extra); else { ta.value = q; ta.focus(); } }
     return {focus: () => ta.focus(), textarea: ta, refresh, askHere, ask, builtin: hereDefault};

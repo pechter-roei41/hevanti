@@ -608,7 +608,7 @@ with sync_playwright() as p:
                     overflow: document.documentElement.scrollWidth > window.innerWidth, table2cols: Math.abs(dt.top - dd.top) < 12 && dt.left !== dd.left, chaptersCount: document.querySelectorAll('#howChapters button').length}; }""")
         check(f"guide, {theme}: the running text is 60 to 80 characters a line (about 70)", r["per"] and min(r["per"]) >= 60 and max(r["per"]) <= 80, r)
         check(f"guide, {theme}: the text column is narrower than it was (720px)", r["guide"] < 640, r)
-        check(f"guide, {theme}: the video keeps its size (16:9) and the chapters list is beside it", r["video"][0] > 500 and abs(r["video"][0] / r["video"][1] - 16 / 9) < 0.05 and r["sameRow"] and r["chaptersCount"] == 13, r)
+        check(f"guide, {theme}: the video keeps its size (16:9) and the chapters list is beside it", r["video"][0] > 500 and abs(r["video"][0] / r["video"][1] - 16 / 9) < 0.05 and r["sameRow"] and r["chaptersCount"] == 12, r)
         check(f"guide, {theme}: the 'something is wrong' table keeps its two columns, and nothing overflows sideways", r["table2cols"] and not r["overflow"], r)
         check(f"guide, {theme}: no script errors", gd.errs == [], gd.errs)
         gd.context.close()

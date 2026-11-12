@@ -55,7 +55,7 @@ Name הבנתי / Hevanti and its logo: one mark everywhere (green speech bubble
 
 ## Evidence on Hand
 
-Real code, tests (`tools/test_*.py`), a one-minute how-to video (`System/Program/media/howto.mp4`, footage of the current interface), a beta release, the in-app guide ("איך משתמשים") and a public web guide (a claude.ai Artifact linked from the README). No proof of a large user base yet (the code-signing application was declined for lack of it); do not fabricate user counts or testimonials.
+Real code, tests (`tools/test_*.py`), a one-minute how-to video (`System/Program/media/howto.mp4`, footage of the current interface, version 2.20, re-recorded on 12.11.2026 with a script), a beta release, the in-app guide ("איך משתמשים") and a public web guide (a claude.ai Artifact linked from the README). No proof of a large user base yet (the code-signing application was declined for lack of it); do not fabricate user counts or testimonials.
 
 ## Product Principles
 
