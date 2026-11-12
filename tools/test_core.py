@@ -482,12 +482,19 @@ finally:
     L._find_mini = _before_find
     L.APP.session = _sess_before
 check("floating button: it stays while the small window is open (the decision does not look at the window)", stays is True)
+_real_anim = L._windows_animations_on
+L._windows_animations_on = lambda: True   # (a build machine has Windows animations off: this checks the app's choice alone)
 L.save_settings(a11y_still=False)
 m_on = L._motion_allowed()
 L.APP.command({"action": "a11y_still", "on": True})
 m_off = L._motion_allowed()
 L.APP.command({"action": "a11y_still", "on": False})
-check("animation: motion is allowed, unless the student chose no animations and motion in the app (the app tells the tool)", m_on is True and m_off is False and L._motion_allowed() is True)
+m_back = L._motion_allowed()
+L._windows_animations_on = lambda: False
+m_win_off = L._motion_allowed()
+L._windows_animations_on = _real_anim
+check("animation: motion is allowed, unless the student chose no animations and motion in the app (the app tells the tool), or Windows has its animations off",
+      m_on is True and m_off is False and m_back is True and m_win_off is False, (m_on, m_off, m_back, m_win_off))
 check("a command without the page's header is refused (another site cannot drive Hevanti)", refused)
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")

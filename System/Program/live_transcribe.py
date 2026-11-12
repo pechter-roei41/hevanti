@@ -5256,21 +5256,23 @@ def _mini_visible(u):
         return False
 
 
+def _windows_animations_on():
+    """False when Windows has "show animations" off (Settings > Accessibility > Visual effects). True when it cannot be read."""
+    if os.name != "nt":
+        return True
+    try:   # SPI_GETCLIENTAREAANIMATION
+        import ctypes
+        v = ctypes.c_int(1)
+        ctypes.windll.user32.SystemParametersInfoW(0x1042, 0, ctypes.byref(v), 0)
+        return v.value != 0
+    except Exception:
+        return True
+
+
 def _motion_allowed():
     """False when the student chose "no animations and motion" in the app, or Windows has its animations off: then nothing grows and
     nothing turns, the button and the window just change."""
-    if load_settings().get("a11y_still"):
-        return False
-    if os.name == "nt":
-        try:   # SPI_GETCLIENTAREAANIMATION
-            import ctypes
-            v = ctypes.c_int(1)
-            ctypes.windll.user32.SystemParametersInfoW(0x1042, 0, ctypes.byref(v), 0)
-            if v.value == 0:
-                return False
-        except Exception:
-            pass
-    return True
+    return not load_settings().get("a11y_still") and _windows_animations_on()
 
 
 def _mini_region(u, hwnd, rect, radius):
