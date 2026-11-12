@@ -7498,6 +7498,7 @@ FONT_FILES = ("SecularOne-Regular.ttf", "Assistant-Variable.ttf")   # the app's 
 KATEX_JS = os.path.join(SCRIPT_DIR, "katex", "katex.min.js")   # draws the formulas in the answers (MIT, see katex\LICENSE.txt)
 ASK_JS = os.path.join(SCRIPT_DIR, "ask.js")  # the "ask the AI" box (app + player)
 APP_FILE = os.path.join(LOCAL_DIR, "app.json")  # where the running tool listens - a second launch opens it
+TAB_CLOSED_WAIT_S = 8   # seconds the program waits after the app's tab was closed (a reload, or another tab, keeps it open)
 IDLE_EXIT_S = float(os.environ.get("BZM_IDLE_EXIT_S") or 15 * 60)  # nothing running, no page open -> the tool closes
 RECORDING_EXTS = (".mp4", ".m4v", ".mov", ".mkv", ".webm", ".avi", ".wmv", ".mpg", ".mpeg", ".ts", ".3gp",
                   ".mp3", ".m4a", ".aac", ".wav", ".ogg", ".opus", ".flac", ".wma", ".ogv")
@@ -7906,8 +7907,11 @@ class App:
             t0 = time.time()
 
             def later():
-                time.sleep(8)
+                time.sleep(TAB_CLOSED_WAIT_S)
                 if self.page_seen < t0:
+                    if _button_keeps_running():   # the floating button is on: Hevanti stays running (the next lecture starts from the button); it closes with the black window
+                        log("חלון האפליקציה נסגר, אבל הכפתור הצף פועל - הבנתי נשארת פועלת.")
+                        return
                     log("הטאב של הבנתי נסגר - הבנתי נסגרת.")
                     self.quit_evt.set()
             threading.Thread(target=later, daemon=True).start()

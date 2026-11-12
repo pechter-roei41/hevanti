@@ -512,5 +512,22 @@ check("animation: motion is allowed, unless the student chose no animations and 
       m_on is True and m_off is False and m_back is True and m_win_off is False, (m_on, m_off, m_back, m_win_off))
 check("a command without the page's header is refused (another site cannot drive Hevanti)", refused)
 
+# ---- the app's tab/window was closed (real Windows run, 12.11.2026: it quit 8 s later although the floating button was on) ----
+import time as _t
+_wait0, _btn0 = L.TAB_CLOSED_WAIT_S, L._button_keeps_running
+L.TAB_CLOSED_WAIT_S = 0.2
+L.APP.quit_evt.clear()
+L._button_keeps_running = lambda: True
+L.APP.command({"action": "tab_closed"})
+_t.sleep(0.8)
+kept = not L.APP.quit_evt.is_set()
+L._button_keeps_running = lambda: False
+L.APP.command({"action": "tab_closed"})
+_t.sleep(0.8)
+quit_without = L.APP.quit_evt.is_set()
+L.APP.quit_evt.clear()
+L.TAB_CLOSED_WAIT_S, L._button_keeps_running = _wait0, _btn0
+check("the app's tab is closed: Hevanti stays while the floating button is on, and closes when it is off", kept and quit_without, (kept, quit_without))
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)
