@@ -363,6 +363,19 @@ code_q, body_q = get("/quick")
 check("quick start: the page is served, with its title (Hevanti first) and the logo for the title bar", code_q == 200 and "<title>הבנתי · חלון התחלה מהירה</title>".encode("utf-8") in body_q and b'rel="icon"' in body_q, code_q)
 check("quick start: \"close\" and \"open the app\" are harmless when no window is open (and off Windows)",
       L.APP.command({"action": "quick_close"}).get("ok") is True and L.APP.command({"action": "quick_open_app"}).get("ok") is True)
+# "start a new lecture" in the small window: the quick-start window opens on the side (track=False), so closing it never closes Hevanti
+_calls = []
+_old_open, _old_url = L.open_app_window, L.APP.url
+L.open_app_window = lambda url, **kw: (_calls.append((url, kw)), True)[1]
+L.APP.url = "http://127.0.0.1:1/"
+_old_nb = os.environ.pop("BZM_NO_BROWSER", None)
+_r = L.APP.command({"action": "quick_new"})
+if _old_nb is not None:
+    os.environ["BZM_NO_BROWSER"] = _old_nb
+L.open_app_window, L.APP.url = _old_open, _old_url
+check("quick start from the small window: opens the quick-start window as a side window (not tracked as the app's window)",
+      _r.get("ok") is True and len(_calls) == 1 and _calls[0][0].endswith("/quick") and _calls[0][1].get("track") is False and _calls[0][1].get("size") == L.QUICK_SIZE, (_r, _calls))
+check("the short-lecture limit is one number on the server (10 s), and the session tells the pages", L.QUICK_STOP_S == 10 and L.Session.__dict__.get("info") is not None and "quick_stop_s" in L.Session("live", "he", None).info() if hasattr(L, "Session") else True)
 # ---- a course from the first slide (offered, never applied), and a course chosen while it records ----
 import tempfile as _tf
 for _c in ("אלגוריתמים", "פיזיקה"):

@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import tempfile
+import time
 import urllib.parse
 import urllib.request
 
@@ -337,6 +338,8 @@ with sync_playwright() as p:
         resp = route.fetch()
         d = resp.json()
         d["session"] = {"kind": "rec" if mini_state.get("rec") else "live", "done": False, "course": "פיזיקה"} if mini_state["live"] else None
+        if d["session"]:   # (a lecture that has been transcribing for 2 minutes; "fresh": 4 seconds; "loading": the model is still loading)
+            d["session"].update(ready=not mini_state.get("loading"), ready_at=time.time() - (4 if mini_state.get("fresh") else 120), quick_stop_s=10)
         d["math"] = dict(d.get("math") or {}, ask=mini_state["ask"])
         if "run" in mini_state:
             d["run"] = mini_state.pop("run")   # (once: one look at Hevanti that says another run)
@@ -416,6 +419,50 @@ with sync_playwright() as p:
     mini_state["saved"] = False
     mini.evaluate("pollApp()")
     mini.wait_for_timeout(300)
+    # ---- no lecture: the same button starts a new one (the quick-start window) ----
+    mini_state["live"] = False
+    marked.clear()
+    mini.evaluate("pollApp()")
+    mini.wait_for_timeout(300)
+    check("floating window: with no lecture the button reads \"התחלת הרצאה חדשה\" (not \"עצירה\")", mini.is_visible("#stopBtn") and mini.inner_text("#stopBtn") == "התחלת הרצאה חדשה", mini.inner_text("#stopBtn"))
+    mini.click("#stopBtn")
+    mini.wait_for_timeout(300)
+    check("floating window: one press asks Hevanti for the quick-start window, and nothing else (no stop, no second press)",
+          [m.get("action") for m in marked] == ["quick_new"], marked)
+    mini_state["live"] = True
+    mini.evaluate("pollApp()")
+    mini.wait_for_timeout(300)
+    check("floating window: a lecture starts - the button goes back to \"עצירה\"", mini.inner_text("#stopBtn") == "עצירה")
+    # ---- a lecture stopped right after it started: the same question as in the app (QUICK_STOP_S) ----
+    mini_state["loading"] = True; marked.clear()
+    mini.evaluate("pollApp()"); mini.wait_for_timeout(300)
+    mini.click("#stopBtn"); mini.click("#stopBtn"); mini.wait_for_timeout(400)
+    check("floating window: stopped while the model still loads - cancelled at once, without saving (and no question)",
+          any(m.get("action") == "stop" and m.get("discard") is True for m in marked) and mini.is_hidden("#short"), marked)
+    mini_state["loading"] = False; mini_state["fresh"] = True; marked.clear()
+    mini.evaluate("pollApp()"); mini.wait_for_timeout(300)
+    mini.click("#stopBtn"); mini.click("#stopBtn"); mini.wait_for_timeout(400)
+    check("floating window: stopped 4 seconds after the start - it asks whether to delete, and nothing is sent yet",
+          mini.is_visible("#short") and "שניות" in mini.inner_text("#shortInfo") and not any(m.get("action") == "stop" for m in marked), (mini.inner_text("#short"), marked))
+    mini.click("#shortSave"); mini.wait_for_timeout(400)
+    check("floating window: \"לעצור ולשמור\" stops and keeps it", any(m.get("action") == "stop" and m.get("discard") is False for m in marked), marked)
+    marked.clear()
+    mini.evaluate("pollApp()"); mini.wait_for_timeout(300)
+    mini.click("#stopBtn"); mini.click("#stopBtn"); mini.wait_for_timeout(300)
+    mini.click("#shortDel"); mini.wait_for_timeout(400)
+    check("floating window: \"עצירה ומחיקה\" stops and deletes it", any(m.get("action") == "stop" and m.get("discard") is True for m in marked), marked)
+    sk = mini.evaluate("""() => { const f = (t) => BZMAsk.stopKind({kind: "live", ready: true, ready_at: 1000, quick_stop_s: 10}, 1000 + t).kind;
+        return [f(4), f(10), f(10.5), f(300), BZMAsk.stopKind({kind: "live", ready: false}).kind, BZMAsk.stopKind({kind: "rec"}).kind]; }""")
+    check("stop rule (one function, ask.js): under the limit and exactly on it ask; over it saves; still loading cancels; a recording is never asked",
+          sk == ["short", "short", "normal", "normal", "cancel", "normal"], sk)
+    mini_state["fresh"] = False
+    mini_state["live"] = False; mini.evaluate("pollApp()"); mini.wait_for_timeout(300)
+    mini_state["live"] = True; mini.evaluate("pollApp()"); mini.wait_for_timeout(300)
+    marked.clear()
+    mini.click("#stopBtn"); mini.click("#stopBtn"); mini.wait_for_timeout(400)
+    check("floating window: a lecture of 2 minutes stops and is saved, with no question", mini.is_hidden("#short") and any(m.get("action") == "stop" and m.get("discard") is False for m in marked), marked)
+    mini_state["live"] = True
+    mini.evaluate("pollApp()"); mini.wait_for_timeout(300)
     mini_state["rec"] = True
     mini.evaluate("pollApp()")
     mini.wait_for_timeout(300)
