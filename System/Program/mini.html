@@ -63,6 +63,9 @@ body.on #lec::before{background:var(--rec)}
 #lag{flex:none;padding:2px 10px;border-radius:999px;background:var(--warn-bg);color:var(--warn-fg);font-size:13px;line-height:1.5;font-weight:700;white-space:nowrap;align-self:center}   /* in the row of "תשובה כאן", a caution pill: never green */
 #stopBtn{padding:0 12px;width:auto;font-size:14px;font-weight:600}
 #stopBtn.confirm{border-color:var(--rec);color:var(--rec);font-weight:800}
+footer{flex:none;display:flex;justify-content:flex-start;padding:2px 10px 8px}
+#quitBtn{border:0;background:none;color:var(--muted);font:inherit;font-size:14px;min-height:28px;padding:2px 6px;border-radius:8px;cursor:pointer;text-decoration:underline}
+#quitBtn.confirm{color:var(--rec);font-weight:800;text-decoration:none}
 #short{margin:14px 10px;padding:18px 16px;border:1px solid var(--line);border-radius:14px;background:var(--surface);display:flex;flex-direction:column;gap:10px}
 #short b{font-size:18px}
 #short p{margin:0;color:var(--muted);font-size:15px}
@@ -114,6 +117,7 @@ body.on #lec::before{background:var(--rec)}
   <button type="button" data-m="15" title="סיכום של 15 הדקות האחרונות">15 דק'</button>
 </div>
 <div id="box"></div>
+<footer><button type="button" id="quitBtn" title="סוגר את הבנתי לגמרי: הכפתור הצף, החלון הזה והאפליקציה. הרצאה שרצה נשמרת.">סגירת הבנתי</button></footer>
 <div id="toast" role="status"></div>
 <script src="/ask.js"></script>
 <script>
@@ -169,6 +173,17 @@ async function doStop(discard) {
 }
 $("#shortDel").addEventListener("click", async () => { await doStop(true); toast("ההרצאה נעצרה ונמחקה."); });
 $("#shortSave").addEventListener("click", () => doStop(false));
+// close Hevanti for good, from here: the first press asks (3 seconds), the second closes (a running lecture is stopped and saved first)
+const quitBtn = $("#quitBtn"); let quitTimer = 0;
+quitBtn.addEventListener("click", async () => {
+  if (!quitBtn.classList.contains("confirm")) {
+    quitBtn.classList.add("confirm"); quitBtn.textContent = live ? "לסגור? ההרצאה תישמר" : "לסגור את הבנתי?";
+    quitTimer = setTimeout(() => { quitBtn.classList.remove("confirm"); quitBtn.textContent = "סגירת הבנתי"; }, 3000);
+    return;
+  }
+  clearTimeout(quitTimer); quitBtn.disabled = true; quitBtn.textContent = live ? "שומר וסוגר..." : "סוגר...";
+  try { await fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify({action: "quit"})}); } catch (e) {}
+});
 $("#savedClose").addEventListener("click", () => { savedGone = $("#saved").dataset.f || ""; drawSaved(null); hide(); });
 $("#savedOpen").addEventListener("click", async () => {
   const f = $("#saved").dataset.f; savedGone = f || ""; drawSaved(null);

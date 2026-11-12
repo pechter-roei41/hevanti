@@ -419,6 +419,17 @@ with sync_playwright() as p:
     mini_state["saved"] = False
     mini.evaluate("pollApp()")
     mini.wait_for_timeout(300)
+    # ---- close Hevanti from the small window: two presses ----
+    marked.clear()
+    check("floating window: it has \"סגירת הבנתי\"", mini.inner_text("#quitBtn") == "סגירת הבנתי")
+    mini.click("#quitBtn")
+    check("floating window: the first press only asks (and says the lecture is saved), nothing is sent", "תישמר" in mini.inner_text("#quitBtn") and not any(m.get("action") == "quit" for m in marked), (mini.inner_text("#quitBtn"), marked))
+    mini.wait_for_timeout(3400)
+    check("floating window: not pressed again - it goes back", mini.inner_text("#quitBtn") == "סגירת הבנתי")
+    mini.click("#quitBtn"); mini.click("#quitBtn"); mini.wait_for_timeout(400)
+    check("floating window: the second press sends quit", any(m.get("action") == "quit" for m in marked), marked)
+    mini.evaluate("() => { const b = document.querySelector('#quitBtn'); b.disabled = false; b.className = ''; b.textContent = 'סגירת הבנתי'; }")
+    marked.clear()
     # ---- no lecture: the same button starts a new one (the quick-start window) ----
     mini_state["live"] = False
     marked.clear()
