@@ -270,6 +270,7 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 /* 320px: nothing may scroll sideways (DESIGN.md, Layout). Measured on 12.11.2026: the segmented controls (1 to 4px) and the AI connection button (8px) in the settings. */
 @media (max-width:400px){.seg button{padding:7px 9px;font-size:14px}.setpanel label.row{flex-wrap:wrap}.btn{max-width:100%;white-space:normal}}   /* the AI connection button in the settings was 8px too wide */
 .tag{display:inline-block;max-width:100%;white-space:normal}
+.log summary,.shotdelbox summary{padding-block:3px}   /* click target: these two summaries were 22px high (WCAG 2.2, 2.5.8: 24px) */
 .study .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}
 .linkish{border:0;background:none;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
 .linkish.muted{color:var(--muted)}   /* a quiet link: not a button, not green (deleting the key is rare) */
