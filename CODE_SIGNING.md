@@ -27,9 +27,9 @@ Free code signing provided by [SignPath.io](https://about.signpath.io/), certifi
 
 | Role | Who | What they do |
 | --- | --- | --- |
-| Author | [Roei Pechter](https://github.com/pechter-roei41) | Writes and commits the code. |
-| Reviewer | [Roei Pechter](https://github.com/pechter-roei41) | Reviews every change from other contributors (pull requests) before it is merged. |
-| Approver | [Roei Pechter](https://github.com/pechter-roei41) | Approves each signing request, after checking that the release was built from this repository. |
+| Author | Hevanti maintainer ([pechter-roei41](https://github.com/pechter-roei41)) | Writes and commits the code. |
+| Reviewer | Hevanti maintainer ([pechter-roei41](https://github.com/pechter-roei41)) | Reviews every change from other contributors (pull requests) before it is merged. |
+| Approver | Hevanti maintainer ([pechter-roei41](https://github.com/pechter-roei41)) | Approves each signing request, after checking that the release was built from this repository. |
 
 Hevanti is a one-person project today. If other people join, they are listed here with their roles.
 All team members use multi-factor authentication on GitHub and on SignPath.

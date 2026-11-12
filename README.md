@@ -77,9 +77,9 @@ Found a bug? [Open an issue](https://github.com/pechter-roei41/hevanti/issues) w
 Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org) (the first application was declined for lack of proof of users; the project will apply again once it has them. Until then the installer is not signed and Windows shows "Windows protected your PC" once).
 
 - What is signed: `Hevanti-Setup.exe`, built from the tagged commit by the public [release workflow](.github/workflows/release.yml). Nothing built on a personal computer is signed.
-- Committers and reviewers: [Roei Pechter](https://github.com/pechter-roei41). Approvers: [Roei Pechter](https://github.com/pechter-roei41).
+- Committers, reviewers and approvers: the Hevanti maintainer ([pechter-roei41](https://github.com/pechter-roei41)).
 - Privacy: Hevanti runs on your computer and sends information to other systems only in the cases listed in the [privacy policy](CODE_SIGNING.md#privacy-policy): your question to Google's Gemini with your own key, the model download, the update check and the page fonts.
 
 ## License
 
-[MIT](LICENSE) © 2026 Roei Pechter. Third-party models and libraries are downloaded from their own sources and are subject to their own licenses. Lectures and slides belong to whoever created them: use them for personal study, according to your institution's policy.
+[MIT](LICENSE) © 2026 Hevanti contributors. Third-party models and libraries are downloaded from their own sources and are subject to their own licenses. Lectures and slides belong to whoever created them: use them for personal study, according to your institution's policy.
