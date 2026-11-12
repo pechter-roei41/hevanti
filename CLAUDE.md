@@ -11,8 +11,10 @@ Answers come from Gemini, called straight from the student's computer with the s
 Read before larger changes:
 - `PRODUCT.md`: users, purpose, positioning
 - `DESIGN.md`: visual system ("The Open Notebook": cream paper, white cards, one green action, yellow only for marks and the logo)
-- `TASKS.md`: open work, split between Roei's tasks (what Claude cannot do) and Claude's. **Update it whenever a task opens or closes.**
-- `DECISIONS.md`: what was decided and why (Hebrew, dated). **Add every new decision there.** It is the project's memory.
+- **Private notes, not in this repository (since 12.11.2026):** `TASKS.md` and `DECISIONS.md` live only on Roei's computer, in `C:\Users\רועי\hevanti-private\` (outside every repo, so they are never pushed; they hold business thinking). Read them from there; if that folder is not among the session's folders, ask Roei to add it. Never copy them into the repo, a worktree or a PR, and never quote their content in a commit message, PR text or public file.
+  - `TASKS.md`: open work, split between Roei's tasks (what Claude cannot do) and Claude's. **Update it whenever a task opens or closes.**
+  - `DECISIONS.md`: what was decided and why (Hebrew, dated). **Add every new decision there.** It is the project's memory.
+  - The same folder holds `backup/` (git bundles and copies from before the files left the history). `.gitignore` lists both names, so a stray copy in the repo folder is never committed.
 - `README.md`: features, privacy, file map
 - `docs/distribution.md`: how it is spread. `docs/real-lecture-test.md`: the manual checklist before each release.
 - `CODE_SIGNING.md`: signing and release policy (SignPath application was declined for lack of users; the installer is unsigned for now)
@@ -130,6 +132,6 @@ The version number is in several places; change them together:
 3. `System/VERSION.txt` (new "מה חדש" block on top, and the header line and date).
 4. `README.txt` (the beta line).
 5. README's VirusTotal line (version, link, hash) only after a new scan of the new installer.
-6. A dated entry in `DECISIONS.md` for any decision behind the release.
+6. A dated entry in the private `DECISIONS.md` (see above) for any decision behind the release.
 
 Then run the tests, do the real-lecture checklist, and tag `v<version>`.

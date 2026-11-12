@@ -13,6 +13,10 @@ System/python/
 mini-profile/
 System/loading_stuck.txt
 
+# Private working notes (open tasks and decisions): kept outside the repository, in hevanti-private next to the repo
+/TASKS.md
+/DECISIONS.md
+
 # AI-tool folders (Impeccable and its agents): installed per developer, not part of the product
 .claude/
 .agents/
