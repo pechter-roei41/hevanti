@@ -1260,7 +1260,15 @@ def changed_fraction(a, b, thresh=25):
 # With the recommended screen (the lecture on two thirds, the AI on a third) or the floating window, an answer
 # being written would look like a "new slide", and the chat would end up in the saved pictures. So the windows of
 # the AI apps/sites and of Hevanti that are in view are painted over (grey) before comparing and saving.
-MASK_TITLE = re.compile(r"\bClaude\b|ChatGPT|Gemini|הבנתי", re.I)
+# The name has to be a whole part of the title ("Claude", "My chat - Claude", "הבנתי · האפליקציה"), not a word inside it: a lecture
+# window called "Claude Shannon - Wikipedia" must not be painted grey (audit 12.11.2026, #9). Copilot, Perplexity, DeepSeek and NotebookLM too.
+MASK_TITLE = re.compile(r"(?:^|[-–—|·:]\s*)(?:claude|chatgpt|(?:google\s+)?gemini|(?:microsoft\s+)?copilot|perplexity|deepseek|notebooklm|הבנתי)(?:\s*$|\s*[-–—|·:]|\s+(?:and|ועוד)\s+\d)", re.I)   # ("ChatGPT and 2 more pages - Microsoft Edge")
+_DIR_MARKS = "‎‏‪‫‬‭‮ "
+
+
+def mask_title(title):
+    """True when a window's title is an AI app or site, or Hevanti itself."""
+    return bool(MASK_TITLE.search(str(title or "").strip(_DIR_MARKS)))
 MASK_EXE = {"claude", "chatgpt"}    # the program (claude.exe)
 
 
@@ -1273,7 +1281,7 @@ def pick_mask_rects(wins):
         if r - l < 40 or b - t < 40:
             continue
         prog = os.path.splitext(os.path.basename(str(exe or "")))[0].lower()
-        if prog in MASK_EXE or MASK_TITLE.search(str(title or "")):
+        if prog in MASK_EXE or mask_title(title):
             cx, cy = (l + r) // 2, (t + b) // 2
             if not any(a[0] <= cx < a[2] and a[1] <= cy < a[3] for a in above):
                 out.append(rc)
@@ -1417,7 +1425,7 @@ def window_choices():
         return out
     for title, exe, rc in wins:
         title = _plain_title(title)
-        if not title or title in seen or title.lower() in SHELL_TITLES or MASK_TITLE.search(title) \
+        if not title or title in seen or title.lower() in SHELL_TITLES or mask_title(title) \
                 or rc[2] - rc[0] < 200 or rc[3] - rc[1] < 150:
             continue
         seen.add(title)
@@ -2995,9 +3003,19 @@ class ScreenWatcher(threading.Thread):
                                 arr = arr.copy()
                                 if mask_windows(arr, area if isinstance(area, dict) else mon):
                                     pixels = arr
+                                self.mask_fails = 0
                             except Exception:
-                                self.mask_ok = False   # not on this computer: compare the whole screen as before
+                                # One failure no longer turns the painting over off for the rest of the lecture (an AI answer would then be
+                                # saved as a slide, silently): this picture is skipped, and only after 5 failures in a row it stops, and says so
+                                # (audit 12.11.2026, #8).
                                 save_error("mask windows")
+                                self.mask_fails = getattr(self, "mask_fails", 0) + 1
+                                if self.mask_fails >= 5:
+                                    self.mask_ok = False
+                                    log("לא הצלחתי להסתיר את חלונות ה-AI ואת החלונות של הבנתי בצילומי המסך במחשב הזה. "
+                                        "כדי שתשובות לא יישמרו כשקופיות: לבחור בהגדרות 'חלון אחד' לצילום, או להשהות את הצילום (Ctrl+Alt+P) כשה-AI על המסך.")
+                                self._idle()
+                                continue
                         hide = [] if self.region_fn is not None else screen_boxes(blur, mon) + cover
                         if hide:   # the parts the student chose to hide, and windows that came in front of the lecture
                             if not arr.flags.writeable:
@@ -10194,10 +10212,10 @@ def run_live(sess, lang, course=""):
             note(f"התחברות מחדש: {reason}")
         return True
 
-    last_audio = time.time()
-    last_loop = time.time()
-    last_reconnect = time.time()
-    last_default_check = time.time()
+    last_audio = time.monotonic()   # (the watchdog clocks are monotonic: a clock change must not blind it or reconnect for nothing - audit #16)
+    last_loop = time.monotonic()
+    last_reconnect = time.monotonic()
+    last_default_check = time.monotonic()
     warned_silent = False
     def finish_tail():
         """Don't lose the last seconds: the piece that was in the middle, what was heard, what still waits."""
@@ -10229,7 +10247,7 @@ def run_live(sess, lang, course=""):
 
     try:
         while not sess.stop.is_set():
-            now = time.time()
+            now = time.monotonic()
             # ---- watchdog: keep listening after sleep / device change / errors ----
             if now - last_loop > 20:
                 reconnect("המחשב חזר ממצב שינה", True); last_reconnect = now; last_audio = now
@@ -10262,7 +10280,7 @@ def run_live(sess, lang, course=""):
                 if g is None and q.qsize() == 0 and not inflight and (state["lag"] or now_file.lag):
                     state["lag"] = now_file.lag = 0.0   # nothing waits to be transcribed: not behind (a value left from the last piece must not stay on the screen when the sound stops)
                 continue
-            last_audio = time.time(); warned_silent = False
+            last_audio = time.monotonic(); warned_silent = False
             a = to_mono(data, ch)
             if q.gap_seen:
                 skip_gap(len(a))
@@ -10299,7 +10317,7 @@ def run_live(sess, lang, course=""):
                 if not handle_backlog(buf[:cut], back_t, sr):
                     in_pieces(buf[:cut], back_t, sr)
                 inflight.clear()
-                last_loop = time.time()
+                last_loop = time.monotonic()
                 continue
             cut = find_cut(buf, sr, min_s, max_s)
             chunk, rest = buf[:cut], buf[cut:]
@@ -10313,7 +10331,7 @@ def run_live(sess, lang, course=""):
             if quick[0] is not None:   # the piece is in the transcript now: the draft goes on from what is left
                 quick[3] = ""
                 quick_draft(restart=True)
-            last_loop = time.time()  # transcribing can take a while - that is not "sleep"
+            last_loop = time.monotonic()  # transcribing can take a while - that is not "sleep"
     except KeyboardInterrupt:
         finish_tail()
     else:

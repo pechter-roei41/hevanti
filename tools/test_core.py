@@ -556,7 +556,6 @@ try:
 except RuntimeError:
     _raised = True
 check("a transient error in one piece does not turn the silence filter off for good", _raised and L.USE_VAD is True)
-_loop = _src[_src.index("last_audio = time.time()"):_src.index("def finish_tail")] if "def finish_tail" in _src else ""
 check("the sound watchdog reconnects only when nothing waits in the queue (a slow piece must not throw the queue away)",
       'now - last_audio > 8 and now - last_reconnect > 15 and q.qsize() == 0' in _src and 'now - last_audio > 45 and now - last_reconnect > 45 and q.qsize() == 0' in _src)
 check("a piece that cannot be transcribed is skipped, the lecture goes on", "def _handle_chunk(" in _src and 'save_error("live chunk")' in _src)
@@ -575,6 +574,17 @@ check("third-party notices: the ivrit.ai models with their licenses and credit, 
 _lic = open(os.path.join(_sys, "LICENSE.txt"), encoding="utf-8").read()
 _appsrc = open(os.path.join(L.SCRIPT_DIR, "app.html"), encoding="utf-8").read()
 check("the license and the app point to the notices, and the app credits ivrit.ai", "THIRD-PARTY-NOTICES.txt" in _lic and "ivrit.ai" in _appsrc and "Yakov Kolani" in _appsrc)
+
+# audit #8, #9: AI windows are told by a whole part of the title; one failure of the painting over does not turn it off
+_cases = [("Claude", True), ("Claude Shannon - Wikipedia", False), ("שאלה על אינטגרל - Claude", True), ("ChatGPT", True),
+          ("ChatGPT and 2 more pages - Personal - Microsoft Edge", True), ("ChatGPT ועוד 2 דפים - אישי - Microsoft Edge", True),
+          ("Google Gemini", True), ("Gemini protocol.pdf", False), ("Microsoft Copilot", True), ("Perplexity", True),
+          ("‫הבנתי‬", True), ("הבנתי · האפליקציה", True), ("הרצאה 3 - YouTube", False), ("ChatGPT Plus pricing - Google Search", False)]
+_bad = [t for t, want in _cases if L.mask_title(t) != want]
+check("AI and Hevanti windows are found by a whole part of the title (a lecture about Claude Shannon is not greyed out)", not _bad, _bad)
+check("one failure of painting over the AI windows skips that picture, it stops only after 5 in a row and says so",
+      "self.mask_fails >= 5" in _src and 'save_error("mask windows")' in _src)
+check("the sound watchdog's clocks are monotonic (a clock change does not blind it)", "now = time.monotonic()" in _src and "last_audio = time.monotonic()" in _src)
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)
