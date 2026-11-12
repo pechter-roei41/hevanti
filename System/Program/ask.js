@@ -1,4 +1,4 @@
-// Hevanti (הבנתי) - the "ask the AI" box, shared by the app, the floating window and the player - (c) 2026 Roei Pechter. MIT License, see LICENSE.txt
+// Hevanti (הבנתי) - the "ask the AI" box, shared by the app, the floating window and the player - (c) 2026 Hevanti. MIT License, see LICENSE.txt
 // A course may have a project of its own in each AI (its link is saved on the course page): the buttons then open
 // THAT project, on a third of the screen - where the AI already reads the course by itself.
 // Three buttons, the same for every AI: a click copies the question together with what was said in the lecture

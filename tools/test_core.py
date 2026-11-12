@@ -293,11 +293,14 @@ L.APP.session = fs = _FakeSess()
 try:
     L.save_settings(mini_button=True)
     before = L.mini_button_wanted()
+    fs.ready = False   # (the model is still loading: the button is already there)
+    loading = L.mini_button_wanted()
+    fs.ready = True
     fs.stop.set()
     after = L.mini_button_wanted()
 finally:
     L.APP.session = old_session
-check("floating button: shown while a lecture runs (the window is not up), gone the moment stop is pressed", before is True and after is False, (before, after))
+check("floating button: shown the moment a lecture starts (while the model loads too), gone the moment stop is pressed", before is True and loading is True and after is False, (before, loading, after))
 L.APP.session = fs2 = _FakeSess()
 try:
     fs2.stop.set()
@@ -307,6 +310,191 @@ try:
 finally:
     L.APP.session = old_session
 check("floating button: the reason it is hidden can be told (for the black window)", why_stop == "נלחצה עצירה" and why_none == "אין הרצאה", (why_stop, why_none))
+# ---- the quick-start window (F1): when it opens instead of the home screen, and its commands ----
+_saved_env = dict(os.environ)
+os.environ.pop("BZM_NO_BROWSER", None)
+os.environ["BZM_QUICK"] = "1"   # (it is Windows only: this lets the decision be checked on any OS)
+_gpu = dict(L.GPU)
+_sess = L.APP.session
+try:
+    L.APP.session = None
+    L.GPU["state"] = ""
+    L.save_settings(consent_ok=False, quick_start=True, math={})
+    r0 = L.quick_start_wanted({"kind": "home"})
+    L.save_settings(consent_ok=True)
+    r1 = L.quick_start_wanted({"kind": "home"})
+    L.save_settings(math={"key": L.keep_secret("AIzaQUICKTEST1234")})
+    r2 = L.quick_start_wanted({"kind": "home"})
+    r3 = L.quick_start_wanted(None)
+    r_file = L.quick_start_wanted({"kind": "offer", "source": "x.mp4"})
+    r_rec = L.quick_start_wanted({"kind": "home", "view": "rec"})
+    L.GPU["state"] = "failed"
+    r_gpu = L.quick_start_wanted({"kind": "home"})
+    L.GPU["state"] = "installing"
+    r_gpu2 = L.quick_start_wanted({"kind": "home"})
+    L.GPU["state"] = ""
+    L.APP.session = _FakeSess()
+    r_run = L.quick_start_wanted({"kind": "home"})
+    L.APP.session = None
+    L.save_settings(quick_start=False)
+    r_off = L.quick_start_wanted({"kind": "home"})
+    L.save_settings(quick_start=True)
+    os.environ["BZM_NO_BROWSER"] = "1"
+    r_nb = L.quick_start_wanted({"kind": "home"})
+finally:
+    L.APP.session = _sess
+    L.GPU.clear(); L.GPU.update(_gpu)
+    os.environ.clear(); os.environ.update(_saved_env)
+check("quick start: the first start (no agreement yet) is the home screen", r0[0] is False and "first start" in r0[1], r0)
+check("quick start: no Gemini key - the home screen", r1[0] is False and "key" in r1[1], r1)
+check("quick start: agreed, with a key, nothing running - the quick-start window (also for a second launch with no arguments)", r2 == (True, "") and r3 == (True, ""), (r2, r3))
+check("quick start: a file, or the recordings view, was asked for - the home screen", r_file[0] is False and r_rec[0] is False, (r_file, r_rec))
+check("quick start: the GPU install failed or is running - the home screen", r_gpu[0] is False and r_gpu2[0] is False, (r_gpu, r_gpu2))
+check("quick start: something is running - the home screen", r_run[0] is False and "running" in r_run[1], r_run)
+check("quick start: the student turned it off - the home screen", r_off[0] is False and "settings" in r_off[1], r_off)
+check("quick start: no browser (a test, a server) - never", r_nb[0] is False, r_nb)
+L.save_settings(consent_ok=False, quick_start=True)
+L.APP.command({"action": "consent_seen"})
+check("quick start: the page tells the tool the student agreed (kept in the settings)", L.load_settings().get("consent_ok") is True)
+L.APP.command({"action": "quick_start", "on": False})
+check("quick start: the setting is saved and is in what the settings page reads", L.load_settings().get("quick_start") is False and json.loads(get("/api/mirror")[1]).get("quick_start") is False)
+L.APP.command({"action": "quick_start", "on": True})
+code_q, body_q = get("/quick")
+check("quick start: the page is served, with its title (Hevanti first) and the logo for the title bar", code_q == 200 and "<title>הבנתי · חלון התחלה מהירה</title>".encode("utf-8") in body_q and b'rel="icon"' in body_q, code_q)
+check("quick start: \"close\" and \"open the app\" are harmless when no window is open (and off Windows)",
+      L.APP.command({"action": "quick_close"}).get("ok") is True and L.APP.command({"action": "quick_open_app"}).get("ok") is True)
+# ---- a course from the first slide (offered, never applied), and a course chosen while it records ----
+import tempfile as _tf
+for _c in ("אלגוריתמים", "פיזיקה"):
+    L.create_course(_c)
+
+
+class _Sess2:
+    def __init__(self):
+        self.stop, self.suggest, self.suggest_off, self.pending_course = threading.Event(), None, False, ""
+
+
+def _suggestion(slide_text_value, **flags):
+    d = _tf.mkdtemp()
+    os.makedirs(os.path.join(d, L.SLIDES_NAME))
+    open(os.path.join(d, L.SLIDES_NAME, "09-00-00.jpg"), "wb").write(b"x")
+    s = _Sess2()
+    for k, v in flags.items():
+        setattr(s, k, v)
+    old = (L.slide_text, L.SUGGEST_POLL_S)
+    L.slide_text, L.SUGGEST_POLL_S = (lambda p: slide_text_value), 0.05
+    try:
+        L.suggest_course_from_slide(s, d, timeout_s=3)
+    finally:
+        L.slide_text, L.SUGGEST_POLL_S = old
+    return s.suggest
+
+
+sg = _suggestion("אלגוריתמים - הרצאה 3\nסיבוכיות זמן")
+check("course from the first slide: a course name on it is offered, with why", sg and sg["course"] == "אלגוריתמים" and sg["why"] == "slide", sg)
+check("course from the first slide: a slide with no course name offers nothing", _suggestion("ברוכים הבאים\nמבוא כללי") is None)
+check("course from the first slide: nothing is offered after a 'no', or after the student chose", _suggestion("פיזיקה 1", suggest_off=True) is None and _suggestion("פיזיקה 1", pending_course="אלגוריתמים") is None)
+check("course from the first slide: two courses on the slide - no guess", _suggestion("אלגוריתמים ופיזיקה") is None)
+ls = L.Session("live", "he", "", L.NO_COURSE)
+ls.ready = True
+_sess_before = L.APP.session
+L.APP.session = ls
+try:
+    r_set = L.APP.command({"action": "set_lecture_course", "course": "פיזיקה"})
+    info1, pending1, saved1 = ls.info(), ls.pending_course, L.load_settings().get("course")
+    r_same = L.APP.command({"action": "set_lecture_course", "course": L.NO_COURSE})
+    info2 = ls.info()
+    ls.suggest, ls.suggest_off = {"course": "אלגוריתמים", "why": "slide", "detail": ""}, False
+    shown = ls.info()["suggest"]
+    r_no = L.APP.command({"action": "suggest_dismiss"})
+    hidden = ls.info()["suggest"]
+    ls.done = True
+    r_done = L.APP.command({"action": "set_lecture_course", "course": "פיזיקה"})
+finally:
+    L.APP.session = _sess_before
+check("course while recording: the chosen course is the one shown, the lecture is marked as moving, and the course is remembered for next time",
+      r_set["ok"] and pending1 == "פיזיקה" and info1["course"] == "פיזיקה" and info1["moving"] is True and info1["course_now"] == L.NO_COURSE and saved1 == "פיזיקה", (r_set, info1, saved1))
+check("course while recording: choosing the course it is already in cancels the move", r_same["ok"] and info2["moving"] is False and info2["course"] == L.NO_COURSE, info2)
+check("course while recording: a course offered is in the session info until the student says no", shown and shown["course"] == "אלגוריתמים" and hidden is None and r_no["ok"], (shown, hidden))
+check("course while recording: no lecture running - refused in words", r_done["ok"] is False and "אין עכשיו" in r_done["error"], r_done)
+# ---- F3/F4: the quick window's place, its own profile, the saved card, "open the lecture" ----
+check("quick window: centred in the work area (also when the area starts away from 0,0)", L._center_xy((0, 0, 1920, 1040), 380, 440) == (770, 300) and L._center_xy((-1920, 0, 0, 1040), 380, 440) == (-1150, 300) and L._center_xy((0, 0, 300, 300), 380, 440) == (0, 0))
+check("quick window: its size is small (380 x 400) and it has a browser profile of its own, in the local folder", L.QUICK_SIZE == (380, 400) and os.path.dirname(L.quick_profile_dir()) == L.LOCAL_DIR and L.quick_profile_dir() != L.mini_profile_dir())
+im_c, wc_, hc_ = L._toast_image("ההרצאה נשמרה", 1.0, False, "check")
+chip_c = tuple(im_c.getpixel((wc_ - 17, 22))[:3])
+chip_cd = tuple(L._toast_image("ההרצאה נשמרה", 1.0, True, "check")[0].getpixel((wc_ - 17, 22))[:3])
+check("saved card above the floating button: a Green Soft chip (never yellow), light and night, and a card wide enough for the words", chip_c == (220, 235, 223) and chip_cd == (37, 56, 43) and wc_ > 150, (chip_c, chip_cd, wc_))
+check("open the lecture: a lecture that is not there is refused in words", L.APP.command({"action": "open_lecture", "f": "אין/כזו"}).get("ok") is False)
+_lec = os.path.join(L.course_dir("אלגוריתמים"), "הרצאה לפתיחה")
+os.makedirs(_lec, exist_ok=True)
+open(os.path.join(_lec, "הרצאה לפתיחה.txt"), "w", encoding="utf-8").write("# x\n")
+check("open the lecture: a lecture that is there is accepted (the window itself opens only on Windows)", L.APP.command({"action": "open_lecture", "f": "אלגוריתמים/הרצאה לפתיחה"}).get("ok") is True)
+_ss = L.Session("live", "he", "", L.NO_COURSE)
+_ss.saved = {"course": "פיזיקה", "minutes": 46, "slides": 9, "f": "פיזיקה/x"}
+check("saved: the session info carries what was saved (course, minutes, slides, the lecture)", _ss.info()["saved"] == {"course": "פיזיקה", "minutes": 46, "slides": 9, "f": "פיזיקה/x"} and L.Session("live", "he").info()["saved"] is None)
+check("saved: the count the floating button watches is in /api/app", "saved_n" in json.loads(get("/api/app")[1]))
+# ---- the floating button: its picture (logo, X, red dot), the animation's curve and shapes, and where the window opens ----
+def _near(im, x, y, pred):
+    return any(pred(im.getpixel((xx, yy))) for xx in range(x - 1, x + 2) for yy in range(y - 1, y + 2))
+
+
+_is_green = lambda c: abs(c[0] - 27) < 12 and abs(c[1] - 110) < 12 and abs(c[2] - 75) < 12 and c[3] == 255
+_is_yellow = lambda c: c[0] > 225 and c[1] > 185 and c[2] < 120 and c[3] == 255
+_is_cream = lambda c: c[0] > 215 and c[1] > 210 and c[2] > 190 and c[3] == 255
+_is_white = lambda c: c[0] > 235 and c[1] > 235 and c[2] > 235 and c[3] == 255
+_is_red = lambda c: abs(c[0] - 194) < 14 and abs(c[1] - 65) < 14 and abs(c[2] - 45) < 14 and c[3] == 255
+b_logo = L._button_image(56, 0.0, False)
+b_dot = L._button_image(56, 0.0, True, "right")
+b_x = L._button_image(56, 1.0, True, "right")
+b_left = L._button_image(56, 0.0, True, "left")
+b_mid = L._button_image(56, 0.5, True, "right")
+check("floating button: the circle is solid green (1B6E4B) with nothing round it, and the corners are see-through", _is_green(b_logo.getpixel((5, 28))) and _is_green(b_logo.getpixel((50, 28))) and b_logo.getpixel((0, 0))[3] == 0 and b_logo.getpixel((55, 55))[3] == 0 and b_logo.getpixel((28, 0))[3] > 150, [b_logo.getpixel(q) for q in ((5, 28), (0, 0), (28, 0))])
+check("floating button: the logo is a thin cream line (no cream disc, no fill) with the yellow check inside", _near(b_logo, 12, 25, _is_cream) and _near(b_logo, 26, 31, _is_yellow) and _is_green(b_logo.getpixel((20, 20))) and not _near(b_logo, 28, 28, _is_cream), [b_logo.getpixel(q) for q in ((12, 25), (26, 31), (20, 20))])
+check("floating button: open, the logo is gone and a white X is in its place (no yellow, no cream)", _near(b_x, 28, 28, _is_white) and _near(b_x, 20, 20, _is_white) and _near(b_x, 36, 20, _is_white) and not _near(b_x, 26, 31, _is_yellow) and not _near(b_x, 12, 25, _is_cream), [b_x.getpixel(q) for q in ((28, 28), (20, 20), (36, 20))])
+check("floating button: the red dot (C2412D) is at the top, on the side of the screen's edge, and not when nothing is recorded", _near(b_dot, 45, 11, _is_red) and not _near(b_dot, 11, 11, _is_red) and _near(b_left, 11, 11, _is_red) and not _near(b_left, 45, 11, _is_red) and not _near(b_logo, 45, 11, _is_red) and _near(b_x, 45, 11, _is_red))
+ring_light, ring_night = L._button_image(56, 0.0, True, "right", False).getpixel((53, 11)), L._button_image(56, 0.0, True, "right", True).getpixel((53, 11))
+check("floating button: the ring round the dot is the colour of the page (paper by day, night paper at night)", ring_light[0] > 235 and ring_light[2] > 220 and ring_light[3] > 230 and ring_night[0] < 60 and ring_night[3] > 230, (ring_light, ring_night))
+check("floating button: a moment of the turn is neither the logo nor the X", b_mid.tobytes() != b_logo.tobytes() and b_mid.tobytes() != b_x.tobytes())
+check("floating button: it is drawn the same at 125% and 150% (a bigger picture, the same shape: green, the dot, the X)", all(_is_green(L._button_image(S_, 0.0, False).getpixel((int(S_ * 5 / 56), S_ // 2))) and _near(L._button_image(S_, 1.0, False), S_ // 2, S_ // 2, _is_white) and _near(L._button_image(S_, 0.0, True, "right"), int(S_ * 0.8), int(S_ * 0.2), _is_red) for S_ in (70, 84)))
+check("floating button: the bytes for Windows are premultiplied BGRA, S x S x 4", len(L._button_rgba(56, 0.0, True)) == 56 * 56 * 4 and L._button_rgba(56, 0.0, True)[3] == 0)
+ease = [L._bezier_ease(k / 20.0) for k in range(21)]
+check("animation: the easing curve cubic-bezier(0.2, 0.8, 0.2, 1) starts at 0, ends at 1, never goes back, and starts fast", ease[0] == 0.0 and ease[-1] == 1.0 and all(b >= a for a, b in zip(ease, ease[1:])) and ease[2] > 0.3 and ease[10] > 0.9, ease)
+g0, g1 = L._glyph_params(0.0), L._glyph_params(1.0)
+check("animation: the logo turns a quarter, shrinks to 0.6 and fades out while the X turns in, grows from 0.6 to 1 and fades in",
+      g0["logo"] == (0.0, 1.0, 1.0) and g0["x"][2] == 0.0 and g1["logo"][2] == 0.0 and g1["logo"][0] == -90.0 and abs(g1["logo"][1] - 0.6) < 1e-9 and g1["x"] == (0.0, 1.0, 1.0) and abs(g0["x"][1] - 0.6) < 1e-9 and g0["x"][0] == 90.0, (g0, g1))
+check("animation: the window grows from the point nearest the button - nothing at the start, all of it at the end, always inside the window",
+      L._grow_rect(0.0, 380, 460, 190, 460) == (190, 460, 190, 460) and L._grow_rect(1.0, 380, 460, 190, 460) == (0, 0, 380, 460) and L._grow_rect(0.5, 380, 460, 190, 460) == (95, 230, 285, 460)
+      and L._grow_rect(0.0, 380, 460, -50, 900) == (0, 460, 0, 460) and all(0 <= v for v in L._grow_rect(0.3, 380, 460, 380, 0)))
+AREA = (0, 0, 1920, 1040)
+pos = {c: L._mini_xy_above(AREA, c, 56, 12, 380, 460, 8) for c in ("br", "bl", "tr", "tl")}
+check("window place: above the button for the two bottom corners, with 8 pixels between (the button stays where it is)", pos["br"] == (1528, 440) and pos["bl"] == (12, 440) and pos["br"][1] + 460 + 8 == 908 == L._mini_btn_xy(type("A", (), {"left": 0, "top": 0, "right": 1920, "bottom": 1040}), "br", 56, 12)[1], pos)
+check("window place: below the button for the two top corners, on the same side", pos["tr"] == (1528, 140) and pos["tl"] == (12, 140) and pos["tr"][1] == 76 + 56 + 8, pos)
+check("window place: always inside the work area (a low screen, a second screen to the left, 150% scaling)",
+      L._mini_xy_above((0, 0, 800, 400), "br", 56, 12, 380, 460, 8)[1] == 0 and L._mini_xy_above((-1920, 0, 0, 1040), "bl", 56, 12, 380, 460, 8)[0] == -1908
+      and all(0 <= x <= 1920 - 570 and 0 <= y <= 1040 - 690 for x, y in (L._mini_xy_above(AREA, c, 84, 18, 570, 690, 12) for c in ("br", "bl", "tr", "tl"))))
+_before_find = L._find_mini
+L._find_mini = lambda u: (_ for _ in ()).throw(AssertionError("the button must not look at the small window to decide to stay"))
+L.APP.session = _FakeSess()
+try:
+    L.save_settings(mini_button=True)
+    stays = L.mini_button_wanted()
+finally:
+    L._find_mini = _before_find
+    L.APP.session = _sess_before
+check("floating button: it stays while the small window is open (the decision does not look at the window)", stays is True)
+_real_anim = L._windows_animations_on
+L._windows_animations_on = lambda: True   # (a build machine has Windows animations off: this checks the app's choice alone)
+L.save_settings(a11y_still=False)
+m_on = L._motion_allowed()
+L.APP.command({"action": "a11y_still", "on": True})
+m_off = L._motion_allowed()
+L.APP.command({"action": "a11y_still", "on": False})
+m_back = L._motion_allowed()
+L._windows_animations_on = lambda: False
+m_win_off = L._motion_allowed()
+L._windows_animations_on = _real_anim
+check("animation: motion is allowed, unless the student chose no animations and motion in the app (the app tells the tool), or Windows has its animations off",
+      m_on is True and m_off is False and m_back is True and m_win_off is False, (m_on, m_off, m_back, m_win_off))
 check("a command without the page's header is refused (another site cannot drive Hevanti)", refused)
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")

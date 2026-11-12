@@ -315,6 +315,26 @@ live, audio, tr = run("הפסקת קול", [speech(10.0)], wH, speed=20, during=
 check("slow transcription: the transcript was behind while the sound played", lags["high"] > 0.5, lags)
 check("...and when the sound stops and everything was transcribed, it says it is not behind (0), not the last value", lags["end"] == 0.0, lags)
 
+# ------------------------------------------------------- I: a course chosen while it records - the lecture moves there when saved
+chosen = {"r": None}
+
+
+def choose_course(live, audio):
+    chosen["r"] = app.command({"action": "set_lecture_course", "course": "קורס שנבחר בהקלטה"})
+
+
+wI = FakeWhisper()
+live, audio, tr = run("העברה", [speech(6.0)], wI, speed=20, during=choose_course)
+dest_dir = os.path.dirname(os.path.dirname(app.session.transcript)) if app.session and app.session.transcript else ""
+orig_dir = L.course_dir("בדיקה העברה")
+check("a course chosen while it records: the command is accepted", chosen["r"] and chosen["r"]["ok"] and chosen["r"]["moves"], chosen)
+check("...the lecture was saved in the chosen course, with its transcript and the end", os.path.normcase(dest_dir) == os.path.normcase(L.course_dir("קורס שנבחר בהקלטה")) and tr and tr[-1].startswith("# סוף"), (dest_dir, tr[-2:]))
+check("...and nothing of it is left in the course it started in", not [d for d in os.listdir(orig_dir) if os.path.isdir(os.path.join(orig_dir, d))] if os.path.isdir(orig_dir) else True, os.listdir(orig_dir) if os.path.isdir(orig_dir) else "")
+check("...and the student is told", any("הועברה לקורס" in x for x in logged), [x for x in logged if "קורס" in x][:3])
+sv = app.session.saved if app.session else None
+check("a lecture that was stopped says what was saved: the course it is in, minutes, slides and the lecture to open (and the count goes up)",
+      sv and sv["course"] == "קורס שנבחר בהקלטה" and isinstance(sv["minutes"], int) and isinstance(sv["slides"], int) and sv["f"].startswith("קורס שנבחר בהקלטה/") and app.saved_n >= 1, (sv, app.saved_n))
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.stdout.flush()
 os._exit(1 if fails else 0)

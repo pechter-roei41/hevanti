@@ -41,7 +41,7 @@ PRIVACY = """הבנתי (Hevanti) - פרטיות / Privacy
   "Formula reading" (on by default once you save your own Gemini key; can be turned off in Settings): slide pictures that are not clearly plain printed text (formulas, handwriting, pictures) are sent to Google (plain printed text is read on your computer).
 
 אחריות: הבנתי ניתנת כמו שהיא, בלי אחריות מכל סוג. השימוש בה הוא באחריות המשתמש בלבד. לפני שמשתמשים, כל משתמש צריך
-לבדוק מה הנהלים והכללים במוסד שלו ואצל המרצה. רועי פכטר ומפתחי הכלי אינם אחראים לשימוש בה.
+לבדוק מה הנהלים והכללים במוסד שלו ואצל המרצה. מפתחי הכלי אינם אחראים לשימוש בה.
 Responsibility: Hevanti is provided "as is", without warranty of any kind. Use is entirely the user's responsibility.
 Each user must check the rules of their own institution and lecturer before using it. The author and contributors are not liable.
 

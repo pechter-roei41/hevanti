@@ -16,8 +16,13 @@ Israeli university students, mostly on an ordinary laptop (no discrete GPU assum
 
 Hevanti (הבנתי) is a lecture companion. It transcribes lectures on the student's computer in Hebrew or English and saves a picture of every new slide or board. Two things sit at the core:
 
+- "Report a problem" shows the details to copy and the student sends them herself, in a GitHub issue or by e-mail (a mail window opens; Hevanti sends nothing).
 - A small always-on-top floating window (Ctrl+Alt+Q), also over a full-screen lecture: type a question and get an answer based on the last minutes of the lecture and the slide on screen.
 - One-click marks (★ only, since 2.13; Ctrl+Alt+M) that mark the moment without stopping to listen, then list every mark with what was said just before it. In a transcript the line said just before the mark carries a highlighter band, a ★ and the words "מסומנת" for a screen reader. "?" marks from older lectures are still read and shown, with the same band.
+- The floating button: a green circle with the logo as a thin line and a red recording dot; a click opens the small window, which grows out of it while the logo turns into an X that closes it; no motion when the student asks for none.
+- The floating window can stop the recording (two presses) and then says the lecture was saved, with a link to open it; when the window is closed the same message shows above the round button.
+- A quick-start window in the middle of the screen when Hevanti opens: the course (guessed from a window title or the weekly schedule, never silently) and the kind of lecture, then "start" runs the transcript in the background; the home screen stays one click away and is what a first start, a missing key or a GPU problem shows.
+- A lecture that started with no course offers the course named on its first slide (local OCR; offered, never applied by itself), and the course of a recording lecture can be changed at any moment: the lecture moves there when it is saved.
 - Three "what did I miss" buttons (3, 7, 15 minutes) in the floating window, and answers that cite the time of the transcript line they rely on (a link only when the page can open that line).
 
 Success is measured by study time saved, number of users, and being a project worth showing.
@@ -36,7 +41,7 @@ During a live lecture the student is listening, so interactions must be quick an
 - Transcription runs on the CPU by default and is much faster and keeps pace with long lectures on an NVIDIA graphics card. Hevanti detects the card at start-up; when it is there but unused, the home page offers a one-click install of the NVIDIA libraries (about 1 GB, once) and a restart, and on every other page a capsule in the top bar offers the same install (never both at once; with no card, or a card in use, there is no capsule and no device pill). Anyone with an NVIDIA card should be steered to it. There is no "is my computer good enough" checklist: the guide only recommends the card.
 - The built-in AI is Gemini, through the student's own API key (stored encrypted via Windows DPAPI; a key that cannot be encrypted is not saved): without a key there is no "answer here", so the interface must make that state and its fix obvious. When the free quota runs out: reduce usage and show a clear message.
 - Settings and the key are saved whole or not at all; a damaged settings file is kept and the last good copy is used, never read as "no settings" quietly.
-- A live question tries at most two Gemini models and gives up within about 25 seconds; an answer that Gemini blocks or cuts shows why.
+- A live question tries at most two Gemini models (and the light one once more when the quota stopped them, with at most 8 seconds spent finding which models answer) and gives up within about 25 seconds; an answer that Gemini blocks or cuts shows why.
 - Transcription that falls far behind is protected: the floating window shows the delay in seconds over 10, and sound that waited more than about five minutes is skipped and said so. No automatic catch-up yet (to be decided after measuring on a real student laptop).
 - Nothing leaves the computer without a student action; cloud sync is off until turned on; the app listens only on 127.0.0.1.
 - Only computer audio is captured, not the microphone.

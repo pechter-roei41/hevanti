@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # הבנתי (Hevanti) - lectures, transcribed live or from a recording
-# Copyright (c) 2026 Roei Pechter (רועי פכטר). MIT License, see LICENSE.txt
+# Copyright (c) 2026 Hevanti. MIT License, see LICENSE.txt
 """
 Lecture transcription (Hebrew / English), live or recorded - run from the app page in the browser.
 Hevanti.bat starts the tool and opens the app (http://127.0.0.1:8765/, this computer only).
@@ -36,8 +36,8 @@ try:
 except Exception:  # lets "uninstall" run even if the install never finished
     np = None
 
-VERSION = "2.19"
-VERSION_DATE = "11.11.2026"
+VERSION = "2.20"
+VERSION_DATE = "12.11.2026"
 PRODUCT = "הבנתי"
 GUIDE_URL = "https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD"
 
@@ -4941,6 +4941,9 @@ def mirror_status():
 MINI_HTML = os.path.join(SCRIPT_DIR, "mini.html")
 MINI_TITLE = "הבנתי"   # the page's title; the window is found by an exact match
 MINI_SIZE = (380, 460)   # small: it stays in a corner of the screen
+QUICK_HTML = os.path.join(SCRIPT_DIR, "quick.html")   # the quick-start window (F1): a small window in the middle of the screen when Hevanti opens
+QUICK_TITLE = "הבנתי · חלון התחלה מהירה"   # its page's title (found by an exact match; the app-window watcher takes it as the app's window too)
+QUICK_SIZE = (380, 400)   # (96-dpi pixels, the title bar included)
 _MINI_LOCK = threading.Lock()
 
 
@@ -4997,6 +5000,108 @@ def _find_mini(u):
         return True
     u.EnumWindows(ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)(each), 0)
     return found[0] if found else 0
+
+
+def quick_profile_dir():
+    """The quick-start window has a browser profile of its own (like the small window): a browser that is already running ignores the size
+    and the place asked for a window that opens in its profile, and a window with a profile of its own is a process of its own."""
+    return os.path.join(LOCAL_DIR, "quick-profile")
+
+
+def _center_xy(area, w, h):
+    """The top-left corner of a window of w x h pixels in the middle of the work area (left, top, right, bottom)."""
+    left, top, right, bottom = area
+    return left + max(0, (right - left - w) // 2), top + max(0, (bottom - top - h) // 2)
+
+
+def _place_quick_window(size):
+    """Windows: the quick-start window, once it exists, gets exactly its size and the middle of the work area of the main screen
+    (in real pixels, whatever the browser did with the size and the place that were asked)."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        from ctypes import wintypes
+        u = _mini_user32()
+        u.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
+        end = time.time() + 20
+        while time.time() < end:
+            hwnd = _find_quick(u)
+            if hwnd:
+                with _real_pixels(u) as rp:
+                    area = wintypes.RECT()
+                    u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0)
+                    w, h = int(round(size[0] * rp.scale)), int(round(size[1] * rp.scale))
+                    x, y = _center_xy((area.left, area.top, area.right, area.bottom), w, h)
+                    u.SetWindowPos(hwnd, 0, x, y, w, h, 0x0004 | 0x0010)   # SWP_NOZORDER | SWP_NOACTIVATE
+                return
+            time.sleep(0.1)
+    except Exception:
+        save_error("place the quick window")
+
+
+def _find_quick(u):
+    """The quick-start window, or 0."""
+    import ctypes
+    from ctypes import wintypes
+    found = []
+
+    def each(hwnd, _):
+        try:
+            buf = ctypes.create_unicode_buffer(200)
+            u.GetWindowTextW(hwnd, buf, 200)
+            if buf.value.strip("\u202a\u202b\u202c\u200e\u200f ") == QUICK_TITLE and _is_chrome_window(u, hwnd):
+                found.append(hwnd)
+        except Exception:
+            pass
+        return True
+    u.EnumWindows(ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)(each), 0)
+    return found[0] if found else 0
+
+
+def close_quick_window():
+    """Close the quick-start window as if the student closed it (a no-op when it is not open, and everywhere but Windows)."""
+    if os.name != "nt":
+        return False
+    try:
+        import ctypes
+        u = _mini_user32()
+        hwnd = _find_quick(u)
+        if not hwnd:
+            return False
+        u.PostMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_size_t, ctypes.c_ssize_t]
+        if _APP_WIN.get("hwnd") == hwnd:
+            _APP_WIN["hwnd"] = 0   # (it is not "the student closed the app": the tool must not close itself because this window went away)
+        u.PostMessageW(hwnd, 0x0010, 0, 0)   # WM_CLOSE
+        return True
+    except Exception:
+        save_error("close quick window")
+        return False
+
+
+def quick_start_wanted(act=None):
+    """(True, "") when Hevanti opens with the quick-start window instead of the home screen; else (False, why).
+    The home screen is for the first start (the student has not agreed yet), a missing Gemini key, a GPU install that failed or
+    is running, a file or a view that was asked for, something already running, and a student who turned the window off."""
+    if os.environ.get("BZM_NO_BROWSER") == "1":
+        return False, "no browser"
+    if os.name != "nt" and os.environ.get("BZM_QUICK") != "1":
+        return False, "Windows only"
+    if act and (act.get("kind") != "home" or act.get("view")):
+        return False, "a file or a view was asked for"
+    s = load_settings()
+    if not s.get("quick_start", True):
+        return False, "off in the settings"
+    if not s.get("consent_ok"):
+        return False, "first start: the home screen asks first"
+    if not (s.get("math") or {}).get("key"):
+        return False, "no Gemini key"
+    if GPU["state"] in ("failed", "installing"):
+        return False, "the GPU install needs a look"
+    sess = APP.session
+    if sess is not None and not sess.done:
+        return False, "something is running"
+    return True, ""
 
 
 MINI_CORNERS = ("br", "bl", "tl", "tr")   # bottom right / bottom left / top left / top right of the main screen
@@ -5092,9 +5197,20 @@ class _real_pixels:
         return False
 
 
+def _mini_xy_above(area, corner, S, m, w, h, gap):
+    """Where a window of w x h sits when it opens: right above the floating button (below it, for a top corner), on the same side of the
+    screen, 'gap' pixels away, and inside the work area (left, top, right, bottom). The button stays where it is."""
+    import types
+    left, top, right, bottom = area
+    _bx, by = _mini_btn_xy(types.SimpleNamespace(left=left, top=top, right=right, bottom=bottom), corner, S, m)
+    x = left + m if corner in ("bl", "tl") else right - w - m
+    y = by - gap - h if corner in ("br", "bl") else by + S + gap
+    return max(left, min(x, right - w)), max(top, min(y, bottom - h))
+
+
 def _mini_xy_by_button(u, w, h):
-    """Where a window of this size (in real pixels) sits right above the floating button (or below it, for a top
-    corner), on the same side; None when the screen cannot be read. Must run inside `_real_pixels`."""
+    """Where a window of this size (in real pixels) sits: above the floating button (below it, for a top corner), on the same side; None
+    when the screen cannot be read. Must run inside `_real_pixels`."""
     import ctypes
     from ctypes import wintypes
     area = wintypes.RECT()
@@ -5102,13 +5218,7 @@ def _mini_xy_by_button(u, w, h):
         return None
     sc = max(1.0, u.GetDpiForSystem() / 96.0)
     S, m = int(round(MiniButton.SIZE * sc)), int(round(12 * sc))
-    corner = mini_btn_corner()
-    _bx, by = _mini_btn_xy(area, corner, S, m)
-    x = area.left + m if corner in ("bl", "tl") else area.right - w - m
-    # the button is gone while the window is open, so a bottom window sits at the bottom of the screen (the same margin
-    # as at the side), a top one at the top
-    y = area.bottom - m - h if corner in ("br", "bl") else area.top + m
-    return max(area.left, min(x, area.right - w)), max(area.top, min(y, area.bottom - h))
+    return _mini_xy_above((area.left, area.top, area.right, area.bottom), mini_btn_corner(), S, m, w, h, int(round(8 * sc)))
 
 
 def _place_mini_by_button(u, hwnd):
@@ -5134,7 +5244,110 @@ def _mini_on_a_screen(u, hwnd):
     return bool(u.MonitorFromWindow(hwnd, 0))   # MONITOR_DEFAULTTONULL
 
 
-def _show_mini(u, hwnd, place=False):
+MINI_UI = {"opening_until": 0.0, "closing_until": 0.0}   # the button turns to an X the moment a click opens the window (even while Edge still starts), and back when it closes
+
+
+def _mini_visible(u):
+    """True while the small window is on the screen (not hidden, not minimized)."""
+    try:
+        hwnd = _find_mini(u)
+        return bool(hwnd and u.IsWindowVisible(hwnd) and not u.IsIconic(hwnd))
+    except Exception:
+        return False
+
+
+def _windows_animations_on():
+    """False when Windows has "show animations" off (Settings > Accessibility > Visual effects). True when it cannot be read."""
+    if os.name != "nt":
+        return True
+    try:   # SPI_GETCLIENTAREAANIMATION
+        import ctypes
+        v = ctypes.c_int(1)
+        ctypes.windll.user32.SystemParametersInfoW(0x1042, 0, ctypes.byref(v), 0)
+        return v.value != 0
+    except Exception:
+        return True
+
+
+def _motion_allowed():
+    """False when the student chose "no animations and motion" in the app, or Windows has its animations off: then nothing grows and
+    nothing turns, the button and the window just change."""
+    return not load_settings().get("a11y_still") and _windows_animations_on()
+
+
+def _mini_region(u, hwnd, rect, radius):
+    """Show only a rounded part of the window (the whole window is there, the part outside is not seen): the window "grows" without Edge
+    having to resize anything. rect None: the whole window again."""
+    import ctypes
+    from ctypes import wintypes
+    gdi = ctypes.WinDLL("gdi32")
+    gdi.CreateRoundRectRgn.argtypes = [ctypes.c_int] * 6
+    gdi.CreateRoundRectRgn.restype = wintypes.HANDLE
+    u.SetWindowRgn.argtypes = [wintypes.HWND, wintypes.HANDLE, wintypes.BOOL]
+    if rect is None:
+        u.SetWindowRgn(hwnd, None, True)
+        return
+    l, t_, r, b = rect
+    u.SetWindowRgn(hwnd, gdi.CreateRoundRectRgn(l, t_, r + 1, b + 1, radius * 2, radius * 2), True)   # (the system owns the region from here)
+
+
+def _mini_anim_geometry(u, hwnd):
+    """(width, height, the point of the window nearest to the button, the size of the button, the DPI scale), in real pixels."""
+    import ctypes
+    from ctypes import wintypes
+    r = wintypes.RECT()
+    u.GetWindowRect(hwnd, ctypes.byref(r))
+    area = wintypes.RECT()
+    u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0)
+    sc = max(1.0, u.GetDpiForSystem() / 96.0)
+    S, m = int(round(MiniButton.SIZE * sc)), int(round(12 * sc))
+    bx, by = _mini_btn_xy(area, mini_btn_corner(), S, m)
+    w, h = r.right - r.left, r.bottom - r.top
+    return w, h, (bx + S / 2 - r.left, by + S / 2 - r.top), S, sc
+
+
+def _animate_mini(u, hwnd, opening):
+    """The window grows from the circle (opening) or shrinks into it (closing), MINI_ANIM_S seconds, with the easing of the design: the
+    visible part of the window is a rounded rectangle that grows from the point nearest to the button, and the content comes in after a
+    moment (the window turns from clear to its own opacity). The window itself is not resized: Edge draws it once, at its full size."""
+    with _real_pixels(u):
+        w, h, (ax, ay), S, sc = _mini_anim_geometry(u, hwnd)
+        target = mini_opacity()
+        t0 = time.perf_counter()
+        try:
+            while True:
+                e = (time.perf_counter() - t0) / MINI_ANIM_S
+                if e >= 1:
+                    break
+                p = _bezier_ease(e if opening else 1 - e)
+                rad = int((S / 2) * (1 - p) + 10 * sc * p)
+                _mini_region(u, hwnd, _grow_rect(p, w, h, ax, ay), max(2, rad))
+                fade = min(max((e * MINI_ANIM_S - 0.12) / (MINI_ANIM_S - 0.12), 0.0), 1.0)   # the content: after about 120 ms
+                _mini_alpha(u, hwnd, int(target * (fade if opening else 1 - e)))
+                time.sleep(0.008)
+        finally:
+            if opening:
+                _mini_region(u, hwnd, None, 0)
+                _mini_alpha(u, hwnd, target)
+
+
+def _hide_mini(u, hwnd):
+    """Hide the small window: it shrinks into the button first (when motion is allowed)."""
+    MINI_UI["closing_until"], MINI_UI["opening_until"] = time.time() + MINI_ANIM_S + 0.4, 0.0
+    try:
+        if _motion_allowed() and u.IsWindowVisible(hwnd) and not u.IsIconic(hwnd):
+            _animate_mini(u, hwnd, opening=False)
+    except Exception:
+        save_error("close animation of the small window")
+    u.ShowWindow(hwnd, 0)   # SW_HIDE
+    try:
+        _mini_region(u, hwnd, None, 0)
+        _mini_alpha(u, hwnd, mini_opacity())
+    except Exception:
+        pass
+
+
+def _show_mini(u, hwnd, place=False, fresh=False):
     """Bring the window forward. When it has to be placed by the button (the first opening in a session, or its screen
     is gone) it is moved BEFORE it is shown, so it never appears at its old place and jumps."""
     import ctypes
@@ -5166,12 +5379,35 @@ def _show_mini(u, hwnd, place=False):
                     u.SetWindowPlacement(hwnd, ctypes.byref(wp))
         else:   # hidden (or just created): moved while it cannot be seen, then shown
             _place_mini_by_button(u, hwnd)
+    was_visible = bool(u.IsWindowVisible(hwnd)) and not iconic and not fresh   # (fresh: the window was just made, off the screen: it opens like a hidden one)
+    grow = _motion_allowed() and not was_visible
+    if grow:   # it opens as a speck at the button (nothing of it is seen), and grows from there
+        try:
+            with _real_pixels(u):
+                w, h, (ax, ay), S, sc = _mini_anim_geometry(u, hwnd)
+                _mini_region(u, hwnd, _grow_rect(0.0, w, h, ax, ay), max(2, int(S / 2)))
+            _mini_alpha(u, hwnd, 0)
+        except Exception:
+            grow = False
+            save_error("open animation of the small window")
     u.ShowWindow(hwnd, 9)   # SW_RESTORE
-    _mini_alpha(u, hwnd, mini_opacity())
+    if not grow:
+        _mini_alpha(u, hwnd, mini_opacity())
     u.SetWindowPos(hwnd, -1, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0040)   # HWND_TOPMOST, no move/size, show
     u.keybd_event(0x12, 0, 0, 0)   # (a tap on Alt lets this program take the keyboard from the lecture's window)
     u.keybd_event(0x12, 0, 2, 0)
     u.SetForegroundWindow(hwnd)
+    MINI_UI["opening_until"], MINI_UI["closing_until"] = 0.0, 0.0
+    if grow:
+        try:
+            _animate_mini(u, hwnd, opening=True)
+        except Exception:
+            save_error("open animation of the small window")
+            try:
+                _mini_region(u, hwnd, None, 0)
+                _mini_alpha(u, hwnd, mini_opacity())
+            except Exception:
+                pass
 
 
 def mini_profile_dir():
@@ -5209,24 +5445,30 @@ def toggle_mini(hide_only=False, show_only=False):
             hwnd = _find_mini(u)
             if hwnd:
                 if u.IsWindowVisible(hwnd) and not u.IsIconic(hwnd) and not show_only:
-                    u.ShowWindow(hwnd, 0)   # SW_HIDE
+                    _hide_mini(u, hwnd)   # (it shrinks into the floating button)
                     return {"ok": True, "shown": False}
                 if hide_only:
                     return {"ok": True, "shown": False}
+                MINI_UI["opening_until"] = time.time() + 20   # (the button is an X from now on, even if the window takes a moment)
                 _show_mini(u, hwnd)
                 return {"ok": True, "shown": True}
             if hide_only:
                 return {"ok": True, "shown": False}
+            MINI_UI["opening_until"] = time.time() + 20   # (the first time Edge has to start: the button turns to an X at once, the window grows when it is ready)
             exe = _browser_exe()
             if not exe or not APP.url:
                 return {"ok": False, "error": "החלון הקטן צריך את Microsoft Edge או את Chrome."}
             prof = mini_profile_dir()
             os.makedirs(prof, exist_ok=True)
             args = [exe, "--app=" + APP.url + "mini", f"--window-size={MINI_SIZE[0]},{MINI_SIZE[1]}"]
-            with _real_pixels(u) as rp:   # it opens near its place at once (the exact place is set when it is found)
-                xy = _mini_xy_by_button(u, int(round(MINI_SIZE[0] * rp.scale)), int(round(MINI_SIZE[1] * rp.scale)))
-            if xy:
-                args.append(f"--window-position={int(xy[0] / rp.scale)},{int(xy[1] / rp.scale)}")
+            grow_first = _motion_allowed()
+            if grow_first:   # off the screen: it is not seen starting, and it grows from the button when it is found
+                args.append("--window-position=-32000,-32000")
+            else:
+                with _real_pixels(u) as rp:   # it opens near its place at once (the exact place is set when it is found)
+                    xy = _mini_xy_by_button(u, int(round(MINI_SIZE[0] * rp.scale)), int(round(MINI_SIZE[1] * rp.scale)))
+                if xy:
+                    args.append(f"--window-position={int(xy[0] / rp.scale)},{int(xy[1] / rp.scale)}")
             _MINI_PROC["proc"] = subprocess.Popen(args + ["--user-data-dir=" + prof, "--no-first-run",
                                                            "--no-default-browser-check", "--disable-extensions", "--disable-sync"])
             end = time.time() + 15
@@ -5234,10 +5476,12 @@ def toggle_mini(hide_only=False, show_only=False):
                 time.sleep(0.05)
                 hwnd = _find_mini(u)
                 if hwnd:
-                    _show_mini(u, hwnd, place=True)
+                    _show_mini(u, hwnd, place=True, fresh=grow_first)
                     return {"ok": True, "shown": True}
+        MINI_UI["opening_until"] = 0.0   # (it did not open: the button is the logo again)
         return {"ok": False, "error": "החלון הקטן לא נפתח. אפשר לנסות שוב."}
     except Exception:
+        MINI_UI["opening_until"] = 0.0
         save_error("mini window")
         return {"ok": False, "error": "לא הצלחתי לפתוח את החלון הקטן."}
 
@@ -5378,7 +5622,7 @@ def mini_button_wanted():
     if not load_settings().get("mini_button", True):
         return False
     s = APP.session
-    if s is None or s.done or not s.ready or s.stop.is_set():   # (stop pressed: the button goes at once, not when the last seconds are written)
+    if s is None or s.done or s.stop.is_set():   # (stop pressed: the button goes at once, not when the last seconds are written. Not waiting for "ready": the button is there the moment the lecture starts, while the model still loads)
         return False
     if s.kind == "rec":   # a recording: only while its player page is open
         rec = APP.rec
@@ -5386,12 +5630,7 @@ def mini_button_wanted():
             return False
     elif s.kind != "live":
         return False
-    try:
-        u = _mini_user32()
-        hwnd = _find_mini(u)
-        return not (hwnd and u.IsWindowVisible(hwnd) and not u.IsIconic(hwnd))
-    except Exception:
-        return True
+    return True   # (the button stays while the small window is open: it is the X that closes it)
 
 
 def mini_button_why():
@@ -5403,8 +5642,6 @@ def mini_button_why():
         return "אין הרצאה"
     if s.done:
         return "ההרצאה נגמרה"
-    if not s.ready:
-        return "ההרצאה עוד נטענת"
     if s.stop.is_set():
         return "נלחצה עצירה"
     if s.kind == "rec":
@@ -5413,36 +5650,145 @@ def mini_button_why():
             return "הנגן של ההקלטה סגור"
     elif s.kind != "live":
         return "סוג הרצאה אחר"
-    return "החלון הקטן פתוח"
+    return "רץ"
 
 
-def _logo_rgba(S):
-    """The logo on a round cream disc with a green ring, as premultiplied BGRA bytes (top-down) for UpdateLayeredWindow:
-    the edge of the disc is smoothed by the alpha channel, and outside the disc the window is transparent."""
-    import numpy as np
+# --- the floating button: a solid green circle with the Hevanti logo as a thin line (an X while the small window is open) and a red recording dot ---
+BTN_GREEN, BTN_CREAM, BTN_YELLOW, BTN_WHITE, BTN_REC = (27, 110, 75), (246, 243, 233), (247, 212, 76), (255, 255, 255), (194, 65, 45)   # 1B6E4B F6F3E9 F7D44C FFFFFF C2412D
+BTN_RING = ((246, 243, 233), (28, 27, 22))   # the ring round the dot: the colour of the page (paper, night paper)
+MINI_ANIM_S = 0.26   # the window grows from the circle (and the logo turns into an X) in this many seconds
+_BTN_CACHE = {}
+
+
+def _bezier_ease(t, x1=0.2, y1=0.8, x2=0.2, y2=1.0):
+    """The easing curve cubic-bezier(0.2, 0.8, 0.2, 1) of CSS: t in 0..1 (time) -> 0..1 (how far)."""
+    if t <= 0:
+        return 0.0
+    if t >= 1:
+        return 1.0
+    lo, hi = 0.0, 1.0
+    for _ in range(40):
+        s = (lo + hi) / 2
+        x = 3 * (1 - s) ** 2 * s * x1 + 3 * (1 - s) * s ** 2 * x2 + s ** 3
+        if x < t:
+            lo = s
+        else:
+            hi = s
+    s = (lo + hi) / 2
+    return 3 * (1 - s) ** 2 * s * y1 + 3 * (1 - s) * s ** 2 * y2 + s ** 3
+
+
+def _grow_rect(p, w, h, ax, ay):
+    """The part of a window of w x h that shows while it grows from the point (ax, ay) (the point of the window nearest to the
+    button): p = 0 nothing, p = 1 all of it. (left, top, right, bottom)."""
+    ax, ay = min(max(ax, 0), w), min(max(ay, 0), h)
+    return (int(round(ax * (1 - p))), int(round(ay * (1 - p))), int(round(ax * (1 - p) + w * p)), int(round(ay * (1 - p) + h * p)))
+
+
+def _glyph_params(p):
+    """How the two pictures on the button look at p (0 = the logo, 1 = the X): the logo turns a quarter, shrinks to 0.6 and fades
+    out; the X turns in from a quarter, grows from 0.6 to 1 and fades in. {"logo": (angle, scale, alpha), "x": (angle, scale, alpha)}."""
+    p = min(max(p, 0.0), 1.0)
+    return {"logo": (-90.0 * p, 1.0 - 0.4 * p, max(0.0, 1.0 - 1.6 * p)),
+            "x": (90.0 * (1.0 - p), 0.6 + 0.4 * p, max(0.0, min(1.0, 1.6 * p - 0.6)))}
+
+
+def _bubble_points():
+    """The outline of the logo's bubble (viewBox 120): M30 8 H90 A24 24 0 0 1 114 32 V70 A24 24 0 0 1 90 94 H92 L100 114 L68 94 H30 A24 24 0 0 1 6 70 V32 A24 24 0 0 1 30 8 Z."""
+    import math
+
+    def arc(cx, cy, a0, a1, n=12):
+        return [(cx + 24 * math.cos(math.radians(a0 + (a1 - a0) * k / n)), cy + 24 * math.sin(math.radians(a0 + (a1 - a0) * k / n))) for k in range(n + 1)]
+    pts = [(30, 8), (90, 8)] + arc(90, 32, -90, 0) + [(114, 70)] + arc(90, 70, 0, 90) + [(92, 94), (100, 114), (68, 94), (30, 94)] + arc(30, 70, 90, 180) + [(6, 32)] + arc(30, 32, 180, 270)
+    return pts + [pts[0]]
+
+
+def _button_layers(S, K=8):
+    """The two pictures of the button, drawn K times larger and kept: the logo (a thin cream line bubble and a yellow check, no fill)
+    and the X (white), each on a transparent square of S*K."""
+    key = ("layers", S, K)
+    if key in _BTN_CACHE:
+        return _BTN_CACHE[key]
     from PIL import Image, ImageDraw
-    K = 8
     N = S * K
-    green, yellow, cream = (31, 122, 85, 255), (247, 212, 76, 255), (246, 243, 233, 255)
-    im = Image.new("RGBA", (N, N), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    d.ellipse([0, 0, N - 1, N - 1], fill=cream, outline=green, width=int(2.4 * K * S / 56))
-    sc = 0.56 * N / 108   # the one Hevanti mark: a rounded bubble with a short tail and a thick check (readable down to 16 px)
+    sc = 0.56 * N / 108   # (the logo fills about 62% of the circle)
     ox, oy = N / 2 - 60 * sc, N / 2 - 61 * sc
 
-    def P(x, y):
-        return (ox + x * sc, oy + y * sc)
-    d.rounded_rectangle([P(6, 8), P(114, 94)], radius=24 * sc, fill=green)
-    d.polygon([P(68, 93), P(92, 93), P(100, 114)], fill=green)
-    pts = [P(33, 52), P(52, 71), P(87, 33)]
-    d.line(pts, fill=yellow, width=int(17 * sc), joint="curve")
-    for x, y in pts:
-        d.ellipse([x - 8.5 * sc, y - 8.5 * sc, x + 8.5 * sc, y + 8.5 * sc], fill=yellow)
-    im = im.resize((S, S), Image.LANCZOS)
-    a = np.asarray(im, dtype=np.float32)
-    alpha = a[..., 3:4] / 255.0
-    out = np.concatenate([a[..., 2:3] * alpha, a[..., 1:2] * alpha, a[..., 0:1] * alpha, a[..., 3:4]], axis=2)   # B, G, R, A
-    return np.clip(out + 0.5, 0, 255).astype(np.uint8).tobytes()
+    def line(d, pts, width, fill):
+        d.line(pts, fill=fill, width=max(1, int(round(width))), joint="curve")
+        for x, y in pts:   # (round ends and corners)
+            d.ellipse([x - width / 2, y - width / 2, x + width / 2, y + width / 2], fill=fill)
+    logo = Image.new("RGBA", (N, N), (0, 0, 0, 0))
+    d = ImageDraw.Draw(logo)
+    line(d, [(ox + x * sc, oy + y * sc) for x, y in _bubble_points()], 9 * sc, BTN_CREAM + (255,))
+    line(d, [(ox + 33 * sc, oy + 52 * sc), (ox + 52 * sc, oy + 71 * sc), (ox + 87 * sc, oy + 33 * sc)], 17 * sc, BTN_YELLOW + (255,))
+    xg = Image.new("RGBA", (N, N), (0, 0, 0, 0))
+    d = ImageDraw.Draw(xg)
+    u_ = (S / 56.0) * K   # one unit of the 24-unit square, which is 24 pixels on a button of 56
+    c = N / 2
+    for (x0, y0), (x1, y1) in (((2, 2), (22, 22)), ((22, 2), (2, 22))):   # (about 24 pixels across, with the round ends, on a button of 56)
+        line(d, [(c + (x0 - 12) * u_, c + (y0 - 12) * u_), (c + (x1 - 12) * u_, c + (y1 - 12) * u_)], 2.6 * u_, BTN_WHITE + (255,))
+    _BTN_CACHE[key] = (logo, xg)
+    return logo, xg
+
+
+def _button_image(S, p=0.0, rec=True, side="right", dark=False, dot_scale=1.0, K=8):
+    """The floating button as a picture (RGBA, S x S): a solid green circle, and on it the logo (p = 0) or the X (p = 1) - or a moment of the
+    turn between them (0 < p < 1, already eased) - and, when a lecture is being recorded, the red dot with a ring in the page's colour, at the
+    top on the side of the screen's edge. Outside the circle it is transparent."""
+    p = round(min(max(p, 0.0), 1.0) * 16) / 16.0   # (17 pictures of the turn: kept, so a frame of the animation costs about a millisecond)
+    key = ("base", S, p, K)
+    base = _BTN_CACHE.get(key)
+    if base is None:
+        from PIL import Image, ImageDraw, ImageChops
+        N = S * K
+        base = Image.new("RGBA", (N, N), (0, 0, 0, 0))
+        ImageDraw.Draw(base).ellipse([0, 0, N - 1, N - 1], fill=BTN_GREEN + (255,))   # (no line round it, no cream)
+        logo, xg = _button_layers(S, K)
+        gp = _glyph_params(p)
+        for layer, (angle, scale, alpha) in ((logo, gp["logo"]), (xg, gp["x"])):
+            if alpha <= 0:
+                continue
+            g = layer
+            if angle:
+                g = g.rotate(angle, resample=Image.BICUBIC)
+            if scale != 1.0:
+                small = g.resize((max(1, int(N * scale)), max(1, int(N * scale))), Image.LANCZOS)
+                g = Image.new("RGBA", (N, N), (0, 0, 0, 0))
+                g.paste(small, ((N - small.width) // 2, (N - small.height) // 2))
+            if alpha < 1.0:
+                g.putalpha(ImageChops.multiply(g.getchannel("A"), Image.new("L", (N, N), int(round(255 * alpha)))))
+            base.alpha_composite(g)
+        base = base.resize((S, S), Image.LANCZOS)
+        _BTN_CACHE[key] = base
+    im = base.copy()
+    if rec:   # the red dot: on the top, on the side of the screen's edge; a ring in the colour of the page keeps it apart from the green
+        from PIL import Image, ImageDraw
+        K2 = 4
+        layer = Image.new("RGBA", (S * K2, S * K2), (0, 0, 0, 0))
+        d = ImageDraw.Draw(layer)
+        u_ = S / 56.0
+        cx, cy = S * (0.80 if side == "right" else 0.20) * K2, S * 0.20 * K2
+        r = 7 * u_ * dot_scale * K2
+        rr = r + 2 * u_ * K2
+        d.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], fill=BTN_RING[1 if dark else 0] + (255,))
+        d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=BTN_REC + (255,))
+        im.alpha_composite(layer.resize((S, S), Image.LANCZOS))
+    return im
+
+
+def _warm_button(S):
+    """Draws all the pictures of the turn once (a second or two in the background when the button starts), so the animation never waits."""
+    try:
+        for k in range(17):
+            _button_image(S, k / 16.0, rec=False)
+    except Exception:
+        save_error("floating button pictures")
+
+
+def _button_rgba(S, p=0.0, rec=True, side="right", dark=False, dot_scale=1.0):
+    """The floating button as premultiplied BGRA bytes for UpdateLayeredWindow."""
+    return _premultiplied_bgra(_button_image(S, p, rec, side, dark, dot_scale))
 
 
 def _premultiplied_bgra(im):
@@ -5464,13 +5810,17 @@ def _windows_dark():
         return False
 
 
-def _toast_image(text="סומן", scale=1.0, dark=False):
+def _toast_image(text="סומן", scale=1.0, dark=False, glyph="star"):
     """The message that shows above the floating button when a mark is made with the keyboard: a small card, like the one in the
     small window - a yellow chip with the ★ (the highlighter of a mark, the only yellow) and the word, on a sheet with a hairline.
     Colours are the tokens of DESIGN.md (sheet, ink, hairline, mark-line; light and night). Returns (RGBA picture, width, height)."""
     from PIL import Image, ImageDraw, ImageFont
     sheet, ink, line, band = ((38, 36, 29), (241, 236, 223), (62, 58, 46), (89, 78, 37)) if dark else \
                              ((255, 255, 255), (23, 38, 31), (221, 215, 196), (247, 221, 123))
+    if glyph == "check":   # a saved lecture: Green Soft chip with a green check (yellow is only for marks)
+        band, ink_glyph = ((37, 56, 43), (91, 199, 154)) if dark else ((220, 235, 223), (27, 110, 75))
+    else:
+        ink_glyph = ink
     K = 4   # drawn four times larger, then reduced: smooth edges
     k = scale * K
     size = int(round(19 * k))
@@ -5505,8 +5855,14 @@ def _toast_image(text="סומן", scale=1.0, dark=False):
     d.rounded_rectangle([cx0, cy0, cx0 + chip_w, cy0 + chip_h], radius=int(round(6 * k)), fill=band + (255,))
     import math
     mx, my, ro, ri = cx0 + chip_w / 2, cy0 + chip_h / 2 + 0.5 * k, 9.5 * k, 4.0 * k   # the ★, five points
-    pts = [(mx + (ro if i % 2 == 0 else ri) * math.sin(i * math.pi / 5), my - (ro if i % 2 == 0 else ri) * math.cos(i * math.pi / 5)) for i in range(10)]
-    d.polygon(pts, fill=ink + (255,))
+    if glyph == "check":
+        cp = [(mx - 7 * k, my + 0.5 * k), (mx - 2 * k, my + 5.5 * k), (mx + 7.5 * k, my - 5.5 * k)]
+        d.line(cp, fill=ink_glyph + (255,), width=int(round(3.2 * k)), joint="curve")
+        for x_, y_ in cp:
+            d.ellipse([x_ - 1.6 * k, y_ - 1.6 * k, x_ + 1.6 * k, y_ + 1.6 * k], fill=ink_glyph + (255,))
+    else:
+        pts = [(mx + (ro if i % 2 == 0 else ri) * math.sin(i * math.pi / 5), my - (ro if i % 2 == 0 else ri) * math.cos(i * math.pi / 5)) for i in range(10)]
+        d.polygon(pts, fill=ink_glyph + (255,))
     bbox = font.getbbox(shown) if hasattr(font, "getbbox") else (0, 0, tw, size)
     d.text((pad - bbox[0], (H - (bbox[3] - bbox[1])) / 2 - bbox[1]), shown, font=font, fill=ink + (255,))
     w, h = int(round(W / K)), int(round(H / K))
@@ -5574,6 +5930,7 @@ class MiniButton(threading.Thread):
         u.MoveWindow.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.BOOL]
         u.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
         u.SetTimer.argtypes = [wintypes.HWND, ctypes.c_size_t, wintypes.UINT, ctypes.c_void_p]
+        u.KillTimer.argtypes = [wintypes.HWND, ctypes.c_size_t]
         u.GetDC.restype = wintypes.HDC
         u.ReleaseDC.argtypes = [wintypes.HWND, wintypes.HDC]
         u.UpdateLayeredWindow.argtypes = [wintypes.HWND, wintypes.HDC, ctypes.c_void_p, ctypes.c_void_p, wintypes.HDC,
@@ -5587,12 +5944,30 @@ class MiniButton(threading.Thread):
         g.SelectObject.restype = wintypes.HANDLE
         g.DeleteObject.argtypes = [wintypes.HANDLE]
         g.DeleteDC.argtypes = [wintypes.HDC]
-        st = {"down": None, "shown": False, "hold": 0.0, "corner": "", "pulsed": None, "pulse_until": 0.0, "pulse_on": False,
-              "mark_n": APP.mark_n, "toast_hwnd": 0, "toast_on": False, "toast_until": 0.0}
+        st = {"down": None, "shown": False, "corner": "", "pulsed": None, "pulse_until": 0.0, "pulse_on": False,
+              "pt": 0.0, "target": 0, "a_t": 0.0, "anim_timer": False, "sig": None,
+              "mark_n": APP.mark_n, "saved_n": APP.saved_n, "toast_hwnd": 0, "toast_on": False, "toast_until": 0.0, "toast_kind": ""}
 
-        def draw(alpha=235):
+        def look():
+            """What the button looks like now: (the turn p between the logo and the X, the red dot or not, which side, light or night, how big the
+            dot is). The dot says a lecture is being recorded: it is a live lecture only (a recording being watched is not recorded). It beats very gently
+            (a few percent, about every two seconds) unless motion is off."""
+            s = APP.session
+            import math
+            rec = bool(s is not None and not s.done and s.kind == "live")
+            side = "right" if mini_btn_corner() in ("br", "tr") else "left"
+            dark = _windows_dark() if not ui_theme() else ui_theme() == "dark"
+            dot = 1.0 + (0.07 * math.sin(time.time() * 2 * math.pi / 2.4) if (rec and _motion_allowed()) else 0.0)
+            return _bezier_ease(st["pt"]), rec, side, dark, round(dot, 2)
+
+        def draw(alpha=235, force=False):
             """Put the picture on the window (per-pixel alpha: a smooth round edge, and the corners are see-through)."""
-            data = _logo_rgba(S)
+            p, rec, side, dark, dot = look()
+            sig = (round(p, 3), rec, side, dark, dot, alpha)
+            if sig == st["sig"] and not force:
+                return
+            st["sig"] = sig
+            data = _button_rgba(S, p, rec, side, dark, dot)
             screen = u.GetDC(None)
             mdc = g.CreateCompatibleDC(screen)
             bmi = BMIH(ctypes.sizeof(BMIH), S, -S, 1, 32, 0, 0, 0, 0, 0, 0)   # (negative height: top-down)
@@ -5625,35 +6000,63 @@ class MiniButton(threading.Thread):
                 st["down"] = True
                 u.SetCapture(hwnd)
                 return 0
-            if msg == 0x0202 and st["down"]:   # button up: a click (the button goes at once; it stays away a few seconds)
+            if msg == 0x0202 and st["down"]:   # button up: a click. The button stays; the window opens (it grows from here) or closes.
                 u.ReleaseCapture()
                 st["down"] = False
-                u.ShowWindow(hwnd, 0)
-                st["shown"], st["hold"] = False, time.time() + 4
+                if _mini_visible(u):   # the button turns at once, before the window has done anything
+                    MINI_UI["closing_until"], MINI_UI["opening_until"] = time.time() + MINI_ANIM_S + 0.4, 0.0
+                else:
+                    MINI_UI["opening_until"], MINI_UI["closing_until"] = time.time() + 20, 0.0
                 threading.Thread(target=self.on_click, daemon=True).start()
                 return 0
-            if msg == 0x0113:   # WM_TIMER (ten times a second): show / hide as the lecture and the window change
+            if msg == 0x0113 and wp == 2:   # WM_TIMER 2 (about 60 times a second, only while the button turns)
+                now = time.time()
+                step = (now - st["a_t"]) / MINI_ANIM_S
+                st["a_t"] = now
+                st["pt"] = min(1.0, st["pt"] + step) if st["target"] else max(0.0, st["pt"] - step)
+                draw()
+                if st["pt"] == float(st["target"]):
+                    u.KillTimer(hwnd, 2)
+                    st["anim_timer"] = False
+                return 0
+            if msg == 0x0113:   # WM_TIMER (ten times a second): show / hide as the lecture changes, and turn as the window opens and closes
                 raw = bool(self.wanted())
                 if raw != st.get("raw_was"):   # (said in the black window when it changes: if the button stays when it should go, the reason is there)
                     st["raw_was"] = raw
                     log("הכפתור הצף: " + ("מוצג" if raw else "מוסתר (" + mini_button_why() + ")"))
-                if not raw:   # the window is up: the hold after the click is over (a minimize brings the button back at once)
-                    st["hold"] = 0.0
-                want = raw and time.time() >= st["hold"]
+                want = raw
+                mini_up = _mini_visible(u)
+                now = time.time()
+                target = 1 if ((mini_up and MINI_UI["closing_until"] < now) or MINI_UI["opening_until"] > now) else 0   # the X while the window is open (or opening)
                 if want and not st["shown"]:
                     place()
+                    st["pt"], st["target"] = float(target), target
+                    draw(force=True)
                     u.ShowWindow(hwnd, 4)   # SW_SHOWNOACTIVATE
                     st["shown"] = True
                     key = _mini_session_key()
-                    if key is not None and key != st["pulsed"]:   # the first time in each lecture: it blinks for a few seconds
+                    if key is not None and key != st["pulsed"] and not mini_up:   # the first time in each lecture: it blinks for a few seconds
                         st["pulsed"], st["pulse_until"] = key, time.time() + 3.6
                 elif not want and st["shown"]:
                     u.ShowWindow(hwnd, 0)
                     st["shown"] = False
-                if st["shown"] and (time.time() < st["pulse_until"] or st["pulse_on"]):
-                    left = st["pulse_until"] - time.time()
-                    st["pulse_on"] = left > 0
-                    draw(235 if left <= 0 else (235 if int(left * 2.5) % 2 else 70))
+                if st["shown"] and target != st["target"]:   # the window opened or closed (from the button, Ctrl+Alt+Q, or its own button): the logo turns to an X, or back
+                    st["target"] = target
+                    if _motion_allowed():
+                        st["a_t"] = time.time()
+                        if not st["anim_timer"]:
+                            u.SetTimer(hwnd, 2, 16, None)
+                            st["anim_timer"] = True
+                    else:
+                        st["pt"] = float(target)
+                        draw()
+                if st["shown"] and not st["anim_timer"]:
+                    if (time.time() < st["pulse_until"] or st["pulse_on"]) and not mini_up:
+                        left = st["pulse_until"] - time.time()
+                        st["pulse_on"] = left > 0
+                        draw(235 if left <= 0 else (235 if int(left * 2.5) % 2 else 70))
+                    else:
+                        draw()   # (only when something changed: the gentle beat of the dot)
                 if st["shown"]:   # (stays above a full-screen lecture; moves when the corner is changed in the settings)
                     if mini_btn_corner() != st["corner"]:
                         place()
@@ -5662,49 +6065,60 @@ class MiniButton(threading.Thread):
                 return 0
             return u.DefWindowProcW(hwnd, msg, wp, lp)
 
+        def show_toast(text, glyph, secs, kind):
+            """A small card above the place of the floating button (below it when the button is at the top of the screen)."""
+            if not st["toast_hwnd"]:
+                twc = WNDCLASS()
+                st["toast_cb"] = proc_t(lambda h, m, w, l: u.DefWindowProcW(h, m, w, l))   # (kept: it must not be collected)
+                twc.lpfnWndProc, twc.lpszClassName = st["toast_cb"], "HevantiMiniToast"
+                twc.hbrBackground = None
+                u.RegisterClassW(ctypes.byref(twc))
+                # TOPMOST | TOOLWINDOW | LAYERED | TRANSPARENT (a click goes through) | NOACTIVATE
+                st["toast_hwnd"] = u.CreateWindowExW(0x8 | 0x80 | 0x80000 | 0x20 | 0x08000000, "HevantiMiniToast", "הבנתי - הודעה",
+                                                      0x80000000, 0, 0, 10, 10, None, None, None, None)
+            im, w, h = _toast_image(text, scale, _windows_dark() if not ui_theme() else ui_theme() == "dark", glyph)
+            data = _premultiplied_bgra(im)
+            area = wintypes.RECT()
+            u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0)
+            corner = mini_btn_corner()
+            bx, by = _mini_btn_xy(area, corner, S, margin)
+            x, y = _toast_xy(bx, by, S, w, h, corner, area, gap=int(round(8 * scale)))
+            screen = u.GetDC(None)
+            mdc = g.CreateCompatibleDC(screen)
+            bmi = BMIH(ctypes.sizeof(BMIH), w, -h, 1, 32, 0, 0, 0, 0, 0, 0)
+            bits = ctypes.c_void_p()
+            hbm = g.CreateDIBSection(mdc, ctypes.byref(bmi), 0, ctypes.byref(bits), None, 0)
+            ctypes.memmove(bits, data, len(data))
+            old = g.SelectObject(mdc, hbm)
+            blend = BLEND(0, 0, 255, 1)
+            u.UpdateLayeredWindow(st["toast_hwnd"], screen, ctypes.byref(wintypes.POINT(x, y)), ctypes.byref(wintypes.SIZE(w, h)),
+                                  mdc, ctypes.byref(wintypes.POINT(0, 0)), 0, ctypes.byref(blend), 2)
+            g.SelectObject(mdc, old)
+            g.DeleteObject(hbm)
+            g.DeleteDC(mdc)
+            u.ReleaseDC(None, screen)
+            u.ShowWindow(st["toast_hwnd"], 4)
+            u.SetWindowPos(st["toast_hwnd"], -1, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010)
+            st["toast_until"], st["toast_on"], st["toast_kind"] = time.time() + secs, True, kind
+
         def toast_tick():
-            """A mark made with the keyboard while the small window is closed: a message above the floating button for a moment."""
+            """Two messages above the floating button, for a moment: a mark made with the keyboard (while the small window is closed, and the
+            button is there), and "the lecture was saved" (whoever pressed stop; while the small window is closed: when it is open it says so itself)."""
             if st.get("toast_bad"):
                 return
             try:
                 n = APP.mark_n
                 if n != st["mark_n"]:
                     st["mark_n"] = n
-                    if st["shown"]:
-                        if not st["toast_hwnd"]:
-                            twc = WNDCLASS()
-                            st["toast_cb"] = proc_t(lambda h, m, w, l: u.DefWindowProcW(h, m, w, l))   # (kept: it must not be collected)
-                            twc.lpfnWndProc, twc.lpszClassName = st["toast_cb"], "HevantiMiniToast"
-                            twc.hbrBackground = None
-                            u.RegisterClassW(ctypes.byref(twc))
-                            # TOPMOST | TOOLWINDOW | LAYERED | TRANSPARENT (a click goes through) | NOACTIVATE
-                            st["toast_hwnd"] = u.CreateWindowExW(0x8 | 0x80 | 0x80000 | 0x20 | 0x08000000, "HevantiMiniToast", "הבנתי - סומן",
-                                                                  0x80000000, 0, 0, 10, 10, None, None, None, None)
-                        im, w, h = _toast_image("סומן", scale, _windows_dark() if not ui_theme() else ui_theme() == "dark")
-                        data = _premultiplied_bgra(im)
-                        area = wintypes.RECT()
-                        u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0)
-                        corner = mini_btn_corner()
-                        bx, by = _mini_btn_xy(area, corner, S, margin)
-                        x, y = _toast_xy(bx, by, S, w, h, corner, area, gap=int(round(8 * scale)))
-                        screen = u.GetDC(None)
-                        mdc = g.CreateCompatibleDC(screen)
-                        bmi = BMIH(ctypes.sizeof(BMIH), w, -h, 1, 32, 0, 0, 0, 0, 0, 0)
-                        bits = ctypes.c_void_p()
-                        hbm = g.CreateDIBSection(mdc, ctypes.byref(bmi), 0, ctypes.byref(bits), None, 0)
-                        ctypes.memmove(bits, data, len(data))
-                        old = g.SelectObject(mdc, hbm)
-                        blend = BLEND(0, 0, 255, 1)
-                        u.UpdateLayeredWindow(st["toast_hwnd"], screen, ctypes.byref(wintypes.POINT(x, y)), ctypes.byref(wintypes.SIZE(w, h)),
-                                              mdc, ctypes.byref(wintypes.POINT(0, 0)), 0, ctypes.byref(blend), 2)
-                        g.SelectObject(mdc, old)
-                        g.DeleteObject(hbm)
-                        g.DeleteDC(mdc)
-                        u.ReleaseDC(None, screen)
-                        u.ShowWindow(st["toast_hwnd"], 4)
-                        u.SetWindowPos(st["toast_hwnd"], -1, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010)
-                        st["toast_until"], st["toast_on"] = time.time() + 2.4, True
-                if st["toast_on"] and (time.time() > st["toast_until"] or not st["shown"]):
+                    if st["shown"] and not _mini_visible(u):   # (the small window, when it is open, says it itself)
+                        show_toast("סומן", "star", 2.4, "mark")
+                n = APP.saved_n
+                if n != st["saved_n"]:
+                    st["saved_n"] = n
+                    hwnd_m = _find_mini(u)
+                    if not (hwnd_m and u.IsWindowVisible(hwnd_m) and not u.IsIconic(hwnd_m)):
+                        show_toast("ההרצאה נשמרה", "check", 4.5, "saved")
+                if st["toast_on"] and (time.time() > st["toast_until"] or (st["toast_kind"] == "mark" and not st["shown"])):
                     u.ShowWindow(st["toast_hwnd"], 0)
                     st["toast_on"] = False
             except Exception:
@@ -5724,7 +6138,8 @@ class MiniButton(threading.Thread):
         # WS_EX_TOPMOST | TOOLWINDOW | LAYERED | NOACTIVATE, WS_POPUP
         self.hwnd = u.CreateWindowExW(0x8 | 0x80 | 0x80000 | 0x08000000, "HevantiMiniButton", "הבנתי - כפתור שאלות", 0x80000000,
                                       0, 0, S, S, None, None, None, None)
-        draw()
+        threading.Thread(target=_warm_button, args=(S,), daemon=True).start()   # (the pictures of the turn, once, in the background)
+        draw(force=True)
         u.SetTimer(self.hwnd, 1, 100, None)
         msg = wintypes.MSG()
         while u.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
@@ -5733,7 +6148,8 @@ class MiniButton(threading.Thread):
 
 
 def _mini_button_click():
-    toggle_mini(show_only=True)
+    """A click on the floating button: the small window opens, or - when it is open - closes (the same as Ctrl+Alt+Q)."""
+    toggle_mini()
 
 
 # --- the AI's window on a third of the screen, beside the lecture ---
@@ -7124,9 +7540,15 @@ class Session:
         self.ready_at = None   # when it started transcribing (a stop within QUICK_STOP_S offers to delete it)
         self.discard = False   # stopped right after starting, and the student chose to delete it
         self.stop_at = None    # when the stop was asked (the page says how long it has been stopping)
+        self.pending_course = ""   # the student chose another course while it records: the lecture moves there when it is stopped and saved
+        self.suggest = None        # {"course", "why": "slide", "detail"}: a course read from the first slide (offered, never applied by itself)
+        self.suggest_off = False   # the student said no (or chose a course himself)
+        self.saved = None          # {"course", "minutes", "slides", "f"}: the lecture was saved (the small window and a card above the floating button say so)
 
     def info(self):
-        return {"kind": self.kind, "lang": self.lang, "title": self.title, "course": self.course, "ready": self.ready,
+        return {"kind": self.kind, "lang": self.lang, "title": self.title, "course": self.pending_course or self.course,
+                "course_now": self.course, "moving": bool(self.pending_course),
+                "suggest": self.suggest if (self.suggest and not self.suggest_off and not self.pending_course) else None, "saved": self.saved, "ready": self.ready,
                 "done": self.done, "stopping": self.stop.is_set() and not self.done, "error": self.error,
                 "started": self.started, "transcript": self.transcript, "yt": self.yt,
                 "ready_at": self.ready_at, "discard": self.discard,
@@ -7158,6 +7580,7 @@ class App:
         self.quit_evt = threading.Event()
         self.url = None
         self.lib_rev = 0
+        self.saved_n = 0
         self.mark_n = 0
         self.first_view = ""
         self._connect, self._connect_at = {}, 0.0
@@ -7196,7 +7619,7 @@ class App:
                     "screens": SCREEN_ENABLED, "capture": capture_control().public(), "math": math_reader().status(), "gpu": gpu_public(),
                     "product": PRODUCT, "migrated": self.migrated,
                     "course": load_settings().get("course") or "", "connect": self.connect_info(),
-                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme(), "save_failed": save_failed_public(), "mark_n": self.mark_n, "run": RUN_ID}
+                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme(), "save_failed": save_failed_public(), "mark_n": self.mark_n, "saved_n": self.saved_n, "run": RUN_ID}
 
     def connect_info(self):
         """Which AI apps are connected (reading two small config files - at most every few seconds)."""
@@ -7324,6 +7747,45 @@ class App:
             return toggle_mini(hide_only=(a == "hide_mini"), show_only=(a == "show_mini"))
         if a == "mini_opacity":
             return set_mini_opacity(d.get("value"))
+        if a in ("set_lecture_course", "suggest_dismiss"):   # the course of the lecture that is recording right now (it moves when the lecture is saved)
+            with self.lock:
+                s = self.session
+            if s is None or s.done or s.kind != "live":
+                return {"ok": False, "error": "אין עכשיו הרצאה חיה."}
+            if a == "suggest_dismiss":
+                s.suggest_off = True
+                return {"ok": True}
+            new = clean_name(d.get("course"), NO_COURSE)
+            s.pending_course = "" if new == s.course else new
+            s.suggest_off = True   # (he chose: the offer is over)
+            save_settings(course=new)
+            with self.lock:
+                self.lib_rev += 1
+            return {"ok": True, "course": new, "moves": bool(s.pending_course)}
+        if a == "open_lecture":   # "open the lecture in the app" (the saved card of the small window)
+            f = str(d.get("f") or "")
+            if lecture_from_rel(f) is None:
+                return {"ok": False, "error": "ההרצאה לא נמצאה."}
+            import urllib.parse
+            ok = open_app_window(self.url + "#t=" + urllib.parse.quote(f, safe="")) if self.url and os.environ.get("BZM_NO_BROWSER") != "1" else False
+            return {"ok": True, "opened": ok}
+        if a == "consent_seen":   # the student agreed (the page keeps it in the browser; the server needs to know too, to open the quick-start window)
+            if not load_settings().get("consent_ok"):
+                save_settings(consent_ok=True)
+            return {"ok": True}
+        if a == "a11y_still":   # "no animations and motion" in the app: the floating button and the small window respect it too
+            save_settings(a11y_still=bool(d.get("on")))
+            return {"ok": True}
+        if a == "quick_start":   # the quick-start window instead of the home screen when Hevanti opens (a setting)
+            save_settings(quick_start=bool(d.get("on")))
+            return {"ok": True}
+        if a == "quick_close":   # the quick-start window is done (a lecture started)
+            return {"ok": True, "closed": close_quick_window()}
+        if a == "quick_open_app":   # "open the app": the home screen in its own window, and the small one goes away; nothing starts
+            _APP_WIN["hwnd"] = 0   # (the app's window is found again by the watcher: until then nothing is "closed")
+            ok = open_app_window(self.url + ("#rec" if d.get("view") == "rec" else "")) if self.url and os.environ.get("BZM_NO_BROWSER") != "1" else False
+            close_quick_window()
+            return {"ok": True, "opened": ok}
         if a == "mini_button":   # the floating "?" button while the small window is closed
             save_settings(mini_button=bool(d.get("on")))
             return {"ok": True}
@@ -8390,6 +8852,8 @@ def _app_handler():
                         return self._send(404, b"", "text/javascript")
                 if p == "/mini":   # the small question window (opened by toggle_mini)
                     return self._page(MINI_HTML)
+                if p == "/quick":   # the quick-start window (opened when Hevanti starts)
+                    return self._page(QUICK_HTML)
                 if p == "/player":
                     if APP.rec is None:
                         return self._send(302, b"", "text/plain", {"Location": "/"})
@@ -8417,6 +8881,7 @@ def _app_handler():
                     return self._json(dict(mirror_status(), place_ai=load_settings().get("place_ai", True),
                                            mini_auto=bool(load_settings().get("mini_open_start", False)), mini_opacity=mini_opacity(),
                                            mini_button=load_settings().get("mini_button", True), mini_btn_corner=mini_btn_corner(),
+                                           quick_start=load_settings().get("quick_start", True),
                                            check_updates=load_settings().get("check_updates", True),
                                            math_every=bool(load_settings().get("math_every_slide", False)),
                                            external_ai=bool(load_settings().get("external_ai", False))))
@@ -8757,12 +9222,12 @@ def _watch_app_window(u, before):
         for h, title in _chrome_windows(u).items():
             if h not in before and "127.0.0.1" in title:
                 _APP_WIN["early"] = h   # the window has just appeared (its title is still the address): its icon can be set at once
-            if h not in before and (title.startswith(PAGE_TITLE) or title.endswith("· הבנתי")):
+            if h not in before and (title.startswith(PAGE_TITLE) or title.endswith("· הבנתי") or title == QUICK_TITLE):
                 _APP_WIN["hwnd"] = h
                 return
 
 
-def open_app_window(url):
+def open_app_window(url, size=None, center=False, profile=None):
     """Windows: the app in a window of its own (the default browser, Edge or Chrome, without tabs and address bar, with
     the student's own profile) and not a tab among the others: the tool knows when it is closed, and closes it when the
     tool closes."""
@@ -8773,8 +9238,27 @@ def open_app_window(url):
     try:
         u = _mini_user32()
         before = set(_chrome_windows(u))
-        subprocess.Popen([exe, "--app=" + url])
+        args = [exe, "--app=" + url]
+        if size:
+            args.append(f"--window-size={size[0]},{size[1]}")
+            if center:   # it opens in the middle at once (and _place_quick_window makes it exact): it does not appear at the side first and jump
+                try:
+                    import ctypes
+                    from ctypes import wintypes
+                    with _real_pixels(u) as rp:
+                        area = wintypes.RECT()
+                        u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0)
+                        x, y = _center_xy((area.left, area.top, area.right, area.bottom), int(size[0] * rp.scale), int(size[1] * rp.scale))
+                        args.append(f"--window-position={int(x / rp.scale)},{int(y / rp.scale)}")
+                except Exception:
+                    pass
+        if profile:   # a profile of its own: the size and the place are kept, and it is a process of its own
+            os.makedirs(profile, exist_ok=True)
+            args += ["--user-data-dir=" + profile, "--no-first-run", "--no-default-browser-check", "--disable-extensions", "--disable-sync"]
+        subprocess.Popen(args)
         threading.Thread(target=_watch_app_window, args=(u, before), daemon=True).start()
+        if size and center:
+            threading.Thread(target=_place_quick_window, args=(size,), daemon=True).start()
         return True
     except Exception:
         save_error("app window")
@@ -8822,6 +9306,16 @@ def close_our_windows(wait=True):
             k.wait(3)
         except Exception:
             pass
+
+
+def open_start_window(url, act=None):
+    """What opens when Hevanti starts (or is started again): the quick-start window, or the home screen of the app."""
+    wanted, why = quick_start_wanted(act)
+    if wanted and open_app_window(url + "quick", size=QUICK_SIZE, center=True, profile=quick_profile_dir()):
+        return True
+    if not wanted:
+        log(f"נפתח מסך הבית ולא חלון ההתחלה המהירה ({why}).")
+    return open_browser(url + ("#rec" if (act or {}).get("view") == "rec" else ""))
 
 
 def open_browser(url):
@@ -9090,7 +9584,7 @@ def main():
                     post_json(url + "api/cmd", {"action": "start_recording", "source": act["source"], "lang": act["lang"]})
             except Exception:
                 save_error("forward")
-            open_browser(url + ("#rec" if act.get("view") == "rec" else ""))
+            open_start_window(url, act)
             log(f"{PRODUCT} כבר פועלת. פתחתי שוב את האפליקציה בדפדפן: {url}")
             return "forwarded"
         log("שים לב: נראה שהכלי כבר פתוח בחלון אחר (אולי גרסה ישנה). כדאי לסגור אותו - שני חלונות מתמללים פעמיים.")
@@ -9129,7 +9623,7 @@ def main():
     elif act["kind"] == "offer":
         APP.pending = {"source": act["source"], "name": display_name(act["source"])}
     APP.first_view = act.get("view", "")
-    if not open_browser(server.url + ("#rec" if act.get("view") == "rec" else "")) and \
+    if not open_start_window(server.url, act) and \
             os.environ.get("BZM_NO_BROWSER") != "1":
         console_show()  # no browser opened: the address is written in this window
     show("=" * 50)
@@ -9167,6 +9661,36 @@ def main():
 
 def rms(x):
     return float(np.sqrt(np.mean(x ** 2))) if len(x) else 0.0
+
+
+SUGGEST_POLL_S = 3   # how often the first slide is looked for (a test makes it short)
+
+
+def suggest_course_from_slide(sess, ldir, timeout_s=15 * 60):
+    """A lecture that started with no course: the text of its first slide (read here, with Tesseract) may carry a course name. The
+    course is OFFERED (sess.suggest), never applied by itself, once per lecture."""
+    slides = os.path.join(ldir, SLIDES_NAME)
+    end = time.time() + timeout_s
+    while time.time() < end and not sess.stop.is_set() and not sess.suggest_off and not sess.pending_course:
+        time.sleep(SUGGEST_POLL_S)
+        try:
+            files = sorted(f for f in os.listdir(slides) if f.lower().endswith((".jpg", ".jpeg", ".png")))
+        except OSError:
+            continue
+        if not files:
+            continue
+        try:
+            text = slide_text(os.path.join(slides, files[0])) or ""
+        except Exception:
+            save_error("course from the first slide")
+            return
+        courses = [c for c in course_names() if c != NO_COURSE]
+        titles = [ln.strip() for ln in text.splitlines() if ln.strip()] + [" ".join(text.split())]
+        g = guess_by_title(titles, courses) if courses and text.strip() else None
+        if g and not sess.suggest_off and not sess.pending_course:
+            sess.suggest = {"course": g[0], "why": "slide", "detail": g[1][:80]}
+            log(f"נראה שזה הקורס \"{g[0]}\" (לפי השקף הראשון). ההצעה מוצגת בחלון, ולא מתבצע שינוי לבד.")
+        return
 
 
 def run_live(sess, lang, course=""):
@@ -9304,6 +9828,8 @@ def run_live(sess, lang, course=""):
                        f"+{datetime.timedelta(seconds=int(max(0, t - start.timestamp())))}] {text}")
             now_file.add(t, text)
         sess.mark_fn = mark
+    if watcher is not None and course == NO_COURSE and not yt:   # no course chosen: the first slide may say which one it is (offered, not applied)
+        threading.Thread(target=suggest_course_from_slide, args=(sess, ldir), daemon=True).start()
     sess.watcher = watcher   # a question begun in the small window / the page asks it for a picture (App.command: snap_question)
     hotkey = PauseHotkey()   # Ctrl+Alt+P: pause the pictures, Ctrl+Alt+M: mark ★
     hotkey.start()
@@ -9713,6 +10239,30 @@ def run_live(sess, lang, course=""):
             sess.hotkey.stop()
         closing()
         step("סוף התמלול נכתב")
+        if sess.pending_course and sess.pending_course != course and os.path.isdir(ldir):   # the student chose another course while it recorded
+            import shutil
+            try:
+                new_parent = course_dir(sess.pending_course)
+                os.makedirs(new_parent, exist_ok=True)
+                old_name = os.path.basename(ldir)
+                new_name = free_folder(new_parent, old_name)
+                new_dir = os.path.join(new_parent, new_name)
+                shutil.move(ldir, new_dir)
+                if new_name != old_name:
+                    os.replace(os.path.join(new_dir, old_name + ".txt"), lecture_txt(new_dir))
+                ldir, path = new_dir, lecture_txt(new_dir)
+                sess.course, sess.transcript = sess.pending_course, path
+                with APP.lock:
+                    APP.lib_rev += 1
+                log(f"ההרצאה הועברה לקורס \"{sess.course}\".")
+            except OSError:
+                save_error("move the lecture to the chosen course")
+                log(f"לא הצלחתי להעביר את ההרצאה לקורס \"{sess.pending_course}\": היא נשארה ב\"{course}\". אפשר להעביר אותה מדף ההרצאה.")
+        if os.path.isdir(ldir):   # (a lecture that was deleted right after it started is not "saved")
+            sess.saved = {"course": sess.course, "minutes": int(round(max(0.0, time.time() - (sess.ready_at or sess.started)) / 60)),
+                          "slides": int(getattr(watcher, "count", 0) or 0) if watcher is not None else 0, "f": lib_rel(ldir)}
+            with APP.lock:
+                APP.saved_n += 1
         now_file.ended = True
         if not os.path.isdir(ldir):
             sess.transcript = None

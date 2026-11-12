@@ -1,5 +1,5 @@
 @echo off
-rem Hevanti - reading the text on the slides (Tesseract OCR, Hebrew + English) - (c) 2026 Roei Pechter. MIT License, see LICENSE.txt
+rem Hevanti - reading the text on the slides (Tesseract OCR, Hebrew + English) - (c) 2026 Hevanti. MIT License, see LICENSE.txt
 chcp 65001 >nul
 cd /d "%~dp0"
 echo Installing the free OCR (Tesseract, Hebrew + English), so Hevanti can read the text on the slides.

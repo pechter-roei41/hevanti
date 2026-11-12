@@ -1,5 +1,5 @@
 @echo off
-rem Hevanti - UNINSTALL - (c) 2026 Roei Pechter. MIT License, see LICENSE.txt
+rem Hevanti - UNINSTALL - (c) 2026 Hevanti. MIT License, see LICENSE.txt
 chcp 65001 >nul
 set PYTHONIOENCODING=utf-8
 cd /d "%~dp0"

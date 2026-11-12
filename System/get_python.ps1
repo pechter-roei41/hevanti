@@ -1,5 +1,5 @@
 # Hevanti - its own Python (the official "embeddable" Python for Windows, from python.org), when the ZIP came without it.
-# (c) 2026 Roei Pechter. MIT License, see LICENSE.txt
+# (c) 2026 Hevanti. MIT License, see LICENSE.txt
 # Usage: get_python.ps1 <folder>   (Install runs it: System\python)
 param([string]$Dest)
 $ErrorActionPreference = 'Stop'

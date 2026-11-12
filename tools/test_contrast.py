@@ -36,7 +36,7 @@ def col(x):
 
 
 # ---------------------------------------------------------------------------------------- 1. the pages use the tokens of DESIGN.md
-for page in ("app.html", "mini.html", "player.html"):
+for page in ("app.html", "mini.html", "player.html", "quick.html"):
     light, dark = C.css_vars(page)
     bad = []
     for var, (lt, dt) in C.VAR_TO_TOKEN.items():
@@ -67,6 +67,9 @@ PAIRS = [
     ("the ★ mark (ink, a graphic part) on the mark-line", "ink", "mark-line", "night-ink", "night-mark-line", GRAPHIC),
     ("a time that can be opened (green link) on paper, where answers are", "board-green", "paper", "night-green", "night-paper", TEXT),
     ("a time that can be opened (green link), hovered, on the soft green", "board-green", "board-green-soft", "night-green", "night-green-soft", TEXT),
+    ("the text of the solid green button (white by day, near black at night) on the green", "#FFFFFF", "board-green", "#0E1A14", "night-green", TEXT),
+    ("a ghost button (green text) on sunk paper: the course offer in the small window and in the live view", "board-green", "sunk-paper", "night-green", "night-sunk", TEXT),
+    ("text (ink) on sunk paper: the course offer", "ink", "sunk-paper", "night-ink", "night-sunk", TEXT),
     ("caution text on the caution bar", "css:--warn-fg", "css:--warn-bg", "cssdark:--warn-fg", "cssdark:--warn-bg", TEXT),
 ]
 for what, lf, lb, df, db, need in PAIRS:

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Hevanti (הבנתי) connector - (c) 2026 Roei Pechter. MIT License, see LICENSE.txt
+"""Hevanti (הבנתי) connector - (c) 2026 Hevanti. MIT License, see LICENSE.txt
 
 A small MCP server (Model Context Protocol, over stdin/stdout) that lets the student's own AI app - Claude for
 desktop, ChatGPT/Codex - read what Hevanti saved: what is happening in the lecture right now, the slide on the

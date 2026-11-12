@@ -336,10 +336,16 @@ with sync_playwright() as p:
     def mini_app(route):
         resp = route.fetch()
         d = resp.json()
-        d["session"] = {"kind": "live", "done": False, "course": "פיזיקה"} if mini_state["live"] else None
+        d["session"] = {"kind": "rec" if mini_state.get("rec") else "live", "done": False, "course": "פיזיקה"} if mini_state["live"] else None
         d["math"] = dict(d.get("math") or {}, ask=mini_state["ask"])
         if "run" in mini_state:
             d["run"] = mini_state.pop("run")   # (once: one look at Hevanti that says another run)
+        if mini_state.get("stopping") and d["session"]:
+            d["session"].update(stopping=True, stopping_for=8)
+        if mini_state.get("saved"):
+            d["session"] = {"kind": "live", "done": True, "course": "פיזיקה", "saved": {"course": "פיזיקה", "minutes": 46, "slides": 9, "f": "פיזיקה/הרצאה 3"}}
+        if mini_state.get("suggest") and d["session"]:
+            d["session"]["suggest"] = {"course": "אלגוריתמים", "why": "slide", "detail": ""}
         d["mark_n"] = mini_state["mark_n"]   # (Hevanti's count of marks: a mark made with the keyboard raises it)
         route.fulfill(response=resp, body=json.dumps(d))
     mini.route("**/api/app*", mini_app)
@@ -376,6 +382,66 @@ with sync_playwright() as p:
     mini.wait_for_function("() => !document.querySelector('#toast').classList.contains('on')", timeout=8000)
     mini.wait_for_timeout(4600)   # (a whole look later)
     check("floating window: ...and only once for one mark", not mini.evaluate("() => document.querySelector('#toast').classList.contains('on')"))
+    # ---- stop from the small window: two presses, then a card says the lecture was saved ----
+    marked.clear()
+    mini.evaluate("pollApp()")
+    mini.wait_for_selector("#stopBtn", state="visible", timeout=5000)
+    check("floating window: a live lecture has a stop button in the title row", mini.inner_text("#stopBtn") == "עצירה")
+    mini.click("#stopBtn")
+    check("floating window: the first press only asks (a short word, so the course name is not cut), and nothing stops yet",
+          mini.inner_text("#stopBtn") == "לעצור?" and not any(m.get("action") == "stop" for m in marked), marked)
+    mini.wait_for_timeout(3400)
+    check("floating window: not pressed again - it goes back to \"עצירה\" after 3 seconds", mini.inner_text("#stopBtn") == "עצירה" and not any(m.get("action") == "stop" for m in marked))
+    mini.click("#stopBtn"); mini.click("#stopBtn")
+    mini.wait_for_timeout(500)
+    check("floating window: the second press stops", any(m.get("action") == "stop" for m in marked), marked)
+    mini_state["stopping"] = True
+    mini.evaluate("pollApp()")
+    mini.wait_for_timeout(300)
+    check("floating window: while it stops and saves it says so (with the seconds), and the stop button is gone", "עוצר ושומר" in mini.inner_text("#lec") and "8" in mini.inner_text("#lec") and mini.is_hidden("#stopBtn"), mini.inner_text("#lec"))
+    mini_state["stopping"] = False
+    mini_state["saved"] = True
+    mini.evaluate("pollApp()")
+    mini.wait_for_selector("#saved", state="visible", timeout=5000)
+    sv_txt = mini.inner_text("#saved")
+    check("floating window: the lecture was saved - a card says so, with the course, minutes and slides, instead of the question box",
+          "נשמרה בהצלחה" in sv_txt and "פיזיקה" in sv_txt and "46 דקות" in sv_txt and "9 שקפים" in sv_txt and mini.is_hidden("#box"), sv_txt)
+    marked.clear()
+    mini.click("#savedOpen")
+    mini.wait_for_timeout(400)
+    check("floating window: 'open the lecture in the app' sends the lecture, and the window goes", any(m.get("action") == "open_lecture" and m.get("f") == "פיזיקה/הרצאה 3" for m in marked) and any(m.get("action") == "hide_mini" for m in marked), marked)
+    mini.evaluate("pollApp()")
+    mini.wait_for_timeout(300)
+    check("floating window: the card does not come back for the same lecture", mini.is_hidden("#saved"))
+    mini_state["saved"] = False
+    mini.evaluate("pollApp()")
+    mini.wait_for_timeout(300)
+    mini_state["rec"] = True
+    mini.evaluate("pollApp()")
+    mini.wait_for_timeout(300)
+    check("floating window: a recording being watched in the player is not stopped from here (no stop button)", mini.is_hidden("#stopBtn"))
+    mini_state["rec"] = False
+    mini.evaluate("pollApp()")
+    mini.wait_for_timeout(300)
+
+    # ---- a course read from the first slide is offered in the small window: one press takes it, or says no ----
+    mini_state["suggest"] = True
+    mini.evaluate("pollApp()")
+    mini.wait_for_selector("#sug", state="visible", timeout=5000)
+    check("floating window: a course read from the first slide is offered, with the name", "אלגוריתמים" in mini.inner_text("#sugText") and "השקף הראשון" in mini.inner_text("#sugText"), mini.inner_text("#sugText"))
+    marked.clear()
+    mini.click("#sugYes")
+    mini.wait_for_timeout(500)
+    check("floating window: 'move' sends the course (the lecture moves when it is saved) and tells when", any(m.get("action") == "set_lecture_course" and m.get("course") == "אלגוריתמים" for m in marked) and mini.is_hidden("#sug"), marked)
+    mini.evaluate("pollApp()")
+    mini.wait_for_selector("#sug", state="visible", timeout=5000)
+    marked.clear()
+    mini.click("#sugNo")
+    mini.wait_for_timeout(400)
+    check("floating window: 'not now' tells Hevanti, and the offer goes", any(m.get("action") == "suggest_dismiss" for m in marked) and mini.is_hidden("#sug"), marked)
+    mini_state["suggest"] = False
+    mini.evaluate("pollApp()")
+    mini.wait_for_timeout(300)
     # the first key of a question asks Hevanti for a picture of the screen of that moment - once per question
     marked.clear()
     mini.fill("textarea", "מ")
@@ -778,6 +844,147 @@ with sync_playwright() as p:
         sp.wait_for_function("document.querySelector('#toast').textContent.includes('לא הצלחתי לשמור')", timeout=8000)
         check(f"{page_name}: a new failure is shown", True)
         sp.context.close()
+
+    # ---- "no animations and motion": the app tells the tool (the floating button is drawn by the tool, not by the page) ----
+    st_ = page()
+    st_.posts = []
+    st_.route("**/api/cmd", lambda r: (st_.posts.append(json.loads(r.request.post_data or "{}")), r.fulfill(content_type="application/json", body=json.dumps({"ok": True})))[1])
+    st_.evaluate("a11ySet('still', true)")
+    st_.wait_for_timeout(300)
+    st_.evaluate("a11ySet('still', false)")
+    st_.wait_for_timeout(300)
+    seq = [p_.get("on") for p_ in st_.posts if p_.get("action") == "a11y_still"]
+    check("accessibility: choosing 'no animations and motion' (and unchoosing it) is told to the tool, for the floating button", seq == [True, False], st_.posts)
+    st_.context.close()
+
+    # ---- the live view: the course of the lecture that records can be changed, and an offer from the first slide ----
+    lc = page()
+    lc.posts = []
+    lc.route("**/api/cmd", lambda r: (lc.posts.append(json.loads(r.request.post_data or "{}")), r.fulfill(content_type="application/json", body=json.dumps({"ok": True})))[1])
+    lc.evaluate("""() => { courses = [{name: 'אלגוריתמים'}, {name: 'פיזיקה'}, {name: 'ללא קורס'}]; document.querySelector('#vLive').hidden = false;
+        drawLiveCourse({kind: 'live', done: false, ready: true, yt: null, course: 'פיזיקה', moving: false, suggest: {course: 'אלגוריתמים', why: 'slide'}}); }""")
+    check("live view: the course of the recording lecture is shown and can be changed (every course, and without a course)",
+          lc.is_visible("#liveCourse") and lc.evaluate("[...document.querySelectorAll('#liveCourse option')].map(o => o.value)") == ["אלגוריתמים", "פיזיקה", "ללא קורס"] and lc.evaluate("document.querySelector('#liveCourse').value") == "פיזיקה")
+    check("live view: a course offered from the first slide is shown, with the name", lc.is_visible("#liveSug") and "אלגוריתמים" in lc.inner_text("#liveSugText"))
+    lc.select_option("#liveCourse", "אלגוריתמים")
+    lc.wait_for_timeout(300)
+    check("live view: choosing a course sends it", any(p_.get("action") == "set_lecture_course" and p_.get("course") == "אלגוריתמים" for p_ in lc.posts), lc.posts)
+    lc.click("#liveSugYes")
+    lc.wait_for_timeout(300)
+    check("live view: 'move' on the offer sends that course and the offer goes", [p_ for p_ in lc.posts if p_.get("action") == "set_lecture_course"][-1].get("course") == "אלגוריתמים" and lc.is_hidden("#liveSug"))
+    lc.evaluate("drawLiveCourse({kind: 'live', done: false, ready: true, yt: null, course: 'אלגוריתמים', moving: true, suggest: null})")
+    check("live view: a lecture that will move says so, in words", "תועבר לקורס" in lc.inner_text("#liveCourseNote") and "אלגוריתמים" in lc.inner_text("#liveCourseNote"), lc.inner_text("#liveCourseNote"))
+    lc.evaluate("drawLiveCourse({kind: 'live', done: false, ready: true, yt: {id: 'x'}, course: 'פיזיקה', moving: false, suggest: null})")
+    check("live view: a YouTube video has no course row (it opens in the player)", lc.is_hidden("#liveCourseRow"))
+    lc.context.close()
+
+    # ---- the quick-start window (F1): course, kind, start in the background, open the app ----
+    def quick_page(theme="light", guess=None, last="פיזיקה", start_ok=True, delay_guess=0):
+        qp = b.new_context(viewport={"width": 380, "height": 364}, locale="he-IL").new_page()
+        qp.errs, qp.posts = [], []
+        qp.on("pageerror", lambda e: qp.errs.append(str(e)))
+        qp.route("**/api/library*", lambda r: r.fulfill(content_type="application/json", body=json.dumps(
+            {"items": [], "courses": [{"name": "אלגוריתמים", "lectures": 3}, {"name": "פיזיקה", "lectures": 2}, {"name": "ללא קורס", "lectures": 1}]})))
+
+        def app_route(r):
+            resp = r.fetch(); d = resp.json(); d["course"] = last; d["theme"] = theme
+            r.fulfill(response=resp, body=json.dumps(d))
+        qp.route("**/api/app*", app_route)
+
+        def cmd(r):
+            body = json.loads(r.request.post_data or "{}")
+            qp.posts.append(body)
+            a = body.get("action")
+            if a == "guess_course":
+                if delay_guess:
+                    time.sleep(delay_guess)
+                out = {"ok": True, **(guess or {})}
+            elif a == "start_live":
+                out = {"ok": bool(start_ok)} if start_ok else {"ok": False, "error": "הבנתי עוד מסיימת לתמלל את ההרצאה הקודמת."}
+            else:
+                out = {"ok": True}
+            r.fulfill(content_type="application/json", body=json.dumps(out))
+        qp.route("**/api/cmd", cmd)
+        qp.goto(url + "/quick")
+        qp.wait_for_timeout(900)
+        return qp
+
+    q = quick_page(guess={"course": "אלגוריתמים", "why": "title", "detail": "זום - אלגוריתמים"})
+    check("quick start: the window's title: Hevanti first, then the window, and it has the logo (not the browser's globe)", q.title() == "הבנתי · חלון התחלה מהירה" and q.evaluate("!!document.querySelector('link[rel=icon]')"), q.title())
+    check("quick start: the courses, \"ללא קורס\", and a new course last",
+          q.evaluate("[...document.querySelectorAll('#course option')].map(o => o.textContent)") == ["אלגוריתמים", "פיזיקה", "ללא קורס", "+ קורס חדש..."])
+    check("quick start: the course is chosen from the title of a window, with the reason and \"you can change it\"",
+          q.evaluate("document.querySelector('#course').value") == "אלגוריתמים" and "זוהה מכותרת החלון" in q.inner_text("#noteText") and "אפשר להחליף" in q.inner_text("#noteText"), q.inner_text("#noteText"))
+    q.select_option("#course", "פיזיקה")
+    check("quick start: the student chooses a course himself - the note goes away", q.is_hidden("#note"))
+    check("quick start: \"חיה עברית\" is chosen first", q.evaluate("document.querySelector('[data-kind=he]').getAttribute('aria-checked')") == "true" and q.inner_text("#go") == "התחל תמלול")
+    q.focus("[data-kind=he]")
+    q.keyboard.press("ArrowLeft")
+    check("quick start: the arrows move between the kinds (a radio group)", q.evaluate("document.querySelector('[data-kind=en]').getAttribute('aria-checked')") == "true")
+    q.click("#go")
+    q.wait_for_timeout(500)
+    starts = [p_ for p_ in q.posts if p_.get("action") == "start_live"]
+    check("quick start: \"start\" starts a live lecture in the chosen language and course", starts == [{"action": "start_live", "lang": "en", "course": "פיזיקה"}], starts)
+    check("quick start: ...and then the small window is closed (the lecture runs in the background)", [p_.get("action") for p_ in q.posts][-1] == "quick_close", q.posts)
+    q.context.close()
+
+    q = quick_page(guess={})
+    check("quick start: no guess - the course of the last lecture, said so", q.evaluate("document.querySelector('#course').value") == "פיזיקה" and "הקורס של ההרצאה הקודמת" in q.inner_text("#noteText"))
+    q.click("[data-kind=rec]")
+    check("quick start: \"מוקלטת\" - the main button says it goes on in the app (nothing starts here)", q.inner_text("#go") == "המשך באפליקציה")
+    q.click("#go")
+    q.wait_for_timeout(400)
+    check("quick start: \"מוקלטת\" opens the app at the recording box and starts nothing",
+          any(p_.get("action") == "quick_open_app" and p_.get("view") == "rec" for p_ in q.posts) and not any(p_.get("action") == "start_live" for p_ in q.posts), q.posts)
+    q.context.close()
+
+    q = quick_page(guess={})
+    q.click("#app")
+    q.wait_for_timeout(400)
+    check("quick start: \"פתח את האפליקציה\" opens the app and starts nothing",
+          any(p_.get("action") == "quick_open_app" and not p_.get("view") for p_ in q.posts) and not any(p_.get("action") == "start_live" for p_ in q.posts), q.posts)
+    q.context.close()
+
+    q = quick_page(guess={})
+    q.select_option("#course", "__new")
+    check("quick start: \"+ new course\" opens a name field right there (the list keeps the course it had)", q.is_visible("#newName") and q.evaluate("document.querySelector('#course').value") == "פיזיקה")
+    q.fill("#newName", "תרמודינמיקה")
+    q.keyboard.press("Enter")
+    q.wait_for_timeout(400)
+    opts = q.evaluate("[...document.querySelectorAll('#course option')].map(o => o.value)")
+    check("quick start: the course is created, put before \"ללא קורס\" and chosen, and it says so",
+          any(p_.get("action") == "new_course" and p_.get("name") == "תרמודינמיקה" for p_ in q.posts) and q.evaluate("document.querySelector('#course').value") == "תרמודינמיקה"
+          and opts.index("תרמודינמיקה") < opts.index("ללא קורס") and q.is_hidden("#newc") and "נוצר" in q.inner_text("#noteText"), (opts, q.posts))
+    q.click("#go")
+    q.wait_for_timeout(400)
+    check("quick start: ...and the lecture starts in it", any(p_.get("action") == "start_live" and p_.get("course") == "תרמודינמיקה" for p_ in q.posts), q.posts)
+    q.select_option("#course", "__new")
+    q.click("#newNo")
+    check("quick start: \"cancel\" closes the field and keeps the course", q.is_hidden("#newc") and q.evaluate("document.querySelector('#course').value") == "תרמודינמיקה")
+    q.context.close()
+
+    q = quick_page(guess={}, start_ok=False)
+    q.click("#go")
+    q.wait_for_timeout(500)
+    check("quick start: a start that is refused says why, and the button can be pressed again",
+          "מסיימת לתמלל" in q.inner_text("#msg") and q.is_enabled("#go") and not any(p_.get("action") == "quick_close" for p_ in q.posts))
+    q.context.close()
+
+    for theme in ("light", "dark"):
+        q = quick_page(theme=theme, guess={})
+        st = q.evaluate("""() => { const css = (e, p) => getComputedStyle(e)[p], v = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+            const rgb = c => { const d = document.createElement('div'); d.style.color = c; document.body.appendChild(d); const r = getComputedStyle(d).color; d.remove(); return r; };
+            const sel = document.querySelector('[data-kind=he]'), go = document.querySelector('#go'), app = document.querySelector('#app');
+            let solid = 0; for (const e of document.querySelectorAll('button')) if (css(e, 'backgroundColor') === rgb(v('--accent'))) solid++;
+            return {solid, goBg: css(go, 'backgroundColor') === rgb(v('--accent')), selBg: css(sel, 'backgroundColor') === rgb(v('--accent-soft')), appBg: css(app, 'backgroundColor'),
+                    noOverflow: document.documentElement.scrollWidth <= innerWidth, small: document.documentElement.scrollHeight <= 364,
+                    sameHeight: Math.abs(go.getBoundingClientRect().height - app.getBoundingClientRect().height) < 1, sameWidth: Math.abs(go.getBoundingClientRect().width - app.getBoundingClientRect().width) < 1,
+                    name: document.body.innerText.split("הבנתי").length - 1}; }""")
+        check(f"quick start, {theme}: one solid green button (start); the chosen kind is the soft green; the app button is a ghost", st["solid"] == 1 and st["goBg"] and st["selBg"] and st["appBg"] == "rgba(0, 0, 0, 0)", st)
+        check(f"quick start, {theme}: it fits a small window, without a sideways scroll", st["noOverflow"] and st["small"], st)
+        check(f"quick start, {theme}: the start button and \"open the app\" are a pair (same width and height), and the name Hevanti is not written in the window (it is in the title bar)", st["sameHeight"] and st["sameWidth"] and st["name"] == 0, st)
+        check(f"quick start, {theme}: no script errors", q.errs == [], q.errs)
+        q.context.close()
     b.close()
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")

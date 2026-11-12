@@ -7,12 +7,16 @@
 Hevanti writes down everything said in the lecture, in Hebrew or English, while it runs on your computer. Its core is two things:
 
 - **The floating window.** A small button with the Hevanti logo sits at the edge of the screen (or press Ctrl+Alt+Q). It opens a small always-on-top window, also over a full-screen lecture: type a question, press Enter, and the answer is written under it, based on what the lecturer said in the last minutes and the slide on the screen. Three "what did I miss" buttons (3, 7 or 15 minutes) ask for a summary of the last minutes in one click, and an answer shows the time of the transcript line it relies on (⏱ 00:20:44; in a saved lecture or the player a click jumps there). Formulas are drawn with KaTeX.
+- **The floating button:** a solid green circle with the logo as a thin line and a small red dot while a lecture is recorded. A click opens the small window, which grows out of the circle (above it, or below it at a top corner); the logo turns into an X, and a click on the X closes the window back into the button. "No animations and motion" in the accessibility settings (or Windows without animations) turns the growing and the turning off.
+- **Stop and saved:** the small window has a "stop" button (press twice, so it is never an accident); the lecture is saved, and a card says so with the course, the minutes and the slides, in the small window, or above the round button when the window is closed.
 - **The marks.** One click on ★, also Ctrl+Alt+M, marks the moment without stopping to listen (older lectures may still show "?" marks from before 2.13; they are kept). After the lecture, the "my marks" tab of the lecture and of the course lists every mark with what was said just before it, opens the lecture 8 seconds before the mark, and can ask an AI to explain them all. In the transcript the line said just before a mark is highlighted in yellow with a ★ (and "מסומנת" for a screen reader).
 
 Everything else supports these two.
 
 ## Also in Hevanti
 
+- **Quick start:** when Hevanti opens (after the first agreement, with a Gemini key), a small window in the middle of the screen asks only two things, the course (chosen from a window title when it can, or a new one made right there) and the kind (live Hebrew, live English, recorded), and "Start" runs the transcript in the background. "Open the app" shows the home screen without starting anything; it can be turned off in the settings.
+- **The right course, without stopping:** a lecture that started with no course offers the course whose name is on its first slide (read here, with Tesseract), in the small window and in the lecture view: one press to take it, or "not now". The course of a recording lecture can also be changed in the lecture view; the lecture moves to that course when it is stopped and saved. Nothing changes by itself.
 - **Live, recorded and YouTube lectures:** Zoom, a broadcast or anything playing on your computer; a file or a link (Drive, Dropbox, OneDrive, Zoom, Panopto through a bookmark); a YouTube video in YouTube's own player. Recordings open in a player synced with the transcript.
 - **Answers inside Hevanti:** with the student's own free Gemini API key (Google AI Studio, no credit card). No Hevanti server. The key is stored encrypted (Windows DPAPI); a key that cannot be encrypted is not saved. When Gemini blocks or cuts an answer, the reason is shown under it, and a live question tries at most two models within about 25 seconds. Without a key, a question can be copied with the last five minutes to ChatGPT, Gemini or Claude in one click; with a key, those buttons stay hidden unless you turn them on in Settings, Advanced.
 - **Slides:** a picture of every new slide or board, read offline with [Tesseract](https://github.com/tesseract-ocr/tesseract); with your own Gemini key, formulas and handwriting are read by Gemini as LaTeX (on by default once a key is saved; slides that are not clearly plain printed text (formulas, handwriting, pictures) are sent to Google - plain printed text is read on your computer; it can be turned off in Settings). Capture the whole screen, one window or a part of it, pause it, mosaic areas, delete pictures for good.
@@ -47,6 +51,7 @@ Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsx
 | `System/Program/app.html` | The app (opens in the browser) |
 | `System/Program/player.html` | The player for recorded lectures |
 | `System/Program/mini.html` | The small always-on-top question window (Ctrl+Alt+Q) |
+| `System/Program/quick.html` | The quick-start window: course, kind of lecture, "Start" (opens in the middle of the screen when Hevanti starts) |
 | `System/Program/media/howto.mp4` | The explainer video on the how-to page (key, lecture, floating window, marks, course page). The lecture in it is ["פתרון משוואה דיפרנציאלית מסדר ראשון בעזרת הפרדת משתנים"](https://www.youtube.com/watch?v=F1_uOZeYLVE) by Dvir Ross, licensed [CC BY](https://creativecommons.org/licenses/by/3.0/); a short silent excerpt is shown with Hevanti's window over it |
 | `System/Program/fonts/` | The two fonts of the app, Secular One and Assistant (SIL Open Font License, the licences are in the folder) |
 | `System/Program/katex/` | [KaTeX](https://katex.org) (MIT), draws the formulas in the answers |
@@ -72,9 +77,9 @@ Found a bug? [Open an issue](https://github.com/pechter-roei41/hevanti/issues) w
 Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org) (the first application was declined for lack of proof of users; the project will apply again once it has them. Until then the installer is not signed and Windows shows "Windows protected your PC" once).
 
 - What is signed: `Hevanti-Setup.exe`, built from the tagged commit by the public [release workflow](.github/workflows/release.yml). Nothing built on a personal computer is signed.
-- Committers and reviewers: [Roei Pechter](https://github.com/pechter-roei41). Approvers: [Roei Pechter](https://github.com/pechter-roei41).
+- Committers, reviewers and approvers: the Hevanti maintainer ([pechter-roei41](https://github.com/pechter-roei41)).
 - Privacy: Hevanti runs on your computer and sends information to other systems only in the cases listed in the [privacy policy](CODE_SIGNING.md#privacy-policy): your question to Google's Gemini with your own key, the model download, the update check and the page fonts.
 
 ## License
 
-[MIT](LICENSE) © 2026 Roei Pechter. Third-party models and libraries are downloaded from their own sources and are subject to their own licenses. Lectures and slides belong to whoever created them: use them for personal study, according to your institution's policy.
+[MIT](LICENSE) © 2026 Hevanti contributors. Third-party models and libraries are downloaded from their own sources and are subject to their own licenses. Lectures and slides belong to whoever created them: use them for personal study, according to your institution's policy.
