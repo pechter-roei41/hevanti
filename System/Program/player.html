@@ -424,7 +424,7 @@ async function contextText(q) {
   let earlier = "", left = 8000;
   before.forEach((x, i) => { const t = (btexts[i] || "").replace(/\n+/g, " | ").slice(0, 700); if (!t || t.length > left) return; left -= t.length; earlier += `[${hms(x.t)}] ${t}\n`; });
   if (earlier) out += "\nמה הופיע על השקופיות והלוח קודם בהרצאה (לפני 5 הדקות האחרונות), מהישנה לחדשה. המרצה אולי מתבסס על זה בלי להגיד:\n" + earlier;
-  return out + "\nלענות בעברית (מונחים מקצועיים אפשר באנגלית). מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.\n" +
+  return out + "\nלענות בעברית, בלי מונחים באנגלית אלא אם המרצה אמר או כתב אותם באנגלית. מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.\n" +
     "\nהשאלה שלי: " + (q || "");
 }
 async function copyText(text) {

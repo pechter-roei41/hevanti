@@ -2364,7 +2364,7 @@ $("#sylDel").addEventListener("click", async () => {
 if (window.BZMAsk) courseAsk = BZMAsk.mount($("#cAsk"), {
   title: "הסבר לרגעים שסימנתי", sub: "לפי מה שנאמר לפניהם", placeholder: "\"הסבר לכל הרגעים\" למעלה, או שאלה משלך",
   example: "מה נאמר ברגע שסימנתי?",
-  context: q => q + "\nלענות בעברית (מונחים מקצועיים אפשר באנגלית). מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.",
+  context: q => q + "\nלענות בעברית, בלי מונחים באנגלית אלא אם המרצה אמר או כתב אותם באנגלית. מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.",
   toast});
 // the course page: suggested terms that are not in the glossary yet - "+" adds and saves at once
 const glossTerms = () => $("#glossIn").value.split(/\n+/).map(x => x.trim()).filter(Boolean);
@@ -2548,7 +2548,7 @@ $("#liveLines").addEventListener("scroll", () => {
 $("#liveFollow").addEventListener("click", () => { const b = $("#liveLines"); b.scrollTop = b.scrollHeight; liveFollow = true; $("#liveFollow").hidden = true; });
 $("#liveStop").addEventListener("click", stopSession);
 $("#liveFind").addEventListener("input", () => filterLines("#liveLines", "#liveFind"));
-const ANSWER_HINT = "\nלענות בעברית (מונחים מקצועיים אפשר באנגלית). מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.\n";
+const ANSWER_HINT = "\nלענות בעברית, בלי מונחים באנגלית אלא אם המרצה אמר או כתב אותם באנגלית. מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.\n";
 // the text read from a slide (OCR, when Tesseract is installed) - copied with the question, so an AI without a
 // connection also knows what was on the slide
 const slideTextCache = {};
