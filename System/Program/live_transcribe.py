@@ -5280,7 +5280,7 @@ def _mini_visible(u):
     """True while the small window is on the screen (not hidden, not minimized)."""
     try:
         hwnd = _find_mini(u)
-        return bool(hwnd and u.IsWindowVisible(hwnd) and not u.IsIconic(hwnd))
+        return bool(hwnd and hwnd != MINI_UI.get("prewarmed") and u.IsWindowVisible(hwnd) and not u.IsIconic(hwnd))   # (a window waiting off the screen is not "open")
     except Exception:
         return False
 
@@ -5473,6 +5473,11 @@ def toggle_mini(hide_only=False, show_only=False):
         u = _mini_user32()
         with _MINI_LOCK:
             hwnd = _find_mini(u)
+            if hwnd and MINI_UI.get("prewarmed") == hwnd and not hide_only:   # ready in the background, off the screen: shown like a new one
+                MINI_UI["prewarmed"] = 0
+                MINI_UI["opening_until"] = time.time() + 20
+                _show_mini(u, hwnd, place=True, fresh=_motion_allowed())
+                return {"ok": True, "shown": True}
             if hwnd:
                 if u.IsWindowVisible(hwnd) and not u.IsIconic(hwnd) and not show_only:
                     _hide_mini(u, hwnd)   # (it shrinks into the floating button)
@@ -5514,6 +5519,39 @@ def toggle_mini(hide_only=False, show_only=False):
         MINI_UI["opening_until"] = 0.0
         save_error("mini window")
         return {"ok": False, "error": "לא הצלחתי לפתוח את החלון הקטן."}
+
+
+def prewarm_mini():
+    """Windows: start the small window's browser while a lecture loads (off the screen, then hidden), so the first press of the button
+    only shows a window that is ready. Until now the first opening of a session waited for Edge to start: a visible stall.
+    A window that already exists (or a click that is already opening it) is left alone."""
+    if os.name != "nt" or not load_settings().get("mini_button", True):
+        return False
+    import subprocess
+    try:
+        u = _mini_user32()
+        with _MINI_LOCK:
+            if _find_mini(u):
+                return False
+            exe = _browser_exe()
+            if not exe or not APP.url:
+                return False
+            prof = mini_profile_dir()
+            os.makedirs(prof, exist_ok=True)
+            args = [exe, "--app=" + APP.url + "mini", f"--window-size={MINI_SIZE[0]},{MINI_SIZE[1]}", "--window-position=-32000,-32000"]
+            _MINI_PROC["proc"] = subprocess.Popen(args + ["--user-data-dir=" + prof, "--no-first-run",
+                                                           "--no-default-browser-check", "--disable-extensions", "--disable-sync"])
+            end = time.time() + 20
+            while time.time() < end:
+                time.sleep(0.1)
+                hwnd = _find_mini(u)
+                if hwnd:
+                    MINI_UI["prewarmed"] = hwnd   # (kept off the screen, NOT hidden: a hidden browser window did not paint again when it was shown. toggle_mini treats it like a window that was just made)
+                    return True
+        return False
+    except Exception:
+        save_error("prewarm the small window")
+        return False
 
 
 def _rec_shot_before(rec, pos):
@@ -6124,6 +6162,8 @@ class MiniButton(threading.Thread):
                 if n != st["saved_n"]:
                     st["saved_n"] = n
                     hwnd_m = _find_mini(u)
+                    if hwnd_m and hwnd_m == MINI_UI.get("prewarmed"):
+                        hwnd_m = 0
                     if not (hwnd_m and u.IsWindowVisible(hwnd_m) and not u.IsIconic(hwnd_m)):
                         show_toast("ההרצאה נשמרה", "check", 4.5, "saved")
                 if st["toast_on"] and (time.time() > st["toast_until"] or (st["toast_kind"] == "mark" and not st["shown"])):
@@ -7661,6 +7701,8 @@ class App:
                 self.rec = None
         sess.thread = threading.Thread(target=self._run, args=(sess, fn) + args, daemon=True)
         sess.thread.start()
+        if kind == "live":
+            threading.Thread(target=prewarm_mini, daemon=True).start()   # (the first open of the small window is then instant)
         return sess
 
     def _run(self, sess, fn, *args):
@@ -9368,7 +9410,7 @@ def app_window_closed():
 
 
 def close_our_windows(wait=True):
-    """Close the browser windows this program opened (the app and the small question window)."""
+    """Close every browser window of Hevanti: the app, the small question window and the quick-start window."""
     import subprocess
     kills = []
     p = _MINI_PROC.get("proc")
@@ -9383,7 +9425,14 @@ def close_our_windows(wait=True):
             import ctypes
             u = _mini_user32()
             u.PostMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_size_t, ctypes.c_ssize_t]
-            for hwnd in (_APP_WIN["hwnd"], _find_mini(u)):   # (the small window of an earlier run too)
+            hwnds = {_APP_WIN["hwnd"], _find_mini(u), _find_quick(u)}   # (the small window of an earlier run, and the quick-start window, too)
+            try:   # every other window that shows a Hevanti page (an app window opened from the quick-start window is not tracked)
+                for h, title in _chrome_windows(u).items():
+                    if title.startswith(PAGE_TITLE) or title.endswith("· הבנתי") or title == QUICK_TITLE:
+                        hwnds.add(h)
+            except Exception:
+                pass
+            for hwnd in hwnds:
                 if hwnd:
                     u.PostMessageW(hwnd, 0x0010, 0, 0)   # WM_CLOSE: the window closes as if the student closed it
             _APP_WIN["hwnd"] = 0
@@ -10376,7 +10425,9 @@ def run_live(sess, lang, course=""):
             except OSError:
                 save_error("move the lecture to the chosen course")
                 log(f"לא הצלחתי להעביר את ההרצאה לקורס \"{sess.pending_course}\": היא נשארה ב\"{course}\". אפשר להעביר אותה מדף ההרצאה.")
-        if os.path.isdir(ldir):   # (a lecture that was deleted right after it started is not "saved")
+        if sess.discard and not (yt and old[0]) and os.path.isdir(ldir):   # (the student chose to delete it: a folder that is still there is removed again, never reported as saved)
+            remove_lecture_dir(ldir)
+        if os.path.isdir(ldir) and not (sess.discard and not (yt and old[0])):   # (a lecture that was deleted right after it started is not "saved")
             sess.saved = {"course": sess.course, "minutes": int(round(max(0.0, time.time() - (sess.ready_at or sess.started)) / 60)),
                           "slides": int(getattr(watcher, "count", 0) or 0) if watcher is not None else 0, "f": lib_rel(ldir)}
             with APP.lock:

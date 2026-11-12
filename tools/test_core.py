@@ -585,6 +585,17 @@ check("AI and Hevanti windows are found by a whole part of the title (a lecture 
 check("one failure of painting over the AI windows skips that picture, it stops only after 5 in a row and says so",
       "self.mask_fails >= 5" in _src and 'save_error("mask windows")' in _src)
 check("the sound watchdog's clocks are monotonic (a clock change does not blind it)", "now = time.monotonic()" in _src and "last_audio = time.monotonic()" in _src)
+# 12.11.2026: closing from the small window closes every window; the quick-start window keeps its size; no "saved" card after a delete
+_src = open(os.path.join(L.SCRIPT_DIR, "live_transcribe.py"), encoding="utf-8").read()
+_cw = _src[_src.index("def close_our_windows"):_src.index("def open_start_window")]
+check("closing Hevanti closes the quick-start window and every other Hevanti window too", "_find_quick(u)" in _cw and "QUICK_TITLE" in _cw and "PAGE_TITLE" in _cw)
+_q = open(os.path.join(L.SCRIPT_DIR, "quick.html"), encoding="utf-8").read()
+check("quick window: a new course's name box takes the place of the list (no growing, no scroll bar)",
+      '$("#course").hidden = true; $("#newc").hidden = false' in _q and '$("#newc").hidden = true; $("#course").hidden = false' in _q)
+check("quick window: the title is one even weight of the body font", ".top{margin:0;font-family:var(--f-body)" in _q)
+_m = open(os.path.join(L.SCRIPT_DIR, "mini.html"), encoding="utf-8").read()
+check("small window: after stop and delete no saved card is drawn", "!discardedHere ? s.saved : null" in _m)
+check("a lecture starting prepares the small window in the background", "prewarm_mini" in _src[_src.index("    def start(self, kind, lang, fn"):_src.index("    def _run(self, sess, fn")])
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)
