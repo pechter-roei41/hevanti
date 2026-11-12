@@ -564,5 +564,17 @@ _ask = open(os.path.join(L.SCRIPT_DIR, "ask.js"), encoding="utf-8").read()
 _mini = open(os.path.join(L.SCRIPT_DIR, "mini.html"), encoding="utf-8").read()
 check("a new lecture starts a new conversation in the small window (no old answers in 'more details')", "reset: resetChat" in _ask and "box.reset()" in _mini)
 
+# third-party notices (audit 12.11.2026): the file, the full texts, the written offer for the GPL libraries, the visible credit
+_sys = os.path.dirname(L.SCRIPT_DIR)
+_tp = open(os.path.join(_sys, "THIRD-PARTY-NOTICES.txt"), encoding="utf-8").read()
+check("third-party notices: FFmpeg/PyAV with the GPL and LGPL texts, source links and a written offer",
+      all(w in _tp for w in ("GPL-2.0.txt", "LGPL-2.1.txt", "ffmpeg.org", "pyav-ffmpeg", "Written offer", "libx264")) and
+      all(os.path.isfile(os.path.join(_sys, "licenses", n)) for n in ("GPL-2.0.txt", "LGPL-2.1.txt", "Apache-2.0.txt", "CC-BY-4.0.txt")))
+check("third-party notices: the ivrit.ai models with their licenses and credit, the CC BY video, Tesseract, KaTeX",
+      all(w in _tp for w in ("ivrit-ai/whisper-large-v3-turbo-ct2", "Apache License 2.0", "Yakov Kolani", "CC-BY-4.0", "Dvir Ross", "Tesseract", "KaTeX")))
+_lic = open(os.path.join(_sys, "LICENSE.txt"), encoding="utf-8").read()
+_appsrc = open(os.path.join(L.SCRIPT_DIR, "app.html"), encoding="utf-8").read()
+check("the license and the app point to the notices, and the app credits ivrit.ai", "THIRD-PARTY-NOTICES.txt" in _lic and "ivrit.ai" in _appsrc and "Yakov Kolani" in _appsrc)
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)
