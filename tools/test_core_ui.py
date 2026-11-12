@@ -484,7 +484,10 @@ with sync_playwright() as p:
     mini.wait_for_selector("#sug", state="visible", timeout=5000)
     marked.clear()
     mini.click("#sugNo")
-    mini.wait_for_timeout(400)
+    for _ in range(30):   # (the answer of the page arrives a moment later: wait for it, not a fixed 400 ms: the test failed one run in two)
+        if any(m.get("action") == "suggest_dismiss" for m in marked) and mini.is_hidden("#sug"):
+            break
+        mini.wait_for_timeout(100)
     check("floating window: 'not now' tells Hevanti, and the offer goes", any(m.get("action") == "suggest_dismiss" for m in marked) and mini.is_hidden("#sug"), marked)
     mini_state["suggest"] = False
     mini.evaluate("pollApp()")
