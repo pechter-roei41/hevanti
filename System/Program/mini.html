@@ -209,7 +209,7 @@ $("#sugYes").addEventListener("click", async () => {   // the lecture moves to t
   toast(r.ok ? "ההרצאה תועבר לקורס \"" + c + "\" כשתיעצר ותישמר." : (r.error || "לא הצלחתי להעביר."));
 });
 $("#sugNo").addEventListener("click", () => { $("#sug").hidden = true; fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify({action: "suggest_dismiss"})}).catch(() => {}); });
-let box = null, markedHere = false;
+let box = null, markedHere = false, lastKey = "";
 if (window.BZMAsk) box = BZMAsk.mount($("#box"), {compact: true, title: "שאלה", placeholder: "מה לא ברור? (Enter לשליחה)",
   context: q => q,   // (for "answer here" Hevanti builds the context itself)
   // what is copied to ChatGPT / Gemini / Claude: the question with the last minutes of the lecture, built by Hevanti like the page's own
@@ -254,6 +254,8 @@ async function pollApp() {
     $("#note").hidden = live; document.body.classList.toggle("on", live);
     if (live) sawLive = true;
     curS = s;
+    const key = s && !s.done ? s.started + "|" + s.kind : "";   // a new lecture starts a new conversation (the window stays open from lecture to lecture)
+    if (key && key !== lastKey) { if (lastKey && box) box.reset(); lastKey = key; }
     const canStop = live && s && s.kind === "live" && !s.stopping;   // (a recording watched in the player is not stopped from here)
     if (!live && stopTimer) stopReset();
     if (!live) $("#short").hidden = true;

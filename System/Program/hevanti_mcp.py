@@ -217,8 +217,18 @@ class Lib:
         for n in names:
             if n.lower() == wanted:
                 return n
-        hits = [n for n in names if wanted in n.lower() or n.lower() in wanted]
-        return min(hits, key=len) if hits else None
+        hits = self.course_hits(wanted, names)
+        return hits[0] if len(hits) == 1 else None   # (two courses fit: none is guessed - "פיזיקה" must not become "פיזיקה 2" by luck)
+
+    def course_hits(self, wanted, names=None):
+        """Every course whose name contains `wanted` (or that `wanted` contains), for telling "no such course" from "which one?"."""
+        wanted = str(wanted or "").strip().lower()
+        if names is None:
+            try:
+                names = [x for x in os.listdir(self.root) if not x.startswith(".") and os.path.isdir(os.path.join(self.root, x))]
+            except OSError:
+                names = []
+        return sorted(n for n in names if wanted and (wanted in n.lower() or n.lower() in wanted))
 
     def now_course(self, body=None):
         """The course of what is happening now (from the transcript path in now_watching.txt), or None."""
@@ -251,12 +261,17 @@ class Lib:
                         return it
             return items[0] if items else None
         low = name.lower()
+        self.ambiguous = []
         for it in items:
             if f"{it[0]}/{it[1]}".lower() == low:
                 return it
-        for it in items:
-            if low in f"{it[0]}/{it[1]}".lower():
-                return it
+        same = [it for it in items if it[1].lower() == low]   # the lecture's own name, exactly ("הרצאה 1" is not "הרצאה 12")
+        if len(same) == 1:
+            return same[0]
+        part = same or [it for it in items if low in f"{it[0]}/{it[1]}".lower()]
+        if len(part) == 1:
+            return part[0]
+        self.ambiguous = [f"{it[0]}/{it[1]}" for it in part[:6]]   # (more than one fits: none is guessed; the tool says which)
         return None
 
 
@@ -382,6 +397,9 @@ class Server:
         c = self.lib.course_of(wanted)
         if c:
             return c, None
+        hits = self.lib.course_hits(wanted)
+        if len(hits) > 1:
+            return None, (f"\"{wanted}\" מתאים ליותר מקורס אחד: " + ", ".join(hits) + ". צריך לציין את השם המלא של הקורס.")
         try:
             names = sorted(x for x in os.listdir(self.lib.root)
                            if not x.startswith(".") and os.path.isdir(os.path.join(self.lib.root, x)))
@@ -389,6 +407,12 @@ class Server:
             names = []
         return None, (f"אין בהבנתי קורס בשם \"{wanted}\". הקורסים שיש: " + (", ".join(names) or "(עוד אין)") +
                       ". אם זה הקורס הנכון בשם אחר - להשתמש בשם כפי שהוא כאן.")
+
+    def _not_found(self, course):
+        amb = getattr(self.lib, "ambiguous", [])
+        if amb:
+            return "השם מתאים ליותר מהרצאה אחת: " + ", ".join(amb) + ". צריך לציין שם מלא יותר."
+        return "לא מצאתי הרצאה כזו" + (f" בקורס \"{course}\"" if course else "") + "."
 
     # --- tools ---
     def now_status(self, body):
@@ -420,10 +444,14 @@ class Server:
                          "אפשר להשתמש ב-`lectures` וב-`transcript` להרצאות שכבר נשמרו.")]
         out = []
         status = self.now_status(body)
+        cur = self.lib.now_course(body)
+        if course and cur and cur != course:   # this conversation is about another course: the lecture that runs now is NOT its lecture (the brief check too: it is the one the AI is told to call first)
+            return [text(f"סטטוס: כרגע רצה בהבנתי הרצאה בקורס \"{cur}\", אבל השיחה הזו היא על הקורס \"{course}\". "
+                         f"אין לקשר את התשובה להרצאה שרצה. אם הסטודנט שואל על ההרצאה שרצה עכשיו - `now` בלי course. "
+                         f"להרצאות של הקורס \"{course}\": `transcript` עם course=\"{course}\".")]
         if args.get("brief"):
             return [text(status)]
         out.append(text(status))
-        cur = self.lib.now_course(body)
         if course and cur and cur != course:
             out.append(text(f"שימו לב: מה שקורה עכשיו בהבנתי שייך לקורס \"{cur}\", לא לקורס \"{course}\" "
                             "שהשיחה הזו עליו. אם השאלה על ההרצאה שרצה עכשיו - הנה היא. אם על הקורס הזה - "
@@ -493,8 +521,7 @@ class Server:
             return self.whole_course(course, args.get("part"))
         it = self.lib.find(args.get("lecture"), course)
         if not it:
-            return [text("לא מצאתי הרצאה כזו" + (f" בקורס \"{course}\"" if course else "") +
-                         ". `lectures` מראה את כל ההרצאות.")]
+            return [text(self._not_found(course) + " `lectures` מראה את כל ההרצאות.")]
         c, n, d, path, _ = it
         lines = read_lines(path)
         a, b = args.get("from_min"), args.get("to_min")
@@ -526,7 +553,7 @@ class Server:
                         ([text("הטקסט שנקרא מהשקופית (אוטומטי):\n" + words)] if words else [])
         it = self.lib.find(args.get("lecture"), course)
         if not it:
-            return [text("לא מצאתי הרצאה כזו" + (f" בקורס \"{course}\"" if course else "") + ".")]
+            return [text(self._not_found(course))]
         at = secs(args.get("at"))
         best = None
         for t, x in read_lines(it[3]):

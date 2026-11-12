@@ -1041,7 +1041,7 @@ with sync_playwright() as p:
             const sel = document.querySelector('[data-kind=he]'), go = document.querySelector('#go'), app = document.querySelector('#app');
             let solid = 0; for (const e of document.querySelectorAll('button')) if (css(e, 'backgroundColor') === rgb(v('--accent'))) solid++;
             return {solid, goBg: css(go, 'backgroundColor') === rgb(v('--accent')), selBg: css(sel, 'backgroundColor') === rgb(v('--accent-soft')), appBg: css(app, 'backgroundColor'),
-                    noOverflow: document.documentElement.scrollWidth <= innerWidth, small: document.documentElement.scrollHeight <= 364,
+                    noOverflow: document.documentElement.scrollWidth <= innerWidth, small: document.documentElement.scrollHeight <= 438,
                     sameHeight: Math.abs(go.getBoundingClientRect().height - app.getBoundingClientRect().height) < 1, sameWidth: Math.abs(go.getBoundingClientRect().width - app.getBoundingClientRect().width) < 1,
                     name: document.body.innerText.split("הבנתי").length - 1}; }""")
         check(f"quick start, {theme}: one solid green button (start); the chosen kind is the soft green; the app button is a ghost", st["solid"] == 1 and st["goBg"] and st["selBg"] and st["appBg"] == "rgba(0, 0, 0, 0)", st)

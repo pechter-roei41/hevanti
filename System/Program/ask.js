@@ -225,7 +225,7 @@
     planBox.append(mk("span", "", "יש לך מנוי בתשלום ל-ChatGPT, Claude או Gemini? (שאלה חד-פעמית)"),
       mk("span", "hint", "אם כן, שאלות והרצאות שלמות ילכו ישר לאפליקציה שלך, בלי מכסה. אם לא, הבנתי תענה כאן במכסה החינמית."));
     const planBtns = mk("div", "btns");
-    for (const [val, label] of [["paid", "כן, יש לי מנוי"], ["free", "לא, חינם"]]) {
+    for (const [val, label] of [["paid", "כן, יש לי מנוי"], ["free", "לא, רק המפתח"]]) {
       const pb = mk("button", "", label); pb.type = "button";
       pb.addEventListener("click", () => savePlan(val));
       planBtns.appendChild(pb);
@@ -260,7 +260,8 @@
     exBtn.title = "דוגמה להסבר האחרון";
     exBtn.addEventListener("click", () => askHere("תן דוגמה"));
     const follow2 = mk("div", "followbar"); follow2.append(moreBtn, exBtn);   // above the box to write in: a next step for the last answer
-    newBtn.addEventListener("click", () => { hist.length = 0; conv.replaceChildren(); convbar.hidden = true; updMore(); });
+    function resetChat() { if (ctl) { try { ctl.abort(); } catch (e) {} } hist.length = 0; conv.replaceChildren(); convbar.hidden = true; updMore(); }   // (also called from outside: a new lecture or course must not carry the old answers into "more details")
+    newBtn.addEventListener("click", resetChat);
     convbar.append(newBtn);
     if (!opts.compact) convbar.append(mk("span", "hint", "התשובות נשמרות בתיקיית ההרצאה, ב\"שאלות ותשובות.md\"."));
     const hist = [];
@@ -431,7 +432,7 @@
     box.append(head, planBox, conn, conv, follow2, ta, row, convbar, chips, hint);
     // a question made ready (a button of the page): for the built-in answer straight away, otherwise written in the box
     function ask(q, extra) { if (hereDefault()) askHere(q, extra); else { ta.value = q; ta.focus(); } }
-    return {focus: () => ta.focus(), textarea: ta, refresh, askHere, ask, builtin: hereDefault};
+    return {focus: () => ta.focus(), textarea: ta, refresh, askHere, ask, builtin: hereDefault, reset: resetChat};
   }
   // open an AI for the course page's "פתיחה בשליש": the course's project link, the connected app, or the site
   async function openFor(id, link) {

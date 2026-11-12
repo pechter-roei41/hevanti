@@ -1066,6 +1066,16 @@ def load_model(stub_av=True):
 USE_VAD = True
 
 
+def _vad_problem(e):
+    """True when an error is about the silence filter itself (its model file or onnxruntime is missing or broken) - only then is the filter
+    turned off. Any other error (out of memory, a busy file, a hiccup of the GPU) must not switch it off for every later lecture:
+    without it Whisper invents text on silence (audit 12.11.2026, #3)."""
+    if isinstance(e, (ImportError, FileNotFoundError)):
+        return True
+    low = (str(e) or "").lower()
+    return any(w in low for w in ("onnx", "silero", "vad"))
+
+
 # --- noise: what the model writes when there is no speech (a word or a sound repeated again and again, "נאסראראראר") ---
 def _word_key(w):
     return re.sub(r"[^\w]", "", w)
@@ -1113,7 +1123,7 @@ def transcribe(model, beam, audio16, prev_text):
                                    initial_prompt=prompt, **hot_kw())
         return denoise(" ".join(s.text.strip() for s in segs))
     except Exception as e:
-        if not USE_VAD:
+        if not USE_VAD or not _vad_problem(e):
             raise
         log(f"סינון שקט (VAD) לא זמין ({e.__class__.__name__}) - ממשיך בלעדיו")
         USE_VAD = False
@@ -4944,7 +4954,7 @@ MINI_SIZE = (380, 460)   # small: it stays in a corner of the screen
 QUICK_HTML = os.path.join(SCRIPT_DIR, "quick.html")   # the quick-start window (F1): a small window in the middle of the screen when Hevanti opens
 QUICK_TITLE = "הבנתי · חלון התחלה מהירה"   # its page's title (found by an exact match; the app-window watcher takes it as the app's window too)
 QUICK_STOP_S = 10   # a lecture stopped this many seconds after it started transcribing (or sooner) is almost empty: the student is asked whether to delete it. One number for the app and the small window (both read it from /api/app)
-QUICK_SIZE = (380, 400)   # (96-dpi pixels, the title bar included)
+QUICK_SIZE = (380, 470)   # (96-dpi pixels, the title bar included)
 _MINI_LOCK = threading.Lock()
 
 
@@ -6518,6 +6528,13 @@ def direct_link(url):
     return url
 
 
+def url_tag(url):
+    """Six letters that tell two links apart: two recordings called "Recording" (Zoom) or "הרצאה 1" (Panopto, two semesters) must not share a file,
+    or the second link would be transcribed from the first one's recording (audit 12.11.2026, #4). The #fragment is not part of the link."""
+    import hashlib
+    return hashlib.sha1(str(url).split("#")[0].encode("utf-8", "replace")).hexdigest()[:6]
+
+
 def _download_name(resp, url):
     import urllib.parse
     cd = resp.headers.get("Content-Disposition") or ""
@@ -6526,7 +6543,7 @@ def _download_name(resp, url):
     stem, ext = os.path.splitext(name)
     if not ext or len(ext) > 6:
         stem, ext = name or "video", ".mp4"
-    return safe_stem(stem) + ext
+    return safe_stem(stem)[:70].strip(" .") + " [" + url_tag(url) + "]" + ext
 
 
 def save_download(resp, url):
@@ -6824,10 +6841,10 @@ def site_download(url):
         problem(LINK_MESSAGES["live"])
         return None
     title = info.get("title") or "video"
-    stem = safe_stem(title)
+    stem = safe_stem(title)[:70].strip(" .") + " [" + url_tag(info.get("webpage_url") or url) + "]"   # (the tag: the same title of another link is another file)
     final = os.path.join(VIDEO_DIR, stem + ".mp4")
     if os.path.isfile(final):
-        log(f"ההקלטה כבר הורדה בעבר: {stem}")
+        log(f"ההקלטה כבר הורדה בעבר: {safe_stem(title)}")
         return Media(final, title=title)
     log(f"מוריד: {title}" + (f" ({hms(info['duration'])})" if info.get("duration") else ""))
     fmts = info.get("formats") or []
@@ -7389,7 +7406,7 @@ def transcribe_worker(rec, model, beam, on_gpu, audio16):
                     save_error("recording batch")
                     batched = False  # one window after another from now on
                     continue
-                if USE_VAD:
+                if USE_VAD and _vad_problem(ex):
                     save_error("recording vad")
                     USE_VAD = False  # without the silence filter
                     continue
@@ -9811,8 +9828,15 @@ def run_live(sess, lang, course=""):
 
     def write_line(line):
         with write_lock:
-            with open(path, "a", encoding="utf-8") as f:
-                f.write(line + "\n")
+            for attempt in range(5):   # (an antivirus or OneDrive may hold the file for a moment: tried again, a line is not lost for that)
+                try:
+                    with open(path, "a", encoding="utf-8") as f:
+                        f.write(line + "\n")
+                    return
+                except OSError:
+                    if attempt == 4:
+                        raise
+                    time.sleep(0.4)
 
     lang_he = 'אנגלית' if LANG == 'en' else 'עברית'
     if yt and os.path.isfile(path):
@@ -10020,6 +10044,20 @@ def run_live(sess, lang, course=""):
         now_file.add(line_t, text)
 
     def handle_chunk(chunk, chunk_t, chunk_sr, heard_until=None):
+        """One piece that cannot be transcribed (out of memory, a busy file, a hiccup of the GPU) is skipped and said: the lecture goes on
+        (until now one error here ended the whole lecture - audit 12.11.2026, #2)."""
+        try:
+            return _handle_chunk(chunk, chunk_t, chunk_sr, heard_until)
+        except Exception as ex:
+            save_error("live chunk")
+            state["chunk_fails"] = state.get("chunk_fails", 0) + 1
+            if state["chunk_fails"] <= 3 or state["chunk_fails"] % 20 == 0:
+                log(f"לא הצלחתי לתמלל קטע של ההרצאה ({ex.__class__.__name__}) - ממשיך. אם זה חוזר: לסגור תוכנות כבדות ולבדוק מקום פנוי בדיסק.")
+            note("קטע לא תומלל")
+            draft_clear()
+            now_file.set_draft("")
+
+    def _handle_chunk(chunk, chunk_t, chunk_sr, heard_until=None):
         """Transcribe one piece of audio and write it out (the final text replaces the draft line).
         heard_until: when the newest sound we already have arrived - the delay is measured from there
         (not from the end of this piece: waiting for a piece to fill up is not being late)."""
@@ -10197,13 +10235,14 @@ def run_live(sess, lang, course=""):
                 reconnect("המחשב חזר ממצב שינה", True); last_reconnect = now; last_audio = now
             elif not audio.alive() and now - last_reconnect > 3:
                 reconnect("התקן השמע התנתק", True); last_reconnect = now; last_audio = now
-            elif MEDIA_STATUS == "Playing" and now - last_audio > 8 and now - last_reconnect > 15:
+            elif MEDIA_STATUS == "Playing" and now - last_audio > 8 and now - last_reconnect > 15 and q.qsize() == 0:
                 # something is playing but no sound reaches us -> the sound went to another device
+                # (only when nothing waits in the queue: while a slow piece is transcribed the loop does not read, so "last_audio" gets old although the sound arrives. A reconnect then threw away everything that waited - audit 12.11.2026, #1)
                 reconnect("משהו מתנגן אבל לא מגיע סאונד", False); last_reconnect = now
                 if not warned_silent and now - last_audio > 40:
                     log("לא מגיע סאונד למרות שמשהו מתנגן. לבדוק שההרצאה לא מושתקת ושהסאונד יוצא מהרמקולים/האוזניות של המחשב.")
                     warned_silent = True
-            elif now - last_audio > 45 and now - last_reconnect > 45:
+            elif now - last_audio > 45 and now - last_reconnect > 45 and q.qsize() == 0:
                 reconnect("בדיקה שקטה", False); last_reconnect = now
             elif speakers.ok and now - last_default_check >= 1.0:
                 # the user picked other speakers/headphones -> follow them right away

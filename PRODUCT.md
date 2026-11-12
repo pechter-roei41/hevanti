@@ -29,7 +29,7 @@ Success is measured by study time saved, number of users, and being a project wo
 
 ## Positioning
 
-Free and open source (MIT), with no Hevanti server and no model of its own. The AI inside Hevanti is Google's Gemini, called with the student's own free API key (Google AI Studio, no credit card): when the student asks, Hevanti sends the question, the last minutes of the transcript and the current slide to Gemini and shows the answer under the question; it also reads formulas and handwriting on slides through Gemini. The key is stored encrypted on the student's computer. Transcripts and slides otherwise stay on the student's computer. Without a key, the question plus the last five minutes can be copied to ChatGPT, Gemini or Claude. A small MCP server lets the student's own AI app read the lecture directly.
+Open source (MIT), with no Hevanti server and no model of its own. The AI inside Hevanti is Google's Gemini, called with the student's own free API key (Google AI Studio, no credit card): when the student asks, Hevanti sends the question, the last minutes of the transcript and the current slide to Gemini and shows the answer under the question; it also reads formulas and handwriting on slides through Gemini. The key is stored encrypted on the student's computer. Transcripts and slides otherwise stay on the student's computer. Without a key, the question plus the last five minutes can be copied to ChatGPT, Gemini or Claude. A small MCP server lets the student's own AI app read the lecture directly.
 
 ## Operating Context
 

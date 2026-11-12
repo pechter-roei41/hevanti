@@ -62,6 +62,7 @@ select:hover{border-color:var(--accent)}
 .newc input::placeholder{color:var(--muted);opacity:1}
 .newc button{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:12px;padding:8px 12px;font-weight:600;cursor:pointer;min-height:42px}
 .newc button.x{border-color:var(--line);color:var(--muted)}
+.rule{margin:0;color:var(--muted);font-size:13px;line-height:1.4}   /* the reminder before every lecture: short, no step that blocks */
 .msg{padding:8px 12px;border-radius:10px;background:var(--warn-bg);color:var(--warn-fg);font-size:14.5px;line-height:1.45}
 </style>
 </head>
@@ -88,6 +89,7 @@ select:hover{border-color:var(--accent)}
     <button type="button" role="radio" aria-checked="false" data-kind="en" tabindex="-1">חיה אנגלית</button>
     <button type="button" role="radio" aria-checked="false" data-kind="rec" tabindex="-1">מוקלטת</button>
   </div>
+  <p class="rule" id="rule">להקליט רק לפי הכללים של המוסד ובידיעת המרצה.</p>
 </div>
 
 <div class="msg" id="msg" role="alert" hidden></div>

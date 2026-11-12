@@ -660,7 +660,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <div class="optbox">
           <h4>יש לי מנוי בתשלום</h4>
           <label class="row"><input type="checkbox" id="planPaid"><b>יש לי מנוי ל-ChatGPT, Claude או Gemini</b></label>
-          <p>שאלות והרצאות שלמות ילכו ישר לאפליקציה שלך, בלי מכסה. "תשובה כאן" נשארת אפשרות חינמית נוספת.</p>
+          <p>שאלות והרצאות שלמות ילכו ישר לאפליקציה שלך, בלי מכסה. "תשובה כאן" נשארת אפשרות נוספת, במכסה החינמית של Google.</p>
         </div>
         <div class="optbox">
           <h4>קריאת נוסחאות וכתב יד</h4>
@@ -680,7 +680,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <ul style="margin:10px 0 0;padding-inline-start:20px;display:grid;gap:6px;line-height:1.6">
         <li><b>מה נשמר:</b> התמלול של ההרצאות, צילומי המסך של מה שבחרת לצלם, והטקסט שנקרא מהם.</li>
         <li><b>איפה:</b> רק במחשב שלך, בתיקייה "הקורסים שלי". אין חשבון ואין שרת של הבנתי. אם התיקייה נמצאת בתוך OneDrive או Google Drive (למשל Documents שמסונכרן), התוכנה של הענן מעתיקה אותה לחשבון שלך שם.</li>
-        <li><b>מה נשלח לבינה המלאכותית:</b> רק כשלוחצים על כפתור "שאלה ל-AI" או על אחת המשימות (סיכום, מבחן דמה, דף נוסחאות), או כשמבקשים ממנה דרך חיבור. אז הטקסט, והתמונה אם מצרפים אותה, עוברים לחברה שמאחוריה. בלי זה, שום דבר לא יוצא מהמחשב.</li>
+        <li><b>מה נשלח לבינה המלאכותית:</b> בלחיצה על כפתור "שאלה ל-AI" או על אחת המשימות (סיכום, מבחן דמה, דף נוסחאות), או כשמבקשים ממנה דרך חיבור: הטקסט, והתמונה אם מצרפים אותה, עוברים לחברה שמאחוריה. <b>יוצא מן הכלל:</b> אם הוזן מפתח Gemini, קריאת הנוסחאות וכתב היד פועלת מעצמה ושולחת ל-Google, בלי לחיצה, שקופיות שאינן טקסט מודפס ברור (אפשר לכבות בהגדרות). בשקופית יכולים להופיע גם פנים ושמות של משתתפים בשיחת וידאו, והם נשלחים כמו שהם. בחשבון חינמי Google עשויה להשתמש בתוכן כדי לשפר את המוצרים שלה. מלבד זה, שום דבר לא יוצא מהמחשב.</li>
         <li><b>מה עוד עובר ברשת:</b> בדיקת גרסה חדשה ב-GitHub (אפשר לכבות בתיבה שלמעלה), הורדה חד-פעמית של מודל התמלול (Hugging Face) ושל קריאת השקופיות (GitHub). ורק אם הגדרת "AI מובנה": בלחיצה על "תשובה כאן" נשלחים ל-Google השאלה, הדקות האחרונות והשקופית; ובנוסף, כי "קריאת נוסחאות וכתב יד" פועלת כברירת מחדל כשיש מפתח (אפשר לכבות בהגדרות), גם שקופיות שאינן טקסט מודפס ברור. עם השאלה נשלח גם הטקסט של השקופיות הקודמות בהרצאה.</li>
         <li><b>מה בשליטתך:</b> לבחור חלון אחד או חלק מהמסך במקום כל המסך, להשהות את הצילום (גם עם <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd></span>), לטשטש אזורים קבועים, ולמחוק צילומים לצמיתות.</li>
         <li><b>אחריות:</b> הבנתי ניתנת כמו שהיא, בלי אחריות מכל סוג. השימוש בה, כולל הקלטה, תמלול ושמירה של הרצאות ושקופיות, הוא באחריות המשתמש בלבד. <b>לפני שמשתמשים, כל משתמש צריך לבדוק מה הנהלים והכללים במוסד שלו ואצל המרצה.</b> מפתחי הכלי אינם אחראים לשימוש בה.</li>
@@ -929,7 +929,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="guide">
       <section id="g-key" aria-labelledby="g-keyT">
         <h2 id="g-keyT">חיבור לתשובות (דקה, פעם אחת)</h2>
-        <p>את התשובות כותב Gemini של Google, בחינם. צריך רק "מפתח": קוד שמאפשר להבנתי לשאול בשמך. בלי כרטיס אשראי.</p>
+        <p>את התשובות כותב Gemini של Google, במפתח החינמי שלה. צריך רק "מפתח": קוד שמאפשר להבנתי לשאול בשמך. בלי כרטיס אשראי.</p>
         <ol class="gsteps">
           <li>נכנסים ל-<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> עם חשבון Google הרגיל.</li>
           <li>לוחצים <span class="say">Create API key</span> ואז <span class="say">Copy key</span>.</li>
@@ -1015,7 +1015,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 <div class="modal" id="consent" hidden role="dialog" aria-modal="true" aria-labelledby="consT"><div class="card">
   <h3 id="consT">לפני שמקליטים הרצאה</h3>
   <p style="margin:0">הבנתי מתמללת את מה שמתנגן במחשב, ושומרת צילומי מסך של שקופיות. בהרבה מוסדות אסור להקליט הרצאה בלי אישור של המרצה, ולכן:</p>
-  <ul style="margin:6px 0;padding-inline-start:20px;line-height:1.6"><li>לבדוק מה הכללים של המוסד שלך.</li><li>לבקש אישור מהמרצה, אם הכללים דורשים.</li><li>להשתמש בזה לעצמך בלבד, ולא להפיץ הקלטות, תמלולים או שקופיות.</li></ul>
+  <ul style="margin:6px 0;padding-inline-start:20px;line-height:1.6"><li>לבדוק מה הכללים של המוסד שלך.</li><li>לבקש אישור מהמרצה, אם הכללים דורשים.</li><li>להשתמש בזה לעצמך בלבד, ולא להפיץ הקלטות, תמלולים או שקופיות.</li><li>אם הוזן מפתח Gemini: שקופיות שאינן טקסט מודפס ברור נשלחות ל-Google אוטומטית (אפשר לכבות בהגדרות), ובחשבון חינמי Google עשויה להשתמש בהן. שקופית עם פנים או שמות של משתתפים נשלחת כמו שהיא.</li></ul>
   <label class="row" style="cursor:pointer"><input type="checkbox" id="consCheck"><b>קראתי, ואני אחראי לבדוק ולקבל אישור לפני שאני מקליט</b></label>
   <div class="row"><button class="btn" id="consOk" type="button" disabled>המשך</button><button class="btn quiet" id="consNo" type="button">ביטול</button></div>
 </div></div>
@@ -2272,7 +2272,7 @@ function lectureMenu(e) {
 }
 let courseName = "", courseTextCache = "", courseChars = null, courseAsk = null;
 async function openCourse(name) {
-  show("course"); courseName = name; courseTextCache = ""; courseChars = null;
+  show("course"); if (courseAsk && courseName !== name) courseAsk.reset(); courseName = name; courseTextCache = ""; courseChars = null;
   $("#cTitle").textContent = name; $("#cSub").textContent = "טוען..."; $("#glossIn").value = ""; $("#cSize").textContent = "";
   $("#cSug").hidden = true; $("#cSug").replaceChildren();
   let d; try { d = await api("/api/course?c=" + encodeURIComponent(name)); } catch (e) { d = {none: true}; }
@@ -2530,6 +2530,7 @@ async function pollLive() {
   filterLines("#liveLines", "#liveFind");
   // side
   const info = d.info || {};
+  if (info.started_ts && liveAskBox && liveAskKey !== info.started_ts) { if (liveAskKey) liveAskBox.reset(); liveAskKey = info.started_ts; }   // a new lecture starts a new conversation
   const started = info.started_ts ? new Date(info.started_ts * 1000) : null;
   const el_ = started ? hms((Date.now() - started.getTime()) / 1000) : "";
   $("#liveSub").innerHTML = "";
@@ -2607,7 +2608,7 @@ async function liveContext(q) {
   if (!n && !(liveLast && liveLast.draft)) out += "(עוד אין תמלול)\n";
   return out + ANSWER_HINT + "\nהשאלה שלי: " + q;
 }
-let liveAskBox = null;
+let liveAskBox = null, liveAskKey = 0;
 if (window.BZMAsk) liveAskBox = BZMAsk.mount($("#liveAsk"), {context: liveContext, toast, hasImage: () => !!$("#shotSlot img"),
   image: () => liveLast && liveLast.shot, where: () => "live", at: () => new Date().toLocaleTimeString("he-IL")});
 $("#shotCopy").addEventListener("click", async () => {
@@ -2618,7 +2619,7 @@ $("#shotCopy").addEventListener("click", async () => {
 // ---------- a past lecture ----------
 let pastData = null;
 async function openPast(f, at) {
-  show("past"); pastFile = f; $("#pastTitle").textContent = "טוען..."; $("#pastLines").replaceChildren();
+  show("past"); if (pastAskBox && pastFile !== f) pastAskBox.reset(); pastFile = f; $("#pastTitle").textContent = "טוען..."; $("#pastLines").replaceChildren();
   let d; try { d = await api("/api/transcript?f=" + encodeURIComponent(f)); } catch (e) { d = {none: true}; }
   if (d.none) { $("#pastTitle").textContent = "התמלול לא נמצא"; return; }
   pastData = d; const e = d.entry; pastSummary = d.summary || ""; drawSummary();
