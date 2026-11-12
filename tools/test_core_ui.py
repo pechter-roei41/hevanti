@@ -868,7 +868,7 @@ with sync_playwright() as p:
 
     # ---- the quick-start window (F1): course, kind, start in the background, open the app ----
     def quick_page(theme="light", guess=None, last="פיזיקה", start_ok=True, delay_guess=0):
-        qp = b.new_context(viewport={"width": 380, "height": 408}, locale="he-IL").new_page()
+        qp = b.new_context(viewport={"width": 380, "height": 364}, locale="he-IL").new_page()
         qp.errs, qp.posts = [], []
         qp.on("pageerror", lambda e: qp.errs.append(str(e)))
         qp.route("**/api/library*", lambda r: r.fulfill(content_type="application/json", body=json.dumps(
@@ -965,9 +965,12 @@ with sync_playwright() as p:
             const sel = document.querySelector('[data-kind=he]'), go = document.querySelector('#go'), app = document.querySelector('#app');
             let solid = 0; for (const e of document.querySelectorAll('button')) if (css(e, 'backgroundColor') === rgb(v('--accent'))) solid++;
             return {solid, goBg: css(go, 'backgroundColor') === rgb(v('--accent')), selBg: css(sel, 'backgroundColor') === rgb(v('--accent-soft')), appBg: css(app, 'backgroundColor'),
-                    noOverflow: document.documentElement.scrollWidth <= innerWidth, small: document.documentElement.scrollHeight <= 640}; }""")
+                    noOverflow: document.documentElement.scrollWidth <= innerWidth, small: document.documentElement.scrollHeight <= 364,
+                    sameHeight: Math.abs(go.getBoundingClientRect().height - app.getBoundingClientRect().height) < 1, sameWidth: Math.abs(go.getBoundingClientRect().width - app.getBoundingClientRect().width) < 1,
+                    name: document.body.innerText.split("הבנתי").length - 1}; }""")
         check(f"quick start, {theme}: one solid green button (start); the chosen kind is the soft green; the app button is a ghost", st["solid"] == 1 and st["goBg"] and st["selBg"] and st["appBg"] == "rgba(0, 0, 0, 0)", st)
         check(f"quick start, {theme}: it fits a small window, without a sideways scroll", st["noOverflow"] and st["small"], st)
+        check(f"quick start, {theme}: the start button and \"open the app\" are a pair (same width and height), and the name Hevanti is not written in the window (it is in the title bar)", st["sameHeight"] and st["sameWidth"] and st["name"] == 0, st)
         check(f"quick start, {theme}: no script errors", q.errs == [], q.errs)
         q.context.close()
     b.close()

@@ -4943,7 +4943,7 @@ MINI_TITLE = "הבנתי"   # the page's title; the window is found by an exact 
 MINI_SIZE = (380, 460)   # small: it stays in a corner of the screen
 QUICK_HTML = os.path.join(SCRIPT_DIR, "quick.html")   # the quick-start window (F1): a small window in the middle of the screen when Hevanti opens
 QUICK_TITLE = "הבנתי · חלון התחלה מהירה"   # its page's title (found by an exact match; the app-window watcher takes it as the app's window too)
-QUICK_SIZE = (380, 440)   # (96-dpi pixels, the title bar included)
+QUICK_SIZE = (380, 400)   # (96-dpi pixels, the title bar included)
 _MINI_LOCK = threading.Lock()
 
 

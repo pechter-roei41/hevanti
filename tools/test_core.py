@@ -419,7 +419,7 @@ check("course while recording: a course offered is in the session info until the
 check("course while recording: no lecture running - refused in words", r_done["ok"] is False and "אין עכשיו" in r_done["error"], r_done)
 # ---- F3/F4: the quick window's place, its own profile, the saved card, "open the lecture" ----
 check("quick window: centred in the work area (also when the area starts away from 0,0)", L._center_xy((0, 0, 1920, 1040), 380, 440) == (770, 300) and L._center_xy((-1920, 0, 0, 1040), 380, 440) == (-1150, 300) and L._center_xy((0, 0, 300, 300), 380, 440) == (0, 0))
-check("quick window: its size is small (380 x 440) and it has a browser profile of its own, in the local folder", L.QUICK_SIZE == (380, 440) and os.path.dirname(L.quick_profile_dir()) == L.LOCAL_DIR and L.quick_profile_dir() != L.mini_profile_dir())
+check("quick window: its size is small (380 x 400) and it has a browser profile of its own, in the local folder", L.QUICK_SIZE == (380, 400) and os.path.dirname(L.quick_profile_dir()) == L.LOCAL_DIR and L.quick_profile_dir() != L.mini_profile_dir())
 im_c, wc_, hc_ = L._toast_image("ההרצאה נשמרה", 1.0, False, "check")
 chip_c = tuple(im_c.getpixel((wc_ - 17, 22))[:3])
 chip_cd = tuple(L._toast_image("ההרצאה נשמרה", 1.0, True, "check")[0].getpixel((wc_ - 17, 22))[:3])
