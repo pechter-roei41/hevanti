@@ -267,6 +267,9 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .moremenu .menu button{border:0;background:none;color:var(--fg);text-align:start;font:inherit;font-size:15px;padding:9px 12px;border-radius:8px;cursor:pointer}
 .moremenu .menu button:hover,.moremenu .menu button:focus-visible{background:var(--sunk)}
 .moremenu .menu button[hidden]{display:none}
+/* 320px: nothing may scroll sideways (DESIGN.md, Layout). Measured on 12.11.2026: the segmented controls (1 to 4px) and the AI connection button (8px) in the settings. */
+@media (max-width:400px){.seg button{padding:7px 9px;font-size:14px}.setpanel label.row{flex-wrap:wrap}.btn{max-width:100%;white-space:normal}}   /* the AI connection button in the settings was 8px too wide */
+.tag{display:inline-block;max-width:100%;white-space:normal}
 .study .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}
 .linkish{border:0;background:none;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
 .linkish.muted{color:var(--muted)}   /* a quiet link: not a button, not green (deleting the key is rare) */
@@ -302,6 +305,7 @@ input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--acce
 .courserow .sub{margin:0}
 .sugbox{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 10px;border-radius:10px;background:var(--sunk)}
 .livebar .acts{display:flex;align-items:center;gap:10px;flex:none}   /* the actions stay one row: they wrap together, never "stop" alone */
+@media (max-width:400px){.livebar .acts{flex:1 1 100%;flex-wrap:wrap;gap:6px}}   /* 320px: the three buttons were 14px too wide */
 .livebar .what b{font-size:22px;font-family:var(--f-display);font-weight:400}
 #liveStop{border-color:var(--line);color:var(--muted)}
 #liveStop:hover{border-color:var(--rec);color:var(--rec);background:transparent}
@@ -859,7 +863,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <div class="cfrow"><div><b>קובץ אחד של כל הקורס</b><small>שומר את התמלולים של כל ההרצאות בקובץ טקסט אחד, כדי להעלות אותו לצ'אט של AI באתר (למשל ChatGPT).</small></div><button class="btn ghost small" id="cExport" type="button">יצירת הקובץ</button></div>
         <div class="cfrow"><div><b>התיקייה במחשב</b><small>פותחת ב-Windows את התיקייה של הקורס: ההרצאות, השקופיות והקובץ הנ"ל.</small></div><button class="btn quiet small" id="cFolder" type="button">פתיחת התיקייה</button></div>
         <div class="cfrow"><div><b>שינוי שם הקורס</b><small>הקורס, ההרצאות והקבצים שלו נשארים כמו שהם, רק השם מתחלף.</small></div><button class="btn ghost small" id="cRename" type="button">שינוי שם</button></div>
-        <div class="cfrow"><div><b>מחיקת הקורס</b><small>מוחק את כל ההרצאות של הקורס. אפשר לשחזר מסל המחזור.</small></div><button class="btn quiet small" id="cDelete" type="button" style="color:var(--danger,#b42318)">מחיקת הקורס</button></div>
+        <div class="cfrow"><div><b>מחיקת הקורס</b><small>מוחק את כל ההרצאות של הקורס. אפשר לשחזר מסל המחזור.</small></div><button class="btn danger small" id="cDelete" type="button">מחיקת הקורס</button></div>
       </div>
     </div>
     <div class="cpanel card" data-cp="marks" hidden>

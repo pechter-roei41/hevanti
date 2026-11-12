@@ -56,6 +56,7 @@ body.on #lec::before{background:var(--rec)}
 .hb{flex:none;width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);background:none;border-radius:10px;padding:0;cursor:pointer;font-size:16px;line-height:1}
 .hb:hover{background:var(--accent-soft)}
 .hb:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}   /* DESIGN.md: focus is a 2px green outline with a 2px offset; the answer button had only the browser's thin default */
 #markImp{color:var(--accent);border-color:var(--accent)}
 .miss{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 10px 0;font-size:13px;color:var(--muted)}
 .miss button{border:1px solid var(--accent);background:none;color:var(--accent);border-radius:999px;padding:1px 11px;cursor:pointer;font-size:13px;font-weight:600}

@@ -69,6 +69,7 @@ PAIRS = [
     ("a time that can be opened (green link), hovered, on the soft green", "board-green", "board-green-soft", "night-green", "night-green-soft", TEXT),
     ("the text of the solid green button (white by day, near black at night) on the green", "#FFFFFF", "board-green", "#0E1A14", "night-green", TEXT),
     ("the small text of the green start card ('זום או שידור...', white by day, near black at night) on the green", "#FFFFFF", "board-green", "#0E1A14", "night-green", TEXT),
+    ("the delete-course button (recording red, danger outline) on a sheet", "recording-red", "sheet", "night-recording", "night-sheet", TEXT),
     ("a ghost button (green text) on sunk paper: the course offer in the small window and in the live view", "board-green", "sunk-paper", "night-green", "night-sunk", TEXT),
     ("text (ink) on sunk paper: the course offer", "ink", "sunk-paper", "night-ink", "night-sunk", TEXT),
     ("caution text on the caution bar", "css:--warn-fg", "css:--warn-bg", "cssdark:--warn-fg", "cssdark:--warn-bg", TEXT),
@@ -91,6 +92,7 @@ for theme, vs_paper, vs_now in bands:
 _app = open(os.path.join(C.PROG, "app.html"), encoding="utf-8").read()
 check("the small text of the green start card uses var(--accent-ink), not a mix with the green",
       '.start[data-start="he"] span:not(.ic){color:var(--accent-ink);' in _app)
+check("the delete-course button is the danger outline (red text on the sheet), not red on a sunk fill", 'id="cDelete" type="button">' in _app and 'class="btn danger small" id="cDelete"' in _app)
 check("the opacity slider gets the same accent-colour as the check boxes (no system blue)", "input[type=range]{accent-color:var(--accent)}" in _app)
 
 print()
