@@ -898,9 +898,9 @@ with sync_playwright() as p:
         return qp
 
     q = quick_page(guess={"course": "אלגוריתמים", "why": "title", "detail": "זום - אלגוריתמים"})
-    check("quick start: the window's title ends with the product (the tool knows it as its window)", q.title() == "התחלה מהירה · הבנתי", q.title())
-    check("quick start: the courses, and \"ללא קורס\" last",
-          q.evaluate("[...document.querySelectorAll('#course option')].map(o => o.textContent)") == ["אלגוריתמים", "פיזיקה", "ללא קורס"])
+    check("quick start: the window's title: Hevanti first, then the window, and it has the logo (not the browser's globe)", q.title() == "הבנתי · חלון התחלה מהירה" and q.evaluate("!!document.querySelector('link[rel=icon]')"), q.title())
+    check("quick start: the courses, \"ללא קורס\", and a new course last",
+          q.evaluate("[...document.querySelectorAll('#course option')].map(o => o.textContent)") == ["אלגוריתמים", "פיזיקה", "ללא קורס", "+ קורס חדש..."])
     check("quick start: the course is chosen from the title of a window, with the reason and \"you can change it\"",
           q.evaluate("document.querySelector('#course').value") == "אלגוריתמים" and "זוהה מכותרת החלון" in q.inner_text("#noteText") and "אפשר להחליף" in q.inner_text("#noteText"), q.inner_text("#noteText"))
     q.select_option("#course", "פיזיקה")
@@ -931,6 +931,24 @@ with sync_playwright() as p:
     q.wait_for_timeout(400)
     check("quick start: \"פתח את האפליקציה\" opens the app and starts nothing",
           any(p_.get("action") == "quick_open_app" and not p_.get("view") for p_ in q.posts) and not any(p_.get("action") == "start_live" for p_ in q.posts), q.posts)
+    q.context.close()
+
+    q = quick_page(guess={})
+    q.select_option("#course", "__new")
+    check("quick start: \"+ new course\" opens a name field right there (the list keeps the course it had)", q.is_visible("#newName") and q.evaluate("document.querySelector('#course').value") == "פיזיקה")
+    q.fill("#newName", "תרמודינמיקה")
+    q.keyboard.press("Enter")
+    q.wait_for_timeout(400)
+    opts = q.evaluate("[...document.querySelectorAll('#course option')].map(o => o.value)")
+    check("quick start: the course is created, put before \"ללא קורס\" and chosen, and it says so",
+          any(p_.get("action") == "new_course" and p_.get("name") == "תרמודינמיקה" for p_ in q.posts) and q.evaluate("document.querySelector('#course').value") == "תרמודינמיקה"
+          and opts.index("תרמודינמיקה") < opts.index("ללא קורס") and q.is_hidden("#newc") and "נוצר" in q.inner_text("#noteText"), (opts, q.posts))
+    q.click("#go")
+    q.wait_for_timeout(400)
+    check("quick start: ...and the lecture starts in it", any(p_.get("action") == "start_live" and p_.get("course") == "תרמודינמיקה" for p_ in q.posts), q.posts)
+    q.select_option("#course", "__new")
+    q.click("#newNo")
+    check("quick start: \"cancel\" closes the field and keeps the course", q.is_hidden("#newc") and q.evaluate("document.querySelector('#course').value") == "תרמודינמיקה")
     q.context.close()
 
     q = quick_page(guess={}, start_ok=False)

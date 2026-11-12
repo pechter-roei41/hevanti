@@ -360,7 +360,7 @@ L.APP.command({"action": "quick_start", "on": False})
 check("quick start: the setting is saved and is in what the settings page reads", L.load_settings().get("quick_start") is False and json.loads(get("/api/mirror")[1]).get("quick_start") is False)
 L.APP.command({"action": "quick_start", "on": True})
 code_q, body_q = get("/quick")
-check("quick start: the page is served, with its title", code_q == 200 and "<title>התחלה מהירה · הבנתי</title>".encode("utf-8") in body_q, code_q)
+check("quick start: the page is served, with its title (Hevanti first) and the logo for the title bar", code_q == 200 and "<title>הבנתי · חלון התחלה מהירה</title>".encode("utf-8") in body_q and b'rel="icon"' in body_q, code_q)
 check("quick start: \"close\" and \"open the app\" are harmless when no window is open (and off Windows)",
       L.APP.command({"action": "quick_close"}).get("ok") is True and L.APP.command({"action": "quick_open_app"}).get("ok") is True)
 # ---- a course from the first slide (offered, never applied), and a course chosen while it records ----

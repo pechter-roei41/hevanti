@@ -4942,7 +4942,7 @@ MINI_HTML = os.path.join(SCRIPT_DIR, "mini.html")
 MINI_TITLE = "הבנתי"   # the page's title; the window is found by an exact match
 MINI_SIZE = (380, 460)   # small: it stays in a corner of the screen
 QUICK_HTML = os.path.join(SCRIPT_DIR, "quick.html")   # the quick-start window (F1): a small window in the middle of the screen when Hevanti opens
-QUICK_TITLE = "התחלה מהירה · הבנתי"   # its page's title (found by an exact match; it also ends with "· הבנתי", so the app-window watcher takes it as the app's window)
+QUICK_TITLE = "הבנתי · חלון התחלה מהירה"   # its page's title (found by an exact match; the app-window watcher takes it as the app's window too)
 QUICK_SIZE = (380, 440)   # (96-dpi pixels, the title bar included)
 _MINI_LOCK = threading.Lock()
 
@@ -8927,7 +8927,7 @@ def _watch_app_window(u, before):
         for h, title in _chrome_windows(u).items():
             if h not in before and "127.0.0.1" in title:
                 _APP_WIN["early"] = h   # the window has just appeared (its title is still the address): its icon can be set at once
-            if h not in before and (title.startswith(PAGE_TITLE) or title.endswith("· הבנתי")):
+            if h not in before and (title.startswith(PAGE_TITLE) or title.endswith("· הבנתי") or title == QUICK_TITLE):
                 _APP_WIN["hwnd"] = h
                 return
 
@@ -8946,6 +8946,17 @@ def open_app_window(url, size=None, center=False, profile=None):
         args = [exe, "--app=" + url]
         if size:
             args.append(f"--window-size={size[0]},{size[1]}")
+            if center:   # it opens in the middle at once (and _place_quick_window makes it exact): it does not appear at the side first and jump
+                try:
+                    import ctypes
+                    from ctypes import wintypes
+                    with _real_pixels(u) as rp:
+                        area = wintypes.RECT()
+                        u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0)
+                        x, y = _center_xy((area.left, area.top, area.right, area.bottom), int(size[0] * rp.scale), int(size[1] * rp.scale))
+                        args.append(f"--window-position={int(x / rp.scale)},{int(y / rp.scale)}")
+                except Exception:
+                    pass
         if profile:   # a profile of its own: the size and the place are kept, and it is a process of its own
             os.makedirs(profile, exist_ok=True)
             args += ["--user-data-dir=" + profile, "--no-first-run", "--no-default-browser-check", "--disable-extensions", "--disable-sync"]
