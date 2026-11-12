@@ -135,7 +135,7 @@ def lines_of(path):
         return [x.rstrip("\n") for x in f]
 
 
-def run(name, clips, model, gpu=False, speed=SPEED, during=None, wait_s=40):
+def run(name, clips, model, gpu=False, speed=SPEED, during=None, wait_s=40, discard=False):
     """One lecture: play the clips, call during(live, audio) while it runs, stop, and return what was written."""
     FakeAudio.clips, FakeAudio.speed, FakeAudio.fed, FakeAudio.instances = clips, speed, threading.Event(), []
     del logged[:]
@@ -151,7 +151,7 @@ def run(name, clips, model, gpu=False, speed=SPEED, during=None, wait_s=40):
     if during:
         during(live, audio)
     time.sleep(0.5)
-    app.command({"action": "stop"})
+    app.command({"action": "stop", "discard": True} if discard else {"action": "stop"})
     s.thread.join(30)
     return live, audio, lines_of(s.transcript) if s.transcript and os.path.isfile(s.transcript) else []
 
@@ -334,6 +334,15 @@ check("...and the student is told", any("הועברה לקורס" in x for x in 
 sv = app.session.saved if app.session else None
 check("a lecture that was stopped says what was saved: the course it is in, minutes, slides and the lecture to open (and the count goes up)",
       sv and sv["course"] == "קורס שנבחר בהקלטה" and isinstance(sv["minutes"], int) and isinstance(sv["slides"], int) and sv["f"].startswith("קורס שנבחר בהקלטה/") and app.saved_n >= 1, (sv, app.saved_n))
+
+# ------------------------------------------- J: stopped right after the start and the student chose to delete it: nothing is left
+wJ = FakeWhisper()
+live, audio, tr = run("מחיקה", [speech(3.0)], wJ, speed=20, discard=True)
+cdir = L.course_dir("בדיקה מחיקה")
+check("a lecture deleted right after it started: no lecture folder (transcript, slide pictures) is left in the course",
+      not [d for d in os.listdir(cdir) if os.path.isdir(os.path.join(cdir, d))] if os.path.isdir(cdir) else True, os.listdir(cdir) if os.path.isdir(cdir) else "")
+check("...it is not reported as saved (no 'saved' card)", app.session.saved is None, app.session.saved)
+check("...and its transcript is gone", not app.session.transcript or not os.path.exists(app.session.transcript), app.session.transcript)
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.stdout.flush()

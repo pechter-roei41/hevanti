@@ -1,6 +1,6 @@
 # Hevanti (הבנתי)
 
-Open-source (MIT) lecture companion for Israeli university students, Windows only. Beta (currently 2.19: it holds all the work of 2.18 and 2.19, which were never released apart; the GitHub release v2.19 was published on 11.11.2026 from `main` at `3984d71`).
+Open-source (MIT) lecture companion for Israeli university students, Windows only. Beta (currently 2.21: it holds 2.20 too, which was never released apart; the GitHub release v2.19 was published on 11.11.2026 from `main` at `3984d71`).
 
 It transcribes a lecture on the student's computer (Hebrew or English, live or recorded), saves a picture of every new slide, and has two core features:
 - **The floating window** (`mini.html`, Ctrl+Alt+Q, or the round button at the screen edge, which stays while the window is open and turns to an X that closes it): always on top, also over a full-screen lecture. Type a question, get an answer based on the last minutes and the slide on screen. Three "what did I miss" buttons (3, 7, 15 minutes).
@@ -64,7 +64,7 @@ Read before larger changes:
 
 It lives in `app.html`, section `#vHow`, and is also published as an online artifact (`GUIDE_URL` in `live_transcribe.py`). Parts: video, חיבור לתשובות, בהרצאה, אחרי ההרצאה, מראה ונגישות, פרטיות, משהו לא עובד. The video has clickable chapters (`#howChapters`, timestamps in `data-t`) and credits Dvir Ross (CC BY). **When a feature, a button, a shortcut or a setting changes, update the guide, the README, `PRODUCT.md` and `VERSION.txt` in the same change.** The video must be re-recorded if the flow it shows changes. Keep the app's wording simple and in Hebrew, with as little English as possible.
 
-Shortcuts (global, registered with `RegisterHotKey`): Ctrl+Alt+Q floating window, Ctrl+Alt+M mark ★, Ctrl+Alt+P pause screenshots (transcription continues). The action of a shortcut and its beep run on their own thread, so a slow one cannot stop the listening. A mark made with the keyboard shows "★ סומן" in the small window (`APP.mark_n` in `/api/app`) or above the round button when the small window is closed (a native window drawn with Pillow). The round button goes the moment stop is pressed (`mini_button_wanted`); the black window says when it is shown or hidden, and why. A small window left open from an earlier run reloads itself (`RUN_ID`).
+Shortcuts (global, registered with `RegisterHotKey`): Ctrl+Alt+Q floating window, Ctrl+Alt+M mark ★, Ctrl+Alt+P pause screenshots (transcription continues). The action of a shortcut and its beep run on their own thread, so a slow one cannot stop the listening. A mark made with the keyboard shows "★ סומן" in the small window (`APP.mark_n` in `/api/app`) or above the round button when the small window is closed (a native window drawn with Pillow). The round button now stays for as long as Hevanti runs (`mini_button_wanted` is true unless the setting is off; 12.11.2026); the red dot shows only a live lecture being recorded. While it is on, closing the app window does not close Hevanti (`_button_keeps_running`): it closes with the black window. "התחלת הרצאה חדשה" in the small window closes the small window and opens the quick-start window on the side. A small window left open from an earlier run reloads itself (`RUN_ID`).
 
 ## Running the app to check the UI (works on Linux)
 

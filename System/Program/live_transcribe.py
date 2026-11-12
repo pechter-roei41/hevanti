@@ -36,7 +36,7 @@ try:
 except Exception:  # lets "uninstall" run even if the install never finished
     np = None
 
-VERSION = "2.20"
+VERSION = "2.21"
 VERSION_DATE = "12.11.2026"
 PRODUCT = "הבנתי"
 GUIDE_URL = "https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD"
@@ -4943,6 +4943,7 @@ MINI_TITLE = "הבנתי"   # the page's title; the window is found by an exact 
 MINI_SIZE = (380, 460)   # small: it stays in a corner of the screen
 QUICK_HTML = os.path.join(SCRIPT_DIR, "quick.html")   # the quick-start window (F1): a small window in the middle of the screen when Hevanti opens
 QUICK_TITLE = "הבנתי · חלון התחלה מהירה"   # its page's title (found by an exact match; the app-window watcher takes it as the app's window too)
+QUICK_STOP_S = 10   # a lecture stopped this many seconds after it started transcribing (or sooner) is almost empty: the student is asked whether to delete it. One number for the app and the small window (both read it from /api/app)
 QUICK_SIZE = (380, 400)   # (96-dpi pixels, the title bar included)
 _MINI_LOCK = threading.Lock()
 
@@ -5622,35 +5623,13 @@ def mini_context(q, minutes=ASK_MINUTES):
 def mini_button_wanted():
     if not load_settings().get("mini_button", True):
         return False
-    s = APP.session
-    if s is None or s.done or s.stop.is_set():   # (stop pressed: the button goes at once, not when the last seconds are written. Not waiting for "ready": the button is there the moment the lecture starts, while the model still loads)
-        return False
-    if s.kind == "rec":   # a recording: only while its player page is open
-        rec = APP.rec
-        if rec is None or not rec.page_alive():
-            return False
-    elif s.kind != "live":
-        return False
-    return True   # (the button stays while the small window is open: it is the X that closes it)
+    return True   # (12.11.2026, Roei: the button stays while Hevanti runs, with a lecture or without - the red dot says a lecture is being recorded, and the X says the small window is open)
 
 
 def mini_button_why():
     """Why the floating button is not shown right now (for the black window: a report of a button that stays when it should go)."""
     if not load_settings().get("mini_button", True):
         return "כבוי בהגדרות"
-    s = APP.session
-    if s is None:
-        return "אין הרצאה"
-    if s.done:
-        return "ההרצאה נגמרה"
-    if s.stop.is_set():
-        return "נלחצה עצירה"
-    if s.kind == "rec":
-        rec = APP.rec
-        if rec is None or not rec.page_alive():
-            return "הנגן של ההקלטה סגור"
-    elif s.kind != "live":
-        return "סוג הרצאה אחר"
     return "רץ"
 
 
@@ -5955,7 +5934,7 @@ class MiniButton(threading.Thread):
             (a few percent, about every two seconds) unless motion is off."""
             s = APP.session
             import math
-            rec = bool(s is not None and not s.done and s.kind == "live")
+            rec = bool(s is not None and not s.done and s.kind == "live" and not s.stop.is_set())
             side = "right" if mini_btn_corner() in ("br", "tr") else "left"
             dark = _windows_dark() if not ui_theme() else ui_theme() == "dark"
             dot = 1.0 + (0.07 * math.sin(time.time() * 2 * math.pi / 2.4) if (rec and _motion_allowed()) else 0.0)
@@ -7519,6 +7498,7 @@ FONT_FILES = ("SecularOne-Regular.ttf", "Assistant-Variable.ttf")   # the app's 
 KATEX_JS = os.path.join(SCRIPT_DIR, "katex", "katex.min.js")   # draws the formulas in the answers (MIT, see katex\LICENSE.txt)
 ASK_JS = os.path.join(SCRIPT_DIR, "ask.js")  # the "ask the AI" box (app + player)
 APP_FILE = os.path.join(LOCAL_DIR, "app.json")  # where the running tool listens - a second launch opens it
+TAB_CLOSED_WAIT_S = 8   # seconds the program waits after the app's tab was closed (a reload, or another tab, keeps it open)
 IDLE_EXIT_S = float(os.environ.get("BZM_IDLE_EXIT_S") or 15 * 60)  # nothing running, no page open -> the tool closes
 RECORDING_EXTS = (".mp4", ".m4v", ".mov", ".mkv", ".webm", ".avi", ".wmv", ".mpg", ".mpeg", ".ts", ".3gp",
                   ".mp3", ".m4a", ".aac", ".wav", ".ogg", ".opus", ".flac", ".wma", ".ogv")
@@ -7552,7 +7532,7 @@ class Session:
                 "suggest": self.suggest if (self.suggest and not self.suggest_off and not self.pending_course) else None, "saved": self.saved, "ready": self.ready,
                 "done": self.done, "stopping": self.stop.is_set() and not self.done, "error": self.error,
                 "started": self.started, "transcript": self.transcript, "yt": self.yt,
-                "ready_at": self.ready_at, "discard": self.discard,
+                "ready_at": self.ready_at, "discard": self.discard, "quick_stop_s": QUICK_STOP_S,
                 "stopping_for": int(time.time() - self.stop_at) if self.stop_at and not self.done else 0}
 
 
@@ -7780,6 +7760,23 @@ class App:
         if a == "quick_start":   # the quick-start window instead of the home screen when Hevanti opens (a setting)
             save_settings(quick_start=bool(d.get("on")))
             return {"ok": True}
+        if a == "quick_new":   # "התחלת הרצאה חדשה" in the small window: the small window closes at once (back to the round button), and the quick-start window opens (once); closing it closes only itself
+            try:
+                toggle_mini(hide_only=True)
+            except Exception:
+                save_error("hide the small window for a new lecture")
+            if self.url and os.environ.get("BZM_NO_BROWSER") != "1":
+                if os.name == "nt":
+                    try:
+                        if _find_quick(_mini_user32()):
+                            return {"ok": True, "opened": False, "already": True}
+                    except Exception:
+                        pass
+                ok = open_app_window(self.url + "quick", size=QUICK_SIZE, center=True, profile=quick_profile_dir(), track=False)
+                if ok:
+                    threading.Thread(target=_front_quick_window, daemon=True).start()
+                return {"ok": True, "opened": ok}
+            return {"ok": True, "opened": False}
         if a == "quick_close":   # the quick-start window is done (a lecture started)
             return {"ok": True, "closed": close_quick_window()}
         if a == "quick_open_app":   # "open the app": the home screen in its own window, and the small one goes away; nothing starts
@@ -7912,8 +7909,11 @@ class App:
             t0 = time.time()
 
             def later():
-                time.sleep(8)
+                time.sleep(TAB_CLOSED_WAIT_S)
                 if self.page_seen < t0:
+                    if _button_keeps_running():   # the floating button is on: Hevanti stays running (the next lecture starts from the button); it closes with the black window
+                        log("חלון האפליקציה נסגר, אבל הכפתור הצף פועל - הבנתי נשארת פועלת.")
+                        return
                     log("הטאב של הבנתי נסגר - הבנתי נסגרת.")
                     self.quit_evt.set()
             threading.Thread(target=later, daemon=True).start()
@@ -9214,6 +9214,37 @@ def _chrome_windows(u):
     return out
 
 
+def _front_quick_window():
+    """The quick-start window opened from the small window ("start a new lecture"): when it appears it is brought to the front, so the
+    keyboard is in it (Esc, Tab, Enter). A real Windows run (12.11.2026) showed it opening behind the keyboard focus: Esc did nothing."""
+    if os.name != "nt":
+        return
+    try:
+        u = _mini_user32()
+        end = time.time() + 10
+        while time.time() < end:
+            hwnd = _find_quick(u)
+            if hwnd:
+                time.sleep(0.4)   # (placed in the middle first)
+                _bring_front(u, hwnd)
+                return
+            time.sleep(0.1)
+    except Exception:
+        save_error("bring the quick window to the front")
+
+
+def _bring_front(u, hwnd):
+    """Bring a window up (and out of the taskbar if it was minimized): the app opened from the quick-start window must be seen."""
+    try:
+        if u.IsIconic(hwnd):
+            u.ShowWindow(hwnd, 9)   # SW_RESTORE
+        u.keybd_event(0x12, 0, 0, 0)   # (a tap on Alt lets this program take the keyboard from another window)
+        u.keybd_event(0x12, 0, 2, 0)
+        u.SetForegroundWindow(hwnd)
+    except Exception:
+        pass
+
+
 def _watch_app_window(u, before):
     """The window that just opened for the app: found by its title, remembered (the tool closes it, and closes itself
     when the student closes it)."""
@@ -9225,10 +9256,12 @@ def _watch_app_window(u, before):
                 _APP_WIN["early"] = h   # the window has just appeared (its title is still the address): its icon can be set at once
             if h not in before and (title.startswith(PAGE_TITLE) or title.endswith("· הבנתי") or title == QUICK_TITLE):
                 _APP_WIN["hwnd"] = h
+                if title != QUICK_TITLE:
+                    _bring_front(u, h)
                 return
 
 
-def open_app_window(url, size=None, center=False, profile=None):
+def open_app_window(url, size=None, center=False, profile=None, track=True):
     """Windows: the app in a window of its own (the default browser, Edge or Chrome, without tabs and address bar, with
     the student's own profile) and not a tab among the others: the tool knows when it is closed, and closes it when the
     tool closes."""
@@ -9257,13 +9290,32 @@ def open_app_window(url, size=None, center=False, profile=None):
             os.makedirs(profile, exist_ok=True)
             args += ["--user-data-dir=" + profile, "--no-first-run", "--no-default-browser-check", "--disable-extensions", "--disable-sync"]
         subprocess.Popen(args)
-        threading.Thread(target=_watch_app_window, args=(u, before), daemon=True).start()
+        if track:   # (track=False: a window opened on the side, e.g. the quick-start window from the small window while a lecture or the app runs in the background: closing it must not close Hevanti)
+            threading.Thread(target=_watch_app_window, args=(u, before), daemon=True).start()
         if size and center:
             threading.Thread(target=_place_quick_window, args=(size,), daemon=True).start()
         return True
     except Exception:
         save_error("app window")
         return False
+
+
+def _button_keeps_running():
+    """True while the floating button is on (Windows): Hevanti then stays running when the app window is closed or nothing runs
+    (the button is how the next lecture starts). It closes with the black window, or when the button is turned off in the settings."""
+    return os.name == "nt" and bool(load_settings().get("mini_button", True))
+
+
+def remove_lecture_dir(ldir, tries=8):
+    """Delete a lecture folder for good. On Windows a file that was just closed (the transcript, a slide picture) can stay locked for a
+    moment, and a folder that is only half deleted would show up in "my lectures": so it is tried again, and the answer says if it worked."""
+    import shutil
+    for i in range(tries):
+        shutil.rmtree(ldir, ignore_errors=True)
+        if not os.path.exists(ldir):
+            return True
+        time.sleep(0.4)
+    return not os.path.exists(ldir)
 
 
 def app_window_closed():
@@ -9631,16 +9683,22 @@ def main():
     show(f"{PRODUCT} פועלת. האפליקציה נפתחה בדפדפן. אם לא נפתחה: {server.url}")
     show("החלון הזה הוא הסימן שהאפליקציה פועלת. אפשר למזער אותו. סגירה שלו עוצרת אותה.")
     show("=" * 50)
+    app_gone = False
     try:
         while not APP.quit_evt.wait(1.0):
             s = APP.session
             idle = s is None or s.done
-            if idle and time.time() - APP.last_seen > IDLE_EXIT_S:
+            if idle and time.time() - APP.last_seen > IDLE_EXIT_S and not _button_keeps_running():
                 log(f"האפליקציה סגורה ושום דבר לא רץ כבר {max(1, round(IDLE_EXIT_S / 60))} דקות - {PRODUCT} נסגרה. כדי לפתוח שוב: Hevanti.")
                 break
-            if app_window_closed() and idle:   # the app's window was closed with nothing running: the tool closes too
+            if idle and (app_window_closed() or app_gone):   # the app's window was closed with nothing running: the tool closes too, unless the floating button is on (it stays: the next lecture starts from it)
+                app_gone = True
+                if _button_keeps_running():
+                    continue
                 log(f"החלון של {PRODUCT} נסגר - {PRODUCT} נסגרת.")
                 break
+            if not idle:
+                app_gone = False
     except KeyboardInterrupt:
         draft_clear()
         log("עוצר...")
@@ -9846,8 +9904,10 @@ def run_live(sess, lang, course=""):
             # stopped right after starting, and the student chose to delete it (a video watched before is kept)
             import shutil
             now_file.finish(transcript_rel)
-            shutil.rmtree(ldir, ignore_errors=True)
-            log("ההרצאה נמחקה (נעצרה מיד אחרי שהתחילה).")
+            if not remove_lecture_dir(ldir):
+                log("לא הצלחתי למחוק את כל תיקיית ההרצאה (קובץ פתוח?): " + ldir)
+            else:
+                log("ההרצאה נמחקה (נעצרה מיד אחרי שהתחילה).")
             with APP.lock:
                 APP.lib_rev += 1
             return

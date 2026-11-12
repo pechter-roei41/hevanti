@@ -461,5 +461,14 @@
     on = !!on;
     if (on !== AI.builtin) { AI.builtin = on; for (const b of boxes) b(); }
   }
-  window.BZMAsk = {render: renderAnswer, mount, AIS, copyText, setConnected, setApps, addCss, openFor, setCourseFn, setBuiltin, setPlan, setExternal};
+  // Stopping a lecture: one rule for the app and the small window. "cancel" = still loading (nothing recorded: cancel at once, no question);
+  // "short" = stopped within quick_stop_s seconds of the start of the transcript (almost empty: ask whether to delete it); "normal" = save.
+  // The number comes from the server (QUICK_STOP_S in live_transcribe.py), measured from ready_at (the start of recording, not of loading the model).
+  function stopKind(s, now) {
+    if (!s || s.kind !== "live") return {kind: "normal"};
+    if (!s.ready) return {kind: "cancel"};
+    const secs = s.ready_at ? (now || Date.now() / 1000) - s.ready_at : 1e9;
+    return secs <= (s.quick_stop_s || 10) ? {kind: "short", secs} : {kind: "normal", secs};
+  }
+  window.BZMAsk = {stopKind, render: renderAnswer, mount, AIS, copyText, setConnected, setApps, addCss, openFor, setCourseFn, setBuiltin, setPlan, setExternal};
 })();

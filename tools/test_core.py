@@ -283,7 +283,7 @@ x2, y2 = L._toast_xy(bx, by, 56, tw_, th_, "tr", _Area)
 x3, _ = L._toast_xy(0, by, 56, tw_, th_, "bl", _Area)
 check("floating-button message: above the button for a bottom corner, below it for a top one, and never off the screen",
       y1 + th_ <= by and y2 >= by + 56 and x1 >= 0 and x1 + tw_ <= 1920 and x3 >= 0, (x1, y1, x2, y2, x3))
-# ---- the floating button goes when the lecture is stopped (at once, while the last seconds are still being written) ----
+# ---- the floating button stays (12.11.2026): with a lecture, while it stops, and with none; only the setting turns it off ----
 class _FakeSess:
     kind, ready, done = "live", True, False
     def __init__(self):
@@ -292,24 +292,26 @@ old_session = L.APP.session
 L.APP.session = fs = _FakeSess()
 try:
     L.save_settings(mini_button=True)
-    before = L.mini_button_wanted()
-    fs.ready = False   # (the model is still loading: the button is already there)
-    loading = L.mini_button_wanted()
+    states = [L.mini_button_wanted()]
+    fs.ready = False
+    states.append(L.mini_button_wanted())   # (the model is still loading)
     fs.ready = True
     fs.stop.set()
-    after = L.mini_button_wanted()
-finally:
-    L.APP.session = old_session
-check("floating button: shown the moment a lecture starts (while the model loads too), gone the moment stop is pressed", before is True and loading is True and after is False, (before, loading, after))
-L.APP.session = fs2 = _FakeSess()
-try:
-    fs2.stop.set()
-    why_stop = L.mini_button_why()
+    states.append(L.mini_button_wanted())   # (stop pressed: it stays)
+    fs.done = True
+    states.append(L.mini_button_wanted())   # (saved)
     L.APP.session = None
-    why_none = L.mini_button_why()
+    states.append(L.mini_button_wanted())   # (no lecture)
+    keeps = L._button_keeps_running() if os.name == "nt" else True
+    L.save_settings(mini_button=False)
+    states.append(L.mini_button_wanted())
+    keeps_off = L._button_keeps_running()
+    L.save_settings(mini_button=True)
 finally:
     L.APP.session = old_session
-check("floating button: the reason it is hidden can be told (for the black window)", why_stop == "נלחצה עצירה" and why_none == "אין הרצאה", (why_stop, why_none))
+check("floating button: it stays with a lecture, while it stops, after it is saved and with no lecture; only the setting turns it off",
+      states == [True, True, True, True, True, False], states)
+check("Hevanti stays running after the app window closes while the button is on (and closes when the button is off)", keeps is True and keeps_off is False, (keeps, keeps_off))
 # ---- the quick-start window (F1): when it opens instead of the home screen, and its commands ----
 _saved_env = dict(os.environ)
 os.environ.pop("BZM_NO_BROWSER", None)
@@ -363,6 +365,19 @@ code_q, body_q = get("/quick")
 check("quick start: the page is served, with its title (Hevanti first) and the logo for the title bar", code_q == 200 and "<title>הבנתי · חלון התחלה מהירה</title>".encode("utf-8") in body_q and b'rel="icon"' in body_q, code_q)
 check("quick start: \"close\" and \"open the app\" are harmless when no window is open (and off Windows)",
       L.APP.command({"action": "quick_close"}).get("ok") is True and L.APP.command({"action": "quick_open_app"}).get("ok") is True)
+# "start a new lecture" in the small window: the quick-start window opens on the side (track=False), so closing it never closes Hevanti
+_calls = []
+_old_open, _old_url = L.open_app_window, L.APP.url
+L.open_app_window = lambda url, **kw: (_calls.append((url, kw)), True)[1]
+L.APP.url = "http://127.0.0.1:1/"
+_old_nb = os.environ.pop("BZM_NO_BROWSER", None)
+_r = L.APP.command({"action": "quick_new"})
+if _old_nb is not None:
+    os.environ["BZM_NO_BROWSER"] = _old_nb
+L.open_app_window, L.APP.url = _old_open, _old_url
+check("quick start from the small window: opens the quick-start window as a side window (not tracked as the app's window)",
+      _r.get("ok") is True and len(_calls) == 1 and _calls[0][0].endswith("/quick") and _calls[0][1].get("track") is False and _calls[0][1].get("size") == L.QUICK_SIZE, (_r, _calls))
+check("the short-lecture limit is one number on the server (10 s), and the session tells the pages", L.QUICK_STOP_S == 10 and L.Session.__dict__.get("info") is not None and "quick_stop_s" in L.Session("live", "he", None).info() if hasattr(L, "Session") else True)
 # ---- a course from the first slide (offered, never applied), and a course chosen while it records ----
 import tempfile as _tf
 for _c in ("אלגוריתמים", "פיזיקה"):
@@ -496,6 +511,34 @@ L._windows_animations_on = _real_anim
 check("animation: motion is allowed, unless the student chose no animations and motion in the app (the app tells the tool), or Windows has its animations off",
       m_on is True and m_off is False and m_back is True and m_win_off is False, (m_on, m_off, m_back, m_win_off))
 check("a command without the page's header is refused (another site cannot drive Hevanti)", refused)
+
+# ---- the app's tab/window was closed (real Windows run, 12.11.2026: it quit 8 s later although the floating button was on) ----
+import time as _t
+_wait0, _btn0 = L.TAB_CLOSED_WAIT_S, L._button_keeps_running
+L.TAB_CLOSED_WAIT_S = 0.2
+L.APP.quit_evt.clear()
+L._button_keeps_running = lambda: True
+L.APP.command({"action": "tab_closed"})
+_t.sleep(0.8)
+kept = not L.APP.quit_evt.is_set()
+L._button_keeps_running = lambda: False
+L.APP.command({"action": "tab_closed"})
+_t.sleep(0.8)
+quit_without = L.APP.quit_evt.is_set()
+L.APP.quit_evt.clear()
+L.TAB_CLOSED_WAIT_S, L._button_keeps_running = _wait0, _btn0
+check("the app's tab is closed: Hevanti stays while the floating button is on, and closes when it is off", kept and quit_without, (kept, quit_without))
+
+# ---- the quick-start window opened from the small window comes to the front (a real Windows run: it opened behind the keyboard focus, Esc did nothing) ----
+if os.name == "nt":
+    _fq, _bf, _u = L._find_quick, L._bring_front, L._mini_user32
+    _calls = []
+    L._find_quick = lambda u: 4242
+    L._bring_front = lambda u, h: _calls.append(h)
+    L._mini_user32 = lambda: object()
+    L._front_quick_window()
+    L._find_quick, L._bring_front, L._mini_user32 = _fq, _bf, _u
+    check("the quick-start window opened from the small window is brought to the front", _calls == [4242], _calls)
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)

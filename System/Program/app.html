@@ -1580,7 +1580,7 @@ const setPanels = {};
   logo.setAttribute("viewBox", "0 0 120 120"); logo.setAttribute("width", "26"); logo.setAttribute("height", "26"); logo.setAttribute("aria-hidden", "true");
   logo.style.cssText = "vertical-align:middle;margin:-2px 2px";
   logo.innerHTML = '<circle cx="60" cy="60" r="58" fill="#1b6e4b"/><g transform="translate(60 60) scale(.6) translate(-60 -61)"><path d="M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z" fill="none" stroke="#f6f3e9" stroke-width="9" stroke-linejoin="round"/><path d="M33 52L52 71L87 33" fill="none" stroke="#f7d44c" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/></g>';
-  bt.append(logo, " צף על המסך בזמן הרצאה חיה (לחיצה עליו פותחת את החלון הקטן, והוא הופך ל-X שסוגר אותו)");
+  bt.append(logo, " צף על המסך כל עוד הבנתי פועלת, גם בלי הרצאה (נקודה אדומה מראה שהרצאה מוקלטת; לחיצה עליו פותחת את החלון הקטן, והוא הופך ל-X שסוגר אותו). כשהוא כבוי, סגירת האפליקציה סוגרת את הבנתי");
   bl.append(bc, bt);
   setPanels.cap.appendChild(bl);
   // which corner of the screen the floating button sits in
@@ -1995,15 +1995,15 @@ $("#recGo").addEventListener("click", () => { if (recSource) startRecording(recS
 $("#linkIn").addEventListener("keydown", e => { if (e.key === "Enter" && recSource) startRecording(recSource, recLang); });
 $("#runBack").addEventListener("click", () => { const s = app && app.session; if (!s) return; if (s.yt) location.hash = "yt"; else if (s.kind === "live") location.hash = "live"; else location.href = "/player"; });
 $("#runStop").addEventListener("click", stopSession);
-const QUICK_STOP_S = 10;   // stopped this soon after starting: offer to delete it right away
 async function stopSession() {
   const s = app && app.session; if (!s || s.done) return;
-  if (s.kind === "live" && !s.ready) {   // still loading: nothing recorded yet - cancel at once, no question
+  const sk = BZMAsk.stopKind(s);   // (the same rule as in the small window: ask.js)
+  if (sk.kind === "cancel") {   // still loading: nothing recorded yet - cancel at once, no question
     await api("/api/cmd", {action: "stop", discard: true});
     toast("בוטל. לא נשמר כלום."); location.hash = ""; return;
   }
-  const secs = s.ready_at ? Date.now() / 1000 - s.ready_at : 1e9;
-  if (s.kind === "live" && secs <= QUICK_STOP_S) {
+  const secs = sk.secs;
+  if (sk.kind === "short") {
     const del = await confirmBox("עצרת מיד אחרי שהתחלת", "עברו רק " + Math.max(1, Math.round(secs)) +
       " שניות, אז כמעט אין בה כלום. למחוק אותה?", "עצירה ומחיקה", "לעצור ולשמור");
     await api("/api/cmd", {action: "stop", discard: del});
