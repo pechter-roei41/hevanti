@@ -1798,7 +1798,9 @@ $("#gpuGo").addEventListener("click", async () => {
   if ($("#gpuGo").dataset.act === "quit") { $("#quitBtn").click(); return; }
   $("#gpuGo").disabled = true;
   try { const r = await api("/api/cmd", {action: "install_gpu"}); if (app && r.gpu) { app.gpu = r.gpu; drawGpu(app); } } catch (e) {}
-});
+});
+// the site a recording offer comes from is always shown: a page can choose any name ("ההרצאה של פרופ' כהן"), never the host (audit #28)
+function offerHost(src) { try { const h = new URL(src).hostname; return h ? " (מ-" + h + ")" : ""; } catch (e) { return ""; } }
 function render(d) {
   drawHomeHints(d); drawGpu(d);
   $("#ver").textContent = "עודכנה ב-" + d.date;   /* design 3: the version is in the top bar only */  $("#ver").title = "גרסת בטא: עדיין בבדיקה, ועלולות להיות תקלות. אם משהו לא עובד, יש \"דיווח על תקלה\" בתחתית מסך הבית.";
@@ -1856,7 +1858,7 @@ function render(d) {
     $("#askIn").value = ""; $("#ask").hidden = false; $("#askIn").focus();
   } else if (!d.question && !$("#ask").hidden) { $("#ask").hidden = true; lastQ = null; }
   // a recording that arrived from outside (dragged onto Hevanti)
-  if (d.pending && lastOffer !== d.pending.source) { lastOffer = d.pending.source; $("#offName").textContent = d.pending.name; $("#offer").hidden = false; }
+  if (d.pending && lastOffer !== d.pending.source) { lastOffer = d.pending.source; $("#offName").textContent = d.pending.name + offerHost(d.pending.source); $("#offer").hidden = false; }
   if (!d.pending) { $("#offer").hidden = true; lastOffer = null; }
   if (d.lib_rev !== libRev && view === "home") loadLib();
   if (view === "live") renderLiveHead(s);

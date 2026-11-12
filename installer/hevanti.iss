@@ -88,5 +88,7 @@ Filename: "{app}\python\python.exe"; Parameters: """{app}\System\Program\live_tr
 ; the settings with the Gemini key (encrypted) and every copy of them (.bak, .corrupt, .tmp), and the models check
 Type: files; Name: "{localappdata}\Hevanti\settings.json*"
 Type: files; Name: "{localappdata}\Hevanti\gemini_models.json"
+; the speech models (about 1.6GB each; since 2.21 in the student's own folder)
+Type: filesandordirs; Name: "{localappdata}\Hevanti\models"
 Type: filesandordirs; Name: "{app}\python"
 Type: filesandordirs; Name: "{app}\System"

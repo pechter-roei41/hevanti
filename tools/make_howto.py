@@ -58,8 +58,15 @@ def prep():
     print("sandbox ready:", SANDBOX)
 
 
+def _real_models():
+    """The student's own models folder (the sandbox has its own LOCALAPPDATA, and must not download the models again)."""
+    sys.path.insert(0, os.path.dirname(PROG))
+    import live_transcribe as L   # (computed with the real LOCALAPPDATA, before env() changes it for Hevanti)
+    return L.MODEL_DIR
+
+
 def env():
-    e = dict(os.environ, PYTHONUTF8="1", BZM_DATA_DIR=DATA, LOCALAPPDATA=LOCAL)
+    e = dict(os.environ, PYTHONUTF8="1", BZM_DATA_DIR=DATA, LOCALAPPDATA=LOCAL, BZM_MODEL_DIR=_real_models())
     e.pop("BZM_NO_BROWSER", None)
     return e
 
