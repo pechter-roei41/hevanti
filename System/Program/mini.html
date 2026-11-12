@@ -91,7 +91,6 @@ body.on #lec::before{background:var(--rec)}
   <span id="lec">אין עכשיו הרצאה פעילה</span>
  <button class="hb" id="stopBtn" type="button" hidden title="עצירת ההקלטה: ההרצאה נשמרת">עצירה</button>
  <button class="hb" id="markImp" type="button" title="סימון ★ של הרגע הזה (Ctrl+Alt+M)" aria-label="סימון ★ של הרגע הזה">★</button>
- <button class="hb" id="hide" type="button" title="להסתיר (Ctrl+Alt+Q או Esc)" aria-label="להסתיר">—</button>
 </header>
 <div id="saved" role="status" hidden>
   <div class="tick" aria-hidden="true">✓</div><b>ההרצאה נשמרה בהצלחה</b><p id="savedInfo"></p>
@@ -122,7 +121,6 @@ function toast(t) {
 }
 const hide = () => fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
   body: JSON.stringify({action: "hide_mini"})}).catch(() => {});
-$("#hide").addEventListener("click", hide);
 // mark this moment of the lecture with ★ (the course page then lists it)
 async function mark() {
   let r; try { r = await (await fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},

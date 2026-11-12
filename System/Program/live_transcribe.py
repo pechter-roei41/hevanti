@@ -5322,7 +5322,8 @@ def _animate_mini(u, hwnd, opening):
                 p = _bezier_ease(e if opening else 1 - e)
                 rad = int((S / 2) * (1 - p) + 10 * sc * p)
                 _mini_region(u, hwnd, _grow_rect(p, w, h, ax, ay), max(2, rad))
-                fade = min(max((e * MINI_ANIM_S - 0.12) / (MINI_ANIM_S - 0.12), 0.0), 1.0)   # the content: after about 120 ms
+                d = 0.45 * MINI_ANIM_S   # the content fades in after about the first half
+                fade = min(max((e * MINI_ANIM_S - d) / (MINI_ANIM_S - d), 0.0), 1.0)
                 _mini_alpha(u, hwnd, int(target * (fade if opening else 1 - e)))
                 time.sleep(0.008)
         finally:
@@ -5656,7 +5657,7 @@ def mini_button_why():
 # --- the floating button: a solid green circle with the Hevanti logo as a thin line (an X while the small window is open) and a red recording dot ---
 BTN_GREEN, BTN_CREAM, BTN_YELLOW, BTN_WHITE, BTN_REC = (27, 110, 75), (246, 243, 233), (247, 212, 76), (255, 255, 255), (194, 65, 45)   # 1B6E4B F6F3E9 F7D44C FFFFFF C2412D
 BTN_RING = ((246, 243, 233), (28, 27, 22))   # the ring round the dot: the colour of the page (paper, night paper)
-MINI_ANIM_S = 0.26   # the window grows from the circle (and the logo turns into an X) in this many seconds
+MINI_ANIM_S = 0.16   # the window grows from the circle (and the logo turns into an X) in this many seconds
 _BTN_CACHE = {}
 
 
