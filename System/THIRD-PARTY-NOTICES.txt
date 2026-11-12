@@ -1,0 +1,88 @@
+הבנתי (Hevanti) - רכיבים של צד שלישי / Third-party notices
+================================================================
+
+בעברית, בקצרה: הבנתי עצמה היא קוד פתוח ברישיון MIT (ראו LICENSE.txt). ההתקנה שלה
+כוללת גם רכיבים של אחרים, והמודלים והכלים הנוספים יורדים ישירות מהמקורות שלהם.
+כל רכיב כפוף לרישיון שלו. הרשימה למטה כוללת את הרישיון, את הקישור למקור, ובמקום
+שנדרש, את הודעת הזכויות. טקסטי הרישיונות המלאים נמצאים בתיקייה `licenses` לצד הקובץ
+הזה, וגם בתיקייה של כל חבילה (`python\Lib\site-packages\<חבילה>*.dist-info`).
+שאלות, או בקשה לקוד המקור של רכיב: hevanti.support@gmail.com
+
+This file lists the parts of other authors that Hevanti installs or downloads. Hevanti
+itself is open source under the MIT License (LICENSE.txt). Each part below keeps its own
+license. Full license texts: the folder `licenses` next to this file, and the
+`*.dist-info` folder of each Python package.
+
+
+1. FFmpeg and PyAV (the `av` package)  -  read this one
+--------------------------------------------------------
+Hevanti reads audio and video files (recordings) with the Python package `av` (PyAV,
+BSD-3-Clause, https://github.com/PyAV-Org/PyAV). The package comes with FFmpeg libraries
+as separate DLL files, in `python\Lib\site-packages\av.libs`. The FFmpeg build used by the
+PyAV wheels includes GPL components (for example libx264 and libx265), so these libraries
+are provided under the GNU General Public License, version 2 or later, and the rest of
+FFmpeg under the GNU Lesser General Public License, version 2.1 or later.
+Hevanti does not change these libraries and uses them only to decode files; they are
+separate files, and you may replace them with another build of the same libraries.
+
+  Texts:  licenses\GPL-2.0.txt  and  licenses\LGPL-2.1.txt
+  Source code of the libraries (the exact versions are the ones inside the installed
+  `av` package, see `python -m pip show av`):
+    FFmpeg      https://ffmpeg.org/download.html
+    x264        https://www.videolan.org/developers/x264.html
+    x265        https://www.x265.org/
+    PyAV        https://github.com/PyAV-Org/PyAV
+    the builds  https://github.com/PyAV-Org/pyav-ffmpeg
+  Written offer: whoever received Hevanti may ask for the complete source code of these
+  GPL/LGPL libraries, as they are in this package, by writing to hevanti.support@gmail.com.
+  We will send it, or the link to it, for at least three years from the date of the
+  release you received.
+
+
+2. Speech models (downloaded when needed, not part of the installer)
+---------------------------------------------------------------------
+  - ivrit-ai/whisper-large-v3-turbo-ct2 and ivrit-ai/whisper-large-v3-turbo
+    (ivrit.ai)  -  Apache License 2.0 (licenses\Apache-2.0.txt). Based on OpenAI Whisper
+    large-v3-turbo (MIT).   https://huggingface.co/ivrit-ai
+  - ivrit-ai/zipformer2-66m-streaming-he (ivrit.ai, Yakov Kolani)  -  Creative Commons
+    Attribution 4.0 (licenses\CC-BY-4.0.txt). Credit: "ivrit.ai, Yakov Kolani". It is
+    based on the icefall streaming Zipformer model (Zengwei), and was converted and
+    quantized by its authors; Hevanti makes no further change.
+    https://huggingface.co/ivrit-ai/zipformer2-66m-streaming-he
+  - Whisper large-v3-turbo (OpenAI)  -  MIT.
+
+3. Python and Python packages (inside the installer)
+-----------------------------------------------------
+  - Python (the embeddable distribution from python.org)  -  Python Software Foundation
+    License. https://docs.python.org/3/license.html
+  - faster-whisper (SYSTRAN)  -  MIT      - CTranslate2  -  MIT
+  - sherpa-onnx (k2-fsa)  -  Apache-2.0    - onnxruntime  -  MIT
+  - tokenizers, huggingface_hub  -  Apache-2.0
+  - numpy  -  BSD-3-Clause      - Pillow  -  HPND (the Pillow license)
+  - mss, comtypes, PyAudioWPatch  -  MIT
+  - av (PyAV)  -  BSD-3-Clause (see part 1 for the FFmpeg libraries inside it)
+  - yt-dlp  -  The Unlicense. Used only to download a recording from a link; never for
+    YouTube.   https://github.com/yt-dlp/yt-dlp
+  Each package's own license file is in its `*.dist-info` folder.
+
+4. Tools and files
+-------------------
+  - Tesseract OCR and the tessdata_fast language files  -  Apache-2.0
+    (installed on request, from https://github.com/tesseract-ocr/tesseract and
+    https://github.com/tesseract-ocr/tessdata_fast)
+  - KaTeX  -  MIT (System\Program\katex\LICENSE.txt)
+  - The fonts Assistant and Secular One  -  SIL Open Font License 1.1
+    (System\Program\fonts\OFL-*.txt)
+  - NVIDIA cuBLAS and cuDNN libraries  -  downloaded only if you choose the GPU install,
+    under NVIDIA's own terms of use.
+
+5. The video in the how-to page
+--------------------------------
+The lecture shown in the video is by Dvir Ross, shared on YouTube under a Creative Commons
+Attribution 3.0 (CC BY 3.0) license (https://creativecommons.org/licenses/by/3.0/): https://www.youtube.com/watch?v=F1_uOZeYLVE . In the video it
+is shortened, enlarged (zoomed) and shown with captions added by Hevanti.
+
+6. YouTube
+-----------
+YouTube videos play in YouTube's own player (IFrame Player), under YouTube's Terms of
+Service. Hevanti does not download them.

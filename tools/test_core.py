@@ -434,7 +434,7 @@ check("course while recording: a course offered is in the session info until the
 check("course while recording: no lecture running - refused in words", r_done["ok"] is False and "אין עכשיו" in r_done["error"], r_done)
 # ---- F3/F4: the quick window's place, its own profile, the saved card, "open the lecture" ----
 check("quick window: centred in the work area (also when the area starts away from 0,0)", L._center_xy((0, 0, 1920, 1040), 380, 440) == (770, 300) and L._center_xy((-1920, 0, 0, 1040), 380, 440) == (-1150, 300) and L._center_xy((0, 0, 300, 300), 380, 440) == (0, 0))
-check("quick window: its size is small (380 x 450) and it has a browser profile of its own, in the local folder", L.QUICK_SIZE == (380, 450) and os.path.dirname(L.quick_profile_dir()) == L.LOCAL_DIR and L.quick_profile_dir() != L.mini_profile_dir())
+check("quick window: its size is small (380 x 470) and it has a browser profile of its own, in the local folder", L.QUICK_SIZE == (380, 470) and os.path.dirname(L.quick_profile_dir()) == L.LOCAL_DIR and L.quick_profile_dir() != L.mini_profile_dir())
 im_c, wc_, hc_ = L._toast_image("ההרצאה נשמרה", 1.0, False, "check")
 chip_c = tuple(im_c.getpixel((wc_ - 17, 22))[:3])
 chip_cd = tuple(L._toast_image("ההרצאה נשמרה", 1.0, True, "check")[0].getpixel((wc_ - 17, 22))[:3])
@@ -540,6 +540,51 @@ if os.name == "nt":
     L._find_quick, L._bring_front, L._mini_user32 = _fq, _bf, _u
     check("the quick-start window opened from the small window is brought to the front", _calls == [4242], _calls)
 
+# audit 12.11.2026, phase A
+_src = open(os.path.join(L.SCRIPT_DIR, "live_transcribe.py"), encoding="utf-8").read()
+check("two links with one title get two files; the #fragment does not count",
+      L.url_tag("https://x/a?id=1") != L.url_tag("https://x/a?id=2") and L.url_tag("https://x/a#t=5") == L.url_tag("https://x/a"))
+check("the silence filter is turned off only for an error about the filter itself",
+      L._vad_problem(ImportError("x")) and L._vad_problem(Exception("onnxruntime failed")) and not L._vad_problem(RuntimeError("CUDA out of memory")))
+class _BadModel:
+    def transcribe(self, *a, **k):
+        raise RuntimeError("CUDA out of memory")
+L.USE_VAD = True
+try:
+    L.transcribe(_BadModel(), 1, [0.0] * 16000, "")
+    _raised = False
+except RuntimeError:
+    _raised = True
+check("a transient error in one piece does not turn the silence filter off for good", _raised and L.USE_VAD is True)
+check("the sound watchdog reconnects only when nothing waits in the queue (a slow piece must not throw the queue away)",
+      'now - last_audio > 8 and now - last_reconnect > 15 and q.qsize() == 0' in _src and 'now - last_audio > 45 and now - last_reconnect > 45 and q.qsize() == 0' in _src)
+check("a piece that cannot be transcribed is skipped, the lecture goes on", "def _handle_chunk(" in _src and 'save_error("live chunk")' in _src)
+_ask = open(os.path.join(L.SCRIPT_DIR, "ask.js"), encoding="utf-8").read()
+_mini = open(os.path.join(L.SCRIPT_DIR, "mini.html"), encoding="utf-8").read()
+check("a new lecture starts a new conversation in the small window (no old answers in 'more details')", "reset: resetChat" in _ask and "box.reset()" in _mini)
+
+# third-party notices (audit 12.11.2026): the file, the full texts, the written offer for the GPL libraries, the visible credit
+_sys = os.path.dirname(L.SCRIPT_DIR)
+_tp = open(os.path.join(_sys, "THIRD-PARTY-NOTICES.txt"), encoding="utf-8").read()
+check("third-party notices: FFmpeg/PyAV with the GPL and LGPL texts, source links and a written offer",
+      all(w in _tp for w in ("GPL-2.0.txt", "LGPL-2.1.txt", "ffmpeg.org", "pyav-ffmpeg", "Written offer", "libx264")) and
+      all(os.path.isfile(os.path.join(_sys, "licenses", n)) for n in ("GPL-2.0.txt", "LGPL-2.1.txt", "Apache-2.0.txt", "CC-BY-4.0.txt")))
+check("third-party notices: the ivrit.ai models with their licenses and credit, the CC BY video, Tesseract, KaTeX",
+      all(w in _tp for w in ("ivrit-ai/whisper-large-v3-turbo-ct2", "Apache License 2.0", "Yakov Kolani", "CC-BY-4.0", "Dvir Ross", "Tesseract", "KaTeX")))
+_lic = open(os.path.join(_sys, "LICENSE.txt"), encoding="utf-8").read()
+_appsrc = open(os.path.join(L.SCRIPT_DIR, "app.html"), encoding="utf-8").read()
+check("the license and the app point to the notices, and the app credits ivrit.ai", "THIRD-PARTY-NOTICES.txt" in _lic and "ivrit.ai" in _appsrc and "Yakov Kolani" in _appsrc)
+
+# audit #8, #9: AI windows are told by a whole part of the title; one failure of the painting over does not turn it off
+_cases = [("Claude", True), ("Claude Shannon - Wikipedia", False), ("שאלה על אינטגרל - Claude", True), ("ChatGPT", True),
+          ("ChatGPT and 2 more pages - Personal - Microsoft Edge", True), ("ChatGPT ועוד 2 דפים - אישי - Microsoft Edge", True),
+          ("Google Gemini", True), ("Gemini protocol.pdf", False), ("Microsoft Copilot", True), ("Perplexity", True),
+          ("‫הבנתי‬", True), ("הבנתי · האפליקציה", True), ("הרצאה 3 - YouTube", False), ("ChatGPT Plus pricing - Google Search", False)]
+_bad = [t for t, want in _cases if L.mask_title(t) != want]
+check("AI and Hevanti windows are found by a whole part of the title (a lecture about Claude Shannon is not greyed out)", not _bad, _bad)
+check("one failure of painting over the AI windows skips that picture, it stops only after 5 in a row and says so",
+      "self.mask_fails >= 5" in _src and 'save_error("mask windows")' in _src)
+check("the sound watchdog's clocks are monotonic (a clock change does not blind it)", "now = time.monotonic()" in _src and "last_audio = time.monotonic()" in _src)
 # 12.11.2026: closing from the small window closes every window; the quick-start window keeps its size; no "saved" card after a delete
 _src = open(os.path.join(L.SCRIPT_DIR, "live_transcribe.py"), encoding="utf-8").read()
 _cw = _src[_src.index("def close_our_windows"):_src.index("def open_start_window")]

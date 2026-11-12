@@ -92,8 +92,8 @@ with tempfile.TemporaryDirectory() as tmp:
     check("lectures: all courses, also an empty one", all(x in body(r[10]) for x in (S, D, "קורס ריק")), body(r[10]))
     check("lectures: one course by part of its name, with its terms",
           S in body(r[11]) and D not in body(r[11]) and "תגובת סמך" in body(r[11]), body(r[11]))
-    check("now: warns when the running lecture is of another course", "שייך לקורס" in body(r[12]) and D in body(r[12]), body(r[12]))
-    check("now: no warning in the right course", "שימו לב" not in body(r[13]) and "תנע זוויתי" in body(r[13]), body(r[13]))
+    check("now: in another course than the running one - no tie to the running lecture, and its content is not given", "אין לקשר" in body(r[12]) and D in body(r[12]) and "דיסקה" not in body(r[12]), body(r[12]))
+    check("now: no warning in the right course", "אין לקשר" not in body(r[13]) and "תנע זוויתי" in body(r[13]), body(r[13]))
     check("transcript: newest lecture of the course", "2026-10-14" in body(r[14]) and "מסבך" in body(r[14]), body(r[14]))
     b = body(r[15])
     check("whole course: both lectures, oldest first, with slide text",
@@ -183,6 +183,24 @@ with tempfile.TemporaryDirectory() as tmp:
     instr = call(root, [])[0]["result"]["instructions"]
     check("instructions: the live lecture rule", "LIVE LECTURE RULE" in instr and "START of every conversation" in instr, instr[:200])
     check("now: tool description asks to call it at the start", "start of every conversation" in tools["now"]["description"])
+
+    # audit 12.11.2026 (#6, #7): the brief "now" respects the course; two courses or lectures that fit are never guessed
+    with tempfile.TemporaryDirectory() as tmp2:
+        root2 = os.path.join(tmp2, "ההרצאות שלי")
+        make_lib(root2)
+        for c in ("פיזיקה 1", "פיזיקה 2"):
+            for ln in ("הרצאה 1", "הרצאה 12"):
+                write(os.path.join(root2, c, ln, ln + ".txt"), f"[10:00:05 | +0:00:05] משהו מ{c} {ln}\n")
+        r = call(root2, [("now", {"course": S, "brief": True}),                       # 10: a lecture of "דינמיקה" runs
+                         ("transcript", {"course": "פיזיקה"}),                         # 11: two courses fit
+                         ("transcript", {"course": "פיזיקה 1", "lecture": "הרצאה 1"}),  # 12: exact name, not "הרצאה 12"
+                         ("transcript", {"course": "פיזיקה 1", "lecture": "הרצאה"}),    # 13: two lectures fit
+                         ("now", {"brief": True})])                                    # 14: no course given: as before
+        check("now brief: another course than the running one is not tied to it", "אין לקשר" in body(r[10]) and "🔴" not in body(r[10]), body(r[10]))
+        check("course that fits two: asks which, does not guess", "יותר מקורס אחד" in body(r[11]) and "פיזיקה 1" in body(r[11]) and "פיזיקה 2" in body(r[11]), body(r[11]))
+        check("lecture by its exact name is not the longer name that contains it", "הרצאה 1 " in body(r[12]) + " " and "הרצאה 12" not in body(r[12]), body(r[12]))
+        check("lecture name that fits two: asks which", "יותר מהרצאה אחת" in body(r[13]), body(r[13]))
+        check("now brief with no course: still says a live lecture runs", "🔴" in body(r[14]), body(r[14]))
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)
