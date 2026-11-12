@@ -95,7 +95,7 @@ h2{font-size:21px;margin:0;text-wrap:balance}
 .start[data-start="he"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);min-height:156px;padding:22px;box-shadow:0 6px 18px -8px color-mix(in srgb,var(--accent) 70%,transparent)}
 .start[data-start="he"] .ic{background:color-mix(in srgb,var(--accent-ink) 16%,transparent);color:var(--accent-ink);width:44px;height:44px}
 .start[data-start="he"] b{font-family:var(--f-display);font-weight:400;font-size:26px;line-height:1.2}
-.start[data-start="he"] span:not(.ic){color:color-mix(in srgb,var(--accent-ink) 88%,var(--accent));font-size:16px}
+.start[data-start="he"] span:not(.ic){color:var(--accent-ink);font-size:16px}   /* the text on the green is white by day and near-black at night (DESIGN.md), not a mix with the green: that was 3.36:1 by day */
 .start[data-start="he"]:hover{filter:brightness(1.06);border-color:var(--accent)}
 .start:not([data-start="he"]){background:transparent;min-height:156px}
 .start:not([data-start="he"]):hover{background:var(--surface)}
@@ -273,7 +273,7 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .keystat{display:flex;align-items:baseline;gap:4px 16px;flex-wrap:wrap}
 .keystat .capstat{flex:1 1 auto}
 .keystat .linkish{margin-inline-start:auto}
-input[type=checkbox],input[type=radio]{accent-color:var(--accent)}   /* the board green, not the system blue */
+input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--accent)}   /* the board green, not the system blue */
 .tile{display:grid;gap:3px;text-align:start;padding:13px 16px;border:1.5px solid var(--line);border-radius:14px;background:var(--bg);color:var(--fg);font:inherit;cursor:pointer}
 .tile b{font-size:17px}
 .tile small{color:var(--muted);font-size:13.5px;line-height:1.4}
