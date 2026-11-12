@@ -283,7 +283,7 @@ x2, y2 = L._toast_xy(bx, by, 56, tw_, th_, "tr", _Area)
 x3, _ = L._toast_xy(0, by, 56, tw_, th_, "bl", _Area)
 check("floating-button message: above the button for a bottom corner, below it for a top one, and never off the screen",
       y1 + th_ <= by and y2 >= by + 56 and x1 >= 0 and x1 + tw_ <= 1920 and x3 >= 0, (x1, y1, x2, y2, x3))
-# ---- the floating button goes when the lecture is stopped (at once, while the last seconds are still being written) ----
+# ---- the floating button stays (12.11.2026): with a lecture, while it stops, and with none; only the setting turns it off ----
 class _FakeSess:
     kind, ready, done = "live", True, False
     def __init__(self):
@@ -292,24 +292,26 @@ old_session = L.APP.session
 L.APP.session = fs = _FakeSess()
 try:
     L.save_settings(mini_button=True)
-    before = L.mini_button_wanted()
-    fs.ready = False   # (the model is still loading: the button is already there)
-    loading = L.mini_button_wanted()
+    states = [L.mini_button_wanted()]
+    fs.ready = False
+    states.append(L.mini_button_wanted())   # (the model is still loading)
     fs.ready = True
     fs.stop.set()
-    after = L.mini_button_wanted()
-finally:
-    L.APP.session = old_session
-check("floating button: shown the moment a lecture starts (while the model loads too), gone the moment stop is pressed", before is True and loading is True and after is False, (before, loading, after))
-L.APP.session = fs2 = _FakeSess()
-try:
-    fs2.stop.set()
-    why_stop = L.mini_button_why()
+    states.append(L.mini_button_wanted())   # (stop pressed: it stays)
+    fs.done = True
+    states.append(L.mini_button_wanted())   # (saved)
     L.APP.session = None
-    why_none = L.mini_button_why()
+    states.append(L.mini_button_wanted())   # (no lecture)
+    keeps = L._button_keeps_running() if os.name == "nt" else True
+    L.save_settings(mini_button=False)
+    states.append(L.mini_button_wanted())
+    keeps_off = L._button_keeps_running()
+    L.save_settings(mini_button=True)
 finally:
     L.APP.session = old_session
-check("floating button: the reason it is hidden can be told (for the black window)", why_stop == "נלחצה עצירה" and why_none == "אין הרצאה", (why_stop, why_none))
+check("floating button: it stays with a lecture, while it stops, after it is saved and with no lecture; only the setting turns it off",
+      states == [True, True, True, True, True, False], states)
+check("Hevanti stays running after the app window closes while the button is on (and closes when the button is off)", keeps is True and keeps_off is False, (keeps, keeps_off))
 # ---- the quick-start window (F1): when it opens instead of the home screen, and its commands ----
 _saved_env = dict(os.environ)
 os.environ.pop("BZM_NO_BROWSER", None)

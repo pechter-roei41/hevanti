@@ -477,12 +477,15 @@ with sync_playwright() as p:
     mini.wait_for_selector("#sug", state="visible", timeout=5000)
     check("floating window: a course read from the first slide is offered, with the name", "אלגוריתמים" in mini.inner_text("#sugText") and "השקף הראשון" in mini.inner_text("#sugText"), mini.inner_text("#sugText"))
     marked.clear()
+    mini_state["suggest"] = False   # (Hevanti stops offering it once it is taken: the mock says so, or a look 4 seconds later brings it back)
     mini.click("#sugYes")
     mini.wait_for_timeout(500)
     check("floating window: 'move' sends the course (the lecture moves when it is saved) and tells when", any(m.get("action") == "set_lecture_course" and m.get("course") == "אלגוריתמים" for m in marked) and mini.is_hidden("#sug"), marked)
+    mini_state["suggest"] = True
     mini.evaluate("pollApp()")
     mini.wait_for_selector("#sug", state="visible", timeout=5000)
     marked.clear()
+    mini_state["suggest"] = False
     mini.click("#sugNo")
     mini.wait_for_timeout(400)
     check("floating window: 'not now' tells Hevanti, and the offer goes", any(m.get("action") == "suggest_dismiss" for m in marked) and mini.is_hidden("#sug"), marked)
