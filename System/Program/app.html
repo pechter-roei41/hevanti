@@ -1981,15 +1981,15 @@ $("#recGo").addEventListener("click", () => { if (recSource) startRecording(recS
 $("#linkIn").addEventListener("keydown", e => { if (e.key === "Enter" && recSource) startRecording(recSource, recLang); });
 $("#runBack").addEventListener("click", () => { const s = app && app.session; if (!s) return; if (s.yt) location.hash = "yt"; else if (s.kind === "live") location.hash = "live"; else location.href = "/player"; });
 $("#runStop").addEventListener("click", stopSession);
-const QUICK_STOP_S = 10;   // stopped this soon after starting: offer to delete it right away
 async function stopSession() {
   const s = app && app.session; if (!s || s.done) return;
-  if (s.kind === "live" && !s.ready) {   // still loading: nothing recorded yet - cancel at once, no question
+  const sk = BZMAsk.stopKind(s);   // (the same rule as in the small window: ask.js)
+  if (sk.kind === "cancel") {   // still loading: nothing recorded yet - cancel at once, no question
     await api("/api/cmd", {action: "stop", discard: true});
     toast("בוטל. לא נשמר כלום."); location.hash = ""; return;
   }
-  const secs = s.ready_at ? Date.now() / 1000 - s.ready_at : 1e9;
-  if (s.kind === "live" && secs <= QUICK_STOP_S) {
+  const secs = sk.secs;
+  if (sk.kind === "short") {
     const del = await confirmBox("עצרת מיד אחרי שהתחלת", "עברו רק " + Math.max(1, Math.round(secs)) +
       " שניות, אז כמעט אין בה כלום. למחוק אותה?", "עצירה ומחיקה", "לעצור ולשמור");
     await api("/api/cmd", {action: "stop", discard: del});

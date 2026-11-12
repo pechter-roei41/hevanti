@@ -4943,6 +4943,7 @@ MINI_TITLE = "הבנתי"   # the page's title; the window is found by an exact 
 MINI_SIZE = (380, 460)   # small: it stays in a corner of the screen
 QUICK_HTML = os.path.join(SCRIPT_DIR, "quick.html")   # the quick-start window (F1): a small window in the middle of the screen when Hevanti opens
 QUICK_TITLE = "הבנתי · חלון התחלה מהירה"   # its page's title (found by an exact match; the app-window watcher takes it as the app's window too)
+QUICK_STOP_S = 10   # a lecture stopped this many seconds after it started transcribing (or sooner) is almost empty: the student is asked whether to delete it. One number for the app and the small window (both read it from /api/app)
 QUICK_SIZE = (380, 400)   # (96-dpi pixels, the title bar included)
 _MINI_LOCK = threading.Lock()
 
@@ -7552,7 +7553,7 @@ class Session:
                 "suggest": self.suggest if (self.suggest and not self.suggest_off and not self.pending_course) else None, "saved": self.saved, "ready": self.ready,
                 "done": self.done, "stopping": self.stop.is_set() and not self.done, "error": self.error,
                 "started": self.started, "transcript": self.transcript, "yt": self.yt,
-                "ready_at": self.ready_at, "discard": self.discard,
+                "ready_at": self.ready_at, "discard": self.discard, "quick_stop_s": QUICK_STOP_S,
                 "stopping_for": int(time.time() - self.stop_at) if self.stop_at and not self.done else 0}
 
 
@@ -7780,6 +7781,17 @@ class App:
         if a == "quick_start":   # the quick-start window instead of the home screen when Hevanti opens (a setting)
             save_settings(quick_start=bool(d.get("on")))
             return {"ok": True}
+        if a == "quick_new":   # "התחלת הרצאה חדשה" in the small window: the quick-start window opens (once); closing it closes only itself
+            if self.url and os.environ.get("BZM_NO_BROWSER") != "1":
+                if os.name == "nt":
+                    try:
+                        if _find_quick(_mini_user32()):
+                            return {"ok": True, "opened": False, "already": True}
+                    except Exception:
+                        pass
+                ok = open_app_window(self.url + "quick", size=QUICK_SIZE, center=True, profile=quick_profile_dir(), track=False)
+                return {"ok": True, "opened": ok}
+            return {"ok": True, "opened": False}
         if a == "quick_close":   # the quick-start window is done (a lecture started)
             return {"ok": True, "closed": close_quick_window()}
         if a == "quick_open_app":   # "open the app": the home screen in its own window, and the small one goes away; nothing starts
@@ -9228,7 +9240,7 @@ def _watch_app_window(u, before):
                 return
 
 
-def open_app_window(url, size=None, center=False, profile=None):
+def open_app_window(url, size=None, center=False, profile=None, track=True):
     """Windows: the app in a window of its own (the default browser, Edge or Chrome, without tabs and address bar, with
     the student's own profile) and not a tab among the others: the tool knows when it is closed, and closes it when the
     tool closes."""
@@ -9257,7 +9269,8 @@ def open_app_window(url, size=None, center=False, profile=None):
             os.makedirs(profile, exist_ok=True)
             args += ["--user-data-dir=" + profile, "--no-first-run", "--no-default-browser-check", "--disable-extensions", "--disable-sync"]
         subprocess.Popen(args)
-        threading.Thread(target=_watch_app_window, args=(u, before), daemon=True).start()
+        if track:   # (track=False: a window opened on the side, e.g. the quick-start window from the small window while a lecture or the app runs in the background: closing it must not close Hevanti)
+            threading.Thread(target=_watch_app_window, args=(u, before), daemon=True).start()
         if size and center:
             threading.Thread(target=_place_quick_window, args=(size,), daemon=True).start()
         return True

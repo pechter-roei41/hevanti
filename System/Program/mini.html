@@ -63,6 +63,11 @@ body.on #lec::before{background:var(--rec)}
 #lag{flex:none;padding:2px 10px;border-radius:999px;background:var(--warn-bg);color:var(--warn-fg);font-size:13px;line-height:1.5;font-weight:700;white-space:nowrap;align-self:center}   /* in the row of "תשובה כאן", a caution pill: never green */
 #stopBtn{padding:0 12px;width:auto;font-size:14px;font-weight:600}
 #stopBtn.confirm{border-color:var(--rec);color:var(--rec);font-weight:800}
+#short{margin:14px 10px;padding:18px 16px;border:1px solid var(--line);border-radius:14px;background:var(--surface);display:flex;flex-direction:column;gap:10px}
+#short b{font-size:18px}
+#short p{margin:0;color:var(--muted);font-size:15px}
+#short button{border:1.5px solid var(--line);background:none;color:var(--fg);border-radius:12px;padding:8px 14px;min-height:40px;font-size:15px;font-weight:600;cursor:pointer}
+#short button:hover{background:var(--accent-soft)}
 #saved{margin:14px 10px;padding:18px 16px;border:1px solid var(--line);border-radius:14px;background:var(--surface);display:flex;flex-direction:column;gap:10px}
 #saved .tick{width:34px;height:34px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-size:20px;font-weight:800}
 #saved b{font-size:18px}
@@ -92,6 +97,10 @@ body.on #lec::before{background:var(--rec)}
  <button class="hb" id="stopBtn" type="button" hidden title="עצירת ההקלטה: ההרצאה נשמרת">עצירה</button>
  <button class="hb" id="markImp" type="button" title="סימון ★ של הרגע הזה (Ctrl+Alt+M)" aria-label="סימון ★ של הרגע הזה">★</button>
 </header>
+<div id="short" role="alertdialog" aria-labelledby="shortT" hidden>
+  <b id="shortT">עצרת מיד אחרי שהתחלת</b><p id="shortInfo"></p>
+  <button type="button" id="shortDel">עצירה ומחיקה</button><button type="button" id="shortSave">לעצור ולשמור</button>
+</div>
 <div id="saved" role="status" hidden>
   <div class="tick" aria-hidden="true">✓</div><b>ההרצאה נשמרה בהצלחה</b><p id="savedInfo"></p>
   <button type="button" id="savedOpen">פתיחת ההרצאה באפליקציה</button><button type="button" id="savedClose">סגירה</button>
@@ -110,7 +119,7 @@ body.on #lec::before{background:var(--rec)}
 <script>
 "use strict";
 const $ = s => document.querySelector(s);
-let shot = null, total = 0, live = false, kind0 = "", lastMark = null, sawLive = false, savedFor = null, savedGone = "", stopTimer = 0;
+let shot = null, total = 0, live = false, kind0 = "", lastMark = null, sawLive = false, savedFor = null, savedGone = "", stopTimer = 0, curS = null;
 const MARKED = "★ סומן";
 function toast(t) {
   const e = $("#toast"); e.textContent = "";
@@ -133,16 +142,33 @@ $("#markImp").addEventListener("click", () => mark());
 const stopBtn = $("#stopBtn");
 function stopReset() { clearTimeout(stopTimer); stopBtn.classList.remove("confirm"); stopBtn.textContent = "עצירה"; }
 stopBtn.addEventListener("click", async () => {
+  if (stopBtn.dataset.mode === "start") {   // no lecture: the same place starts a new one (the quick-start window; closing it closes only itself)
+    try { await fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify({action: "quick_new"})}); } catch (e) {}
+    return;
+  }
   if (!stopBtn.classList.contains("confirm")) {
     stopBtn.classList.add("confirm"); stopBtn.textContent = "לעצור?";
     stopTimer = setTimeout(stopReset, 3000);
     return;
   }
-  stopReset(); stopBtn.hidden = true;
-  $("#lec").textContent = "עוצר ושומר...";
-  try { await fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify({action: "stop"})}); } catch (e) {}
-  pollApp();
+  stopReset();
+  const sk = BZMAsk.stopKind(curS);   // (the same rule as in the app: ask.js)
+  if (sk.kind === "cancel") { await doStop(true); toast("בוטל. לא נשמר כלום."); return; }
+  if (sk.kind === "short") {   // almost empty: the same question as in the app
+    $("#shortInfo").textContent = "עברו רק " + Math.max(1, Math.round(sk.secs)) + " שניות, אז כמעט אין בה כלום. למחוק אותה?";
+    $("#short").hidden = false; stopBtn.hidden = true; $("#shortSave").focus();
+    return;
+  }
+  await doStop(false);
 });
+async function doStop(discard) {
+  $("#short").hidden = true; stopBtn.hidden = true;
+  $("#lec").textContent = "עוצר ושומר...";
+  try { await fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify({action: "stop", discard})}); } catch (e) {}
+  pollApp();
+}
+$("#shortDel").addEventListener("click", async () => { await doStop(true); toast("ההרצאה נעצרה ונמחקה."); });
+$("#shortSave").addEventListener("click", () => doStop(false));
 $("#savedClose").addEventListener("click", () => { savedGone = $("#saved").dataset.f || ""; drawSaved(null); hide(); });
 $("#savedOpen").addEventListener("click", async () => {
   const f = $("#saved").dataset.f; savedGone = f || ""; drawSaved(null);
@@ -211,9 +237,17 @@ async function pollApp() {
     kind0 = s ? s.kind : "";
     $("#note").hidden = live; document.body.classList.toggle("on", live);
     if (live) sawLive = true;
-    stopBtn.hidden = !(live && s && s.kind === "live" && !s.stopping);   // (a recording watched in the player is not stopped from here)
-    if (live && s && s.stopping) $("#lec").textContent = "עוצר ושומר..." + (s.stopping_for > 5 ? " " + s.stopping_for + " שנ'" : "");
+    curS = s;
+    const canStop = live && s && s.kind === "live" && !s.stopping;   // (a recording watched in the player is not stopped from here)
     if (!live && stopTimer) stopReset();
+    if (!live) $("#short").hidden = true;
+    // with no lecture the same button starts a new one; while a lecture stops, a recording is watched, or the question "delete?" is open, it is hidden
+    const startNew = !live && !(s && !s.done);
+    stopBtn.dataset.mode = startNew ? "start" : "stop";
+    if (startNew) { stopBtn.textContent = "התחלת הרצאה חדשה"; stopBtn.title = "פותח את חלון ההתחלה המהירה"; stopBtn.classList.remove("confirm"); }
+    else if (!stopBtn.classList.contains("confirm")) { stopBtn.textContent = "עצירה"; stopBtn.title = "עצירת ההקלטה: ההרצאה נשמרת"; }
+    stopBtn.hidden = !(canStop || startNew) || !$("#short").hidden;
+    if (live && s && s.stopping) $("#lec").textContent = "עוצר ושומר..." + (s.stopping_for > 5 ? " " + s.stopping_for + " שנ'" : "");
     const sg = live && s && s.suggest;   // a course read from the first slide: offered, one press to take it
     $("#sug").hidden = !sg;
     if (sg) { $("#sugText").textContent = "נראה שזה הקורס \"" + sg.course + "\" (לפי השקף הראשון). להעביר?"; $("#sug").dataset.course = sg.course; }
