@@ -9279,6 +9279,16 @@ def open_app_window(url, size=None, center=False, profile=None, track=True):
         return False
 
 
+def _mini_window_open():
+    """True while the small question window is open (Windows; False elsewhere)."""
+    if os.name != "nt":
+        return False
+    try:
+        return bool(_find_mini(_mini_user32()))
+    except Exception:
+        return False
+
+
 def app_window_closed():
     """True once the student closed the app's window."""
     h = _APP_WIN["hwnd"]
@@ -9644,6 +9654,7 @@ def main():
     show(f"{PRODUCT} פועלת. האפליקציה נפתחה בדפדפן. אם לא נפתחה: {server.url}")
     show("החלון הזה הוא הסימן שהאפליקציה פועלת. אפשר למזער אותו. סגירה שלו עוצרת אותה.")
     show("=" * 50)
+    app_gone = False
     try:
         while not APP.quit_evt.wait(1.0):
             s = APP.session
@@ -9651,9 +9662,14 @@ def main():
             if idle and time.time() - APP.last_seen > IDLE_EXIT_S:
                 log(f"האפליקציה סגורה ושום דבר לא רץ כבר {max(1, round(IDLE_EXIT_S / 60))} דקות - {PRODUCT} נסגרה. כדי לפתוח שוב: Hevanti.")
                 break
-            if app_window_closed() and idle:   # the app's window was closed with nothing running: the tool closes too
+            if idle and (app_window_closed() or app_gone):   # the app's window was closed with nothing running: the tool closes too, unless the small window is still open (then it goes with the small window: "start a new lecture" is there)
+                app_gone = True
+                if _mini_window_open():
+                    continue
                 log(f"החלון של {PRODUCT} נסגר - {PRODUCT} נסגרת.")
                 break
+            if not idle:
+                app_gone = False
     except KeyboardInterrupt:
         draft_clear()
         log("עוצר...")
