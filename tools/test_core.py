@@ -529,5 +529,16 @@ L.APP.quit_evt.clear()
 L.TAB_CLOSED_WAIT_S, L._button_keeps_running = _wait0, _btn0
 check("the app's tab is closed: Hevanti stays while the floating button is on, and closes when it is off", kept and quit_without, (kept, quit_without))
 
+# ---- the quick-start window opened from the small window comes to the front (a real Windows run: it opened behind the keyboard focus, Esc did nothing) ----
+if os.name == "nt":
+    _fq, _bf, _u = L._find_quick, L._bring_front, L._mini_user32
+    _calls = []
+    L._find_quick = lambda u: 4242
+    L._bring_front = lambda u, h: _calls.append(h)
+    L._mini_user32 = lambda: object()
+    L._front_quick_window()
+    L._find_quick, L._bring_front, L._mini_user32 = _fq, _bf, _u
+    check("the quick-start window opened from the small window is brought to the front", _calls == [4242], _calls)
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)

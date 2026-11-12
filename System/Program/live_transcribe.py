@@ -7773,6 +7773,8 @@ class App:
                     except Exception:
                         pass
                 ok = open_app_window(self.url + "quick", size=QUICK_SIZE, center=True, profile=quick_profile_dir(), track=False)
+                if ok:
+                    threading.Thread(target=_front_quick_window, daemon=True).start()
                 return {"ok": True, "opened": ok}
             return {"ok": True, "opened": False}
         if a == "quick_close":   # the quick-start window is done (a lecture started)
@@ -9210,6 +9212,25 @@ def _chrome_windows(u):
         return True
     u.EnumWindows(ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)(each), 0)
     return out
+
+
+def _front_quick_window():
+    """The quick-start window opened from the small window ("start a new lecture"): when it appears it is brought to the front, so the
+    keyboard is in it (Esc, Tab, Enter). A real Windows run (12.11.2026) showed it opening behind the keyboard focus: Esc did nothing."""
+    if os.name != "nt":
+        return
+    try:
+        u = _mini_user32()
+        end = time.time() + 10
+        while time.time() < end:
+            hwnd = _find_quick(u)
+            if hwnd:
+                time.sleep(0.4)   # (placed in the middle first)
+                _bring_front(u, hwnd)
+                return
+            time.sleep(0.1)
+    except Exception:
+        save_error("bring the quick window to the front")
 
 
 def _bring_front(u, hwnd):
