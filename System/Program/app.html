@@ -135,7 +135,7 @@ h2{font-size:21px;margin:0;text-wrap:balance}
 .row input[type=url],.row input[type=text],.row input[type=search],.row input[type=password]{flex:1;min-width:0;padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg)}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
 .seg button{border:0;background:var(--surface);padding:7px 16px;cursor:pointer}
-.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--fg);font-weight:800;box-shadow:inset 0 0 0 1.5px var(--accent)}   /* design 3: a choice is soft green with ink, never the heaviest thing on the screen */
 .chosen{font-weight:600;word-break:break-all}
 .meter{height:8px;border-radius:4px;background:var(--sunk);overflow:hidden}
 .meter i{display:block;height:100%;background:var(--accent);width:0}
@@ -173,7 +173,7 @@ h2{font-size:21px;margin:0;text-wrap:balance}
 .coursebar .hint{color:var(--muted);font-size:15px}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
 .tabs button{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 13px;cursor:pointer;font-size:15px;font-weight:600}
-.tabs button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.tabs button[aria-pressed="true"]{background:var(--accent-soft);color:var(--fg);border-color:var(--accent);font-weight:800}
 .tabs button.add{border-style:dashed;color:var(--accent)}
 .cbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--accent-soft);border-radius:var(--r);padding:10px 14px;margin:0 0 10px}
 .cbar span{margin-inline-end:auto}
@@ -195,7 +195,7 @@ mark{background:var(--accent-soft);color:var(--fg);border-radius:3px;padding:0 1
 .chips{display:flex;flex-wrap:wrap;gap:6px;max-height:200px;overflow-y:auto;padding:2px}
 .chips button{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:999px;padding:2px 11px;font-size:14px;font-weight:600;cursor:pointer;line-height:1.5}
 .chips button:hover{background:var(--accent-soft)}
-.chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.chips button[aria-pressed="true"]{background:var(--accent-soft);color:var(--fg)}
 #newCourse .card{max-height:92vh;overflow-y:auto}
 textarea.gloss{width:100%;min-height:220px;resize:vertical;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);line-height:1.55}
 select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);min-width:0;max-width:100%}
@@ -235,8 +235,8 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .ctabs button small{color:var(--muted);font-size:13px;line-height:1.3}
 .ctabs button small.warn{color:var(--rec);font-weight:700}
 .ctabs button small.ok{color:var(--ok);font-weight:700}
-.ctabs button[aria-selected="true"]{border-color:var(--accent);background:var(--accent-soft)}
-.ctabs button[aria-selected="true"] b{color:var(--accent)}
+.ctabs button[aria-selected="true"]{background:var(--sunk)}   /* design 3: "where am I" is one shape everywhere: sunk paper, ink, 800 */
+.ctabs button[aria-selected="true"] b{font-weight:800}
 .pano{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
 .pano summary{cursor:pointer}
 .pano ol{margin:6px 0;padding-inline-start:22px}
@@ -256,7 +256,7 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .ptabs{display:flex;gap:8px}
 .ptabs button{font:inherit;font-size:16px;font-weight:700;padding:8px 18px;border:1.5px solid var(--line);border-radius:999px;background:var(--surface);color:var(--fg);cursor:pointer}
 .ptabs button small{font-weight:400;color:var(--muted);margin-inline-start:4px}
-.ptabs button[aria-selected="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.ptabs button[aria-selected="true"]{background:var(--sunk);font-weight:800}
 .mklist{display:grid;gap:10px;margin-top:12px}
 .mklist .mk .ts{color:var(--muted);font-weight:400;margin-inline-start:10px}
 .mklist .mk .acts{display:flex;gap:8px}
@@ -267,6 +267,9 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .moremenu .menu button{border:0;background:none;color:var(--fg);text-align:start;font:inherit;font-size:15px;padding:9px 12px;border-radius:8px;cursor:pointer}
 .moremenu .menu button:hover,.moremenu .menu button:focus-visible{background:var(--sunk)}
 .moremenu .menu button[hidden]{display:none}
+.moremenu .menu .menusep{border:0;border-top:1px solid var(--line);margin:4px 2px}
+.moremenu .menu button.menudanger{color:var(--rec)}   /* design 3: the one destructive item is apart and in the destructive colour (5.14:1 on a sheet, 6.07:1 at night) */
+@media (max-width:560px){.moremenu .menu{position:fixed;inset-inline:12px;top:auto;bottom:12px;min-width:0}}   /* design 3: on a narrow screen the menu opens as a sheet at the bottom (it ran off the screen at 320 to 480px) */
 /* 320px: nothing may scroll sideways (DESIGN.md, Layout). Measured on 12.11.2026: the segmented controls (1 to 4px) and the AI connection button (8px) in the settings. */
 @media (max-width:400px){.seg button{padding:7px 9px;font-size:14px}.setpanel label.row{flex-wrap:wrap}.btn{max-width:100%;white-space:normal}}   /* the AI connection button in the settings was 8px too wide */
 .tag{display:inline-block;max-width:100%;white-space:normal}
@@ -513,7 +516,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 .pipbody.caps ol li.draft{color:#ffd84d;font-style:normal}
 .pipbody.caps .pbtn{color:#ffd84d;border-color:#ffd84d}
 .pipbody.caps .phead{color:#fff}
-.log{margin-top:24px}
+.log{margin-top:6px}   /* design 3: the tool's messages moved from the foot of every screen into the report dialog */
 .log summary{cursor:pointer;color:var(--muted);font-size:14px}
 .log ol{list-style:none;margin:8px 0 0;padding:0;font-size:14px;display:grid;gap:3px;max-height:260px;overflow:auto}
 .log li.warn{color:var(--warn-fg);background:var(--warn-bg);border-radius:6px;padding:0 6px}
@@ -598,7 +601,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="resume" id="homeResume" hidden>
       <div class="rtxt"><b id="resTitle"></b><small id="resSub"></small></div>
       <button class="btn ghost small" id="resMarks" type="button" hidden></button>
-      <button class="btn small" id="resOpen" type="button">מעבר על ההרצאה</button>
+      <button class="btn ghost small" id="resOpen" type="button">מעבר על ההרצאה</button>
     </div>
     <div class="homehints">
       <p class="hstat" id="homeAns" role="status"></p>
@@ -636,7 +639,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 
 
     <details class="card" id="mathBox" style="margin-top:18px">
-      <summary><b>AI מובנה (Gemini): תשובות בתוך הבנתי וקריאת נוסחאות</b> <span class="sub2" id="mathSum" style="color:var(--muted)"></span></summary>
+      <summary><b>מפתח Gemini ותשובות בתוך הבנתי</b> <span class="sub2" id="mathSum" style="color:var(--muted)"></span></summary>
       <div style="display:grid;gap:12px;margin-top:10px">
         <div class="optbox">
           <h4>מפתח Gemini ותשובות בתוך הבנתי</h4>
@@ -677,7 +680,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <ul style="margin:10px 0 0;padding-inline-start:20px;display:grid;gap:6px;line-height:1.6">
         <li><b>מה נשמר:</b> התמלול של ההרצאות, צילומי המסך של מה שבחרת לצלם, והטקסט שנקרא מהם.</li>
         <li><b>איפה:</b> רק במחשב שלך, בתיקייה "הקורסים שלי". אין חשבון ואין שרת של הבנתי. אם התיקייה נמצאת בתוך OneDrive או Google Drive (למשל Documents שמסונכרן), התוכנה של הענן מעתיקה אותה לחשבון שלך שם.</li>
-        <li><b>מה נשלח ל-AI:</b> רק כשלוחצים על כפתור "שאלה ל-AI" או על אחת המשימות (סיכום, מבחן דמה, דף נוסחאות), או כשמבקשים מ-AI מחובר. אז הטקסט, והתמונה אם מצרפים אותה, עוברים לחברה של אותו AI. בלי זה, שום דבר לא יוצא מהמחשב.</li>
+        <li><b>מה נשלח לבינה המלאכותית:</b> רק כשלוחצים על כפתור "שאלה ל-AI" או על אחת המשימות (סיכום, מבחן דמה, דף נוסחאות), או כשמבקשים ממנה דרך חיבור. אז הטקסט, והתמונה אם מצרפים אותה, עוברים לחברה שמאחוריה. בלי זה, שום דבר לא יוצא מהמחשב.</li>
         <li><b>מה עוד עובר ברשת:</b> בדיקת גרסה חדשה ב-GitHub (אפשר לכבות בתיבה שלמעלה), הורדה חד-פעמית של מודל התמלול (Hugging Face) ושל קריאת השקופיות (GitHub). ורק אם הגדרת "AI מובנה": בלחיצה על "תשובה כאן" נשלחים ל-Google השאלה, הדקות האחרונות והשקופית; ובנוסף, כי "קריאת נוסחאות וכתב יד" פועלת כברירת מחדל כשיש מפתח (אפשר לכבות בהגדרות), גם שקופיות שאינן טקסט מודפס ברור. עם השאלה נשלח גם הטקסט של השקופיות הקודמות בהרצאה.</li>
         <li><b>מה בשליטתך:</b> לבחור חלון אחד או חלק מהמסך במקום כל המסך, להשהות את הצילום (גם עם <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd></span>), לטשטש אזורים קבועים, ולמחוק צילומים לצמיתות.</li>
         <li><b>אחריות:</b> הבנתי ניתנת כמו שהיא, בלי אחריות מכל סוג. השימוש בה, כולל הקלטה, תמלול ושמירה של הרצאות ושקופיות, הוא באחריות המשתמש בלבד. <b>לפני שמשתמשים, כל משתמש צריך לבדוק מה הנהלים והכללים במוסד שלו ואצל המרצה.</b> מפתחי הכלי אינם אחראים לשימוש בה.</li>
@@ -728,7 +731,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     </div>
     <div class="ended" id="liveEnded" hidden></div>
     <div class="card study" id="liveStudy" hidden><h2 style="margin:0 0 6px">ההרצאה נשמרה. מה עושים איתה?</h2>
-      <p class="sub" style="margin-top:0">לחיצה אחת: הבנתי שולחת ל-AI שלך את ההרצאה הזו עם המשימה (סיכום, מבחן דמה או דף נוסחאות).</p>
+      <p class="sub" style="margin-top:0">לחיצה אחת: הבנתי שולחת לבינה המלאכותית שלך את ההרצאה הזו עם המשימה (סיכום, מבחן דמה או דף נוסחאות).</p>
       <div class="row"><button class="btn ghost" id="liveStudyGo" type="button">סיכום, מבחן דמה ודף נוסחאות ←</button></div></div>
     <div class="split">
       <div class="tbox">
@@ -789,9 +792,10 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <div class="menu">
           <button type="button" id="pastCopy">העתקת כל התמלול</button>
           <button type="button" id="pastFile">פתיחת הקובץ</button>
-          <button type="button" id="pastMore" aria-label="העברה לקורס, שינוי שם או מחיקה">העברה / שם / מחיקה</button>
+          <button type="button" id="pastMore">העברה או שינוי שם</button>
           <button type="button" id="pastMath" hidden title="שולח ל-Gemini את השקופיות שעוד לא נקראו, כדי לקרוא נוסחאות וכתב יד">קריאת נוסחאות בשקופיות</button>
-          <button type="button" id="pastDelShots" title="מוחק את כל תמונות המסך של ההרצאה, לצמיתות. התמלול נשאר.">מחיקת כל צילומי המסך</button>
+          <hr class="menusep">
+          <button type="button" id="pastDelShots" class="menudanger" title="מוחק את כל תמונות המסך של ההרצאה, לצמיתות. התמלול נשאר.">מחיקת כל צילומי המסך</button>
         </div>
       </details>
     </div>
@@ -810,7 +814,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="ppanel" id="pastPanelStudy">
     <div class="study plain" id="pastStudy">
       <h2>לימוד בלחיצה אחת</h2>
-      <p class="sub">הבנתי שולחת ל-AI את ההרצאה הזו (התמלול והטקסט מהשקופיות) עם המשימה, וזוכרת לאיזה AI.</p>
+      <p class="sub">הבנתי שולחת לבינה המלאכותית את ההרצאה הזו (התמלול והטקסט מהשקופיות) עם המשימה, וזוכרת לאיזו מהן.</p>
       <div class="tiles">
         <button class="tile main" type="button" data-study="summary"><b>סיכום ההרצאה</b><small>הרעיונות, ההגדרות והנוסחאות</small></button>
         <button class="tile" type="button" data-study="exam"><b>מבחן דמה</b><small>שאלות מהקלה לקשה</small></button>
@@ -832,7 +836,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <div id="sumText" class="sumtext"></div>
     </div>
     <details class="fold" id="pastAskFold">
-      <summary>שאלה חופשית ל-AI על ההרצאה</summary>
+      <summary>שאלה חופשית על ההרצאה (עם מה שנאמר בה)</summary>
       <div class="card" id="pastAsk"></div>
     </details>
     <details class="fold" id="pastTrFold">
@@ -929,8 +933,8 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <ol class="gsteps">
           <li>נכנסים ל-<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> עם חשבון Google הרגיל.</li>
           <li>לוחצים <span class="say">Create API key</span> ואז <span class="say">Copy key</span>.</li>
-          <li>מדביקים אותו בחלון <b>בואו נתחיל</b> שמופיע בפעם הראשונה (או ב<b>הגדרות ← תשובות</b>). ההדבקה מספיקה: הבנתי שומרת ובודקת לבד.</li>
-          <li>מוכן כשבבית כתוב <b>תשובות בתוך הבנתי: מוכן</b>. אם מופיע פס <b>חסר מפתח Gemini</b> מעל הכרטיסים, לוחצים בו על <b>הדבקת מפתח</b>.</li>
+          <li>מדביקים אותו בחלון <b>בואו נתחיל</b> שמופיע בפעם הראשונה (או ב<b>הגדרות ← מפתח</b>). ההדבקה מספיקה: הבנתי שומרת ובודקת לבד.</li>
+          <li>אם מופיע בבית פס <b>חסר מפתח Gemini</b> מעל הכרטיסים, לוחצים בו על <b>הדבקת מפתח</b>. כשהפס נעלם, התשובות מוכנות.</li>
         </ol>
         <p class="gnote">המפתח הוא כמו סיסמה: לא שולחים אותו לאף אחד. הבנתי שומרת אותו מוצפן במחשב.</p>
       </section>
@@ -978,7 +982,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <h2 id="g-privT">פרטיות</h2>
         <ul class="glist">
           <li>התמלול והשקופיות נשמרים <b>רק במחשב שלך</b>. אין חשבון ואין שרת של הבנתי.</li>
-          <li>ל-Google נשלח רק כששואלים: השאלה, הדקות האחרונות והשקופית. עם מפתח, גם שקופיות של נוסחאות וכתב יד (אפשר לכבות ב<b>הגדרות ← תשובות</b>).</li>
+          <li>ל-Google נשלח רק כששואלים: השאלה, הדקות האחרונות והשקופית. עם מפתח, גם שקופיות של נוסחאות וכתב יד (אפשר לכבות ב<b>הגדרות ← התאמת התשובות</b>).</li>
           <li>כדאי לצלם חלון אחד ולא את כל המסך: <b>הגדרות ← צילום וטשטוש</b>.</li>
           <li>לפני שמקליטים: לבדוק את הכללים של המוסד ושל המרצה. השימוש באחריותך.</li>
         </ul>
@@ -1000,7 +1004,6 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <p class="howcredit">הבנתי · קוד פתוח (MIT) © 2026 הבנתי · <a href="https://github.com/pechter-roei41/hevanti" target="_blank" rel="noopener">GitHub</a> · <a href="https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD" target="_blank" rel="noopener">המדריך באינטרנט</a></p>
     </div>
   </section>
-  <details class="log" id="logBox"><summary>הודעות מהכלי</summary><ol id="log"></ol></details>
   <div class="quitrow"><button class="btn quiet small" id="quitBtn" type="button" title="סוגר את הבנתי במחשב (לא את הדפדפן)">סגירת האפליקציה</button></div>
 </main>
 
@@ -1029,6 +1032,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <label for="repText" class="sub" style="display:block;margin:0">מה נכנס לדיווח</label>
   <textarea class="gloss" id="repText" dir="auto" spellcheck="false" style="min-height:220px;font-size:13px"></textarea>
   <div class="row"><button class="btn" id="repCopy" type="button">העתקה</button><a class="btn ghost" id="repGit" href="#" target="_blank" rel="noopener">פתיחת דיווח ב-GitHub</a><a class="btn ghost" id="repMail" href="#">שליחה במייל</a><button class="btn quiet" id="repClose" type="button" style="margin-inline-start:auto">סגירה</button></div>
+  <details class="log" id="logBox"><summary>הודעות מהכלי (מה הכלי כתב מאז שנפתח)</summary><ol id="log"></ol></details>
   <p class="sub" style="margin:0">ב-GitHub: מדביקים (Ctrl+V) ושולחים (צריך חשבון GitHub). <span id="repMailHelp" hidden>במייל: נפתחת הודעה חדשה והטקסט מועתק, מדביקים בה (Ctrl+V) ושולחים בעצמכם. אין תוכנת דואר? כתובת: <span id="repAddr" dir="ltr"></span> <button class="btn quiet small" id="repAddrCopy" type="button">העתקת הכתובת</button></span><span id="repNoMail"> אפשר גם לשלוח את הטקסט למי שנתן לכם את הבנתי.</span></p>
 </div></div>
 <div class="modal" id="confirm" hidden role="dialog" aria-modal="true" aria-labelledby="confT"><div class="card">
@@ -1042,7 +1046,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 </div></div>
 <div class="modal" id="conn" hidden role="dialog" aria-modal="true" aria-labelledby="connT"><div class="card wide">
   <h3 id="connT">חיבור ה-AI שלך להבנתי</h3>
-  <p style="margin:0">מחברים פעם אחת, ואז שואלים את ה-AI ישר בחלון שלו, ליד ההרצאה: "מה הוא אמר עכשיו?", "מה כתוב בשקופית?". הוא קורא לבד מה נאמר בדקות האחרונות, איפה אתם בהקלטה ואת השקופית שעל המסך. צריך את האפליקציה שלו למחשב ואת החשבון שלכם בה. הבנתי לא שולחת שום דבר בעצמה.</p>
+  <p style="margin:0">מחברים פעם אחת, ואז שואלים את הבינה המלאכותית ישר בחלון שלה, ליד ההרצאה: "מה הוא אמר עכשיו?", "מה כתוב בשקופית?". הוא קורא לבד מה נאמר בדקות האחרונות, איפה אתם בהקלטה ואת השקופית שעל המסך. צריך את האפליקציה שלו למחשב ואת החשבון שלכם בה. הבנתי לא שולחת שום דבר בעצמה.</p>
   <div class="conns" id="conns"></div>
   <p class="cstate" id="connMsg" role="status"></p>
   <div class="cloud" id="cloudBox">
@@ -1544,7 +1548,7 @@ function srSay(text) { if (a11y.say && text) { const s = $("#srLive"); s.textCon
 
 // ---------- settings (the gear): the key, what to photograph, accessibility, connect an AI app, privacy ----------
 // The pieces already exist on the page (with their buttons): they are moved into the tabs once, here.
-const SET_TABS = [["key", "תשובות"], ["cap", "צילום וטשטוש"], ["a11y", "נגישות"], ["ai", "מתקדם"], ["priv", "פרטיות"]];
+const SET_TABS = [["key", "מפתח"], ["tune", "התאמת התשובות"], ["cap", "צילום וטשטוש"], ["a11y", "נגישות"], ["ai", "מתקדם"], ["priv", "פרטיות"]];
 const setPanels = {};
 (function buildSettings() {
   const tabs = $("#setTabs"), body = $("#setBody");
@@ -1555,6 +1559,11 @@ const setPanels = {};
     body.appendChild(p); setPanels[id] = p;
   }
   const mb = $("#mathBox"); mb.open = true; setPanels.key.appendChild(mb);
+  // design 3: the answers tab was 933px long, four parts. The key, the plan and the privacy of the quota stay in "מפתח"; how the answers
+  // are written (personal instructions) and what slides are read (formulas, handwriting) move to a tab of their own
+  const optOf = t => [...mb.querySelectorAll(".optbox")].find(o => { const h = o.querySelector("h4"); return h && h.textContent.trim() === t; });
+  const tune = setPanels.tune; tune.style.display = "grid"; tune.style.gap = "12px";
+  tune.append(el("h2", "", "התאמת התשובות"), el("p", "sub", "איך התשובות נכתבות, ואיזה שקופיות נקראות. הכל נשמר וחל על כל תיבת שאלה."), optOf("הוראות אישיות לתשובות"), optOf("קריאת נוסחאות וכתב יד"));
   setPanels.cap.appendChild($("#capHome"));
   const ml = el("label", "row miniopt"), mc = el("input"); mc.type = "checkbox"; mc.id = "miniAuto";
   mc.addEventListener("change", () => api("/api/cmd", {action: "mini_auto", on: mc.checked}));
@@ -1632,7 +1641,7 @@ function openSettings(id) {
   if (view !== "settings") { if (location.hash !== "#settings") history.pushState(null, "", "#settings"); show("settings"); }
   for (const [t] of SET_TABS) { setPanels[t].hidden = t !== id; $("#settab-" + t).setAttribute("aria-selected", t === id ? "true" : "false"); }
   if (id === "cap") { api("/api/mirror").then(m => { $("#miniAuto").checked = m.mini_auto === true; $("#quickStart").checked = m.quick_start !== false; $("#miniBtn").checked = m.mini_button !== false; drawCorner(m.mini_btn_corner || "br"); const o = m.mini_opacity || 60; $("#miniOp").value = o; $("#miniOp").nextElementSibling.textContent = o + "%"; }).catch(() => {}); capSig = ""; drawCaps(); if (capOf().mode === "window" && !capWinsAt) capLoadWins(); }
-  if (id === "key") { mathSig = ""; drawMath(); }
+  if (id === "key" || id === "tune") { mathSig = ""; drawMath(); }
   if (id === "a11y") a11yDraw();
   if (id === "ai") api("/api/mirror").then(m => { $("#extAi").checked = m.external_ai === true; $("#mathEvery").checked = m.math_every === true; }).catch(() => {});
   if (id === "priv") api("/api/mirror").then(m => { $("#checkUpd").checked = m.check_updates !== false; }).catch(() => {});
@@ -1741,7 +1750,7 @@ function drawHomeHints(d) {
   box.hidden = noKey;
   box.className = "hstat"; box.replaceChildren();
   if (noKey) return;
-  if (m.has_key && m.ask) box.textContent = "תשובות בתוך הבנתי: מוכן";
+  if (m.has_key && m.ask) { box.hidden = true; return; }   // design 3: ready is said once, in the top bar; here only what is missing
   else if (m.has_key) { box.textContent = "יש מפתח Gemini, אבל \"תשובה כאן\" כבויה. "; const b = el("button", "", "להפעלה"); b.type = "button"; b.onclick = () => { location.hash = "settings"; }; box.appendChild(b); }
   else box.textContent = "יש לך מנוי: שאלות הולכות לאפליקציית ה-AI שלך";
 }
@@ -1791,7 +1800,7 @@ $("#gpuGo").addEventListener("click", async () => {
 });
 function render(d) {
   drawHomeHints(d); drawGpu(d);
-  $("#ver").textContent = "גרסת בטא " + d.version + " (" + d.date + ")"; $("#ver").title = "גרסת בטא: עדיין בבדיקה, ועלולות להיות תקלות. אם משהו לא עובד, יש \"דיווח על תקלה\" בתחתית מסך הבית.";
+  $("#ver").textContent = "עודכנה ב-" + d.date;   /* design 3: the version is in the top bar only */  $("#ver").title = "גרסת בטא: עדיין בבדיקה, ועלולות להיות תקלות. אם משהו לא עובד, יש \"דיווח על תקלה\" בתחתית מסך הבית.";
   if (!render.themed) { render.themed = true;   // a browser that has no choice of its own yet takes Hevanti's
     let mine = ""; try { mine = localStorage.getItem("bzm.theme") || ""; } catch (e) {}
     if (!mine && d.theme) { bzmTheme(d.theme); drawThemeBtn(); } }
@@ -2704,7 +2713,7 @@ $("#pastCopy").addEventListener("click", async () => {
 });
 let pastAskBox = null;
 if (window.BZMAsk) pastAskBox = BZMAsk.mount($("#pastAsk"), {
-  example: "תסביר לי את ההרצאה הזו", where: () => "past", lecture: () => pastFile,
+  noHead: true, example: "תסביר לי את ההרצאה הזו", where: () => "past", lecture: () => pastFile,
   chips: ["מה הרעיון המרכזי של ההרצאה?", "תסביר את החלק הכי קשה", "תן תרגיל לדוגמה עם פתרון"],
   context: q => (pastData ? pastText() : "") + ANSWER_HINT + "\nהשאלה שלי: " + q,
   // a source in an answer ("[00:20:44]"): the transcript opens at that line

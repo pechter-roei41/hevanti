@@ -211,6 +211,9 @@ Sunk Paper pills with muted text. The recording pill is tinted red with a pulsin
 ### Navigation
 A pill-shaped top bar on a Sheet: logo and name on the right, tabs (בית, הקורסים שלי, איך משתמשים, הגדרות) in the middle, theme switch and status pills on the left. The current tab is a Sunk Paper pill with 800 weight. Below 700px the tabs wrap onto their own row.
 
+
+**Selected states have two shapes (design round 3).** "Where am I" (the top tabs, the settings menu, the course and lecture tabs) is a Sunk Paper pill or panel with Ink and weight 800. "A choice inside a group" (the course filter, a segmented control, the kind of lecture, a suggested term) is Green Soft with Ink, a green edge and weight 800. Neither is ever solid green or solid ink, because solid green is the one action of the screen.
+
 ### The Floating Window
 A small always-on-top window with the same tokens: a title bar, the course name with a recording dot, a ★ button, three "what did I miss" pills (3, 7, 15 minutes), a conversation area, and a text box with one green "תשובה כאן" button. It shows exactly one thing to do: ask. Two quiet notices live in it: the warning that the transcript is behind ("מאחר ב-N שניות", a caution pill in the row of the green button, never in the title row, which a long course name needs), and the mark message: a small centred card (Sheet, 1px Hairline) with a Mark Line chip holding the ★ in Ink and the word "סומן". The same card, drawn as a native window, shows above the round floating button when a mark is made with the keyboard while the small window is closed.
 

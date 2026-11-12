@@ -60,7 +60,7 @@ def live_routes(pg):
 
 SCREENS = [("home", "#", None), ("my courses", "#courses", None), ("guide", "#how", None), ("course page", "#c=%D7%A4%D7%99%D7%96%D7%99%D7%A7%D7%94%201", None),
            ("lecture page", "#t=%D7%A4%D7%99%D7%96%D7%99%D7%A7%D7%94%201/" + LECT.replace(" ", "%20"), None), ("live lecture", "#live", live_routes)]
-SET_TABS = ["תשובות", "צילום וטשטוש", "נגישות", "מתקדם", "פרטיות"]
+SET_TABS = ["מפתח", "התאמת התשובות", "צילום וטשטוש", "נגישות", "מתקדם", "פרטיות"]
 with sync_playwright() as p:
     b = launch(p)
     if b is None:

@@ -137,7 +137,7 @@ def main():
             ("lecture page", "#t=" + "%D7%A4%D7%99%D7%96%D7%99%D7%A7%D7%94%201/" + LECT.replace(" ", "%20"), None, "#vPast"),
             ("live lecture", "#live", live_routes, "#vLive"),
         ]
-        for i, tab in enumerate(["תשובות", "צילום וטשטוש", "נגישות", "מתקדם", "פרטיות"]):
+        for i, tab in enumerate(["מפתח", "התאמת התשובות", "צילום וטשטוש", "נגישות", "מתקדם", "פרטיות"]):
             screens.append(("settings: " + tab, "#settings", None, "#vSettings"))
         for theme in ("light", "dark"):
             for name, h, extra, wait in screens:
