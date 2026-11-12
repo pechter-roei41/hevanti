@@ -2553,7 +2553,7 @@ TUTOR_SYSTEM = (
     "מקורות: בסוף משפט שמסתמך על שורה בתמלול, הוסף את השעה של אותה שורה כפי שהיא כתובה בתמלול, בסוגריים מרובעים "
     "(למשל [00:20:44] או [11:04:05]; כל שעה בסוגריים משלה, לא [11:04:05, 11:09:12]) - עד שלושה מקורות בתשובה, ורק שעות שבאמת מופיעות בתמלול שנשלח אליך. לעולם אל "
     "תכתוב שעה שלא מופיעה שם, ואל תחשב כמה זמן עבר. תשובה מהידע הכללי או מהשקופית - בלי שעה. "
-    "כתוב בעברית פשוטה וברורה; מונח מקצועי גם באנגלית בסוגריים. שאלה בזמן הרצאה: תשובה קצרה, 3-6 שורות, כי "
+    "כתוב בעברית פשוטה וברורה. כתוב מונחים בעברית. מונח באנגלית רק אם המרצה אמר אותו באנגלית בהרצאה, או שהוא כתוב באנגלית בשקופית. שאלה בזמן הרצאה: תשובה קצרה, 3-6 שורות, כי "
     "הסטודנט מקשיב - ובסוף אפשר להציע בשורה אחת להרחיב. נוסחאות כתוב ב-LaTeX: בתוך שורה בין $...$ "
     "(למשל $I = \\int r^2\\,dm$), ונוסחה חשובה בשורה נפרדת בין $$...$$. האפליקציה מציגה אותן כנוסחאות. טקסט בעברית "
     "כתוב מחוץ לנוסחה, לא בתוכה. התמלול אוטומטי: מילה שלא מתאימה היא כנראה טעות שמיעה - נחש מההקשר, בלי להעיר על זה אלא אם זה משנה. "
@@ -4610,7 +4610,7 @@ When the student asks about this course or about the lecture ("מה הוא אמ�
     comes back), then `transcript` ~3 minutes around the best place and `slide` at that time. First line of the
     answer: the lecture and the exact time; then the explanation. If it was never said - say so, do not invent.
 - Without those tools, read the files in this folder: now_watching.txt first, then the lectures' .txt files.
-- Answer in Hebrew, step by step; keep technical terms in English in parentheses. The transcript is automatic:
+- Answer in Hebrew, step by step. Write terms in Hebrew; use an English term only if the lecturer said it in English or it is written in English on a slide. The transcript is automatic:
   a word that makes no sense is probably a mis-hearing - guess it from the context and the slide.
 - Do not change, move or delete any file in this folder.
 """
@@ -4705,7 +4705,7 @@ def project_instructions(course, app):
                 f'בכל שאלה על הקורס או על ההרצאה ("מה הוא אמר עכשיו?", "מה כתוב בשקופית?", "תכין מבחן תרגול"): '
                 f'להשתמש בכלים של hevanti ותמיד לתת course="{course}". קודם now על מה שקורה עכשיו; transcript '
                 'להרצאה של הקורס (whole_course=true לכל הקורס, part=2,3 כשארוך); slide לשקופית; search לחיפוש.\n'
-                "לענות בעברית, צעד אחר צעד, מונחים מקצועיים באנגלית בסוגריים. התמלול אוטומטי: מילה מוזרה היא כנראה "
+                "לענות בעברית, צעד אחר צעד, בלי מונחים באנגלית אלא אם המרצה אמר או כתב אותם באנגלית. התמלול אוטומטי: מילה מוזרה היא כנראה "
                 "טעות תמלול - לנחש לפי ההקשר והשקופית.")
     return (f'הפרויקט הזה הוא הקורס "{course}". הבנתי (Hevanti), אפליקציית ההרצאות שלי, שומרת את הקורס {cloud}:\n'
             '- "עכשיו.txt": מה שקורה עכשיו בהרצאה (חיה, הקלטה או יוטיוב): הדקות האחרונות של מה שנאמר והטקסט '
@@ -4714,7 +4714,7 @@ def project_instructions(course, app):
             "בכל שאלה על ההרצאה (\"מה הוא אמר עכשיו?\", \"לא הבנתי את החלק האחרון\") - לפתוח מחדש את הגרסה הנוכחית של "
             '"עכשיו.txt" מ-Google Drive לפני שעונים, גם אם כבר נפתח קודם בשיחה. למבחן, סיכום וכרטיסיות - '
             '"כל ההרצאות.txt".\n'
-            "לענות בעברית, צעד אחר צעד, מונחים מקצועיים באנגלית בסוגריים. התמלול אוטומטי: מילה מוזרה היא כנראה "
+            "לענות בעברית, צעד אחר צעד, בלי מונחים באנגלית אלא אם המרצה אמר או כתב אותם באנגלית. התמלול אוטומטי: מילה מוזרה היא כנראה "
             "טעות תמלול.")
 
 
@@ -5567,7 +5567,7 @@ def _mini_context_rec(rec, q, hint, minutes=ASK_MINUTES):
 def mini_context(q, minutes=ASK_MINUTES):
     """What the small window sends with the question: the last 5 minutes of the live lecture (and what was on the
     slides), the same as the lecture page sends. The "what I missed" buttons: the last 3, 7 or 15 minutes."""
-    hint = "\nלענות בעברית (מונחים מקצועיים אפשר באנגלית). מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.\n"
+    hint = "\nלענות בעברית, בלי מונחים באנגלית אלא אם המרצה אמר או כתב אותם באנגלית. מילה שנשמעת מוזרה בתמלול היא כנראה טעות תמלול.\n"
     live = APP.live
     span = minutes * 60
     if live is None and APP.rec is not None:

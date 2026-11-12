@@ -52,8 +52,8 @@ INSTRUCTIONS = (
     "what is happening right now (live, or the exact minute in a recording/video), the last minutes of the "
     "transcript and the slide on the screen. Use `transcript` for more context or another lecture, `slide` for "
     "the slide at a given time, `search` to find where something was said, `lectures` for the list. "
-    "Answer in the user's language (usually Hebrew), step by step, and keep technical terms in English in "
-    "parentheses. The transcript is automatic: a word that makes no sense is probably a mis-hearing - guess from "
+    "Answer in the user's language (usually Hebrew), step by step. In Hebrew, write terms in Hebrew: an "
+    "English term only if the lecturer said or wrote it in English. The transcript is automatic: a word that makes no sense is probably a mis-hearing - guess from "
     "the context. Ignore ads. A line '[סימון: חשוב]' (a star) is a moment the student marked during the lecture "
     "(lectures from before 2.13 may also have '[סימון: לא הבנתי]'): when asked about 'what I marked' / "
     "'הרגעים שסימנתי', explain what was said in the minute or two before each mark, in simple terms, and why it "
@@ -82,12 +82,12 @@ RECIPES = {
         "4. When the student sends answers: grade every question - what is right, what is missing, what is wrong - "
         "and give the score. On 'פתרון': a full solution of each question, and for each its SOURCE: lecture name "
         "and time [h:mm:ss] (and the slide) where it was taught, so the student can go back to it.\n"
-        "Answer in Hebrew, technical terms in English in parentheses."),
+        "Answer in Hebrew; use an English term only if the lecturer said or wrote it in English."),
     "summary": (
         "SUMMARIZE a lecture of {course}: {lecture}.\n"
         "1. `transcript` with course={course!r}{lecture_arg} (default: the lecture open now, or the newest). If it "
         "is long, read all of it with from_min/to_min. Use `slide` for the important slides and boards.\n"
-        "2. The summary, in Hebrew, technical terms in English in parentheses:\n"
+        "2. The summary, in Hebrew; an English term only if the lecturer said or wrote it in English:\n"
         "   - ONE paragraph: what the lecture was about.\n"
         "   - The topics in the order they were taught; for each: the idea, the definitions, the formulas "
         "(written clearly), and the example the lecturer solved. Put the time [h:mm:ss] next to each topic.\n"
