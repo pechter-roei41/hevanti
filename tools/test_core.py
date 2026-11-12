@@ -434,7 +434,7 @@ check("course while recording: a course offered is in the session info until the
 check("course while recording: no lecture running - refused in words", r_done["ok"] is False and "אין עכשיו" in r_done["error"], r_done)
 # ---- F3/F4: the quick window's place, its own profile, the saved card, "open the lecture" ----
 check("quick window: centred in the work area (also when the area starts away from 0,0)", L._center_xy((0, 0, 1920, 1040), 380, 440) == (770, 300) and L._center_xy((-1920, 0, 0, 1040), 380, 440) == (-1150, 300) and L._center_xy((0, 0, 300, 300), 380, 440) == (0, 0))
-check("quick window: its size is small (380 x 400) and it has a browser profile of its own, in the local folder", L.QUICK_SIZE == (380, 400) and os.path.dirname(L.quick_profile_dir()) == L.LOCAL_DIR and L.quick_profile_dir() != L.mini_profile_dir())
+check("quick window: its size is small (380 x 450) and it has a browser profile of its own, in the local folder", L.QUICK_SIZE == (380, 450) and os.path.dirname(L.quick_profile_dir()) == L.LOCAL_DIR and L.quick_profile_dir() != L.mini_profile_dir())
 im_c, wc_, hc_ = L._toast_image("ההרצאה נשמרה", 1.0, False, "check")
 chip_c = tuple(im_c.getpixel((wc_ - 17, 22))[:3])
 chip_cd = tuple(L._toast_image("ההרצאה נשמרה", 1.0, True, "check")[0].getpixel((wc_ - 17, 22))[:3])
@@ -539,6 +539,18 @@ if os.name == "nt":
     L._front_quick_window()
     L._find_quick, L._bring_front, L._mini_user32 = _fq, _bf, _u
     check("the quick-start window opened from the small window is brought to the front", _calls == [4242], _calls)
+
+# 12.11.2026: closing from the small window closes every window; the quick-start window keeps its size; no "saved" card after a delete
+_src = open(os.path.join(L.SCRIPT_DIR, "live_transcribe.py"), encoding="utf-8").read()
+_cw = _src[_src.index("def close_our_windows"):_src.index("def open_start_window")]
+check("closing Hevanti closes the quick-start window and every other Hevanti window too", "_find_quick(u)" in _cw and "QUICK_TITLE" in _cw and "PAGE_TITLE" in _cw)
+_q = open(os.path.join(L.SCRIPT_DIR, "quick.html"), encoding="utf-8").read()
+check("quick window: a new course's name box takes the place of the list (no growing, no scroll bar)",
+      '$("#course").hidden = true; $("#newc").hidden = false' in _q and '$("#newc").hidden = true; $("#course").hidden = false' in _q)
+check("quick window: the title is one even weight of the body font", ".top{margin:0;font-family:var(--f-body)" in _q)
+_m = open(os.path.join(L.SCRIPT_DIR, "mini.html"), encoding="utf-8").read()
+check("small window: after stop and delete no saved card is drawn", "!discardedHere ? s.saved : null" in _m)
+check("a lecture starting prepares the small window in the background", "prewarm_mini" in _src[_src.index("    def start(self, kind, lang, fn"):_src.index("    def _run(self, sess, fn")])
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)

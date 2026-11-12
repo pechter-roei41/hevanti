@@ -166,9 +166,11 @@ stopBtn.addEventListener("click", async () => {
   }
   await doStop(false);
 });
+let discardedHere = false;   // (the student chose to delete it: no "saved" card for this lecture, whatever the server says)
 async function doStop(discard) {
+  discardedHere = !!discard;
   $("#short").hidden = true; stopBtn.hidden = true;
-  $("#lec").textContent = "עוצר ושומר...";
+  $("#lec").textContent = discard ? "עוצר ומוחק..." : "עוצר ושומר...";
   try { await fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify({action: "stop", discard})}); } catch (e) {}
   pollApp();
 }
@@ -192,7 +194,7 @@ $("#savedOpen").addEventListener("click", async () => {
   hide();
 });
 function drawSaved(s) {   // the lecture this window saw running is saved: a card instead of the question box
-  let sv = s && s.done && s.saved && sawLive ? s.saved : null;
+  let sv = s && s.done && s.saved && sawLive && !discardedHere ? s.saved : null;
   if (sv && sv.f === savedGone) sv = null;   // (closed or opened already: it does not come back every time the window opens)
   if (sv && savedFor !== sv.f) savedFor = sv.f;
   const show = !!sv && savedFor === sv.f && !live;
@@ -252,7 +254,7 @@ async function pollApp() {
     $("#lec").textContent = live ? kind + (s.course && s.course !== "ללא קורס" ? " - " + s.course : "") + (s.ready ? "" : " · מתחילה...") : "אין עכשיו הרצאה פעילה";   // (the button is there from the first second; the transcript starts when the model has loaded)
     kind0 = s ? s.kind : "";
     $("#note").hidden = live; document.body.classList.toggle("on", live);
-    if (live) sawLive = true;
+    if (live) { sawLive = true; if (!s.stopping) discardedHere = false; }
     curS = s;
     const canStop = live && s && s.kind === "live" && !s.stopping;   // (a recording watched in the player is not stopped from here)
     if (!live && stopTimer) stopReset();
@@ -263,7 +265,7 @@ async function pollApp() {
     if (startNew) { stopBtn.textContent = "התחלת הרצאה חדשה"; stopBtn.title = "פותח את חלון ההתחלה המהירה"; stopBtn.classList.remove("confirm"); }
     else if (!stopBtn.classList.contains("confirm")) { stopBtn.textContent = "עצירה"; stopBtn.title = "עצירת ההקלטה: ההרצאה נשמרת"; }
     stopBtn.hidden = !(canStop || startNew) || !$("#short").hidden;
-    if (live && s && s.stopping) $("#lec").textContent = "עוצר ושומר..." + (s.stopping_for > 5 ? " " + s.stopping_for + " שנ'" : "");
+    if (live && s && s.stopping) $("#lec").textContent = (s.discard ? "עוצר ומוחק..." : "עוצר ושומר...") + (s.stopping_for > 5 ? " " + s.stopping_for + " שנ'" : "");
     const sg = live && s && s.suggest;   // a course read from the first slide: offered, one press to take it
     $("#sug").hidden = !sg;
     if (sg) { $("#sugText").textContent = "נראה שזה הקורס \"" + sg.course + "\" (לפי השקף הראשון). להעביר?"; $("#sug").dataset.course = sg.course; }
