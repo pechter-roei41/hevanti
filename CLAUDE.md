@@ -11,13 +11,21 @@ Answers come from Gemini, called straight from the student's computer with the s
 Read before larger changes:
 - `PRODUCT.md`: users, purpose, positioning
 - `DESIGN.md`: visual system ("The Open Notebook": cream paper, white cards, one green action, yellow only for marks and the logo)
-- **Private notes, not in this repository (since 12.11.2026):** `TASKS.md` and `DECISIONS.md` live only on Roei's computer, in `C:\Users\רועי\hevanti-private\` (outside every repo, so they are never pushed; they hold business thinking). Read them from there; if that folder is not among the session's folders, ask Roei to add it. Never copy them into the repo, a worktree or a PR, and never quote their content in a commit message, PR text or public file.
+- **Private notes, not in this repository (since 12.11.2026):** `TASKS.md` and `DECISIONS.md` live only on Roei's computer, in `C:\Users\רועי\hevanti-private\` (outside every repo, so they are never pushed). Read them from there; if that folder is not among the session's folders, ask Roei to add it. Never copy them into the repo, a worktree or a PR, and never quote their content in a commit message, PR text or public file.
   - `TASKS.md`: open work, split between Roei's tasks (what Claude cannot do) and Claude's. **Update it whenever a task opens or closes.**
   - `DECISIONS.md`: what was decided and why (Hebrew, dated). **Add every new decision there.** It is the project's memory.
   - The same folder holds `backup/` (git bundles and copies from before the files left the history). `.gitignore` lists both names, so a stray copy in the repo folder is never committed.
 - `README.md`: features, privacy, file map
 - `docs/distribution.md`: how it is spread. `docs/real-lecture-test.md`: the manual checklist before each release.
 - `CODE_SIGNING.md`: signing and release policy (SignPath application was declined for lack of users; the installer is unsigned for now)
+
+## Working copy and what goes to GitHub (since 12.11.2026)
+
+- The repository was moved on 12.11.2026 (same name `pechter-roei41/hevanti`, clean history; the old one is the private `hevanti-old`, to be deleted by Roei). Work only in `hevanti-new`. Older folders (`hevanti-repo`, `hevanti-floating`, `hevanti-tasks`, `hevanti-untrack`) hold the old history: never push from them. Commit hashes from before that date no longer exist.
+- **Push (in a branch and a PR):** code, tests, pages, `VERSION.txt`, `README.md`, `PRODUCT.md`, `DESIGN.md`, `CLAUDE.md`, `docs/`, `site/`.
+- **Never push or put in a PR, commit message or public text:** `TASKS.md`, `DECISIONS.md` and anything copied or quoted from them (prices, plans for a paid product); lecture folders; keys. Roei's personal e-mail address must not appear in commits: commit with the GitHub no-reply address (`git config user.email` in this repository is set for that).
+- Update the private `TASKS.md` and `DECISIONS.md` (see the first list above) as before: they are the project's memory, only not in the repository.
+- Pushing is Roei's call; open a PR, do not merge or force-push without asking.
 
 ## Principles (do not break without asking Roei)
 
