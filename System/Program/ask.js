@@ -427,6 +427,7 @@
     row.prepend(here);
     refresh();
     // like a chat: the conversation first (it grows downward), the box to write in under it
+    if (opts.noHead) head.hidden = true;   // (design 3: a box inside a fold whose title already says it does not repeat the title)
     box.append(head, planBox, conn, conv, follow2, ta, row, convbar, chips, hint);
     // a question made ready (a button of the page): for the built-in answer straight away, otherwise written in the box
     function ask(q, extra) { if (hereDefault()) askHere(q, extra); else { ta.value = q; ta.focus(); } }

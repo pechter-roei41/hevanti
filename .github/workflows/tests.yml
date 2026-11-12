@@ -31,6 +31,12 @@ jobs:
       - name: The core in a browser - the marks tab, the consent, the ask box, the floating window
         if: runner.os == 'Windows'
         run: python tools/test_core_ui.py
+      - name: Design round 3 - one green on the home page, the selected shapes, the lecture menu, the split settings (browser)
+        if: runner.os == 'Windows'
+        run: python tools/test_design3.py
+      - name: Nothing scrolls sideways at 320 px, and the focus ring of the floating window (browser)
+        if: runner.os == 'Windows'
+        run: python tools/test_narrow.py
       - name: The question to Gemini, from the sound to the answer - a model that fails, the quota, what is kept (made-up Gemini)
         run: python tools/test_ai_flow.py
       - name: The page offers the student's own AI apps when the quota is used up (browser, made-up Gemini)

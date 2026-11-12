@@ -237,7 +237,7 @@ with sync_playwright() as p:
     # ---- own instructions for the answers (Settings) ----
     L.save_settings(math={"key": L.keep_secret("AQ.fake"), "ask": True})
     pg = page()
-    pg.evaluate("openSettings('key')")
+    pg.evaluate("openSettings('tune')")
     pg.wait_for_timeout(500)
     check("own instructions: the field is there, and open once a key is saved", pg.is_visible("#notesIn") and not pg.evaluate("document.querySelector('#notesIn').disabled"))
     pg.click("[data-note]")
@@ -248,13 +248,13 @@ with sync_playwright() as p:
     check("own instructions: saved by Hevanti", L.math_settings().get("notes") == typed.strip(), (typed, L.math_settings().get("notes")))
     pg.reload()
     pg.wait_for_timeout(1200)
-    pg.evaluate("openSettings('key')")
+    pg.evaluate("openSettings('tune')")
     pg.wait_for_timeout(400)
     check("own instructions: still there after a reload", pg.evaluate("document.querySelector('#notesIn').value") == typed.strip())
     check("own instructions: no script errors", pg.errs == [], pg.errs)
     L.save_settings(math={})
     pg = page()
-    pg.evaluate("openSettings('key')")
+    pg.evaluate("openSettings('tune')")
     check("own instructions: without a key the field is closed", pg.evaluate("document.querySelector('#notesIn').disabled"))
 
     # ---- report a problem ----
@@ -262,7 +262,7 @@ with sync_playwright() as p:
     perr = []
     pg.on("pageerror", lambda e: perr.append(str(e)))
     top, foot = pg.evaluate("document.querySelector('#verTop').textContent"), pg.evaluate("document.querySelector('#ver').textContent")
-    check("beta: the header and the footer say it is a beta, with the version", top.startswith("בטא ") and "בטא" in foot and L.VERSION in top and L.VERSION in foot, (top, foot))
+    check("beta: the header says it is a beta, with the version; the footer has only the date (design 3: no second version number)", top.startswith("בטא ") and L.VERSION in top and L.VERSION not in foot and L.VERSION_DATE in foot, (top, foot))
     TEST_MAIL = "support@example.test"   # (a made-up address: the real one is set in REPORT_EMAIL when Hevanti has one)
     mail_now = {"v": ""}
 
@@ -504,7 +504,7 @@ with sync_playwright() as p:
           pg.is_visible("#setupCard") and pg.evaluate("document.activeElement.id") == "setupKey", pg.evaluate("document.activeElement.id"))
     L.save_settings(math={"key": L.keep_secret("AQ.fake"), "ask": True})
     pg.wait_for_function("document.querySelector('#keyBar').hidden", timeout=8000)
-    check("with a key: the bar is gone, and the status line is back", not pg.evaluate("document.querySelector('#homeAns').hidden") and "מוכן" in pg.inner_text("#homeAns"), pg.inner_text("#homeAns"))
+    check("with a key: the bar is gone, and the status line stays quiet (design 3: ready is said once, in the top bar)", pg.evaluate("document.querySelector('#homeAns').hidden") and pg.inner_text("#statePill") == "מוכן", (pg.inner_text("#statePill"),))
     check("the keyboard shortcuts have a row of their own, under the status",
           pg.evaluate("document.querySelector('.hkeys').getBoundingClientRect().top >= document.querySelector('#homeAns').getBoundingClientRect().bottom - 1"))
     L.save_settings(math={"plan": "paid"})
@@ -517,10 +517,10 @@ with sync_playwright() as p:
     heads = pg.evaluate("[...document.querySelectorAll('#set-key .optbox h4')].map(h => h.textContent.trim())")
     check("settings: the groups are not numbered", heads and not any(h[:1].isdigit() for h in heads), heads)
     check("settings: the privacy notes are in the caution colours, not the error red",
-          pg.evaluate("""() => { const n = document.querySelector('#set-key .optbox .warn'), p = document.createElement('div');
+          pg.evaluate("""() => { const n = document.querySelector('#setBody .optbox .warn'), p = document.createElement('div');
               p.style.cssText = 'background:var(--warn-bg);color:var(--warn-fg)'; document.body.appendChild(p);
               const a = getComputedStyle(p), b = getComputedStyle(n); const ok = a.backgroundColor === b.backgroundColor && a.color === b.color; p.remove(); return ok; }"""))
-    check("settings: ...and not bold red", pg.evaluate("getComputedStyle(document.querySelector('#set-key .optbox .warn')).fontWeight") in ("600", "500"))
+    check("settings: ...and not bold red", pg.evaluate("getComputedStyle(document.querySelector('#setBody .optbox .warn')).fontWeight") in ("600", "500"))
 
     counts = pg.evaluate("[nLec(0), nLec(1), nLec(2), nLec(5), nTerm(1), nTerm(2), nTerm(30), nLine(1), nLine(2), nSlide(1), nSlide(7), nShot(1)]")
     check("Hebrew counts: one, two, many, none", counts == ["אין הרצאות", "הרצאה אחת", "שתי הרצאות", "5 הרצאות", "מונח אחד", "שני מונחים", "30 מונחים",
