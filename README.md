@@ -62,7 +62,6 @@ Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsx
 | `tools/build_zip.py` | Builds `Hevanti.zip` (with the embeddable Python) |
 | `installer/hevanti.iss`, `tools/build_setup_dir.py` | `Hevanti-Setup.exe` (Inno Setup): per-user, its own Python with the packages inside |
 | `tools/test_*.py` | Tests run on every push (`.github/workflows/tests.yml`); `test_core.py` and `test_core_ui.py` cover the core: the marks, the first-time consent, the ask box and the floating window |
-| `DECISIONS.md` | What was decided and why (Hebrew) |
 
 New version: push a tag such as `v2.0-20261014` (same number, new build) or `v2.1`. GitHub Actions builds both ZIPs and attaches them to a release, and the app tells students that an update is available.
 
