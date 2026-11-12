@@ -419,6 +419,17 @@ with sync_playwright() as p:
     mini_state["saved"] = False
     mini.evaluate("pollApp()")
     mini.wait_for_timeout(300)
+    # ---- close Hevanti from the small window: two presses ----
+    marked.clear()
+    check("floating window: it has \"סגירת הבנתי\"", mini.inner_text("#quitBtn") == "סגירת הבנתי")
+    mini.click("#quitBtn")
+    check("floating window: the first press only asks (and says the lecture is saved), nothing is sent", "תישמר" in mini.inner_text("#quitBtn") and not any(m.get("action") == "quit" for m in marked), (mini.inner_text("#quitBtn"), marked))
+    mini.wait_for_timeout(3400)
+    check("floating window: not pressed again - it goes back", mini.inner_text("#quitBtn") == "סגירת הבנתי")
+    mini.click("#quitBtn"); mini.click("#quitBtn"); mini.wait_for_timeout(400)
+    check("floating window: the second press sends quit", any(m.get("action") == "quit" for m in marked), marked)
+    mini.evaluate("() => { const b = document.querySelector('#quitBtn'); b.disabled = false; b.className = ''; b.textContent = 'סגירת הבנתי'; }")
+    marked.clear()
     # ---- no lecture: the same button starts a new one (the quick-start window) ----
     mini_state["live"] = False
     marked.clear()
@@ -477,12 +488,15 @@ with sync_playwright() as p:
     mini.wait_for_selector("#sug", state="visible", timeout=5000)
     check("floating window: a course read from the first slide is offered, with the name", "אלגוריתמים" in mini.inner_text("#sugText") and "השקף הראשון" in mini.inner_text("#sugText"), mini.inner_text("#sugText"))
     marked.clear()
+    mini_state["suggest"] = False   # (Hevanti stops offering it once it is taken: the mock says so, or a look 4 seconds later brings it back)
     mini.click("#sugYes")
     mini.wait_for_timeout(500)
     check("floating window: 'move' sends the course (the lecture moves when it is saved) and tells when", any(m.get("action") == "set_lecture_course" and m.get("course") == "אלגוריתמים" for m in marked) and mini.is_hidden("#sug"), marked)
+    mini_state["suggest"] = True
     mini.evaluate("pollApp()")
     mini.wait_for_selector("#sug", state="visible", timeout=5000)
     marked.clear()
+    mini_state["suggest"] = False
     mini.click("#sugNo")
     for _ in range(30):   # (the answer of the page arrives a moment later: wait for it, not a fixed 400 ms: the test failed one run in two)
         if any(m.get("action") == "suggest_dismiss" for m in marked) and mini.is_hidden("#sug"):
