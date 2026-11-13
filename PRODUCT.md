@@ -33,7 +33,7 @@ Open source (MIT), with no Hevanti server and no model of its own. The AI inside
 
 ## Operating Context
 
-During a live lecture the student is listening, so interactions must be quick and non-disruptive. After a lecture: summary, mock exam, formula sheet, explanation of marked moments. Lectures live in a folder per course in "הקורסים שלי"; each course has a page with lectures, marks, syllabus and glossary (glossary terms improve transcription). Also: search across everything said, recorded lectures in a player synced with the transcript, optional cloud sync to the student's own Google Drive or OneDrive.
+During a live lecture the student is listening, so interactions must be quick and non-disruptive. After a lecture: summary, mock exam, formula sheet, explanation of marked moments. Lectures live in a folder per course in "הקורסים שלי"; each course has a page with lectures, marks, syllabus and glossary (glossary terms improve transcription). Also: search across everything said, recorded lectures in a player synced with the transcript, optional cloud sync to the student's own Google Drive or OneDrive, and a one-click backup of the whole library to a ZIP file.
 
 ## Capabilities and Constraints
 

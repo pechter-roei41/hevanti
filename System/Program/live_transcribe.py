@@ -4214,6 +4214,55 @@ def free_folder(parent, name):
     return name + " " + str(int(time.time()))
 
 
+def _state_files(folder):
+    """The media files a recording's folder points to (from its .state.json)."""
+    try:
+        with open(os.path.join(folder, STATE_NAME), encoding="utf-8") as f:
+            d = json.load(f)
+    except (OSError, ValueError):
+        return []
+    return [str(d[k]) for k in ("path", "video", "audio") if isinstance(d.get(k), str) and d.get(k)]
+
+
+def lecture_downloads(folder):
+    """Files in the videos folder (the ones Hevanti downloaded or received by drag and drop) that this lecture uses.
+    A file the student opened from somewhere else is never in the list: it is theirs, not ours to delete."""
+    root = os.path.realpath(VIDEO_DIR) + os.sep
+    out = []
+    for f in _state_files(folder):
+        try:
+            real = os.path.realpath(f)
+        except OSError:
+            continue
+        if real.startswith(root) and os.path.isfile(real) and real not in out:
+            out.append(real)
+    return out
+
+
+def delete_downloads(files, gone):
+    """Delete downloaded files that no remaining lecture uses (two lectures can share one file).
+    `gone` = folders of the lectures that were just deleted. Returns how many files were deleted."""
+    if not files:
+        return 0
+    skip = {os.path.normcase(os.path.abspath(g)) for g in gone}
+    keep = set()
+    for root, dirs, names in os.walk(LIB_DIR):
+        if STATE_NAME in names and os.path.normcase(os.path.abspath(root)) not in skip:
+            for f in _state_files(root):
+                try:
+                    keep.add(os.path.normcase(os.path.realpath(f)))
+                except OSError:
+                    pass
+    n = 0
+    for f in files:
+        if os.path.normcase(f) in keep:
+            continue
+        _remove_quietly(f)
+        if not os.path.exists(f):
+            n += 1
+    return n
+
+
 GLOSSARY_HEAD = ("# מילון המונחים של הקורס: מילה או מונח בכל שורה.\n"
                  "# התמלול משתמש בהם כדי לכתוב נכון מונחים מקצועיים, שמות ומילים באנגלית.\n"
                  "# הכי חשובים למעלה: נכנסים רק בערך 25-30 המונחים הראשונים. שורה שמתחילה ב-# לא נקראת.\n")
@@ -7902,6 +7951,7 @@ class App:
         self.url = None
         self.token = ""   # the secret of this run; empty = the pages are not asked for it (tests)
         self.lib_rev = 0
+        self.backup = None   # the library backup: None, or {"state": "running" | "done" | "error", ...}
         self.saved_n = 0
         self.mark_n = 0
         self.first_view = ""
@@ -8249,6 +8299,27 @@ class App:
         if a == "open_folder":
             open_in_explorer(d.get("what") or "tool", d.get("f"))
             return {"ok": True}
+        if a == "backup_library":
+            with self.lock:
+                if (self.backup or {}).get("state") == "running":
+                    return {"ok": True, "state": "running"}
+                self.backup = {"state": "running"}
+
+            def work():
+                import subprocess
+                r = backup_library()
+                with self.lock:
+                    self.backup = {"state": "done" if r.get("ok") else "error", **r}
+                if r.get("ok") and os.name == "nt":
+                    try:
+                        subprocess.Popen(["explorer.exe", "/select," + r["path"]], close_fds=True)
+                    except OSError:
+                        pass
+            threading.Thread(target=work, daemon=True).start()
+            return {"ok": True, "state": "running"}
+        if a == "backup_status":
+            with self.lock:
+                return {"ok": True, **(self.backup or {"state": "idle"})}
         if a == "quit":
             self.quit_evt.set()
             return {"ok": True}
@@ -8343,14 +8414,17 @@ class App:
                 os.path.normcase(os.path.abspath(s.transcript)).startswith(prefix)
         if busy:
             return {"ok": False, "error": "יש הרצאה פתוחה בקורס הזה עכשיו. אפשר למחוק אותו אחרי שעוצרים אותה."}
+        folders = [r for r, _d, names in os.walk(src) if STATE_NAME in names]
+        downloads = [f for r in folders for f in lecture_downloads(r)]
         where = to_recycle_bin(src)
         if not where:
             return {"ok": False, "error": "לא הצלחתי למחוק (אולי קובץ מהקורס פתוח בתוכנה אחרת)."}
+        deleted = delete_downloads(downloads, folders)
         if clean_name(load_settings().get("course"), NO_COURSE) == name:
             save_settings(course=NO_COURSE)
         with self.lock:
             self.lib_rev += 1
-        return {"ok": True, "where": where}
+        return {"ok": True, "where": where, "videos_deleted": deleted}
 
     def rename_course(self, old, new):
         """Rename a course: its folder (the lectures, slides, glossary, syllabus and AI files go with it)."""
@@ -8408,12 +8482,14 @@ class App:
         if busy:
             return {"ok": False, "error": "ההרצאה הזו פתוחה עכשיו. אפשר להעביר, לשנות שם או למחוק אחרי שעוצרים אותה."}
         if a == "delete_lecture":
+            downloads = lecture_downloads(src)   # (read before the folder goes away)
             where = to_recycle_bin(src)
             if not where:
                 return {"ok": False, "error": "לא הצלחתי למחוק (אולי קובץ מההרצאה פתוח בתוכנה אחרת)."}
+            deleted = delete_downloads(downloads, [src])
             with self.lock:
                 self.lib_rev += 1
-            return {"ok": True, "where": where}
+            return {"ok": True, "where": where, "videos_deleted": deleted}
         old = os.path.basename(src)
         if a == "move_lecture":
             course = clean_name(d.get("course"), NO_COURSE)
@@ -8574,6 +8650,54 @@ def display_name(src):
     if s.lower().startswith(("http://", "https://")):
         return s
     return os.path.splitext(os.path.basename(s))[0] or s
+
+
+def backup_library(out_dir=None):
+    """Copy the whole library (transcripts, slides, Q&A, glossaries) into one ZIP file, so a lost or replaced computer
+    does not take a semester with it. Goes to the Documents folder unless out_dir says otherwise; never touches the
+    library. Downloaded recordings are not included (they can be fetched again and are large).
+    Returns {"ok": True, "path", "files", "bytes"} or {"ok": False, "error"}."""
+    import shutil
+    import zipfile
+    if not os.path.isdir(LIB_DIR):
+        return {"ok": False, "error": "עוד אין ספרייה לגבות."}
+    out_dir = out_dir or os.path.join(os.path.expanduser("~"), "Documents")
+    files, total = [], 0
+    for root, dirs, names in os.walk(LIB_DIR):
+        for n in names:
+            if n.endswith((".tmp", ".part")):
+                continue
+            f = os.path.join(root, n)
+            try:
+                total += os.path.getsize(f)
+            except OSError:
+                continue
+            files.append(f)
+    if not files:
+        return {"ok": False, "error": "הספרייה ריקה, אין מה לגבות."}
+    out = os.path.join(out_dir, "הבנתי-גיבוי-" + time.strftime("%Y-%m-%d-%H%M") + ".zip")
+    try:
+        os.makedirs(out_dir, exist_ok=True)
+        if shutil.disk_usage(out_dir).free < total + DISK_SPARE:
+            return {"ok": False, "error": "אין מספיק מקום בדיסק לגיבוי (צריך בערך " + str(total // (1 << 20) + 1) + " מגה)."}
+    except OSError:
+        save_error("backup library")
+        return {"ok": False, "error": "לא הצלחתי לפתוח את תיקיית היעד."}
+    tmp, n = out + ".part", 0
+    try:
+        with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
+            for f in files:
+                try:
+                    z.write(f, os.path.relpath(f, os.path.dirname(LIB_DIR)))
+                    n += 1
+                except OSError:
+                    pass   # a file that changed or is locked right now: the rest is still saved
+        os.replace(tmp, out)
+    except (OSError, zipfile.BadZipFile):
+        save_error("backup library")
+        _remove_quietly(tmp)
+        return {"ok": False, "error": "הגיבוי לא הושלם (אולי הדיסק התמלא)."}
+    return {"ok": True, "path": out, "files": n, "bytes": os.path.getsize(out)}
 
 
 def open_in_explorer(what, fname=None):
