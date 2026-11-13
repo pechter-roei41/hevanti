@@ -247,7 +247,11 @@
       b.addEventListener("click", () => { if (hereDefault()) askHere(c); else { ta.value = c; ta.focus(); } });
       chips.appendChild(b);
     }
-    const conv = mk("div", "conv"); conv.setAttribute("aria-live", "polite");
+    // (a screen reader must not read the answer in pieces while it streams: the answer is not a live region; one short message says when it is ready - audit #38)
+    const conv = mk("div", "conv");
+    const ready = mk("div", ""); ready.setAttribute("role", "status"); ready.setAttribute("aria-live", "polite");
+    ready.style.cssText = "position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap";
+    function sayReady(text) { ready.textContent = ""; setTimeout(() => { ready.textContent = text; }, 60); }
     const convbar = mk("div", "convbar"); convbar.hidden = true;
     const newBtn = mk("button", "", "שיחה חדשה"); newBtn.type = "button";
     newBtn.title = "Gemini שוכח את השאלות הקודמות בתיבה הזו (התשובות נשמרות בתיקיית ההרצאה)";
@@ -320,10 +324,11 @@
         text += dec.decode(); renderAnswer(doc, ae, text || "(לא התקבלה תשובה)", src);
         if (opts.compact) follow();
         if (text && !text.includes("\n\n⚠ ")) { hist.push({q: shown, a: text}); if (extra.onDone) extra.onDone(text); }
+        sayReady(text ? "התשובה מוכנה" : "לא התקבלה תשובה");
       } catch (e) {
         if (e.name === "AbortError") renderAnswer(doc, ae, (text ? text + "\n" : "") + "(נעצר)", src);
         else {
-          qa.classList.add("err"); ae.textContent = e.message || "לא הצלחתי לקבל תשובה.";
+          qa.classList.add("err"); ae.textContent = e.message || "לא הצלחתי לקבל תשובה."; sayReady(ae.textContent);
           if (e.quota) offerElsewhere(qa, q || DEF_Q, extra, e.wait);   // the free quota is used up
         }
       } finally { setBusy(false); ctl = null; if (opts.compact) { try { ta.focus(); } catch (e) {} } }
@@ -429,7 +434,7 @@
     refresh();
     // like a chat: the conversation first (it grows downward), the box to write in under it
     if (opts.noHead) head.hidden = true;   // (design 3: a box inside a fold whose title already says it does not repeat the title)
-    box.append(head, planBox, conn, conv, follow2, ta, row, convbar, chips, hint);
+    box.append(head, planBox, conn, conv, ready, follow2, ta, row, convbar, chips, hint);
     // a question made ready (a button of the page): for the built-in answer straight away, otherwise written in the box
     function ask(q, extra) { if (hereDefault()) askHere(q, extra); else { ta.value = q; ta.focus(); } }
     return {focus: () => ta.focus(), textarea: ta, refresh, askHere, ask, builtin: hereDefault, reset: resetChat};
