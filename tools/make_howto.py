@@ -66,7 +66,7 @@ def _real_models():
 
 
 def env():
-    e = dict(os.environ, PYTHONUTF8="1", BZM_DATA_DIR=DATA, LOCALAPPDATA=LOCAL, BZM_MODEL_DIR=_real_models())
+    e = dict(os.environ, PYTHONUTF8="1", BZM_DATA_DIR=DATA, LOCALAPPDATA=LOCAL, BZM_MODEL_DIR=_real_models(), BZM_NO_TOKEN="1")   # (no secret: this tool reads the API itself)
     e.pop("BZM_NO_BROWSER", None)
     return e
 

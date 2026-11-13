@@ -4,6 +4,7 @@ last first - in the app's ask box and in the floating window. Against a made-up 
 opened for real. Needs Playwright and Edge or Chrome; skips when missing. To use another Chromium: HEVANTI_TEST_CHROMIUM=<path>.
   python3 tools/test_ai_flow_ui.py"""
 import json
+import time
 import os
 import re
 import sys
@@ -95,6 +96,9 @@ def check(name, ok, detail=""):
 
 L.save_settings(math={"key": L.keep_secret("AQ.fake"), "ask": True})
 reader = L.math_reader()
+# No AI app counts as installed: on a computer that has Claude Desktop (this one) the page opens the app and not a window, the test waits for a
+# window that never comes - and the test would start the real app. (Found 12.11.2026: it failed only on that computer.)
+L._AI_APPS.update(ids={}, at=time.time() + 10 ** 9, busy=False)
 srv = L.AppServer()
 assert srv.start()
 url = srv.url.rstrip("/")

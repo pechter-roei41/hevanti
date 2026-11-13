@@ -5659,7 +5659,7 @@ def toggle_mini(hide_only=False, show_only=False):
                 return {"ok": False, "error": "החלון הקטן צריך את Microsoft Edge או את Chrome."}
             prof = mini_profile_dir()
             os.makedirs(prof, exist_ok=True)
-            args = [exe, "--app=" + APP.url + "mini", f"--window-size={MINI_SIZE[0]},{MINI_SIZE[1]}"]
+            args = [exe, "--app=" + APP.link("mini"), f"--window-size={MINI_SIZE[0]},{MINI_SIZE[1]}"]
             grow_first = _motion_allowed()
             if grow_first:   # off the screen: it is not seen starting, and it grows from the button when it is found
                 args.append("--window-position=-32000,-32000")
@@ -5702,7 +5702,7 @@ def prewarm_mini():
                 return False
             prof = mini_profile_dir()
             os.makedirs(prof, exist_ok=True)
-            args = [exe, "--app=" + APP.url + "mini", f"--window-size={MINI_SIZE[0]},{MINI_SIZE[1]}", "--window-position=-32000,-32000"]
+            args = [exe, "--app=" + APP.link("mini"), f"--window-size={MINI_SIZE[0]},{MINI_SIZE[1]}", "--window-position=-32000,-32000"]
             _MINI_PROC["proc"] = subprocess.Popen(args + ["--user-data-dir=" + prof, "--no-first-run",
                                                            "--no-default-browser-check", "--disable-extensions", "--disable-sync"])
             end = time.time() + 20
@@ -7814,6 +7814,7 @@ class App:
         self.page_seen = time.time()   # the last time the Hevanti page itself (not the small window) asked for something
         self.quit_evt = threading.Event()
         self.url = None
+        self.token = ""   # the secret of this run; empty = the pages are not asked for it (tests)
         self.lib_rev = 0
         self.saved_n = 0
         self.mark_n = 0
@@ -7921,6 +7922,10 @@ class App:
             if wait and s.thread is not None:
                 s.thread.join(wait)
 
+    def link(self, rel=""):
+        """The address a window of Hevanti is opened with: the page, and the secret of this run (see AppServer._gate). rel: "mini", "#t=...", ..."""
+        return make_link(self.url, self.token)(rel)
+
     def command(self, d):
         a = d.get("action")
         course = clean_name(d.get("course"), NO_COURSE)
@@ -8004,7 +8009,7 @@ class App:
             if lecture_from_rel(f) is None:
                 return {"ok": False, "error": "ההרצאה לא נמצאה."}
             import urllib.parse
-            ok = open_app_window(self.url + "#t=" + urllib.parse.quote(f, safe="")) if self.url and os.environ.get("BZM_NO_BROWSER") != "1" else False
+            ok = open_app_window(self.link("#t=" + urllib.parse.quote(f, safe=""))) if self.url and os.environ.get("BZM_NO_BROWSER") != "1" else False
             return {"ok": True, "opened": ok}
         if a == "consent_seen":   # the student agreed (the page keeps it in the browser; the server needs to know too, to open the quick-start window)
             if not load_settings().get("consent_ok"):
@@ -8028,7 +8033,7 @@ class App:
                             return {"ok": True, "opened": False, "already": True}
                     except Exception:
                         pass
-                ok = open_app_window(self.url + "quick", size=QUICK_SIZE, center=True, profile=quick_profile_dir(), track=False)
+                ok = open_app_window(self.link("quick"), size=QUICK_SIZE, center=True, profile=quick_profile_dir(), track=False)
                 if ok:
                     threading.Thread(target=_front_quick_window, daemon=True).start()
                 return {"ok": True, "opened": ok}
@@ -8037,7 +8042,7 @@ class App:
             return {"ok": True, "closed": close_quick_window()}
         if a == "quick_open_app":   # "open the app": the home screen in its own window, and the small one goes away; nothing starts
             _APP_WIN["hwnd"] = 0   # (the app's window is found again by the watcher: until then nothing is "closed")
-            ok = open_app_window(self.url + ("#rec" if d.get("view") == "rec" else "")) if self.url and os.environ.get("BZM_NO_BROWSER") != "1" else False
+            ok = open_app_window(self.link("#rec" if d.get("view") == "rec" else "")) if self.url and os.environ.get("BZM_NO_BROWSER") != "1" else False
             close_quick_window()
             return {"ok": True, "opened": ok}
         if a == "mini_button":   # the floating "?" button while the small window is closed
@@ -8976,6 +8981,53 @@ def _app_handler():
             host = (self.headers.get("Host") or "").rsplit(":", 1)[0].strip("[]").lower()
             return host in ("127.0.0.1", "localhost", "::1")
 
+        # A secret that belongs to this run (audit #27): the pages and everything they show (transcripts, pictures, the state, the recording) are
+        # given only to a browser that came with it. The secret is in the address every window of Hevanti is opened with (?bzm=...), which
+        # becomes a cookie at once (HttpOnly, only for us) and disappears from the address. Another program on the computer, or another
+        # Windows user, that just asks for the page or for /api/transcript gets 403. (The commands - POST - are still protected by X-BZM alone.)
+        def _cookie_ok(self):
+            import http.cookies
+            import hmac
+            try:
+                c = http.cookies.SimpleCookie(self.headers.get("Cookie") or "")
+                got = c["bzm"].value if "bzm" in c else ""
+            except Exception:
+                got = ""
+            return bool(got) and hmac.compare_digest(got, self.server_token())
+
+        def server_token(self):
+            return TOKEN_OF[self.server.server_address[1]]
+
+        def _gate(self, p, query):
+            """True when the request may go on. A page with the right ?bzm= gets its cookie and goes to the same address without it."""
+            if not REQUIRE_TOKEN.get(self.server.server_address[1]):
+                return True
+            import hmac
+            pages = ("/", "/index.html", "/mini", "/quick", "/player")
+            if p in pages:
+                given = (query.get("bzm") or [""])[0]
+                if given and hmac.compare_digest(given, self.server_token()):
+                    rest = urllib.parse.urlencode([(k, v) for k, vs in query.items() if k != "bzm" for v in vs])
+                    self.close_connection = False
+                    self.send_response(302)
+                    self.send_header("Location", p + ("?" + rest if rest else ""))
+                    self.send_header("Set-Cookie", f"bzm={self.server_token()}; Path=/; HttpOnly; SameSite=Strict")
+                    self.send_header("Content-Length", "0")
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    return False
+                return self._cookie_ok() or self._no_token_page()
+            if p.startswith("/api/") or p.startswith("/shot") or p == "/media":
+                return self._cookie_ok() or self._refuse()
+            return True
+
+        def _no_token_page(self):
+            body = ("<!doctype html><meta charset=utf-8><title>הבנתי</title><body dir=rtl style='font:18px sans-serif;padding:32px'>"
+                    "הבנתי נפתחת רק מהקיצור שלה (או מהכפתור העגול), לא מכתובת שהועתקה. לסגור את הלשונית ולפתוח את הבנתי משם.").encode("utf-8")
+            self.close_connection = True
+            self._send(403, body, "text/html; charset=utf-8", {"Connection": "close"})
+            return False
+
         # Other websites open in the browser must not be able to use the tool (start recording the sound and
         # the screen, read transcripts, show pictures). The browser marks their requests: Sec-Fetch-Site and
         # Origin. Our own page also adds X-BZM to every command - a header other sites cannot add.
@@ -8995,7 +9047,13 @@ def _app_handler():
             return path == "/api/place" or self.headers.get("X-BZM") == "1"  # where you are in a recording: harmless
 
         def _refuse(self):
-            self.close_connection = True  # the request body (if any) is not read - don't reuse this connection
+            self.close_connection = True  # the connection is not reused after a refusal
+            try:   # a small body is read first: closing with unread data made Windows cut the connection, and the client saw "connection aborted" instead of the 403 (a flaky test, 12.11.2026)
+                n = int(self.headers.get("Content-Length") or 0)
+                if 0 < n <= (1 << 20):
+                    self.rfile.read(n)
+            except (ValueError, OSError):
+                pass
             return self._send(403, b"forbidden", "text/plain", {"Connection": "close"})
 
         def _send(self, code, body, ctype, extra=None):
@@ -9072,6 +9130,8 @@ def _app_handler():
                 p = u.path
                 if not self._host_ok() or not self._site_ok(p):
                     return self._refuse()
+                if not self._gate(p, q):
+                    return
 
                 def qint(k):
                     try:
@@ -9360,6 +9420,10 @@ def _app_handler():
     return Handler
 
 
+TOKEN_OF = {}       # port -> the secret of this run (the handler looks it up)
+REQUIRE_TOKEN = {}  # port -> True once main() turned the secret on (tests of the pages and API leave it off)
+
+
 class AppServer:
     """The page on http://127.0.0.1:<port>/ - only this computer can open it."""
 
@@ -9398,11 +9462,14 @@ class AppServer:
         if self.httpd is None:
             return False
         self.url = f"http://127.0.0.1:{self.httpd.server_address[1]}/"
+        import secrets
+        self.token = secrets.token_urlsafe(24)
+        TOKEN_OF[self.httpd.server_address[1]] = self.token
         threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
         try:
             os.makedirs(LOCAL_DIR, exist_ok=True)
             with open(APP_FILE, "w", encoding="utf-8") as f:
-                json.dump({"url": self.url, "pid": os.getpid(), "version": VERSION}, f)
+                json.dump({"url": self.url, "pid": os.getpid(), "version": VERSION, "token": self.token}, f)
         except OSError:
             pass
         return True
@@ -9624,14 +9691,14 @@ def close_our_windows(wait=True):
             pass
 
 
-def open_start_window(url, act=None):
+def open_start_window(link, act=None):
     """What opens when Hevanti starts (or is started again): the quick-start window, or the home screen of the app."""
     wanted, why = quick_start_wanted(act)
-    if wanted and open_app_window(url + "quick", size=QUICK_SIZE, center=True, profile=quick_profile_dir()):
+    if wanted and open_app_window(link("quick"), size=QUICK_SIZE, center=True, profile=quick_profile_dir()):
         return True
     if not wanted:
         log(f"נפתח מסך הבית ולא חלון ההתחלה המהירה ({why}).")
-    return open_browser(url + ("#rec" if (act or {}).get("view") == "rec" else ""))
+    return open_browser(link("#rec" if (act or {}).get("view") == "rec" else ""))
 
 
 def open_browser(url):
@@ -9841,20 +9908,32 @@ def another_window_open():
         return False
 
 
+def make_link(url, token):
+    """A function rel -> the address to open: the secret goes before the #fragment, as a query (rel may be "mini", "#rec" or "")."""
+    def link(rel=""):
+        path, hash_, frag = rel.partition("#")
+        full = url + path
+        if token:
+            full += ("&" if "?" in full else "?") + "bzm=" + token
+        return full + (hash_ + frag)
+    return link
+
+
 def running_url():
     """The page of a tool that is already running, if it answers."""
     try:
         with open(APP_FILE, encoding="utf-8") as f:
-            url = json.load(f).get("url")
+            info = json.load(f)
+        url, token = info.get("url"), info.get("token") or ""
     except (OSError, ValueError):
         return None
     if not url:
         return None
     for _ in range(6):
         try:
-            with _http(url + "api/app", timeout=2) as r:
+            with _http(url + "api/app", headers={"Cookie": "bzm=" + token} if token else None, timeout=2) as r:
                 if r.status == 200:
-                    return url
+                    return url, token
         except Exception:
             time.sleep(0.5)
     return None
@@ -9896,8 +9975,9 @@ def main():
     log(f"{PRODUCT} - גרסה {VERSION} ({VERSION_DATE})")
     act = initial_action(sys.argv[1:], os.environ)
     if another_window_open():
-        url = running_url()
-        if url:
+        found = running_url()
+        if found:
+            url, token = found
             try:
                 if act["kind"] == "offer":
                     post_json(url + "api/cmd", {"action": "offer", "source": act["source"]})
@@ -9905,14 +9985,18 @@ def main():
                     post_json(url + "api/cmd", {"action": "start_recording", "source": act["source"], "lang": act["lang"]})
             except Exception:
                 save_error("forward")
-            open_start_window(url, act)
-            log(f"{PRODUCT} כבר פועלת. פתחתי שוב את האפליקציה בדפדפן: {url}")
+            open_start_window(make_link(url, token), act)
+            log(f"{PRODUCT} כבר פועלת. פתחתי שוב את האפליקציה בדפדפן.")
             return "forwarded"
         log("שים לב: נראה שהכלי כבר פתוח בחלון אחר (אולי גרסה ישנה). כדאי לסגור אותו - שני חלונות מתמללים פעמיים.")
     server = AppServer()
     if not server.start():
         raise RuntimeError("לא הצלחתי לפתוח את האפליקציה (כל הפורטים 8765-8769 תפוסים).")
     APP.url = server.url
+    if os.environ.get("BZM_NO_TOKEN") != "1":
+        REQUIRE_TOKEN[server.httpd.server_address[1]] = True
+        APP.token = server.token
+        close_our_windows(wait=False)   # a small or quick-start window left from an earlier run has the old secret: it would show nothing (it is closed; the new ones open with this run's)
     set_window_icon()
     threading.Thread(target=probe_gpu, daemon=True).start()   # an NVIDIA card? (home page banner)
     if os.name == "nt":
@@ -9944,11 +10028,11 @@ def main():
     elif act["kind"] == "offer":
         APP.pending = {"source": act["source"], "name": display_name(act["source"])}
     APP.first_view = act.get("view", "")
-    if not open_start_window(server.url, act) and \
+    if not open_start_window(APP.link, act) and \
             os.environ.get("BZM_NO_BROWSER") != "1":
         console_show()  # no browser opened: the address is written in this window
     show("=" * 50)
-    show(f"{PRODUCT} פועלת. האפליקציה נפתחה בדפדפן. אם לא נפתחה: {server.url}")
+    show(f"{PRODUCT} פועלת. האפליקציה נפתחה בדפדפן. אם לא נפתחה: {APP.link()}")
     show("החלון הזה הוא הסימן שהאפליקציה פועלת. אפשר למזער אותו. סגירה שלו עוצרת אותה.")
     show("=" * 50)
     app_gone = False
