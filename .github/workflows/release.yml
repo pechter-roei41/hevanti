@@ -48,6 +48,16 @@ jobs:
           else
             gh release create "$TAG" Hevanti.zip --target "$GITHUB_SHA" --title "Hevanti $TAG" --generate-notes
           fi
+      - name: SHA-256 of the ZIP, in the release notes and as a file (so a download can be checked)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          sha256sum Hevanti.zip > Hevanti.zip.sha256
+          gh release upload "$TAG" Hevanti.zip.sha256 --clobber
+          body="$(gh release view "$TAG" --json body -q .body)"
+          printf '%s\n\n**SHA-256** (check a download in PowerShell: `Get-FileHash <file>`)\n- Hevanti.zip: `%s`\n' "$body" "$(cut -d' ' -f1 Hevanti.zip.sha256)" > notes.md
+          gh release edit "$TAG" --notes-file notes.md
 
   setup:
     runs-on: windows-latest
@@ -116,3 +126,17 @@ jobs:
         run: |
           $f = if (Test-Path dist-signed/Hevanti-Setup.exe) { "dist-signed/Hevanti-Setup.exe" } else { "dist/Hevanti-Setup.exe" }
           gh release upload "$env:TAG" $f --clobber
+      - name: SHA-256 of the installer, in the release notes and as a file (the signed file when it was signed)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          $f = if (Test-Path dist-signed/Hevanti-Setup.exe) { "dist-signed/Hevanti-Setup.exe" } else { "dist/Hevanti-Setup.exe" }
+          $h = (Get-FileHash $f -Algorithm SHA256).Hash.ToLower()
+          Set-Content -NoNewline -Path Hevanti-Setup.exe.sha256 -Value "$h  Hevanti-Setup.exe"
+          gh release upload "$env:TAG" Hevanti-Setup.exe.sha256 --clobber
+          $body = gh release view "$env:TAG" --json body -q .body
+          $nl = [Environment]::NewLine
+          Set-Content -Path notes.md -Value ($body + $nl + "- Hevanti-Setup.exe: ``" + $h + "``" + $nl)
+          gh release edit "$env:TAG" --notes-file notes.md

@@ -677,6 +677,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 
     <details class="card" id="privBox" style="margin-top:18px">
       <summary><b>פרטיות: מה נשמר, איפה, ומה נשלח</b></summary>
+      <p class="sub" style="margin:10px 0 0">המדיניות המלאה: <a href="https://github.com/pechter-roei41/hevanti/blob/main/PRIVACY.md" target="_blank" rel="noopener">מדיניות הפרטיות</a> · <a href="https://github.com/pechter-roei41/hevanti/blob/main/TERMS.md" target="_blank" rel="noopener">תנאי השימוש</a></p>
       <ul style="margin:10px 0 0;padding-inline-start:20px;display:grid;gap:6px;line-height:1.6">
         <li><b>מה נשמר:</b> התמלול של ההרצאות, צילומי המסך של מה שבחרת לצלם, והטקסט שנקרא מהם.</li>
         <li><b>איפה:</b> רק במחשב שלך, בתיקייה "הקורסים שלי". אין חשבון ואין שרת של הבנתי. אם התיקייה נמצאת בתוך OneDrive או Google Drive (למשל Documents שמסונכרן), התוכנה של הענן מעתיקה אותה לחשבון שלך שם.</li>
@@ -1017,6 +1018,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <h3 id="consT">לפני שמקליטים הרצאה</h3>
   <p style="margin:0">הבנתי מתמללת את מה שמתנגן במחשב, ושומרת צילומי מסך של שקופיות. בהרבה מוסדות אסור להקליט הרצאה בלי אישור של המרצה, ולכן:</p>
   <ul style="margin:6px 0;padding-inline-start:20px;line-height:1.6"><li>לבדוק מה הכללים של המוסד שלך.</li><li>לבקש אישור מהמרצה, אם הכללים דורשים.</li><li>להשתמש בזה לעצמך בלבד, ולא להפיץ הקלטות, תמלולים או שקופיות.</li><li>אם הוזן מפתח Gemini: שקופיות שאינן טקסט מודפס ברור נשלחות ל-Google אוטומטית (אפשר לכבות בהגדרות), ובחשבון חינמי Google עשויה להשתמש בהן. שקופית עם פנים או שמות של משתתפים נשלחת כמו שהיא.</li></ul>
+  <p style="margin:0;font-size:14.5px;color:var(--muted)">בהמשך אתה מאשר את <a href="https://github.com/pechter-roei41/hevanti/blob/main/TERMS.md" target="_blank" rel="noopener">תנאי השימוש</a> ואת <a href="https://github.com/pechter-roei41/hevanti/blob/main/PRIVACY.md" target="_blank" rel="noopener">מדיניות הפרטיות</a> (נמצאות גם בתיקיית ההתקנה).</p>
   <label class="row" style="cursor:pointer"><input type="checkbox" id="consCheck"><b>קראתי, ואני אחראי לבדוק ולקבל אישור לפני שאני מקליט</b></label>
   <div class="row"><button class="btn" id="consOk" type="button" disabled>המשך</button><button class="btn quiet" id="consNo" type="button">ביטול</button></div>
 </div></div>
@@ -1798,7 +1800,7 @@ $("#gpuGo").addEventListener("click", async () => {
   if ($("#gpuGo").dataset.act === "quit") { $("#quitBtn").click(); return; }
   $("#gpuGo").disabled = true;
   try { const r = await api("/api/cmd", {action: "install_gpu"}); if (app && r.gpu) { app.gpu = r.gpu; drawGpu(app); } } catch (e) {}
-});
+});
 // the site a recording offer comes from is always shown: a page can choose any name ("ההרצאה של פרופ' כהן"), never the host (audit #28)
 function offerHost(src) { try { const h = new URL(src).hostname; return h ? " (מ-" + h + ")" : ""; } catch (e) { return ""; } }
 function render(d) {

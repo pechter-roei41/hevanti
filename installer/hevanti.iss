@@ -90,5 +90,10 @@ Type: files; Name: "{localappdata}\Hevanti\settings.json*"
 Type: files; Name: "{localappdata}\Hevanti\gemini_models.json"
 ; the speech models (about 1.6GB each; since 2.21 in the student's own folder)
 Type: filesandordirs; Name: "{localappdata}\Hevanti\models"
+; the browser profiles of the small window and the quick-start window, the usage count and the file of the running tool
+Type: filesandordirs; Name: "{localappdata}\Hevanti\mini-profile"
+Type: filesandordirs; Name: "{localappdata}\Hevanti\quick-profile"
+Type: files; Name: "{localappdata}\Hevanti\tokens.jsonl"
+Type: files; Name: "{localappdata}\Hevanti\app.json"
 Type: filesandordirs; Name: "{app}\python"
 Type: filesandordirs; Name: "{app}\System"
