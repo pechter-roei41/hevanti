@@ -7991,7 +7991,7 @@ class App:
                     "screens": SCREEN_ENABLED, "capture": capture_control().public(), "math": math_reader().status(), "gpu": gpu_public(),
                     "product": PRODUCT, "migrated": self.migrated,
                     "course": load_settings().get("course") or "", "connect": self.connect_info(),
-                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme(), "save_failed": save_failed_public(), "mark_n": self.mark_n, "saved_n": self.saved_n, "run": RUN_ID}
+                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme(), "still": bool(load_settings().get("a11y_still")), "save_failed": save_failed_public(), "mark_n": self.mark_n, "saved_n": self.saved_n, "run": RUN_ID}
 
     def connect_info(self):
         """Which AI apps are connected (reading two small config files - at most every few seconds)."""
