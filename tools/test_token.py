@@ -1,6 +1,7 @@
 """The secret of a run (audit 12.11.2026, #27): the pages and what they show are given only to a browser that came with the secret.
 No browser needed (http.client).   python3 tools/test_token.py"""
 import http.client
+import json
 import os
 import sys
 import tempfile
@@ -60,7 +61,7 @@ check("a wrong secret in the address is refused", st == 403, st)
 st, hd, body = get(f"/mini?bzm={tok}")
 cookie = hd.get("Set-Cookie", "")
 check("the right secret in the address: the cookie is set (HttpOnly, only for us) and the address goes on without it",
-      st == 302 and hd.get("Location") == "/mini" and f"bzm={tok}" in cookie and "HttpOnly" in cookie and "SameSite=Strict" in cookie, (st, hd))
+      st == 302 and hd.get("Location") == "/mini" and f"bzm={tok}" in cookie and "HttpOnly" in cookie and "SameSite=Lax" in cookie, (st, hd))
 st, hd, body = get(f"/?bzm={tok}&x=1")
 check("...other parts of the address are kept", st == 302 and hd.get("Location") == "/?x=1", hd.get("Location"))
 for path in ("/", "/mini", "/quick", "/api/app", "/api/library", "/api/diag"):
@@ -74,6 +75,27 @@ check("another host name is refused even with the secret (DNS rebinding)", st ==
 st, hd, body = get("/api/app", cookie=tok, headers={"Sec-Fetch-Site": "cross-site"})
 check("another site is refused even with the secret", st == 403, st)
 
+# the commands (POST) need the cookie too
+def post(path, body, cookie=None, bzm=True):
+    c = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+    h = {"Host": f"127.0.0.1:{port}", "Content-Type": "application/json"}
+    if bzm:
+        h["X-BZM"] = "1"
+    if cookie is not None:
+        h["Cookie"] = "bzm=" + cookie
+    c.request("POST", path, body=json.dumps(body), headers=h)
+    r = c.getresponse()
+    out = (r.status, r.read())
+    c.close()
+    return out
+
+
+check("a command without the cookie is refused, even with X-BZM", post("/api/cmd", {"action": "nothing"})[0] == 403)
+check("a command with a wrong cookie is refused", post("/api/cmd", {"action": "nothing"}, cookie="x")[0] == 403)
+check("a command with the cookie but without X-BZM is refused", post("/api/cmd", {"action": "nothing"}, cookie=tok, bzm=False)[0] == 403)
+check("a command with the cookie and X-BZM goes through", post("/api/cmd", {"action": "nothing"}, cookie=tok)[0] == 200)
+check("where you are in a recording needs the cookie too", post("/api/place", {"pos": 1}, bzm=False)[0] == 403 and post("/api/place", {"pos": 1}, cookie=tok, bzm=False)[0] in (200, 204))
+
 # the address a window is opened with
 link = L.make_link("http://127.0.0.1:8765/", "TOK")
 check("the address of a window: the secret goes before the #fragment",
@@ -83,7 +105,6 @@ check("no secret (a test server): the plain address", L.make_link("http://x/", "
 
 # a second start finds the running one: from app.json, with the secret
 app_json = L.APP_FILE
-import json  # noqa: E402
 with open(app_json, encoding="utf-8") as f:
     info = json.load(f)
 check("the running tool's file holds its address and secret (in the student's own folder)", info.get("token") == tok and info.get("url") == srv.url, info)

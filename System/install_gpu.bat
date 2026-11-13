@@ -12,12 +12,13 @@ for %%V in (3.12 3.13 3.14 3.11 3.10) do (
 )
 if not defined PY ( python -c "import sys" >nul 2>&1 && set "PY=python" )
 if not defined PY (
-  echo Python not found. Install Python 3.14 from https://www.python.org/downloads/windows/ ^(check "Add python.exe to PATH"^) and run again.
+  echo Python not found. Install Python 3.12 from https://www.python.org/downloads/windows/ ^(check "Add python.exe to PATH"^) and run again.
   pause
   exit /b 1
 )
 echo Using: %PY%
-%PY% -m pip install nvidia-cublas-cu12 "nvidia-cudnn-cu12==9.*"
+rem exact versions with SHA-256 (requirements-gpu.txt): a file that is not exactly this one is refused
+%PY% -m pip install -r "%~dp0requirements-gpu.txt" --require-hashes --only-binary=:all:
 if errorlevel 1 ( echo. & echo GPU INSTALL FAILED - the tool still works on the CPU. Send a screenshot of this window. & pause & exit /b 1 )
 echo.
 echo GPU libraries installed. Open Hevanti in the main folder.

@@ -36,6 +36,8 @@ All team members use multi-factor authentication on GitHub and on SignPath.
 
 ## Privacy policy
 
+The full, current policy is [PRIVACY.md](PRIVACY.md) (with the [terms of use](TERMS.md)); it also comes with the installer. The table below is the short list of what leaves the computer.
+
 Hevanti runs on your computer. It has no server and no account of its own, and it does not collect statistics.
 The transcript and the slide pictures are saved only on your computer (in your Documents folder).
 
@@ -56,6 +58,12 @@ systems.
 
 If you use "cloud sync" (off by default), the transcripts are written to a Google Drive or OneDrive folder on your
 computer, and that service syncs them under its own terms.
+
+## Checking a download, and antivirus warnings
+
+Every release lists the SHA-256 of `Hevanti-Setup.exe` and `Hevanti.zip` in its notes, and attaches them as `*.sha256` files. To check a download in PowerShell: `Get-FileHash Hevanti-Setup.exe` and compare the value. The installer is built from the tagged commit by the public release workflow, and the packages and downloads it uses are pinned by SHA-256 (`System/requirements.txt`).
+
+The installer is not signed yet, so Windows SmartScreen or an antivirus may warn about it (a program that carries its own Python and installs for one user looks like many harmful ones). Each release is submitted to Microsoft Security Intelligence (<https://www.microsoft.com/wdsi/filesubmission>) as "incorrectly detected", and the result of a VirusTotal scan is kept in the README. If your antivirus blocks Hevanti, write to <hevanti.support@gmail.com> with its name and the version.
 
 ## Uninstall
 

@@ -1047,7 +1047,8 @@ def gpu_install():
     def run():
         import subprocess
         try:
-            r = subprocess.run([sys.executable, "-m", "pip", "install", "nvidia-cublas-cu12", "nvidia-cudnn-cu12==9.*"],
+            r = subprocess.run([sys.executable, "-m", "pip", "install", "-r", os.path.join(SYSTEM_DIR, "requirements-gpu.txt"),
+                                "--require-hashes", "--only-binary=:all:"],   # (exact versions with SHA-256: see requirements-gpu.txt - audit #25)
                                capture_output=True, text=True, timeout=1800,
                                creationflags=0x08000000 if os.name == "nt" else 0)
             if r.returncode == 0:
@@ -1393,6 +1394,40 @@ def start_quick_draft(slot):
 
 
 # ---------- screen snapshots ----------
+def pinned_pip_install(names, extra=()):
+    """pip install of `names` from the exact versions and SHA-256 of System/requirements.txt (no dependencies: only the pure-Python helpers
+    use this). Falls back to the plain, newest version when that file does not fit this Python (a developer's own Python), and says so."""
+    import re
+    import subprocess
+    import tempfile
+    try:
+        with open(os.path.join(SYSTEM_DIR, "requirements.txt"), encoding="utf-8") as f:
+            text = f.read()
+        blocks = []
+        for n in names:
+            m = re.search(r"^" + re.escape(n.lower().replace("_", "-")) + r"==\S+ \\\n[ \t]+--hash=sha256:[0-9a-f]+", text, re.M | re.I)
+            if not m:
+                raise KeyError(n)
+            blocks.append(m.group(0))
+        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as tf:
+            tf.write(chr(10).join(blocks) + chr(10))
+        try:
+            r = subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", "--no-deps", "--require-hashes", "--only-binary=:all:",
+                                "-r", tf.name, *extra], capture_output=True, text=True)
+        finally:
+            try:
+                os.remove(tf.name)
+            except OSError:
+                pass
+        if r.returncode == 0:
+            return True
+        save_error_text("pinned install " + " ".join(names), r.stderr)
+    except Exception:
+        save_error("pinned install")
+    log("לא הצלחתי להתקין את הגרסה המדויקת של הרכיב (" + " ".join(names) + "), מתקין את הגרסה העדכנית.")
+    return subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", *names]).returncode == 0
+
+
 def _ensure_packages(pairs, what="לצילום מסך"):
     """Install missing pure-Python helpers (mss, Pillow, comtypes) on first run."""
     import importlib
@@ -1407,7 +1442,7 @@ def _ensure_packages(pairs, what="לצילום מסך"):
             pass  # installed but blocked/broken - handled where it is used
     if missing:
         log(f"מתקין רכיבים {what} ({' '.join(missing)}) - פעם אחת בלבד...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", *missing])
+        pinned_pip_install(missing)
 
 
 def changed_fraction(a, b, thresh=25):
@@ -6884,7 +6919,25 @@ def ensure_ytdlp(upgrade=False):
         show_status("מעדכן את רכיב ההורדה מאתרים (yt-dlp)...")
     else:
         log("מתקין רכיב להורדה מאתרי וידאו (yt-dlp) - פעם אחת בלבד, כ-50MB...")
-    r = subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", "--upgrade", "yt-dlp"],
+    if not upgrade:   # the first time: the exact version of System/requirements.txt (SHA-256 checked)
+        ok = pinned_pip_install(["yt-dlp"])
+        draft_clear()
+        importlib.invalidate_caches()
+        return ok and importlib.util.find_spec("yt_dlp") is not None
+    # An update is what a changed site needs (sites change, and an old yt-dlp stops working): the newest, but only a wheel (no code runs at
+    # install) and at most once a day - a failure that repeats must not install again and again (audit #25).
+    stamp = os.path.join(LOCAL_DIR, "ytdlp_upgrade.txt")
+    try:
+        if time.time() - os.path.getmtime(stamp) < 86400:
+            return importlib.util.find_spec("yt_dlp") is not None
+    except OSError:
+        pass
+    try:
+        os.makedirs(LOCAL_DIR, exist_ok=True)
+        open(stamp, "w").close()
+    except OSError:
+        pass
+    r = subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", "--upgrade", "--only-binary=:all:", "yt-dlp"],
                        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
     draft_clear()
     importlib.invalidate_caches()
@@ -8984,7 +9037,7 @@ def _app_handler():
         # A secret that belongs to this run (audit #27): the pages and everything they show (transcripts, pictures, the state, the recording) are
         # given only to a browser that came with it. The secret is in the address every window of Hevanti is opened with (?bzm=...), which
         # becomes a cookie at once (HttpOnly, only for us) and disappears from the address. Another program on the computer, or another
-        # Windows user, that just asks for the page or for /api/transcript gets 403. (The commands - POST - are still protected by X-BZM alone.)
+        # Windows user, that just asks for the page or for /api/transcript gets 403. (The commands - POST - need the cookie too, and X-BZM.)
         def _cookie_ok(self):
             import http.cookies
             import hmac
@@ -9011,7 +9064,7 @@ def _app_handler():
                     self.close_connection = False
                     self.send_response(302)
                     self.send_header("Location", p + ("?" + rest if rest else ""))
-                    self.send_header("Set-Cookie", f"bzm={self.server_token()}; Path=/; HttpOnly; SameSite=Strict")
+                    self.send_header("Set-Cookie", f"bzm={self.server_token()}; Path=/; HttpOnly; SameSite=Lax")
                     self.send_header("Content-Length", "0")
                     self.send_header("Cache-Control", "no-store")
                     self.end_headers()
@@ -9043,6 +9096,8 @@ def _app_handler():
             port = self.server.server_address[1]
             origin = (self.headers.get("Origin") or "").lower().rstrip("/")
             if origin and origin not in (f"http://127.0.0.1:{port}", f"http://localhost:{port}"):
+                return False
+            if REQUIRE_TOKEN.get(port) and not self._cookie_ok():   # the commands need the secret of the run too (audit #27), not X-BZM alone
                 return False
             return path == "/api/place" or self.headers.get("X-BZM") == "1"  # where you are in a recording: harmless
 
@@ -9939,10 +9994,10 @@ def running_url():
     return None
 
 
-def post_json(url, obj):
+def post_json(url, obj, token=""):
     import urllib.request
     req = urllib.request.Request(url, data=json.dumps(obj).encode("utf-8"), method="POST",
-                                 headers={"Content-Type": "application/json", "X-BZM": "1"})
+                                 headers=dict({"Content-Type": "application/json", "X-BZM": "1"}, **({"Cookie": "bzm=" + token} if token else {})))
     with urllib.request.urlopen(req, timeout=10) as r:
         return json.load(r)
 
@@ -9980,9 +10035,9 @@ def main():
             url, token = found
             try:
                 if act["kind"] == "offer":
-                    post_json(url + "api/cmd", {"action": "offer", "source": act["source"]})
+                    post_json(url + "api/cmd", {"action": "offer", "source": act["source"]}, token)
                 elif act["kind"] == "rec":
-                    post_json(url + "api/cmd", {"action": "start_recording", "source": act["source"], "lang": act["lang"]})
+                    post_json(url + "api/cmd", {"action": "start_recording", "source": act["source"], "lang": act["lang"]}, token)
             except Exception:
                 save_error("forward")
             open_start_window(make_link(url, token), act)

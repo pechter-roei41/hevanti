@@ -1,0 +1,8 @@
+# NVIDIA's cuBLAS and cuDNN for the graphics card (Windows, about 1.2 GB), exactly: version and SHA-256 (pinned 13.11.2026).
+# Installed by the "GPU" button and install_gpu.bat with: pip install -r System/requirements-gpu.txt --require-hashes --only-binary=:all:
+# To update: take the newest win_amd64 wheels of the two packages from https://pypi.org/project/nvidia-cublas-cu12/ and /nvidia-cudnn-cu12/
+# (cuDNN 9.x), write their SHA-256 here, and test a lecture on a computer with an NVIDIA card.
+nvidia-cublas-cu12==12.9.2.10 \
+    --hash=sha256:623f43027d40d44ceadf0043f002bd25cf353e8f13ce90b9a87057019f560661
+nvidia-cudnn-cu12==9.28.1.4 \
+    --hash=sha256:3467aafa9b260e6adf5fbbfc0e21d180133305b42032aa1160be2d3142bb8b09

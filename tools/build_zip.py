@@ -29,7 +29,7 @@ def main():
     ap.add_argument("--get-pip", help="get-pip.py from bootstrap.pypa.io (with --python-zip)")
     a = ap.parse_args()
     out = a.out or "Hevanti.zip"
-    top = ["Hevanti.bat", "Install.bat", "README.txt", "System"]
+    top = ["Hevanti.bat", "Install.bat", "README.txt", "PRIVACY.md", "TERMS.md", "System"]
     n = 0
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for item in top:

@@ -38,6 +38,8 @@ Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsx
 
 ## Privacy
 
+The full policy is [PRIVACY.md](PRIVACY.md) and the terms of use are [TERMS.md](TERMS.md); both come with the installer, and the app and the website link to them. In short:
+
 - Transcripts and screenshots stay on your computer. The app only listens on `127.0.0.1`.
 - There is no Hevanti server. Once you save your own Gemini key, two things go to Google's Gemini API: when you ask (Answer here), the question, the last minutes of the transcript, the text of earlier slides and the current slide; and, because reading formulas and handwriting is on by default with a key, every new slide picture that is saved. The second can be turned off in Settings, in the "התאמת התשובות" tab. The connector (`hevanti_mcp.py`) only reads files from the "הקורסים שלי" (My Lectures) folder, and only when your AI asks for them. What your AI reads is sent to its provider like any other conversation with it.
 - "Sync to the cloud" is off until you turn it on; then your transcripts are copied to your own Google Drive / OneDrive.
