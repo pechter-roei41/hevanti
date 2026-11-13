@@ -698,7 +698,8 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <!-- MY COURSES (2.14: its own tab) -->
   <section id="vCourses" aria-label="הקורסים שלי" hidden>
     <div class="libhead"><h1>הקורסים שלי</h1><input type="search" id="libFind" placeholder="חיפוש בכל מה שנאמר" aria-label="חיפוש בכל ההרצאות">
-      <button class="btn quiet small" type="button" data-open="lib">פתיחה בתיקייה</button></div>
+      <button class="btn quiet small" type="button" data-open="lib">פתיחה בתיקייה</button>
+      <button class="btn quiet small" type="button" id="libBackup" title="שומר עותק של כל ההרצאות, השקופיות והשאלות בקובץ ZIP אחד בתיקיית המסמכים">שמירת עותק של הספרייה</button></div>
     <div class="tabs" id="libTabs" role="group" aria-label="קורסים"></div>
     <div class="cbar" id="libCbar" hidden><span id="libCbarText"></span><button class="btn small" id="libCbarGo" type="button">לדף הקורס</button></div>
     <ol class="lib" id="lib"><li class="empty">טוען...</li></ol>
@@ -970,6 +971,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <li><b>דף הקורס</b> בנוי משלוש לשוניות: <b>ההרצאות</b>, <b>סימונים</b> (כל הרגעים שסימנת, עם "פתיחה ברגע הזה") ו<b>סילבוס ומילון</b>. סילבוס שמעלים שם משפר את התמלול של מונחים ושמות.</li>
           <li>בלשונית ההרצאות, בכרטיס <b>קבצים וניהול</b>: קובץ אחד של כל הקורס, פתיחת התיקייה, שינוי שם ומחיקה.</li>
           <li>כל שאלה ותשובה נשמרות בתיקיית ההרצאה (<span class="say">שאלות ותשובות.md</span>).</li>
+          <li><b>גיבוי:</b> ב"הקורסים שלי", הכפתור <b>שמירת עותק של הספרייה</b> שומר את כל ההרצאות, השקופיות והשאלות בקובץ ZIP אחד בתיקיית המסמכים. כדאי להעתיק אותו גם לכונן חיצוני או לענן. מחיקת הרצאה או קורס מוחקת גם את ההקלטה שהבנתי הורידה להם, לצמיתות.</li>
         </ul>
       </section>
       <section id="g-look" aria-labelledby="g-lookT">
@@ -2023,6 +2025,20 @@ $("#quitBtn").addEventListener("click", async () => {
   if (!(await confirmBox("לסגור את האפליקציה?", running ? sessionName(s) + " ייעצר, ומה שכבר תומלל נשמר." : "אפשר לפתוח אותה שוב מ-Hevanti."))) return;
   await api("/api/cmd", {action: "quit"}); $("#gone").hidden = false;
 });
+$("#libBackup").addEventListener("click", async () => {
+  const b = $("#libBackup"); b.disabled = true;
+  toast("שומר עותק של הספרייה... זה יכול לקחת כמה דקות.");
+  try {
+    await api("/api/cmd", {action: "backup_library"});
+    for (let i = 0; i < 1800; i++) {
+      await new Promise(r => setTimeout(r, 1000));
+      const s = await api("/api/cmd", {action: "backup_status"});
+      if (s.state === "done") { toast("נשמר עותק: " + s.files + " קבצים. הקובץ נפתח בתיקיית המסמכים. כדאי להעתיק אותו גם לכונן חיצוני או לענן."); break; }
+      if (s.state === "error") { toast(s.error || "הגיבוי לא הצליח."); break; }
+    }
+  } catch (e) { toast("הגיבוי לא הצליח."); }
+  b.disabled = false;
+});
 document.querySelectorAll("[data-open]").forEach(b => b.addEventListener("click", () => api("/api/cmd", {action: "open_folder", what: b.dataset.open})));
 
 // ---------- the library ----------
@@ -2265,7 +2281,7 @@ function lectureMenu(e) {
   $("#lmFolder").onclick = () => api("/api/cmd", {action: "open_folder", what: "folder", f: e.f});
   $("#lmDelete").onclick = async () => {
     $("#lecMenu").hidden = true;
-    if (!(await confirmBox("למחוק את \"" + e.title + "\"?", "התמלול, השקופיות והסיכום שלה יימחקו. אפשר לשחזר מסל המחזור של Windows.", "מחיקה"))) { $("#lecMenu").hidden = false; return; }
+    if (!(await confirmBox("למחוק את \"" + e.title + "\"?", "התמלול, השקופיות והסיכום שלה יימחקו. אפשר לשחזר מסל המחזור של Windows. אם הבנתי הורידה את ההקלטה, גם היא נמחקת, לצמיתות.", "מחיקה"))) { $("#lecMenu").hidden = false; return; }
     const r = await api("/api/cmd", {action: "delete_lecture", f: e.f});
     if (!r.ok) { toast(r.error || "לא הצלחתי"); return; }
     toast(r.where === "bin" ? "ההרצאה נמחקה. אפשר לשחזר אותה מסל המחזור." : "ההרצאה נמחקה (עותק נשמר ב-Hevanti\\deleted).");
@@ -2434,7 +2450,7 @@ $("#cDelete").addEventListener("click", async () => {
   if (!name || name === NO_COURSE) return;
   if (!(await confirmBox("למחוק את הקורס \"" + name + "\"?",
       (n ? n + " הרצאות, השקופיות שלהן ומילון המונחים של הקורס יימחקו. " : "מילון המונחים של הקורס יימחק. ") +
-      "אפשר לשחזר אותו מסל המחזור של Windows.", "מחיקה"))) return;
+      "אפשר לשחזר אותו מסל המחזור של Windows. הקלטות שהבנתי הורידה להרצאות הקורס נמחקות לצמיתות.", "מחיקה"))) return;
   const r = await api("/api/cmd", {action: "delete_course", course: name});
   if (!r.ok) { toast(r.error || "לא הצלחתי"); return; }
   toast(r.where === "bin" ? "הקורס \"" + name + "\" נמחק. אפשר לשחזר אותו מסל המחזור." : "הקורס נמחק (עותק נשמר ב-Hevanti\\deleted).");

@@ -756,5 +756,56 @@ check("a settings file held for a moment is waited for: the chosen window stays 
 check("a streamed answer is not a live region; one short message says when it is ready (screen reader)",
       'conv.setAttribute("aria-live"' not in _ask and "sayReady(" in _ask and "התשובה מוכנה" in _ask)
 
+# --- 13.11.2026: a downloaded recording goes with its lecture; a copy of the whole library in one ZIP ---
+import shutil as _sh, zipfile as _zf
+L.VIDEO_DIR = os.path.join(TMP, "videos"); os.makedirs(L.VIDEO_DIR)
+_own = os.path.join(TMP, "outside"); os.makedirs(_own)
+def _mk_lecture(course, name, media):
+    d = os.path.join(L.LIB_DIR, course, name); os.makedirs(d, exist_ok=True)
+    open(os.path.join(d, name + ".txt"), "w", encoding="utf-8").write("[09:00:00 | +0:00:01] שלום" + chr(10))
+    with open(os.path.join(d, L.STATE_NAME), "w", encoding="utf-8") as f:
+        json.dump({"v": 2, "path": media, "video": media, "audio": media}, f)
+    return d
+_v1 = os.path.join(L.VIDEO_DIR, "a.mp4"); open(_v1, "wb").write(b"x" * 100)
+_v2 = os.path.join(L.VIDEO_DIR, "shared.mp4"); open(_v2, "wb").write(b"y" * 100)
+_mine = os.path.join(_own, "mine.mp4"); open(_mine, "wb").write(b"z" * 100)
+_d1 = _mk_lecture("קורס מחיקה", "הרצאה א", _v1)
+_d2 = _mk_lecture("קורס מחיקה", "הרצאה ב", _v2)
+_d3 = _mk_lecture("קורס מחיקה", "הרצאה ג", _v2)
+_d4 = _mk_lecture("קורס מחיקה", "הרצאה ד", _mine)
+check("lecture_downloads lists only files inside the videos folder", L.lecture_downloads(_d1) == [os.path.realpath(_v1)] and L.lecture_downloads(_d4) == [])
+_orig_bin = L.to_recycle_bin
+L.to_recycle_bin = lambda path: (_sh.rmtree(path), "bin")[1]
+try:
+    r1 = L.APP.change_lecture("delete_lecture", {"f": "קורס מחיקה/הרצאה א"})
+    check("deleting a lecture deletes the recording Hevanti downloaded for it", r1.get("ok") and r1.get("videos_deleted") == 1 and not os.path.exists(_v1), r1)
+    r2 = L.APP.change_lecture("delete_lecture", {"f": "קורס מחיקה/הרצאה ב"})
+    check("a recording another lecture still uses is kept", r2.get("ok") and r2.get("videos_deleted") == 0 and os.path.exists(_v2), r2)
+    r3 = L.APP.change_lecture("delete_lecture", {"f": "קורס מחיקה/הרצאה ד"})
+    check("a file the student opened from elsewhere is never deleted", r3.get("ok") and os.path.exists(_mine), r3)
+    rc = L.APP.delete_course("קורס מחיקה")
+    check("deleting the course deletes the last recording too", rc.get("ok") and rc.get("videos_deleted") == 1 and not os.path.exists(_v2), rc)
+finally:
+    L.to_recycle_bin = _orig_bin
+_bk_out = os.path.join(TMP, "backups")
+_saved_lib = L.LIB_DIR
+_empty_lib = os.path.join(TMP, "emptylib"); os.makedirs(_empty_lib)
+L.LIB_DIR = _empty_lib
+_e = L.backup_library(_bk_out)
+L.LIB_DIR = _saved_lib
+check("backup of an empty library says so and makes no file", not _e["ok"] and not os.path.exists(_bk_out))
+_d5 = _mk_lecture("קורס גיבוי", "הרצאה 1", _mine)
+open(os.path.join(_d5, "שאלות ותשובות.md"), "w", encoding="utf-8").write("שאלה")
+open(os.path.join(_d5, "x.tmp"), "w").write("temp")
+_bk = L.backup_library(_bk_out)
+with _zf.ZipFile(_bk["path"]) as _z:
+    _names = _z.namelist()
+check("backup: one ZIP with the lecture, the Q&A and the state, without temp files, and no video",
+      _bk["ok"] and any(n.endswith("שאלות ותשובות.md") for n in _names) and any(n.endswith("הרצאה 1.txt") for n in _names)
+      and not any(n.endswith(".tmp") or n.endswith(".mp4") for n in _names) and not os.path.exists(_bk["path"] + ".part"), (_bk, _names))
+check("backup does not change the library", os.path.isfile(L.lecture_txt(_d5)) and os.path.isfile(os.path.join(_d5, "x.tmp")))
+_pg = open(os.path.join(L.SCRIPT_DIR, "app.html"), encoding="utf-8").read()
+check("the page has the backup button and warns that a downloaded recording is deleted for good", 'id="libBackup"' in _pg and "נמחקת, לצמיתות" in _pg and "backup_status" in _pg)
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)
