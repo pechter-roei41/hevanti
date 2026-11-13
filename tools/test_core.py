@@ -665,5 +665,30 @@ check("Tesseract, its language files and Python are checked by SHA-256 before us
 check("the release runs every test first; the tests run lint, pip-audit and a key search",
       "uses: ./.github/workflows/tests.yml" in _rel and "needs: tests" in _rel and all(w in _txt(".github", "workflows", "tests.yml") for w in ("ruff check", "pip-audit", "scan_secrets.py", "workflow_call")))
 
+# audit phase D (13.11.2026): the installs Hevanti runs by itself are pinned too
+import subprocess as _sp, types as _ty
+_gpu = _txt("System", "requirements-gpu.txt")
+check("the GPU libraries are pinned (exact versions with SHA-256), and the button and install_gpu.bat use that file",
+      "nvidia-cublas-cu12==" in _gpu and "nvidia-cudnn-cu12==" in _gpu and _gpu.count("--hash=sha256:") == 2
+      and "requirements-gpu.txt" in _src and "--require-hashes" in _txt("System", "install_gpu.bat") and "requirements-gpu.txt" in _txt("System", "install_gpu.bat"))
+_cap = {}
+def _fake_run(cmd, **k):
+    if "-r" in cmd:
+        _cap["file"] = open(cmd[cmd.index("-r") + 1], encoding="utf-8").read()
+        _cap["cmd"] = cmd
+    return _ty.SimpleNamespace(returncode=0, stderr="", stdout="")
+_real_run = _sp.run
+_sp.run = _fake_run
+try:
+    _ok = L.pinned_pip_install(["mss", "Pillow", "comtypes"])
+finally:
+    _sp.run = _real_run
+check("a missing helper (mss, Pillow, comtypes) is installed from the exact versions with their hashes, no dependencies",
+      _ok and all(w in _cap["file"] for w in ("mss==", "pillow==", "comtypes==")) and _cap["file"].count("--hash=sha256:") == 3
+      and "--require-hashes" in _cap["cmd"] and "--no-deps" in _cap["cmd"] and "--only-binary=:all:" in _cap["cmd"], _cap)
+check("the update of yt-dlp (what a changed site needs) takes only a wheel and at most once a day",
+      '"--only-binary=:all:", "yt-dlp"' in _src and "ytdlp_upgrade.txt" in _src and "86400" in _src)
+check("the commands (POST) need the secret of the run too", "the commands need the secret of the run too" in _src and "def post_json(url, obj, token" in _src)
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)
