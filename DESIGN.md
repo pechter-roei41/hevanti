@@ -227,6 +227,16 @@ A native window, 56 px (drawn at 8 times the size and reduced, so the edge is sm
 ### The Quick-Start Window
 A small window in the middle of the screen when Hevanti opens (the name and the logo are in the title bar of the window, and not written again inside): the heading "הקלטה חדשה", the field "איזה קורס?" with a note under it ("זוהה מכותרת החלון. אפשר להחליף." with a small sparkle), three kinds of lecture as a radio group (the chosen one Green Soft with Ink and a Green edge, never a second solid green), the one solid-green action "התחל תמלול" (it becomes "המשך באפליקציה" for a recording, which only opens the app), and a ghost button "פתח את האפליקציה", the same width and height as the start button (the two are a pair). Tokens as everywhere, light and night.
 
+### Motion
+Motion is rare, short and never over the lecture. Three small things move, all with the easing `cubic-bezier(0.2, 0.8, 0.2, 1)` (the same as the floating window opening), and nothing else:
+- **A mark made now:** the Mark Line band is drawn over the line said just before the mark, from the right (as Hebrew is read), in 0.6 s, and the ★ pops once (scale 0.4 to 1.3 to 1). Only for a mark that arrives while the lecture runs; a saved lecture opens with the finished band. Yellow is still only the mark.
+- **The selected shape slides:** the "where am I" pill of the top tabs and the Green Soft choice of a segmented group (`glideGroup`) glide to the new place in 0.28 s, instead of jumping. The glide only follows the `aria-current`, `aria-selected` or `aria-pressed` the code already sets; a group that is hidden cannot be measured and keeps its own selected look.
+- **The check of "saved":** the check in the Green Soft chip of "ההרצאה נשמרה בהצלחה" is drawn in 0.4 s after the chip pops, the same check shape as the logo.
+
+### Named Rules
+**The Finished Look Rule.** The end of every animation is the static look, so with motion off nothing is missing. Animations are written as `from`-only keyframes or inside `@media (prefers-reduced-motion: no-preference)`, and `html.a-still` ("no animations and motion" in the accessibility settings, also sent to the floating window) removes them all. A new motion needs a test in `tools/test_motion.py` for both switches.
+**The Quiet Rule.** Animate `transform`, `opacity`, a background size or a stroke only; no loop except the recording dot; nothing that moves text the student is reading.
+
 ### Logo
 One mark, everywhere: a green bubble with a short tail at its lower right and a thick yellow check (viewBox 120; bubble `M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z`, check `M33 52L52 71L87 33`, stroke width 17). The floating button places the same mark on a solid Board Green circle, as a thin line (the bubble a 9-wide Paper stroke without fill, the check Highlighter yellow, 17 wide); the installer icon keeps its own file. No second variant of the mark is made anywhere else.
 
