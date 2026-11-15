@@ -522,6 +522,27 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 .log li.warn{color:var(--warn-fg);background:var(--warn-bg);border-radius:6px;padding:0 6px}
 .gone{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;padding:16px;z-index:50;text-align:center}
 @media (prefers-reduced-motion:reduce){.toast,.start{transition:none}}
+/* motion (2.22): short and quiet, never over the lecture. Off with the system setting and with "no animations and motion" (html.a-still above).
+   The static look is always the finished one, so with motion off nothing is missing. */
+/* a mark made now: the highlighter band is drawn over the line (from the right, as the Hebrew is read), and the star pops once */
+.lines li.sweep{background-color:transparent;background-image:linear-gradient(var(--mark-line),var(--mark-line));background-repeat:no-repeat;background-position:right top;background-size:100% 100%}
+@media (prefers-reduced-motion:no-preference){
+  .lines li.sweep{animation:hv-sweep .6s cubic-bezier(.2,.8,.2,1)}
+  .lines li.sweep .mstar{display:inline-block;animation:hv-pop .5s cubic-bezier(.2,.8,.2,1) .15s backwards}
+  .glide{transition:transform .28s cubic-bezier(.2,.8,.2,1),width .28s cubic-bezier(.2,.8,.2,1),height .28s cubic-bezier(.2,.8,.2,1)}
+}
+@keyframes hv-sweep{from{background-size:0 100%}}
+@keyframes hv-pop{0%{transform:scale(.4)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+/* the selected shape of the top tabs and of a choice group slides to the new place (glideGroup in the script); where it cannot be measured the buttons keep their own selected look */
+.glide-box{position:relative}
+.glide-box > button{position:relative;z-index:1}
+.glide{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;z-index:0}
+.nav .glide{background:var(--sunk);border-radius:999px}
+.nav.glide-on button[aria-current="page"]{background:transparent}
+.nav.glide-on button[aria-current="page"]:hover{background:transparent}
+.seg.glide-box{background:var(--surface)}
+.seg .glide{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.seg.glide-on button,.seg.glide-on button[aria-pressed="true"]{background:transparent;box-shadow:none}
 </style>
 </head>
 <body>
@@ -1602,6 +1623,7 @@ const setPanels = {};
   }
   pl.append(el("b", "", "מיקום הכפתור הצף על המסך"), cs);
   setPanels.cap.appendChild(pl);
+  glideGroup(cs);
   // how see-through the small window is (the lecture behind it stays visible)
   const ol = el("label", "row miniopt"), oc = el("input"), ov = el("span", "", "60%"); oc.type = "range"; oc.id = "miniOp";
   oc.min = 30; oc.max = 100; oc.step = 5; oc.value = 60; oc.style.width = "160px"; oc.setAttribute("aria-label", "שקיפות החלון הקטן");
@@ -2492,7 +2514,7 @@ $("#liveSugYes").addEventListener("click", async () => { await api("/api/cmd", {
 $("#liveSugNo").addEventListener("click", async () => { await api("/api/cmd", {action: "suggest_dismiss"}); $("#liveSug").hidden = true; });
 // a marked moment: the line said just before the mark gets the highlighter band, a ★ ("?" for the old "didn't understand" marks - the same band,
 // one colour one meaning) and, for the screen reader, the words "מסומנת"
-function markPrev(li) {
+function markPrev(li, fresh) {
   const glyph = /\?\s*סימנת/.test(li.textContent) ? "?" : "★";
   let p = li.previousElementSibling;
   for (let n = 0; p && n < 8; p = p.previousElementSibling, n++) {
@@ -2500,13 +2522,20 @@ function markPrev(li) {
     if (p._x && p._x.x && !p._x.img) {
       if (p.classList.contains("marked")) return;
       p.classList.add("marked");
+      if (fresh) sweepLine(p);
       const sp = p.children[1];
       if (sp) { const st = el("span", "mstar", glyph); st.setAttribute("aria-hidden", "true"); sp.prepend(st, el("span", "sr-only", "מסומנת: ")); }
       return;
     }
   }
 }
-function appendLine(parent, x) { const li = lineEl(x); parent.appendChild(li); if (li.classList.contains("mark")) markPrev(li); return li; }
+// "fresh": the line arrived now, in a lecture that is running (not when a saved one is opened): a new mark is drawn like a highlighter
+function sweepLine(li) { li.classList.add("sweep"); setTimeout(() => li.classList.remove("sweep"), 1200); }
+function appendLine(parent, x, fresh) {
+  const li = lineEl(x); parent.appendChild(li);
+  if (li.classList.contains("mark")) { markPrev(li, fresh); if (fresh) sweepLine(li); }
+  return li;
+}
 function lineEl(x) {
   const mk = markOf(x);
   if (mk) {   // a moment the student marked in the lecture
@@ -2540,7 +2569,8 @@ async function pollLive() {
   liveLast = d;
   const box = $("#liveLines"), atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
   const draftEl = box.querySelector("li.draft"); if (draftEl) draftEl.remove();
-  for (const x of d.items) { liveItems.push(x); appendLine(box, x); }
+  const fresh = liveSince > 0;   // (the first batch is what was already said: no drawing)
+  for (const x of d.items) { liveItems.push(x); appendLine(box, x, fresh); }
   if (liveSince && d.items.length) srSay(d.items.filter(x => x.x && !markOf(x)).map(x => x.x).join(" "));
   liveSince = d.total;
   if (d.draft) { const li = el("li", "draft"); li.appendChild(el("span", "ts", "עכשיו")); const sp = el("span", "", "טיוטה: " + d.draft); sp.dir = "auto"; li.appendChild(sp); box.appendChild(li); }
@@ -3105,6 +3135,33 @@ document.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", 
 }));
 $("#howNo").addEventListener("click", () => { $("#howBar").hidden = true; try { localStorage.setItem("bzm.how", "1"); } catch (e) {} });
 try { $("#howBar").hidden = !!localStorage.getItem("bzm.how"); } catch (e) { $("#howBar").hidden = true; }
+
+// ---------- the selected shape slides to the new place (the top tabs and the choice groups) ----------
+// It only follows the aria state the code already sets, so nothing else changes. Where it cannot measure (the group is hidden) it does nothing
+// and the buttons keep their own selected look.
+function glideGroup(box) {   // (a function, so it can be used before this place; the settings are drawn earlier)
+  if (!box || box._glide || !window.ResizeObserver || !window.MutationObserver) return;
+  const GLIDE_CUR = '[aria-current="page"],[aria-selected="true"],[aria-pressed="true"]';
+  const g = document.createElement("span"); g.className = "glide"; g.setAttribute("aria-hidden", "true");
+  box.classList.add("glide-box"); box.prepend(g); box._glide = g;
+  let shown = false;
+  const place = animate => {
+    const cur = box.querySelector(GLIDE_CUR);
+    if (!cur || !cur.offsetWidth) { box.classList.remove("glide-on"); shown = false; return; }
+    const move = animate && shown;
+    if (!move) g.style.transition = "none";
+    g.style.width = cur.offsetWidth + "px"; g.style.height = cur.offsetHeight + "px";
+    g.style.transform = "translate(" + cur.offsetLeft + "px," + cur.offsetTop + "px)";
+    box.classList.add("glide-on");
+    if (!move) { void g.offsetWidth; g.style.transition = ""; }
+    shown = true;
+  };
+  new MutationObserver(() => place(true)).observe(box, {subtree: true, childList: true, attributes: true, attributeFilter: ["aria-current", "aria-selected", "aria-pressed"]});
+  new ResizeObserver(() => place(true)).observe(box);   // (a font that finishes loading, a window that is resized: it moves; a group that was hidden has no earlier place, so it just appears)
+  place(false);
+}
+glideGroup(document.querySelector(".nav"));
+document.querySelectorAll(".seg").forEach(glideGroup);
 
 route();
 poll();

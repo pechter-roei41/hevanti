@@ -71,7 +71,8 @@ with sync_playwright() as p:
         check(f"home, {theme}: the foot has the date and not a second version number, no message log, and the app closes from it",
               ver == "עודכנה ב-" + L.VERSION_DATE and L.VERSION not in ver and pg.evaluate("!document.querySelector('main > #logBox')") and pg.is_visible("#quitBtn"), ver)
         check(f"report dialog, {theme}: the tool's messages are in it", pg.evaluate("!!document.querySelector('#report #logBox')"))
-        nav = pg.evaluate("(() => { const s = getComputedStyle(document.querySelector('.nav button[aria-current=page]')); return [s.backgroundColor, s.fontWeight]; })()")
+        # the sunk-paper shape is the tab's own background, or (2.22) the glide under it that slides between the tabs
+        nav = pg.evaluate("(() => { const b = document.querySelector('.nav button[aria-current=page]'), s = getComputedStyle(b), g = document.querySelector('.nav.glide-on > .glide'); return [g ? getComputedStyle(g).backgroundColor : s.backgroundColor, s.fontWeight]; })()")
         check(f"navigation, {theme}: the current tab is sunk paper, 800", nav[0] == tok(pg, "--sunk") and nav[1] == "800", nav)
         pg.context.close()
 
