@@ -426,20 +426,10 @@ input[dir="ltr"]::placeholder{direction:rtl;text-align:right}
 #setBody .optbox,#setBody .optbox2{background:transparent;border:0;border-top:1px solid var(--line);border-radius:0;padding:18px 0 0}
 #setBody .optbox:first-child,#setBody .optbox2:first-child,#setBody .setpanel>:first-child .optbox:first-child{border-top:0;padding-top:0}
 #setBody .optbox2.drag{background:var(--accent-soft);border-radius:12px;padding:12px 16px}
-.howtop{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr);gap:20px;align-items:start;margin-top:16px}
-@media (max-width:900px){.howtop{grid-template-columns:minmax(0,1fr)}}
-.howvid{margin:0;display:grid;gap:8px}
-.howvid video{width:100%;border-radius:14px;border:1px solid var(--line);background:#000;aspect-ratio:16/9}
-.howvid figcaption{color:var(--muted);font-size:15px}
 .howcredit{color:var(--muted);font-size:13.5px;line-height:1.5;margin:14px 0 0}
 .howteaser{margin:16px 0 0;display:grid;gap:8px;max-width:760px}
 .howteaser video{width:100%;border-radius:14px;border:1px solid var(--line);background:#000;aspect-ratio:16/9}
 .howteaser figcaption{color:var(--muted);font-size:15px}
-.chapters{list-style:none;margin:0;padding:0;display:grid;gap:2px;align-content:start}
-.chapters button{width:100%;text-align:start;display:flex;gap:12px;align-items:baseline;background:transparent;border:0;border-radius:10px;padding:8px 12px;font:inherit;font-size:16px;line-height:1.4;cursor:pointer;color:var(--fg)}
-.chapters button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.chapters button:hover{background:var(--accent-soft)}
-.chapters button b{font-family:var(--f-mono);color:var(--accent);font-size:15px;min-width:42px}
 .miniopt{display:flex;gap:8px;align-items:center;margin-top:14px;cursor:pointer;font-size:16px}
 /* the guide inside the app (2.14) */
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px}
@@ -932,28 +922,8 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <span id="g-video"></span>
     <figure class="howteaser">
       <video controls preload="none" poster="/teaser.jpg" src="/teaser.mp4" aria-label="סרטון קצר: חצי דקה של הבנתי בהרצאה"></video>
-      <figcaption>חצי דקה, בלי קול: הרצאה במסך מלא, העיגול הירוק נשאר בקצה המסך, שאלה על מה שנאמר ו"מה פספסתי" של 7 דקות. ההרצאה בסרטון: דביר רוס, רישיון CC BY (הפרטים למטה). הסרטון המלא של דקה אחת מתחת.</figcaption>
+      <figcaption>חצי דקה, בלי קול: הרצאה במסך מלא, העיגול הירוק נשאר בקצה המסך, שאלה על מה שנאמר ו"מה פספסתי" של 7 דקות. ההרצאה בסרטון: דביר רוס, רישיון CC BY (הפרטים למטה).</figcaption>
     </figure>
-    <div class="howtop">
-    <figure class="howvid">
-      <video controls preload="metadata" poster="/howto.jpg" src="/howto.mp4" aria-label="סרטון הסבר: איך משתמשים בהבנתי"></video>
-      <figcaption>דקה אחת: מפתח, תמלול וצילום בזמן אמת, שאלה, "מה פספסתי", סימון ★, מה עושים אחרי, ופרטיות. לחיצה על פרק קופצת אליו.</figcaption>
-    </figure>
-    <ol class="chapters" id="howChapters" aria-label="פרקי הסרטון">
-      <li><button type="button" data-t="0"><b>0:00</b> מדביקים מפתח Gemini חינמי (דקה, פעם אחת)</button></li>
-      <li><button type="button" data-t="5"><b>0:05</b> בוחרים קורס בחלון ההתחלה המהירה ומתחילים הרצאה</button></li>
-      <li><button type="button" data-t="9"><b>0:09</b> הבנתי מתמללת ומצלמת את ההרצאה בזמן אמת</button></li>
-      <li><button type="button" data-t="15"><b>0:15</b> ההרצאה במסך מלא, והעיגול הירוק נשאר בקצה המסך</button></li>
-      <li><button type="button" data-t="20"><b>0:20</b> לוחצים על הכפתור של הבנתי ושואלים</button></li>
-      <li><button type="button" data-t="25"><b>0:25</b> התשובה, לפי מה שנאמר ומה שעל הלוח</button></li>
-      <li><button type="button" data-t="31"><b>0:31</b> "מה פספסתי": סיכום של 7 הדקות האחרונות</button></li>
-      <li><button type="button" data-t="38"><b>0:38</b> מסמנים ★ רגע חשוב וסוגרים את החלון</button></li>
-      <li><button type="button" data-t="43"><b>0:43</b> אחרי ההרצאה: דף הקורס עם שלוש לשוניות</button></li>
-      <li><button type="button" data-t="47"><b>0:47</b> בלשונית סימונים חוזרים לרגעים שסימנת</button></li>
-      <li><button type="button" data-t="51"><b>0:51</b> התמלול רץ אצלך במחשב, אין שרת של הבנתי, והמפתח נשמר מוצפן · רק שקפים עם נוסחאות או כתב יד נשלחים ל-Google, ואפשר לכבות</button></li>
-      <li><button type="button" data-t="58"><b>0:58</b> בקיצור: ארבעה צעדים - מפתח, הרצאה, שאלה, ודף הקורס</button></li>
-    </ol>
-    </div>
     <p class="howcredit">ההרצאה בסרטון: <a href="https://www.youtube.com/watch?v=F1_uOZeYLVE" target="_blank" rel="noopener">"פתרון משוואה דיפרנציאלית מסדר ראשון בעזרת הפרדת משתנים"</a> של דביר רוס (Dvir Ross), ברישיון <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY</a>. בסרטון מוצג קטע קצר ממנה, בלי קול, עם החלון של הבנתי מעליה.</p>
     <p class="howcredit">תמלול העברית נעשה בעזרת מודלים של <a href="https://huggingface.co/ivrit-ai" target="_blank" rel="noopener">ivrit.ai</a>, והטיוטה המהירה בעזרת מודל של ivrit.ai ושל Yakov Kolani (CC BY 4.0). הרישיונות של כל הרכיבים נמצאים בקובץ THIRD-PARTY-NOTICES.txt בתיקיית System.</p>
 
@@ -3130,11 +3100,6 @@ function floatDraw(isYt) {
 
 // ---------- "how to use" is a static page (the steps are in #vHow) ----------
 const HOW = {open() {}, stop() {}};
-// the chapters of the how-to video: a click jumps to that place and plays
-document.querySelectorAll("#howChapters [data-t]").forEach(b => b.addEventListener("click", () => {
-  const v = document.querySelector(".howvid video"); if (!v) return;
-  v.currentTime = +b.dataset.t; v.play().catch(() => {}); v.scrollIntoView({block: "center", behavior: "smooth"});
-}));
 document.querySelectorAll("[data-how]").forEach(b => b.addEventListener("click", () => { location.hash = "how"; }));
 // the guide's chips: scroll to a part of it (an #anchor would change the page instead)
 document.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => {

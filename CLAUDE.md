@@ -72,7 +72,7 @@ Read before larger changes:
 
 ## The in-app guide ("איך משתמשים")
 
-It lives in `app.html`, section `#vHow`, and is also published as an online artifact (`GUIDE_URL` in `live_transcribe.py`). Parts: video, חיבור לתשובות, בהרצאה, אחרי ההרצאה, מראה ונגישות, פרטיות, משהו לא עובד. The video has clickable chapters (`#howChapters`, timestamps in `data-t`) and credits Dvir Ross (CC BY). **When a feature, a button, a shortcut or a setting changes, update the guide, the README, `PRODUCT.md` and `VERSION.txt` in the same change.** The video must be re-recorded if the flow it shows changes. Keep the app's wording simple and in Hebrew, with as little English as possible.
+It lives in `app.html`, section `#vHow`, and is also published as an online artifact (`GUIDE_URL` in `live_transcribe.py`). Parts: video (half a minute, `media/teaser.mp4`), חיבור לתשובות, בהרצאה, אחרי ההרצאה, מראה ונגישות, פרטיות, משהו לא עובד. The video credits Dvir Ross (CC BY). **When a feature, a button, a shortcut or a setting changes, update the guide, the README, `PRODUCT.md` and `VERSION.txt` in the same change.** The video is made again if the flow it shows changes. Keep the app's wording simple and in Hebrew, with as little English as possible.
 
 Shortcuts (global, registered with `RegisterHotKey`): Ctrl+Alt+Q floating window, Ctrl+Alt+M mark ★, Ctrl+Alt+P pause screenshots (transcription continues). The action of a shortcut and its beep run on their own thread, so a slow one cannot stop the listening. A mark made with the keyboard shows "★ סומן" in the small window (`APP.mark_n` in `/api/app`) or above the round button when the small window is closed (a native window drawn with Pillow). The round button now stays for as long as Hevanti runs (`mini_button_wanted` is true unless the setting is off; 12.11.2026); the red dot shows only a live lecture being recorded. While it is on, closing the app window does not close Hevanti (`_button_keeps_running`): it closes with the black window. "התחלת הרצאה חדשה" in the small window closes the small window and opens the quick-start window on the side. A small window left open from an earlier run reloads itself (`RUN_ID`).
 
@@ -88,21 +88,18 @@ PYTHONUTF8=1 BZM_NO_BROWSER=1 BZM_DATA_DIR=/tmp/h/data LOCALAPPDATA=/tmp/h/local
 
 Then open `http://127.0.0.1:8765/` (and `/mini` for the floating window) with Playwright (`require('playwright')`, Chromium, no install needed in the cloud container). Notes:
 - First load shows the "בואו נתחיל" modal over everything; click "לא עכשיו" or nothing else is clickable.
-- Top tabs are `[data-nav="home|courses|how|settings"]`; settings tabs are `#setTabs > *`; the course page opens from the "דף הקורס" button on the home page; the guide's video chapters are `#howChapters button`.
+- Top tabs are `[data-nav="home|courses|how|settings"]`; settings tabs are `#setTabs > *`; the course page opens from the "דף הקורס" button on the home page.
 - Without a Gemini key the home page says "חסר מפתח Gemini". No network or model is needed to render any page.
 - The console output looks reversed on Linux (Hebrew without bidi), which is harmless.
 - Stop it with `pkill -f "live_transcribe.py --app"`. A real lecture, the transcript, the answers and the Windows features cannot be checked this way.
 
 ## The how-to video
 
-`System/Program/media/howto.mp4`: 63 s, 1920x1080, **no audio**, version 2.20 (recorded again on 12.11.2026). A dark caption bar on top carries one Hebrew sentence per chapter, word for word the same as `#howChapters` in `app.html`, and every chapter is zoomed on the action. Chapters (`data-t` seconds): 0 key, 5 quick-start window, 9 live transcript and screenshots, 15 full screen and the green round button, 20 click the button and ask, 25 answer, 31 "what did I miss" (7 minutes), 38 mark ★ and close the window, 43 course page (three tabs), 47 marks, 51 privacy (two sentences), 58 summary slide "בקיצור: ארבעה צעדים". The lecture is "פתרון משוואה דיפרנציאלית מסדר ראשון בעזרת הפרדת משתנים" by Dvir Ross (CC BY), the course "חשבון אינפיניטסימלי 2".
+`System/Program/media/teaser.mp4` (poster `teaser-poster.jpg`): 35 s, 1280x720, **no audio**, captions on screen, 1.7 MB. It shows a full-screen lecture, the green round button at the bottom right, a question, "מה פספסתי" (7 minutes) and a ★. The lecture is by Dvir Ross (CC BY), credited under the video and on the website. It is served at `/teaser.mp4` and `/teaser.jpg` and is the only video in the app and on the site.
 
-How it is made (`tools/make_howto.py`, Windows only; needs ffmpeg, Playwright and Edge):
-- `python tools/make_howto.py record`: builds a clean sandbox (library with one course, copy of the settings in a temp folder, light theme, no update check; `BZM_DATA_DIR` and `LOCALAPPDATA` point there, the real library and the key are never touched or shown), plays the lecture full screen on the main screen, records the main screen with ffmpeg (`gdigrab`, `h264_nvenc`), starts Hevanti, presses Start in the quick-start window, the round button and "7 דק'" with a simulated mouse (`tools/howto_win.py`), types the question, marks with Ctrl+Alt+M, stops, and records the app pages. About 11 minutes, with sound (Hevanti hears the lecture); the footage and `events.json` are written to `%TEMP%\hevanti-howto\out`.
-- `python tools/make_howto.py build`: raw footage plus `tools/howto/captions.json` (text, length, zoom crop per chapter) into `howto_draft.mp4`, a still per chapter and `chapter_times.json`. **Changing a caption does not need a new recording.** The poster is a frame at about 28 s (`ffmpeg -ss 28 ... -vf scale=1280:720`).
-- While recording, the person must work on the second screen, keep their hands off the mouse and keep the speakers on. The tool never moves or minimizes the user's windows; it only notes (and `build` warns about) another window on the recorded screen. Check the frames for anything personal before replacing the video. Not checked: display scaling other than 125%, and the tool on more than one monitor layout.
+The earlier one-minute video (`howto.mp4`, version 2.20, with clickable chapters) was removed on 15.11.2026. Its recording tools (`tools/make_howto.py`, `tools/howto_win.py`, `tools/howto/`) are still in the repository but they build that old video and its chapter captions; they are not used for the teaser.
 
-If the flow it shows changes (a button, the quick-start window, the floating window, the course page tabs), record again and update the chapters.
+If the flow the teaser shows changes (a button, the quick-start window, the floating window), make it again and check every frame for anything personal first.
 
 ## Testing
 
