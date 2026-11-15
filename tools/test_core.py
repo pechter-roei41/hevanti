@@ -814,5 +814,14 @@ _sha_a, _sha_b = _re2.search(r"([0-9a-f]{64})  get-pip.py", _rel), _re2.search(r
 check("get-pip.py is pinned to the same version and SHA-256 in release.yml and get_python.ps1, and it is not the broken 26.3 file",
       bool(_gp_a and _gp_b and _sha_a and _sha_b) and _gp_a.group(1) == _gp_b.group(1) == "26.2" and _sha_a.group(1).lower() == _sha_b.group(1).lower())
 
+# 15.11.2026 (Roei): the small window opens at once the first time, follows light/dark within a second, and nothing is cut at 115/130/150% or at the ends of a choice group
+_mini_src, _app_src = _txt("System", "Program", "mini.html"), _txt("System", "Program", "app.html")
+check("the small window is prepared at start (before any lecture), not only when a lecture starts",
+      "threading.Timer(2.0, prewarm_mini).start()" in _src)
+check("light/dark and no-motion reach the small window within a second: /api/theme answers and the window asks every second",
+      'p == "/api/theme"' in _src and "setInterval(pollTheme, 1000)" in _mini_src and 'getJson("/api/theme")' in _mini_src)
+check("the top bar is not a half circle (999px cut its chips when it wrapped), and a choice group keeps its selected ring whole at both ends",
+      "border-radius:26px}" in _app_src.split(".bar{", 1)[1].split("}", 1)[0] + "}" and ".seg{display:inline-flex;gap:2px;padding:2px;" in _app_src and ".seg button{border:0;background:var(--surface);padding:7px 16px;cursor:pointer;border-radius:999px}" in _app_src)
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)

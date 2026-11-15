@@ -9393,6 +9393,8 @@ def _app_handler():
                         APP.page_seen = time.time()
                 if p == "/api/app":
                     return self._json(APP.state(qint("notes")))
+                if p == "/api/theme":   # tiny and cheap: the small window asks it every second, so a change of light/dark in the app shows there at once (not up to 4 s later)
+                    return self._json({"theme": ui_theme(), "still": bool(load_settings().get("a11y_still"))})
                 if p == "/api/live":
                     return self._json(live_state(qint("since")))
                 if p == "/api/library":
@@ -10215,6 +10217,7 @@ def main():
     if os.name == "nt":
         MiniHotkey(daemon=True).start()   # Ctrl+Alt+Q
         MiniButton(mini_button_wanted, _mini_button_click).start()   # the floating button
+        threading.Timer(2.0, prewarm_mini).start()   # the small window's browser starts in the background right away (off the screen), so even the first press of the button, before any lecture, shows it at once
     on_window_close(APP.emergency_close)
     os.makedirs(LIB_DIR, exist_ok=True)
     try:
