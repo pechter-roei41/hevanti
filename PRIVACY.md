@@ -1,6 +1,6 @@
 # מדיניות פרטיות · Privacy policy
 
-הבנתי (Hevanti), גרסה 2.21, 13.11.2026. תוקף: מהגרסה הזאת ועד שתתפרסם מדיניות חדשה. הגרסאות הקודמות של הדף נמצאות בהיסטוריה של המאגר.
+הבנתי (Hevanti), גרסה 2.22, 15.11.2026. תוקף: מהגרסה הזאת ועד שתתפרסם מדיניות חדשה. הגרסאות הקודמות של הדף נמצאות בהיסטוריה של המאגר.
 
 ## בקצרה
 
@@ -69,7 +69,7 @@ Google עשויה להשתמש במה שנשלח ל-Gemini לפי התנאים �
 
 ## In English
 
-Hevanti (version 2.21, 13 Nov 2026) runs on your computer. It has no server and no account of its own, collects no statistics and sends no usage data.
+Hevanti (version 2.22, 15 Nov 2026) runs on your computer. It has no server and no account of its own, collects no statistics and sends no usage data.
 
 **Kept on your computer:** transcripts, slide pictures and the text read from them (in `Documents\הבנתי`); the settings and your Gemini key (encrypted with Windows DPAPI); the speech models; an error log without keys; a count of questions to Gemini without their content. If the lectures folder sits inside OneDrive or Google Drive, that service copies it to your account.
 
