@@ -3,111 +3,483 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>הבנתי - תמלול הרצאות בזמן אמת לסטודנטים</title>
-<meta name="description" content="הבנתי מתמללת את ההרצאה בזמן אמת ומאפשרת לשאול שאלות בלי לצאת מהשיעור. קוד פתוח, ל-Windows.">
-<meta property="og:title" content="הבנתי - איבדת את החוט? הבנתי תחזיר אותו">
-<meta property="og:description" content="תמלול הרצאות בזמן אמת, שאלות תוך כדי השיעור וסיכום של מה שפספסת. קוד פתוח.">
+<title>הבנתי - חלון צף שעונה על מה שפספסת בהרצאות זום והקלטות</title>
+<meta name="description" content="הבנתי מתמללת הרצאות זום והקלטות ופותחת חלון קטן שצף מעל ההרצאה, גם במסך מלא. שואלים שאלה ומקבלים תשובה מהדקות האחרונות ומהשקף. קוד פתוח, ל-Windows, גרסת בטא.">
+<meta name="theme-color" content="#0D1B16">
+<meta property="og:type" content="website">
 <meta property="og:locale" content="he_IL">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap">
+<meta property="og:site_name" content="הבנתי">
+<meta property="og:url" content="https://hevanti-app.netlify.app/">
+<meta property="og:image" content="https://hevanti-app.netlify.app/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="החלון הצף של הבנתי עם שאלה ותשובה, והכותרת: יש לך שאלה באמצע ההרצאה? תשאל, ותמשיך להקשיב.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://hevanti-app.netlify.app/assets/og.png">
+<meta property="og:title" content="הבנתי - חלון קטן מעל הזום שעונה על מה שפספסת">
+<meta property="og:description" content="תמלול הרצאות זום והקלטות, חלון צף לשאלות, וסימון רגעים עם ★. קוד פתוח, ל-Windows.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Cpath d='M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z' fill='%233DDC97'/%3E%3Cpath d='M33 52L52 71L87 33' fill='none' stroke='%230D1B16' stroke-width='17' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
-body{margin:0;background:#0E1411}
-a{color:#7FE3B2}a:hover{color:#B5F2D2}
-.cta:hover{background:#6BE0A6}
-</style>
+@font-face{font-family:"Secular One";src:url(assets/SecularOne-Regular.ttf) format("truetype");font-weight:400;font-display:swap}
+@font-face{font-family:"Assistant";src:url(assets/Assistant-Variable.ttf) format("truetype");font-weight:200 800;font-display:swap}
+body{margin:0}
+a.fl{text-decoration:none}
+a:focus-visible,button:focus-visible,summary:focus-visible,video:focus-visible{outline:3px solid #FFD93D;outline-offset:3px}
+summary{cursor:pointer;list-style:none}
+summary::-webkit-details-marker{display:none}
+details[open] summary .plus{transform:rotate(45deg)}
+.plus{transition:transform .2s cubic-bezier(0.2,0.8,0.2,1)}
+.lift{transition:transform .2s cubic-bezier(0.2,0.8,0.2,1)}
+.lift:hover{transform:translateY(-3px)}
+.navlink:hover{color:#FFD93D}
+@media (max-width:640px){.annot{display:none!important}.topnav{display:none!important}}
+@media (prefers-reduced-motion: reduce){.plus,.lift{transition:none}.lift:hover{transform:none}}
+
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}</style>
 </head>
 <body>
-<div style="background:#0E1411;color:#EDEFE9;font-family:Heebo,system-ui,sans-serif;direction:rtl;display:flex;flex-direction:column;align-items:center">
+<div dir="rtl" style="background:#F5F0E3;color:#1A2A23;font-family:Assistant,'Segoe UI','Arial Hebrew',Arial,sans-serif;font-size:17px;line-height:1.6;min-width:0;overflow:hidden">
 
-<div style="width:100%;max-width:1160px;box-sizing:border-box;padding:28px 32px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+<!-- ================= HERO (dark) ================= -->
+<div style="background:radial-gradient(900px 520px at 85% 0%,rgba(61,220,151,0.17),transparent 62%),radial-gradient(700px 480px at 0% 100%,rgba(255,217,61,0.07),transparent 60%),#0D1B16;color:#F5F0E3">
+
+<header style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:22px 24px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px">
 <div style="display:flex;align-items:center;gap:10px">
-<span style="font-size:28px;font-weight:800;letter-spacing:-0.5px">הבנתי</span>
-<span style="color:#F2C94C;font-size:22px" aria-hidden="true">★</span>
+<svg width="40" height="40" viewBox="0 0 120 120" role="img" aria-label="הלוגו של הבנתי"><path d="M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z" fill="#3DDC97"/><path d="M33 52L52 71L87 33" fill="none" stroke="#0D1B16" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<span style="font-family:'Secular One',Assistant,sans-serif;font-size:28px;line-height:1">הבנתי</span>
 </div>
-<div style="color:#9AA59D;font-size:15px">בטא · ל-Windows · קוד פתוח</div>
+<nav class="topnav" aria-label="ניווט בדף" style="display:flex;flex-wrap:wrap;gap:4px">
+<a class="navlink" href="#window" style="color:#CFE0D6;text-decoration:none;font-weight:700;font-size:15px;padding:10px 14px;border-radius:999px">החלון הצף</a>
+<a class="navlink" href="#how" style="color:#CFE0D6;text-decoration:none;font-weight:700;font-size:15px;padding:10px 14px;border-radius:999px">איך זה עובד</a>
+<a class="navlink" href="#video" style="color:#CFE0D6;text-decoration:none;font-weight:700;font-size:15px;padding:10px 14px;border-radius:999px">סרטון</a>
+<a class="navlink" href="#privacy" style="color:#CFE0D6;text-decoration:none;font-weight:700;font-size:15px;padding:10px 14px;border-radius:999px">פרטיות</a>
+<a class="navlink" href="#faq" style="color:#CFE0D6;text-decoration:none;font-weight:700;font-size:15px;padding:10px 14px;border-radius:999px">שאלות</a>
+</nav>
+</header>
+
+<section aria-labelledby="h1" style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:36px 24px 120px;display:flex;flex-wrap:wrap;gap:56px 56px;align-items:center">
+<div style="flex:1 1 440px;min-width:0;display:flex;flex-direction:column;gap:26px">
+<div style="align-self:flex-start;border:1px solid #2F4A3C;color:#9FDCC0;font-weight:700;font-size:14px;line-height:1.4;padding:4px 14px;border-radius:999px">בטא · ל-Windows · קוד פתוח</div>
+<h1 id="h1" style="margin:0;font-family:'Secular One',Assistant,sans-serif;font-weight:400;font-size:clamp(44px,7.2vw,88px);line-height:1.06;letter-spacing:-0.015em;text-wrap:balance">חלון קטן מעל הזום
+<span style="display:inline-block;margin-top:10px;background:#FFD93D;color:#0D1B16;padding:0 16px 4px;border-radius:8px;transform:rotate(-1.2deg)">שעונה על מה שפספסת.</span></h1>
+<p style="margin:0;font-size:20px;line-height:1.65;max-width:540px;color:#C9D8CF;text-wrap:pretty">הבנתי מתמללת את הרצאת הזום או ההקלטה שלך, ופותחת חלון צף שנשאר מעל ההרצאה, גם במסך מלא. כותבים שאלה ומקבלים תשובה מהדקות האחרונות ומהשקף שעל המסך, בלי להחליף חלון ובלי לאבד את החוט.</p>
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px 18px">
+<a href="https://github.com/pechter-roei41/hevanti/releases/latest/download/Hevanti-Setup.exe" style="background:#3DDC97;color:#06140E;text-decoration:none;font-weight:800;font-size:20px;padding:15px 28px;border-radius:14px;min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center;gap:10px;box-shadow:0 12px 30px -10px rgba(61,220,151,0.55)">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#06140E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>
+הורדה ל-Windows</a>
+<a href="#video" style="color:#F5F0E3;text-decoration:none;font-weight:700;font-size:17px;padding:12px 20px;border-radius:14px;border:1.5px solid #4C6B5B;min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center;gap:8px">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F5F0E3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg>
+צפו בסרטון</a>
+</div>
+<div style="color:#93AB9E;font-size:15px;line-height:1.6">Hevanti-Setup.exe · גרסת בטא · רישיון MIT</div>
 </div>
 
-<div style="width:100%;max-width:1160px;box-sizing:border-box;padding:48px 32px 72px;display:flex;flex-wrap:wrap;gap:56px;align-items:center">
-<div style="flex:1 1 460px;min-width:0;display:flex;flex-direction:column;gap:24px">
-<h1 style="margin:0;font-size:clamp(40px,6vw,64px);line-height:1.08;font-weight:800;letter-spacing:-1px">איבדת את החוט?<br><span style="color:#3FD08A">הבנתי תחזיר אותו.</span></h1>
-<p style="margin:0;font-size:20px;line-height:1.6;color:#C9D0CA;max-width:520px">הבנתי מתמללת את ההרצאה בזמן שהיא קורית, ומאפשרת לשאול שאלה בלי לצאת מהשיעור. פספסת דקה? לוחצים, ומקבלים סיכום של מה שנאמר.</p>
-<div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin-top:8px">
-<a class="cta" href="https://github.com/pechter-roei41/hevanti/releases/latest/download/Hevanti-Setup.exe" style="background:#3FD08A;color:#06140D;text-decoration:none;font-weight:700;font-size:20px;padding:16px 32px;border-radius:12px;min-height:44px;display:inline-flex;align-items:center;gap:10px">להורדה</a>
-<span style="color:#9AA59D;font-size:15px">Hevanti-Setup.exe · בלי הרשאות מנהל</span>
+<div style="flex:1.2 1 520px;min-width:0;position:relative;display:flex;flex-direction:column">
+
+<div class="annot" aria-hidden="true" style="position:absolute;left:6px;top:-26px;z-index:2;display:flex;flex-direction:column;align-items:flex-start;gap:0;transform:rotate(-4deg)">
+<div style="background:#FFD93D;color:#0D1B16;font-family:'Secular One',Assistant,sans-serif;font-size:20px;line-height:1.2;padding:8px 14px;border-radius:6px">זה החלון הצף</div>
+<svg width="80" height="236" viewBox="0 0 80 236" fill="none" stroke="#FFD93D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-inline-start:8px;margin-top:2px"><path d="M12 4C-2 70 6 150 54 214"/><path d="M36 218L56 218L52 196"/></svg>
+</div>
+
+<div aria-hidden="true" style="background:#FFFFFF;color:#0D1B16;border-radius:20px;padding:22px 26px 210px;box-sizing:border-box;min-height:140px;border:1px solid #DCE5DF">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+<div style="display:inline-block;background:#E9EEEA;color:#4E5C54;font-size:13px;font-weight:700;line-height:1.4;padding:3px 12px;border-radius:999px">הרצאה בזום · מסך מלא</div>
+<div style="display:flex;gap:6px"><span style="width:26px;height:20px;border-radius:4px;background:#D9E2DC;display:block"></span><span style="width:26px;height:20px;border-radius:4px;background:#C8D5CD;display:block"></span><span style="width:26px;height:20px;border-radius:4px;background:#D9E2DC;display:block"></span></div>
+</div>
+<div style="font-family:'Secular One',Assistant,sans-serif;font-size:32px;line-height:1.15;margin-top:20px">הגדרת הגבול</div>
+<div dir="ltr" style="font-family:Consolas,'Cascadia Mono',ui-monospace,monospace;font-size:18px;line-height:1.5;margin-top:8px;color:#2A3B33;text-align:right">lim f(x) = L,  x → a</div>
+<div style="margin-top:16px;display:flex;flex-direction:column;gap:8px"><span style="height:9px;width:68%;border-radius:5px;background:#E3E9E5;display:block"></span><span style="height:9px;width:52%;border-radius:5px;background:#E3E9E5;display:block"></span></div>
+<div style="margin-top:18px;background:#0D1B16;color:#F5F0E3;border-radius:10px;padding:9px 14px;font-size:15px;line-height:1.5;display:flex;align-items:center;gap:10px"><span style="width:8px;height:8px;border-radius:50%;background:#3DDC97;display:block;flex:none"></span><span>תמלול חי: ״...לכל אפסילון חיובי יש דלתא מתאימה.״</span></div>
+</div>
+
+<div role="region" aria-label="החלון הצף של הבנתי" style="width:min(450px,94%);margin-top:-196px;margin-inline-start:auto;margin-inline-end:18px;box-sizing:border-box;background:#0D1B16;color:#F5F0E3;border:1px solid #33503F;border-radius:18px;padding:16px 18px 18px;display:flex;flex-direction:column;gap:13px;box-shadow:0 34px 70px -18px rgba(0,0,0,0.75),0 0 0 6px rgba(61,220,151,0.10);transform:rotate(-0.8deg)">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+<div style="display:flex;align-items:center;gap:9px">
+<span aria-hidden="true" style="width:10px;height:10px;border-radius:50%;background:#FF7A5C;display:block"></span>
+<div style="font-weight:800;font-size:15px;line-height:1.4">חשבון אינפיניטסימלי 2</div>
+</div>
+<div style="display:flex;align-items:center;gap:6px">
+<span id="nowChip" hidden style="background:#FFD93D;color:#0D1B16;font-weight:800;font-size:14px;line-height:1.4;padding:3px 12px;border-radius:999px">★ סומן</span>
+<button type="button" id="markBtn" aria-pressed="false" aria-label="סמן את הרגע הזה" style="width:44px;height:44px;border:1.5px solid #33503F;background:transparent;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0">
+<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.1l-5.7 3.2 1.2-6.4-4.7-4.4 6.4-.8z" fill="#FFD93D" stroke="#FFD93D" stroke-width="1.6" stroke-linejoin="round"/></svg>
+</button>
+</div>
+</div>
+<div role="group" aria-label="מה פספסתי" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+<span style="font-size:14px;font-weight:700;color:#9DB3A6">מה פספסתי?</span>
+<span id="pillsMount" style="display:contents"></span>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:stretch">
+<div style="flex:1 1 180px;min-width:0;background:#16291F;border:1px solid #2C4337;border-radius:12px;padding:10px 14px;font-size:16px;line-height:1.5;min-height:44px;box-sizing:border-box;display:flex;align-items:center;color:#E4EDE7">מה זה דלתא ואפסילון?</div>
+<button type="button" id="askBtn" style="min-height:44px;padding:0 18px;border-radius:12px;background:#3DDC97;color:#06140E;border:0;font-family:inherit;font-weight:800;font-size:16px;cursor:pointer">תשובה כאן</button>
+</div>
+<div id="ansBox" hidden role="status" style="background:#1B3B2D;border:1px solid #2F6B50;border-radius:12px;padding:12px 14px;font-size:16px;line-height:1.55;color:#F5F0E3">
+<div id="ansText"></div>
+<div id="ansSrc" style="margin-top:6px;font-size:14px;color:#8EF0C3;font-weight:700"></div>
+</div>
+<div id="hintBox" style="background:#16291F;border-radius:12px;padding:12px 14px;font-size:15px;line-height:1.55;color:#A9BDB2">לחצו על &quot;תשובה כאן&quot;, על אחד מכפתורי הדקות, או על ★ כדי לסמן רגע.</div>
+</div>
+<p style="margin:16px 4px 0;font-size:14px;line-height:1.5;color:#93AB9E">דוגמה להמחשה: החלון מעל הרצאה במסך מלא. בהרצאה אמיתית התשובה נשענת על התמלול ועל השקף שלכם.</p>
+</div>
+</section>
+</div>
+
+<!-- ================= MARKER TAPE ================= -->
+<div aria-hidden="true" style="margin-top:-34px;position:relative;z-index:2">
+<div style="background:#FFD93D;color:#0D1B16;transform:rotate(-1.4deg);margin:0 -24px;padding:16px 24px;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 30px;font-family:'Secular One',Assistant,sans-serif;font-size:22px;line-height:1.3;box-shadow:0 10px 30px -14px rgba(0,0,0,0.5)">
+<span>זום</span><span>★</span><span>הקלטות</span><span>★</span><span>פנופטו</span><span>★</span><span>יוטיוב</span><span>★</span><span>עברית</span><span>★</span><span>אנגלית</span>
 </div>
 </div>
 
-<div style="flex:1 1 400px;min-width:0;display:flex;justify-content:center">
-<div style="width:100%;max-width:440px;background:#161E19;border:1px solid #28352D;border-radius:16px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.45)">
-<div style="padding:12px 18px;border-bottom:1px solid #28352D;display:flex;justify-content:space-between;align-items:center;font-size:14px;color:#9AA59D">
-<span style="font-weight:700;color:#EDEFE9">הבנתי · חלון שאלות</span>
-<span>מקליט</span>
+<main>
+
+<!-- ================= FLOATING WINDOW ================= -->
+<section id="window" aria-labelledby="h-win" style="background-color:#F5F0E3;background-image:radial-gradient(#D9D1B8 1.2px,transparent 1.2px);background-size:24px 24px">
+<div style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:120px 24px 96px;display:flex;flex-direction:column;gap:52px">
+<div style="display:flex;flex-direction:column;gap:14px;max-width:760px">
+<div style="align-self:flex-start;background:#0D1B16;color:#FFD93D;font-weight:800;font-size:14px;line-height:1.4;padding:4px 14px;border-radius:999px">מה שמייחד את הבנתי</div>
+<h2 id="h-win" style="margin:0;font-family:'Secular One',Assistant,sans-serif;font-weight:400;font-size:clamp(34px,5.4vw,60px);line-height:1.08;letter-spacing:-0.01em;text-wrap:balance">שואלים בלי <span style="background:linear-gradient(transparent 56%,#FFD93D 56%,#FFD93D 92%,transparent 92%)">לעזוב את ההרצאה</span></h2>
+<p style="margin:0;font-size:20px;line-height:1.65;color:#33433B;text-wrap:pretty">לשאול אפליקציית AI באמצע שיעור אומר לצאת מהזום, להעתיק, להדביק ולנסות להבין איפה היינו. החלון של הבנתי נשאר מעל ההרצאה, ולכן השאלה עולה בשניות וההקשבה ממשיכה.</p>
 </div>
-<div style="padding:18px;display:flex;flex-direction:column;gap:12px;font-size:15px;line-height:1.55">
-<div style="display:flex;gap:12px;color:#9AA59D"><span style="font-family:ui-monospace,Consolas,monospace;font-size:13px;padding-top:2px">12:38</span><span>נעבור עכשיו להגדרה של גבול של פונקציה בנקודה.</span></div>
-<div style="display:flex;gap:12px;background:rgba(242,201,76,0.14);border-radius:8px;padding:8px 10px;margin:0 -10px;color:#EDEFE9"><span style="font-family:ui-monospace,Consolas,monospace;font-size:13px;padding-top:2px;color:#9AA59D">12:41</span><span><span style="color:#F2C94C" aria-hidden="true">★</span> שימו לב, זה מה שיהיה במבחן.</span></div>
-<div style="background:#0E1411;border:1px solid #28352D;border-radius:10px;padding:12px 14px;color:#9AA59D">מה זה אומר שהגבול קיים?</div>
-<div style="background:#12301F;border-radius:10px;padding:12px 14px;color:#EDEFE9">הגבול קיים כשהערכים מתקרבים למספר אחד מכל כיוון, כפי שהמרצה אמר לפני רגע.
-<div style="margin-top:6px;font-size:13px;color:#8FD9B1">מבוסס על 12:38</div></div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:22px;align-items:stretch">
+<div style="background:#EBE4D2;border:2px dashed #BDB394;border-radius:22px;padding:30px 28px;display:flex;flex-direction:column;gap:16px">
+<div style="font-family:'Secular One',Assistant,sans-serif;font-size:26px;line-height:1.2;color:#4A5A51">בלי חלון צף</div>
+<ol style="margin:0;padding:0 24px 0 0;display:flex;flex-direction:column;gap:10px;color:#44534B;font-size:18px">
+<li>יוצאים מחלון הזום</li>
+<li>מעתיקים את מה שנאמר, אם הספקתם</li>
+<li>מדביקים באפליקציית AI וכותבים שאלה</li>
+<li>חוזרים להרצאה ומחפשים איפה היא עומדת</li>
+</ol>
 </div>
-</div>
+<div style="background:#0D1B16;color:#F5F0E3;border-radius:22px;padding:30px 28px;display:flex;flex-direction:column;gap:16px;box-shadow:0 26px 50px -22px rgba(13,27,22,0.7)">
+<div style="font-family:'Secular One',Assistant,sans-serif;font-size:26px;line-height:1.2;color:#3DDC97">עם הבנתי</div>
+<ol style="margin:0;padding:0 24px 0 0;display:flex;flex-direction:column;gap:10px;font-size:18px">
+<li><span dir="ltr" style="unicode-bidi:isolate;font-family:Consolas,'Cascadia Mono',ui-monospace,monospace;font-size:15px;background:#1F3A2E;color:#8EF0C3;padding:2px 8px;border-radius:5px">Ctrl+Alt+Q</span> והחלון נפתח מעל ההרצאה</li>
+<li>כותבים שאלה, או לוחצים &quot;7 דק׳&quot;</li>
+<li>התשובה מופיעה שם, עם השורה בתמלול שעליה היא נשענת</li>
+<li>סוגרים וממשיכים להקשיב</li>
+</ol>
 </div>
 </div>
 
-<div style="width:100%;background:#121A15;display:flex;justify-content:center">
-<div style="width:100%;max-width:1160px;box-sizing:border-box;padding:72px 32px;display:flex;flex-direction:column;gap:40px">
-<h2 style="margin:0;font-size:36px;font-weight:800;letter-spacing:-0.5px">למה צריך את זה</h2>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px">
-<div style="background:#161E19;border:1px solid #28352D;border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:12px">
-<div style="font-size:22px;font-weight:700">אי אפשר גם להקשיב וגם לרשום</div>
-<div style="font-size:17px;line-height:1.6;color:#C9D0CA">כשכותבים, מפספסים את המשפט הבא. כשמקשיבים, שוכחים מה נאמר. הבנתי רושמת בשבילך, ואתה מקשיב.</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(270px,100%),1fr));gap:22px">
+<div class="lift" style="background:#FFFFFF;border:1px solid #D8D0B8;border-radius:20px;padding:26px;display:flex;flex-direction:column;gap:12px">
+<div style="width:48px;height:48px;border-radius:14px;background:#FFD93D;display:flex;align-items:center;justify-content:center">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0D1B16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><rect x="11" y="11" width="8" height="5" rx="1" fill="#0D1B16"/><path d="M8 21h8"/></svg>
 </div>
-<div style="background:#161E19;border:1px solid #28352D;border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:12px">
-<div style="font-size:22px;font-weight:700">שואלים בלי לעצור את השיעור</div>
-<div style="font-size:17px;line-height:1.6;color:#C9D0CA">חלון קטן שצף מעל המסך נפתח ב-Ctrl+Alt+Q. התשובה נשענת על מה שנאמר בדקות האחרונות ועל השקף הנוכחי, ומראה על איזו שורה בתמלול היא מבוססת.</div>
+<h3 style="margin:0;font-size:21px;font-weight:800;line-height:1.3">מעל הכול, גם במסך מלא</h3>
+<p style="margin:0;color:#33433B;font-size:17px;line-height:1.6">החלון תמיד מעל, כך שהרצאה במסך מלא לא מסתירה אותו.</p>
 </div>
-<div style="background:#161E19;border:1px solid #28352D;border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:12px">
-<div style="font-size:22px;font-weight:700">מסמנים ★ וממשיכים</div>
-<div style="font-size:17px;line-height:1.6;color:#C9D0CA">רגע חשוב? לוחצים על כוכב. אחרי ההרצאה מחכה רשימה של כל הסימונים, עם מה שנאמר לפניהם, והקלטה שנפתחת 8 שניות לפני.</div>
+<div class="lift" style="background:#FFFFFF;border:1px solid #D8D0B8;border-radius:20px;padding:26px;display:flex;flex-direction:column;gap:12px">
+<div style="width:48px;height:48px;border-radius:14px;background:#3DDC97;display:flex;align-items:center;justify-content:center">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0D1B16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
 </div>
-<div style="background:#161E19;border:1px solid #28352D;border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:12px">
-<div style="font-size:22px;font-weight:700">מבחן? הכול כבר מסודר</div>
-<div style="font-size:17px;line-height:1.6;color:#C9D0CA">סיכומי הרצאות, מבחני דוגמה ודפי נוסחאות, לכל קורס בנפרד. אפשר גם לחבר את Claude, ChatGPT או Gemini לתיקיית הקורסים.</div>
+<h3 style="margin:0;font-size:21px;font-weight:800;line-height:1.3">עונה ממה שנאמר עכשיו</h3>
+<p style="margin:0;color:#33433B;font-size:17px;line-height:1.6">התשובה מבוססת על הדקות האחרונות ועל השקף שעל המסך. שלושה כפתורים מוכנים: 3, 7 או 15 דקות אחורה.</p>
+</div>
+<div class="lift" style="background:#FFFFFF;border:1px solid #D8D0B8;border-radius:20px;padding:26px;display:flex;flex-direction:column;gap:12px">
+<svg width="48" height="48" viewBox="0 0 56 56" role="img" aria-label="העיגול הירוק בקצה המסך"><circle cx="28" cy="28" r="28" fill="#0F7A52"/><g transform="translate(14 14) scale(0.233)"><path d="M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z" fill="none" stroke="#F5F0E3" stroke-width="9"/><path d="M33 52L52 71L87 33" fill="none" stroke="#FFD93D" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/></g><circle cx="47" cy="9" r="6" fill="#E5533A" stroke="#F5F0E3" stroke-width="2"/></svg>
+<h3 style="margin:0;font-size:21px;font-weight:800;line-height:1.3">עיגול בקצה המסך</h3>
+<p style="margin:0;color:#33433B;font-size:17px;line-height:1.6">לחיצה עליו פותחת את החלון, ועוד לחיצה סוגרת. הנקודה האדומה מראה שהרצאה מוקלטת.</p>
 </div>
 </div>
 </div>
+</section>
+
+<!-- ================= SOURCES ================= -->
+<section id="sources" aria-labelledby="h-src" style="background:#EBE4D2;border-top:1px solid #D8D0B8;border-bottom:1px solid #D8D0B8">
+<div style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:96px 24px;display:flex;flex-direction:column;gap:36px">
+<div style="display:flex;flex-direction:column;gap:12px;max-width:700px">
+<h2 id="h-src" style="margin:0;font-family:'Secular One',Assistant,sans-serif;font-weight:400;font-size:clamp(32px,4.8vw,52px);line-height:1.1;text-wrap:balance">בנוי להרצאות זום ולהקלטות</h2>
+<p style="margin:0;font-size:19px;color:#33433B;text-wrap:pretty">הבנתי שומעת את מה שהמחשב משמיע, ולכן היא עובדת עם כל הרצאה שרצה אצלך על המסך.</p>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr));gap:18px">
+<div style="background:#0D1B16;color:#F5F0E3;border-radius:20px;padding:26px;display:flex;flex-direction:column;gap:12px">
+<div style="width:48px;height:48px;border-radius:14px;background:#3DDC97;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0D1B16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/></svg></div>
+<h3 style="margin:0;font-size:21px;font-weight:800;line-height:1.3">הרצאת זום חיה</h3>
+<p style="margin:0;color:#C9D8CF;font-size:16px;line-height:1.6">מפעילים תמלול לפני ההרצאה. כל שקף חדש שעולה על המסך נשמר כתמונה.</p>
+</div>
+<div style="background:#FFFFFF;border:1px solid #D8D0B8;border-radius:20px;padding:26px;display:flex;flex-direction:column;gap:12px">
+<div style="width:48px;height:48px;border-radius:14px;background:#FFD93D;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0D1B16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l5.5 3.5-5.5 3.5z"/></svg></div>
+<h3 style="margin:0;font-size:21px;font-weight:800;line-height:1.3">הקלטת הרצאה</h3>
+<p style="margin:0;color:#33433B;font-size:16px;line-height:1.6">קובץ, גרירה לחלון או קישור (פנופטו ועוד). ההקלטה מתנגנת בנגן שמסונכרן לתמלול.</p>
+</div>
+<div style="background:#FFFFFF;border:1px solid #D8D0B8;border-radius:20px;padding:26px;display:flex;flex-direction:column;gap:12px">
+<div style="width:48px;height:48px;border-radius:14px;background:#FF8A6B;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0D1B16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="4"/><path d="M10.5 9.5l4 2.5-4 2.5z"/></svg></div>
+<h3 style="margin:0;font-size:21px;font-weight:800;line-height:1.3">יוטיוב</h3>
+<p style="margin:0;color:#33433B;font-size:16px;line-height:1.6">מתנגן בנגן הרשמי של יוטיוב בתוך הבנתי, ואף פעם לא מורד.</p>
+</div>
+<div style="background:#FFFFFF;border:1px solid #D8D0B8;border-radius:20px;padding:26px;display:flex;flex-direction:column;gap:12px">
+<div style="width:48px;height:48px;border-radius:14px;background:#BFE6D2;display:flex;align-items:center;justify-content:center;font-family:'Secular One',Assistant,sans-serif;font-size:21px;line-height:1;color:#0D1B16">א/A</div>
+<h3 style="margin:0;font-size:21px;font-weight:800;line-height:1.3">עברית ואנגלית</h3>
+<p style="margin:0;color:#33433B;font-size:16px;line-height:1.6">תמלול בשתי השפות, כולל מונחים של הקורס שאפשר להוסיף למילון.</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ================= HOW (dark) ================= -->
+<section id="how" aria-labelledby="h-how" style="background:#0D1B16;color:#F5F0E3">
+<div style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:104px 24px;display:flex;flex-direction:column;gap:48px">
+<h2 id="h-how" style="margin:0;font-family:'Secular One',Assistant,sans-serif;font-weight:400;font-size:clamp(34px,5.2vw,58px);line-height:1.08;text-wrap:balance">שלוש פעולות בהרצאה. <span style="color:#FFD93D">זה הכול.</span></h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:22px">
+
+<div style="background:#16291F;border:1px solid #2A4437;border-radius:22px;padding:30px 28px;display:flex;flex-direction:column;gap:14px">
+<div aria-hidden="true" style="font-family:'Secular One',Assistant,sans-serif;font-size:84px;line-height:0.9;color:#3DDC97">1</div>
+<h3 style="margin:0;font-size:23px;font-weight:800;line-height:1.3">לוחצים &quot;התחל תמלול&quot;</h3>
+<p style="margin:0;color:#C9D8CF">פותחים את הזום או מנגנים הקלטה. חלון קטן באמצע המסך: בוחרים קורס וסוג הרצאה, ולוחצים. הבנתי מתמללת ושומרת תמונה של כל שקף חדש.</p>
 </div>
 
-<div style="width:100%;max-width:1160px;box-sizing:border-box;padding:72px 32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:32px">
-<div style="display:flex;flex-direction:column;gap:8px">
-<div style="font-size:20px;font-weight:700;color:#3FD08A">נשאר אצלך</div>
-<div style="font-size:17px;line-height:1.6;color:#C9D0CA">התמלולים והצילומי מסך נשמרים במחשב שלך. אין שרת של הבנתי.</div>
-</div>
-<div style="display:flex;flex-direction:column;gap:8px">
-<div style="font-size:20px;font-weight:700;color:#3FD08A">קוד פתוח</div>
-<div style="font-size:17px;line-height:1.6;color:#C9D0CA">לתשובות משתמשים במפתח Gemini חינמי משלך. בלי מפתח, אפשר להעתיק את השאלה ל-ChatGPT, Gemini או Claude.</div>
-</div>
-<div style="display:flex;flex-direction:column;gap:8px">
-<div style="font-size:20px;font-weight:700;color:#3FD08A">בעברית ובאנגלית</div>
-<div style="font-size:17px;line-height:1.6;color:#C9D0CA">הרצאה חיה, קובץ מוקלט, קישור או סרטון יוטיוב, עם נגן שמסונכרן לתמלול.</div>
-</div>
+<div style="background:#16291F;border:1px solid #2A4437;border-radius:22px;padding:30px 28px;display:flex;flex-direction:column;gap:14px">
+<div aria-hidden="true" style="font-family:'Secular One',Assistant,sans-serif;font-size:84px;line-height:0.9;color:#FFD93D">2</div>
+<h3 style="margin:0;font-size:23px;font-weight:800;line-height:1.3">שואלים בלי לצאת מהשיעור</h3>
+<p style="margin:0;color:#C9D8CF">החלון הצף נפתח מעל ההרצאה, גם במסך מלא, ב-<span dir="ltr" style="unicode-bidi:isolate;font-family:Consolas,'Cascadia Mono',ui-monospace,monospace;font-size:15px;background:#0D1B16;color:#8EF0C3;padding:1px 8px;border-radius:5px">Ctrl+Alt+Q</span> או בעיגול הירוק שבקצה המסך. התשובה מציינת באיזו שורה בתמלול היא נשענת.</p>
 </div>
 
-<div style="width:100%;background:#12301F;display:flex;justify-content:center">
-<div style="width:100%;max-width:1160px;box-sizing:border-box;padding:80px 32px;display:flex;flex-direction:column;align-items:center;gap:24px;text-align:center">
-<h2 style="margin:0;font-size:clamp(32px,5vw,48px);font-weight:800;letter-spacing:-0.5px">ההרצאה הבאה שלך מתחילה עוד מעט</h2>
-<p style="margin:0;font-size:19px;line-height:1.6;color:#C9D0CA;max-width:520px">מורידים, מתקינים, ולוחצים על הקלטה. ההתקנה כוללת הכול.</p>
-<a class="cta" href="https://github.com/pechter-roei41/hevanti/releases/latest/download/Hevanti-Setup.exe" style="background:#3FD08A;color:#06140D;text-decoration:none;font-weight:700;font-size:20px;padding:16px 36px;border-radius:12px;min-height:44px;display:inline-flex;align-items:center">להורדה</a>
-<div style="color:#A9B8AE;font-size:15px">ל-Windows · גרסת בטא</div>
-</div>
-</div>
-
-<div style="width:100%;max-width:1160px;box-sizing:border-box;padding:32px;color:#9AA59D;font-size:14px;line-height:1.7;display:flex;flex-direction:column;gap:6px">
-<div>הקובץ עדיין לא חתום דיגיטלית, ולכן Windows עשוי להציג פעם אחת אזהרה "Windows protected your PC". בוחרים "מידע נוסף" ואז "הפעל בכל זאת".</div>
-<div>האחריות לעמוד בכללי ההקלטה של המוסד ושל המרצה היא של המשתמש. התוכנה ניתנת ללא אחריות, ברישיון MIT.</div>
-<div><a href="https://github.com/pechter-roei41/hevanti/blob/main/PRIVACY.md">מדיניות פרטיות</a> · <a href="https://github.com/pechter-roei41/hevanti/blob/main/TERMS.md">תנאי שימוש</a> · <a href="https://github.com/pechter-roei41/hevanti">קוד המקור ב-GitHub</a></div>
+<div style="background:#16291F;border:1px solid #2A4437;border-radius:22px;padding:30px 28px;display:flex;flex-direction:column;gap:14px">
+<div aria-hidden="true" style="font-family:'Secular One',Assistant,sans-serif;font-size:84px;line-height:0.9;color:#FF8A6B">3</div>
+<h3 style="margin:0;font-size:23px;font-weight:800;line-height:1.3">מסמנים ★ וממשיכים להקשיב</h3>
+<p style="margin:0;color:#C9D8CF">לחיצה אחת, או <span dir="ltr" style="unicode-bidi:isolate;font-family:Consolas,'Cascadia Mono',ui-monospace,monospace;font-size:15px;background:#0D1B16;color:#8EF0C3;padding:1px 8px;border-radius:5px">Ctrl+Alt+M</span>, ועוברים הלאה. אחרי ההרצאה מחכה רשימת סימונים עם מה שנאמר רגע לפני, וההקלטה נפתחת 8 שניות מוקדם יותר.</p>
 </div>
 
 </div>
+</div>
+</section>
+
+<!-- ================= VIDEO ================= -->
+<section id="video" aria-labelledby="h-video" style="background-color:#F5F0E3;background-image:radial-gradient(#D9D1B8 1.2px,transparent 1.2px);background-size:24px 24px">
+<div style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:104px 24px 96px;display:flex;flex-direction:column;gap:36px">
+<div style="display:flex;flex-direction:column;gap:12px;max-width:680px">
+<h2 id="h-video" style="margin:0;font-family:'Secular One',Assistant,sans-serif;font-weight:400;font-size:clamp(32px,4.8vw,52px);line-height:1.1;text-wrap:balance">רואים את זה <span style="background:linear-gradient(transparent 56%,#FFD93D 56%,#FFD93D 92%,transparent 92%)">בפעולה</span></h2>
+<p style="margin:0;font-size:19px;color:#33433B;text-wrap:pretty">חצי דקה, בלי קול, עם כתוביות על המסך: הרצאה במסך מלא, שאלה, ו"מה פספסתי".</p>
+</div>
+<div style="display:grid;grid-template-columns:minmax(0,880px);gap:36px">
+<div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+<div style="background:#0D1B16;border-radius:24px;padding:14px;box-shadow:0 40px 70px -30px rgba(13,27,22,0.75)">
+<video controls preload="none" poster="assets/teaser-poster.jpg" src="assets/teaser.mp4" aria-label="סרטון קצר של הבנתי, חצי דקה, בלי קול" style="display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:12px;background:#000000"></video>
+</div>
+<h3 style="margin:0;font-size:22px;font-weight:800;line-height:1.3">חצי דקה: הסחת דעת בהרצאה, ומה הבנתי עושה</h3>
+<p style="margin:0;font-size:17px;color:#33433B;text-wrap:pretty">הרצאה במסך מלא, העיגול הירוק בקצה המסך, שאלה, "מה פספסתי" של 7 דקות וסימון ★.</p>
+<p style="margin:0;font-size:14px;line-height:1.5;color:#55635A">ההרצאה בסרטון: דביר רוס, רישיון CC BY.</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ================= AFTER ================= -->
+<section aria-labelledby="h-after" style="background:#EBE4D2;border-top:1px solid #D8D0B8;border-bottom:1px solid #D8D0B8">
+<div style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:96px 24px;display:flex;flex-wrap:wrap;gap:44px 64px;align-items:center">
+<div style="flex:1 1 380px;min-width:0;display:flex;flex-direction:column;gap:18px">
+<h2 id="h-after" style="margin:0;font-family:'Secular One',Assistant,sans-serif;font-weight:400;font-size:clamp(32px,4.8vw,52px);line-height:1.1;text-wrap:balance">ואחרי ההרצאה, לפני המבחן</h2>
+<p style="margin:0;font-size:19px;color:#33433B;text-wrap:pretty">כל ההרצאות של קורס נשמרות יחד: התמלול, תמונות השקפים והרגעים שסימנתם ב-★, כל אחד עם מה שנאמר רגע לפניו. נסו בדוגמה: לחצו על כוכב ליד שורה.</p>
+<ul style="margin:0;padding:0 22px 0 0;display:flex;flex-direction:column;gap:10px;color:#33433B;font-size:18px">
+<li>סיכום, מבחן לדוגמה ודף נוסחאות, לכל קורס בנפרד</li>
+<li>חיפוש בכל מה שנאמר בקורס</li>
+<li>אפשר לחבר את אפליקציית ה-AI שלך לתיקיית הקורסים, והיא תקרא את ההרצאה בעצמה</li>
+</ul>
+</div>
+<div style="flex:1.1 1 460px;min-width:0">
+<div style="background:#FFFFFF;border:1px solid #D8D0B8;border-radius:20px;overflow:hidden;transform:rotate(0.8deg);box-shadow:0 30px 50px -28px rgba(13,27,22,0.45)">
+<div aria-hidden="true" style="display:flex;justify-content:space-around;padding:10px 24px 0;background:#0D1B16;height:28px;box-sizing:border-box">
+<span style="width:12px;height:12px;border-radius:50%;background:#EBE4D2;display:block"></span>
+<span style="width:12px;height:12px;border-radius:50%;background:#EBE4D2;display:block"></span>
+<span style="width:12px;height:12px;border-radius:50%;background:#EBE4D2;display:block"></span>
+<span style="width:12px;height:12px;border-radius:50%;background:#EBE4D2;display:block"></span>
+<span style="width:12px;height:12px;border-radius:50%;background:#EBE4D2;display:block"></span>
+<span style="width:12px;height:12px;border-radius:50%;background:#EBE4D2;display:block"></span>
+</div>
+<div style="padding:16px 22px 10px;font-family:'Secular One',Assistant,sans-serif;font-size:20px;line-height:1.3">חשבון אינפיניטסימלי 2 · תמלול</div>
+<div style="padding:4px 12px 18px;background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 55px,#EFE9D8 55px,#EFE9D8 56px)">
+<span id="linesMount" style="display:contents"></span>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ================= PRIVACY (dark) ================= -->
+<section id="privacy" aria-labelledby="h-priv" style="background:#0D1B16;color:#F5F0E3">
+<div style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:104px 24px;display:flex;flex-direction:column;gap:40px">
+<div style="display:flex;flex-direction:column;gap:12px;max-width:700px">
+<h2 id="h-priv" style="margin:0;font-family:'Secular One',Assistant,sans-serif;font-weight:400;font-size:clamp(34px,5.2vw,58px);line-height:1.08;text-wrap:balance">נשאר <span style="color:#FFD93D">אצלך</span></h2>
+<p style="margin:0;font-size:19px;color:#C9D8CF;text-wrap:pretty">אין שרת של הבנתי ואין מודל משלה. התמלולים והתמונות נשמרים במחשב שלך. החוצה יוצא רק מה שמפורט כאן ובמדיניות הפרטיות.</p>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:20px">
+
+<div style="background:#16291F;border:1px solid #2A4437;border-radius:20px;padding:26px;display:flex;flex-direction:column;gap:12px">
+<div style="width:48px;height:48px;border-radius:14px;background:#0D1B16;border:1px solid #2F6B50;display:flex;align-items:center;justify-content:center">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3DDC97" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+</div>
+<h3 style="margin:0;font-size:21px;font-weight:800;line-height:1.3">נשלח ל-Google רק עם המפתח שלך</h3>
+<p style="margin:0;color:#C9D8CF;font-size:16px;line-height:1.6">כששואלים: השאלה, הדקות האחרונות והשקף נשלחים ל-Gemini של גוגל, עם המפתח האישי שלך. אחרי שמזינים מפתח, שקפים שאינם טקסט מודפס ברור (נוסחאות, כתב יד) נשלחים לקריאה גם בלי לחיצה, ואפשר לכבות את זה בהגדרות. המפתח נשמר מוצפן במחשב.</p>
+</div>
+
+<div style="background:#16291F;border:1px solid #2A4437;border-radius:20px;padding:26px;display:flex;flex-direction:column;gap:12px">
+<div style="width:48px;height:48px;border-radius:14px;background:#0D1B16;border:1px solid #2F6B50;display:flex;align-items:center;justify-content:center">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3DDC97" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 9a4 4 0 0 1 0 6"/></svg>
+</div>
+<h3 style="margin:0;font-size:21px;font-weight:800;line-height:1.3">שמע המחשב, לא המיקרופון</h3>
+<p style="margin:0;color:#C9D8CF;font-size:16px;line-height:1.6">הבנתי קולטת את מה שהמחשב משמיע, כמו זום או קובץ מוקלט. המיקרופון לא נפתח אף פעם.</p>
+</div>
+
+<div style="background:#16291F;border:1px solid #2A4437;border-radius:20px;padding:26px;display:flex;flex-direction:column;gap:12px">
+<div style="width:48px;height:48px;border-radius:14px;background:#0D1B16;border:1px solid #2F6B50;display:flex;align-items:center;justify-content:center">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3DDC97" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/></svg>
+</div>
+<h3 style="margin:0;font-size:21px;font-weight:800;line-height:1.3">קוד פתוח, ברישיון MIT</h3>
+<p style="margin:0;color:#C9D8CF;font-size:16px;line-height:1.6">כל הקוד ב-GitHub. אפשר לקרוא אותו, לבדוק מה הוא עושה, ולהציע תיקון.</p>
+</div>
+
+</div>
+</div>
+</section>
+
+<!-- ================= FAQ ================= -->
+<section id="faq" aria-labelledby="h-faq" style="background-color:#F5F0E3;background-image:radial-gradient(#D9D1B8 1.2px,transparent 1.2px);background-size:24px 24px">
+<div style="max-width:880px;margin:0 auto;box-sizing:border-box;padding:104px 24px 96px;display:flex;flex-direction:column;gap:32px">
+<h2 id="h-faq" style="margin:0;font-family:'Secular One',Assistant,sans-serif;font-weight:400;font-size:clamp(32px,4.8vw,52px);line-height:1.1;text-wrap:balance">שאלות שכדאי לשאול לפני שמורידים</h2>
+<div style="display:flex;flex-direction:column;gap:12px">
+
+<details style="background:#FFFFFF;border:1px solid #D8D0B8;border-radius:16px;padding:0 22px">
+<summary style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:60px;font-weight:800;font-size:19px;line-height:1.4"><span>זה עובד עם הרצאות זום?</span><svg class="plus" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0F7A52" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+<p style="margin:0 0 20px;color:#33433B;text-wrap:pretty">כן. הבנתי קולטת את מה שהמחשב משמיע, ולכן היא עובדת עם הרצאת זום חיה ועם הקלטות. מתחילים תמלול לפני ההרצאה, והחלון הצף נשאר מעל הזום גם במסך מלא. הכללים של המרצה והמוסד חלים גם כאן: בדקו אותם לפני שמקליטים.</p>
+</details>
+
+<details style="background:#FFFFFF;border:1px solid #D8D0B8;border-radius:16px;padding:0 22px">
+<summary style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:60px;font-weight:800;font-size:19px;line-height:1.4"><span>צריך מפתח Gemini?</span><svg class="plus" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0F7A52" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+<p style="margin:0 0 20px;color:#33433B;text-wrap:pretty">כדי לקבל תשובות בתוך הבנתי, כן: מפתח אישי מ-Google AI Studio, בלי כרטיס אשראי, והמכסה היא של גוגל. בלי מפתח אפשר להעתיק את השאלה עם חמש הדקות האחרונות ל-ChatGPT, Gemini או Claude.</p>
+</details>
+
+<details style="background:#FFFFFF;border:1px solid #D8D0B8;border-radius:16px;padding:0 22px">
+<summary style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:60px;font-weight:800;font-size:19px;line-height:1.4"><span>מה קורה בהפעלה הראשונה?</span><svg class="plus" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0F7A52" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+<p style="margin:0 0 20px;color:#33433B;text-wrap:pretty">בהפעלה הראשונה הבנתי מורידה את מודל התמלול (<span dir="ltr" style="unicode-bidi:isolate">1.6 GB</span> בערך לכל שפה, עברית ואנגלית בנפרד, צריך אינטרנט). בהתקנה היא מבקשת רשות פעם אחת להתקין את Tesseract, שקורא טקסט משקפים. תמיכה בכרטיס מסך היא התקנה אופציונלית, חד-פעמית. בכל הפעלה היא גם בודקת ב-GitHub מהי הגרסה האחרונה, בלי לשלוח מידע עליך.</p>
+</details>
+
+<details style="background:#FFFFFF;border:1px solid #D8D0B8;border-radius:16px;padding:0 22px">
+<summary style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:60px;font-weight:800;font-size:19px;line-height:1.4"><span>יש לי מחשב נייד רגיל. זה יעבוד?</span><svg class="plus" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0F7A52" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+<p style="margin:0 0 20px;color:#33433B;text-wrap:pretty">הבנתי נבנתה למחשב נייד רגיל, בלי כרטיס מסך. התמלול רץ על המעבד. עם כרטיס NVIDIA הוא מהיר יותר ומדביק קצב גם בהרצאות ארוכות, והבנתי תציע התקנה בלחיצה אחת.</p>
+</details>
+
+<details style="background:#FFFFFF;border:1px solid #D8D0B8;border-radius:16px;padding:0 22px">
+<summary style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:60px;font-weight:800;font-size:19px;line-height:1.4"><span>אפשר לתמלל הקלטה או סרטון יוטיוב?</span><svg class="plus" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0F7A52" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+<p style="margin:0 0 20px;color:#33433B;text-wrap:pretty">כן. הרצאה חיה, קובץ מוקלט, קישור או יוטיוב. הקלטות מתנגנות בנגן שמסונכרן לתמלול, ויוטיוב מתנגן בנגן הרשמי שלו ואף פעם לא מורד.</p>
+</details>
+
+<details style="background:#FFFFFF;border:1px solid #D8D0B8;border-radius:16px;padding:0 22px">
+<summary style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:60px;font-weight:800;font-size:19px;line-height:1.4"><span>מותר להקליט את ההרצאה?</span><svg class="plus" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0F7A52" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+<p style="margin:0 0 20px;color:#33433B;text-wrap:pretty">זו אחריות שלך: לכל מוסד ולכל מרצה יש כללים משלהם, ואנחנו לא מחזיקים רשימה של מה מותר איפה. הבנתי ניתנת כמו שהיא, ללא אחריות.</p>
+</details>
+
+<details style="background:#FFFFFF;border:1px solid #D8D0B8;border-radius:16px;padding:0 22px">
+<summary style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:60px;font-weight:800;font-size:19px;line-height:1.4"><span>Windows מזהיר אותי בהתקנה</span><svg class="plus" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0F7A52" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+<p style="margin:0 0 20px;color:#33433B;text-wrap:pretty">הקובץ עדיין לא חתום דיגיטלית, ולכן Windows עשוי להציג פעם אחת &quot;Windows protected your PC&quot;. בוחרים &quot;מידע נוסף&quot; ואז &quot;הפעל בכל זאת&quot;. הקוד פתוח, ואפשר לבדוק מה בדיוק מותקן.</p>
+</details>
+
+<details style="background:#FFFFFF;border:1px solid #D8D0B8;border-radius:16px;padding:0 22px">
+<summary style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:60px;font-weight:800;font-size:19px;line-height:1.4"><span>יש גרסה ל-Mac או לטלפון?</span><svg class="plus" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0F7A52" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+<p style="margin:0 0 20px;color:#33433B;text-wrap:pretty">לא. הבנתי נבנתה ל-Windows בלבד.</p>
+</details>
+
+</div>
+</div>
+</section>
+
+<!-- ================= FINAL CTA ================= -->
+<section aria-labelledby="h-cta" style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:0 24px 96px">
+<div style="background:#3DDC97;color:#06140E;border-radius:32px;padding:72px 28px;display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center;position:relative;overflow:hidden">
+<svg width="64" height="64" viewBox="0 0 120 120" aria-hidden="true"><path d="M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z" fill="#0D1B16"/><path d="M33 52L52 71L87 33" fill="none" stroke="#FFD93D" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<h2 id="h-cta" style="margin:0;font-family:'Secular One',Assistant,sans-serif;font-weight:400;font-size:clamp(34px,5.6vw,64px);line-height:1.08;text-wrap:balance">ההרצאה הבאה שלך כבר מתחילה</h2>
+<p style="margin:0;max-width:540px;font-size:19px;color:#0F3326;text-wrap:pretty">מתקינים, בוחרים קורס, ולוחצים &quot;התחל תמלול&quot;. כשתאבד את החוט, הבנתי כבר תהיה שם.</p>
+<a href="https://github.com/pechter-roei41/hevanti/releases/latest/download/Hevanti-Setup.exe" style="background:#0D1B16;color:#F5F0E3;text-decoration:none;font-weight:800;font-size:20px;padding:16px 32px;border-radius:14px;min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center;gap:10px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFD93D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>
+הורדה ל-Windows</a>
+<div style="color:#0F3326;font-size:15px;font-weight:700">Hevanti-Setup.exe · גרסת בטא</div>
+</div>
+</section>
+
+</main>
+
+<footer style="background:#0D1B16;color:#A9BDB2">
+<div style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:32px 24px 44px;display:flex;flex-direction:column;gap:12px;font-size:14px;line-height:1.7">
+<div style="display:flex;flex-wrap:wrap;gap:6px 22px">
+<a href="https://github.com/pechter-roei41/hevanti" style="color:#F5F0E3;font-weight:700;text-decoration:none;border-bottom:1px solid #4C6B5B">קוד המקור ב-GitHub</a>
+<a href="https://github.com/pechter-roei41/hevanti/blob/main/PRIVACY.md" style="color:#F5F0E3;font-weight:700;text-decoration:none;border-bottom:1px solid #4C6B5B">מדיניות פרטיות</a>
+<a href="https://github.com/pechter-roei41/hevanti/blob/main/TERMS.md" style="color:#F5F0E3;font-weight:700;text-decoration:none;border-bottom:1px solid #4C6B5B">תנאי שימוש</a>
+<a href="https://github.com/pechter-roei41/hevanti/issues" style="color:#F5F0E3;font-weight:700;text-decoration:none;border-bottom:1px solid #4C6B5B">דיווח על תקלה</a>
+<a href="mailto:hevanti.support@gmail.com" style="color:#F5F0E3;font-weight:700;text-decoration:none;border-bottom:1px solid #4C6B5B"><span dir="ltr" style="unicode-bidi:isolate">hevanti.support@gmail.com</span></a>
+<a href="https://www.virustotal.com/gui/file/60b54391dbad6269d08d412452b1b0433dfaa5d9747b02071c09000f16621bec/detection" style="color:#F5F0E3;font-weight:700;text-decoration:none;border-bottom:1px solid #4C6B5B">בדיקת וירוסים (גרסה 2.19)</a>
+</div>
+<div>האחריות לעמוד בכללי ההקלטה של המוסד ושל המרצה היא של המשתמש. התוכנה ניתנת כמו שהיא, ללא אחריות, ברישיון MIT.</div>
+</div>
+</footer>
+
+</div>
+<script>
+(function(){
+  var marks={l5:true}, ans='none', now=false;
+  var raw=[
+    {id:'l1',time:'12:36',text:'נעבור עכשיו להגדרה של גבול של פונקציה בנקודה.'},
+    {id:'l2',time:'12:38',text:'אומרים שהגבול של f ב-a הוא L אם לכל אפסילון חיובי יש דלתא מתאימה.'},
+    {id:'l3',time:'12:41',text:'כלומר, כשמתקרבים ל-a, הערכים של f מתקרבים ל-L.'},
+    {id:'l4',time:'12:43',text:'שימו לב: לא משנה מה קורה בנקודה a עצמה.'},
+    {id:'l5',time:'12:46',text:'זה בדיוק מה שיהיה במבחן.'}
+  ];
+  var pillDefs=[{k:'3',label:'3 דק׳'},{k:'7',label:'7 דק׳'},{k:'15',label:'15 דק׳'}];
+  var answers={
+    q:{t:'דלתא ואפסילון הם שני ״שטחי ביטחון״ בהגדרת הגבול: אפסילון הוא כמה קרוב ל-L רוצים להיות, ודלתא היא כמה קרוב ל-a צריך להישאר כדי להבטיח את זה.',s:'מבוסס על 12:38'},
+    '3':{t:'ב-3 הדקות האחרונות: המרצה הסביר שהערכים מתקרבים ל-L, הדגיש שהערך בנקודה עצמה לא משנה, ואמר שזה יהיה במבחן.',s:'מבוסס על 12:43 עד 12:46'},
+    '7':{t:'ב-7 הדקות האחרונות: עברו להגדרת הגבול בנקודה, הוסבר הקשר בין אפסילון לדלתא, והודגש שהערך בנקודה עצמה לא חשוב.',s:'מבוסס על 12:38 עד 12:46'},
+    '15':{t:'ב-15 הדקות האחרונות: סיום הנושא הקודם, מעבר להגדרת הגבול, הסבר על הקשר בין אפסילון לדלתא, ודגש למבחן.',s:'מבוסס על 12:31 עד 12:46'}
+  };
+  var STAR='M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.1l-5.7 3.2 1.2-6.4-4.7-4.4 6.4-.8z';
+  function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+  function renderLines(){
+    var h='';
+    raw.forEach(function(l){
+      var m=!!marks[l.id];
+      var label=m?('מסומנת, '+l.time+'. לחצו כדי להסיר את הסימון'):('סמן את הרגע '+l.time);
+      h+='<div style="display:flex;align-items:center;gap:10px;padding:8px 8px;border-radius:6px;margin-bottom:2px;background:'+(m?'#FFE680':'transparent')+'">'
+       +'<span dir="ltr" style="font-family:Consolas,\'Cascadia Mono\',ui-monospace,monospace;font-size:13px;line-height:1.4;color:#55635A;min-width:40px;text-align:left">'+l.time+'</span>'
+       +'<span style="flex:1;min-width:0;font-size:16px;line-height:1.5">'+esc(l.text)+'</span>'
+       +'<button type="button" data-id="'+l.id+'" aria-pressed="'+m+'" aria-label="'+esc(label)+'" style="width:44px;height:44px;flex:none;border:0;background:transparent;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0">'
+       +'<svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="'+STAR+'" fill="'+(m?'#FFD93D':'none')+'" stroke="'+(m?'#0D1B16':'#55635A')+'" stroke-width="1.6" stroke-linejoin="round"/></svg></button></div>';
+    });
+    document.getElementById('linesMount').innerHTML=h;
+  }
+  function renderPills(){
+    var h='';
+    pillDefs.forEach(function(p){
+      var on=ans===p.k;
+      h+='<button type="button" data-k="'+p.k+'" aria-pressed="'+on+'" style="min-height:44px;padding:0 16px;border-radius:999px;font-family:inherit;font-size:15px;cursor:pointer;color:#F5F0E3;background:'+(on?'#1F4A38':'transparent')+';border:1.5px solid '+(on?'#3DDC97':'#33503F')+';font-weight:'+(on?800:600)+'">'+p.label+'</button>';
+    });
+    document.getElementById('pillsMount').innerHTML=h;
+  }
+  function renderAns(){
+    var cur=answers[ans];
+    document.getElementById('ansBox').hidden=!cur;
+    document.getElementById('hintBox').hidden=!!cur;
+    if(cur){document.getElementById('ansText').textContent=cur.t;document.getElementById('ansSrc').textContent=cur.s;}
+  }
+  function renderNow(){
+    document.getElementById('nowChip').hidden=!now;
+    document.getElementById('markBtn').setAttribute('aria-pressed',String(now));
+  }
+  document.getElementById('linesMount').addEventListener('click',function(e){
+    var b=e.target.closest('button[data-id]'); if(!b) return;
+    marks[b.dataset.id]=!marks[b.dataset.id]; renderLines();
+    var again=document.querySelector('#linesMount button[data-id="'+b.dataset.id+'"]'); if(again) again.focus();
+  });
+  document.getElementById('pillsMount').addEventListener('click',function(e){
+    var b=e.target.closest('button[data-k]'); if(!b) return;
+    ans=b.dataset.k; renderPills(); renderAns();
+    var again=document.querySelector('#pillsMount button[data-k="'+ans+'"]'); if(again) again.focus();
+  });
+  document.getElementById('askBtn').addEventListener('click',function(){ans='q';renderPills();renderAns();});
+  document.getElementById('markBtn').addEventListener('click',function(){now=!now;renderNow();});
+  renderLines();renderPills();renderAns();renderNow();
+})();
+</script>
 </body>
 </html>
