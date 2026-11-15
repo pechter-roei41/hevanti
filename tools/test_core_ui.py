@@ -653,7 +653,7 @@ with sync_playwright() as p:
         check(f"colours, {theme}: no script errors", cp.errs == [], cp.errs)
         cp.context.close()
 
-    # ---- 2.19, stage 9: the guide's text is about 70 characters a line, and the video, the chapters and the "something is wrong" table hold ----
+    # ---- 2.19, stage 9: the guide's text is about 70 characters a line, and the video and the "something is wrong" table hold ----
     for theme in ("light", "dark"):
         gd = b.new_context(viewport={"width": 1280, "height": 900}, locale="he-IL", color_scheme=theme).new_page()
         gd.errs = []
@@ -666,13 +666,13 @@ with sync_playwright() as p:
               const rg = document.createRange(); let first = null, n = 0;
               for (let i = 0; i < t.length; i++) { rg.setStart(t, i); rg.setEnd(t, i + 1); const b = rg.getBoundingClientRect(); if (first === null) first = Math.round(b.top); if (Math.round(b.top) !== first) break; n++; }
               per.push(n); }
-            const vid = document.querySelector('.howvid video').getBoundingClientRect(), ch = document.querySelector('#howChapters').getBoundingClientRect(), g = document.querySelector('.guide').getBoundingClientRect();
+            const vid = document.querySelector('.howteaser video').getBoundingClientRect(), g = document.querySelector('.guide').getBoundingClientRect();
             const dt = document.querySelector('.gfix dt').getBoundingClientRect(), dd = document.querySelector('.gfix dd').getBoundingClientRect();
-            return {per, guide: Math.round(g.width), video: [Math.round(vid.width), Math.round(vid.height)], chapters: [Math.round(ch.width), Math.round(ch.height)], sameRow: Math.abs(vid.top - ch.top) < 30,
-                    overflow: document.documentElement.scrollWidth > window.innerWidth, table2cols: Math.abs(dt.top - dd.top) < 12 && dt.left !== dd.left, chaptersCount: document.querySelectorAll('#howChapters button').length}; }""")
+            return {per, guide: Math.round(g.width), video: [Math.round(vid.width), Math.round(vid.height)], videos: document.querySelectorAll('#vHow video').length,
+                    overflow: document.documentElement.scrollWidth > window.innerWidth, table2cols: Math.abs(dt.top - dd.top) < 12 && dt.left !== dd.left, oldVideo: document.querySelectorAll('#howChapters, .howvid').length}; }""")
         check(f"guide, {theme}: the running text is 60 to 80 characters a line (about 70)", r["per"] and min(r["per"]) >= 60 and max(r["per"]) <= 80, r)
         check(f"guide, {theme}: the text column is narrower than it was (720px)", r["guide"] < 640, r)
-        check(f"guide, {theme}: the video keeps its size (16:9) and the chapters list is beside it", r["video"][0] > 500 and abs(r["video"][0] / r["video"][1] - 16 / 9) < 0.05 and r["sameRow"] and r["chaptersCount"] == 12, r)
+        check(f"guide, {theme}: the half-minute video is the only one and keeps its size (16:9)", r["video"][0] > 500 and abs(r["video"][0] / r["video"][1] - 16 / 9) < 0.05 and r["videos"] == 1 and r["oldVideo"] == 0, r)
         check(f"guide, {theme}: the 'something is wrong' table keeps its two columns, and nothing overflows sideways", r["table2cols"] and not r["overflow"], r)
         check(f"guide, {theme}: no script errors", gd.errs == [], gd.errs)
         gd.context.close()

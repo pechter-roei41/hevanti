@@ -56,7 +56,7 @@ The full policy is [PRIVACY.md](PRIVACY.md) and the terms of use are [TERMS.md](
 | `System/Program/player.html` | The player for recorded lectures |
 | `System/Program/mini.html` | The small always-on-top question window (Ctrl+Alt+Q) |
 | `System/Program/quick.html` | The quick-start window: course, kind of lecture, "Start" (opens in the middle of the screen when Hevanti starts) |
-| `System/Program/media/howto.mp4` | The explainer video on the how-to page (key, quick-start window, live lecture, floating window and round button, marks, course page, privacy; version 2.20, 63 s, recorded again with `tools/make_howto.py`). The lecture in it is ["פתרון משוואה דיפרנציאלית מסדר ראשון בעזרת הפרדת משתנים"](https://www.youtube.com/watch?v=F1_uOZeYLVE) by Dvir Ross, licensed [CC BY](https://creativecommons.org/licenses/by/3.0/); a short silent excerpt is shown with Hevanti's window over it |
+| `System/Program/media/teaser.mp4` | A half-minute silent video at the top of the how-to page (the floating window over a full-screen lecture, a question, "what did I miss", a ★; 35 s, 1280x720, lecture by Dvir Ross, CC BY, credited on the page). Also on the website. |
 | `System/Program/fonts/` | The two fonts of the app, Secular One and Assistant (SIL Open Font License, the licences are in the folder) |
 | `System/Program/katex/` | [KaTeX](https://katex.org) (MIT), draws the formulas in the answers |
 | `System/Program/ask.js` | The "ask AI" box |
@@ -81,7 +81,7 @@ Free code signing provided by [SignPath.io](https://about.signpath.io), certific
 
 - What is signed: `Hevanti-Setup.exe`, built from the tagged commit by the public [release workflow](.github/workflows/release.yml). Nothing built on a personal computer is signed.
 - Committers, reviewers and approvers: the Hevanti maintainer ([pechter-roei41](https://github.com/pechter-roei41)).
-- Privacy: Hevanti runs on your computer and sends information to other systems only in the cases listed in the [privacy policy](CODE_SIGNING.md#privacy-policy): your question to Google's Gemini with your own key, the model download, the update check and the page fonts.
+- Privacy: Hevanti runs on your computer and sends information to other systems only in the cases listed in the [privacy policy](CODE_SIGNING.md#privacy-policy): your question to Google's Gemini with your own key, the model download and the update check. The website serves its own font, so a visit does not send a request to Google Fonts.
 
 ## License
 
