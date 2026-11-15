@@ -432,6 +432,9 @@ input[dir="ltr"]::placeholder{direction:rtl;text-align:right}
 .howvid video{width:100%;border-radius:14px;border:1px solid var(--line);background:#000;aspect-ratio:16/9}
 .howvid figcaption{color:var(--muted);font-size:15px}
 .howcredit{color:var(--muted);font-size:13.5px;line-height:1.5;margin:14px 0 0}
+.howteaser{margin:16px 0 0;display:grid;gap:8px;max-width:760px}
+.howteaser video{width:100%;border-radius:14px;border:1px solid var(--line);background:#000;aspect-ratio:16/9}
+.howteaser figcaption{color:var(--muted);font-size:15px}
 .chapters{list-style:none;margin:0;padding:0;display:grid;gap:2px;align-content:start}
 .chapters button{width:100%;text-align:start;display:flex;gap:12px;align-items:baseline;background:transparent;border:0;border-radius:10px;padding:8px 12px;font:inherit;font-size:16px;line-height:1.4;cursor:pointer;color:var(--fg)}
 .chapters button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
@@ -927,6 +930,10 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <button type="button" data-go="g-video">סרטון</button><button type="button" data-go="g-key">חיבור לתשובות</button><button type="button" data-go="g-live">בהרצאה</button><button type="button" data-go="g-after">אחרי ההרצאה</button><button type="button" data-go="g-look">מראה ונגישות</button><button type="button" data-go="g-priv">פרטיות</button><button type="button" data-go="g-fix">משהו לא עובד</button>
     </nav>
     <span id="g-video"></span>
+    <figure class="howteaser">
+      <video controls preload="none" poster="/teaser.jpg" src="/teaser.mp4" aria-label="סרטון קצר: חצי דקה של הבנתי בהרצאה"></video>
+      <figcaption>חצי דקה, בלי קול: הרצאה במסך מלא, העיגול הירוק נשאר בקצה המסך, שאלה על מה שנאמר ו"מה פספסתי" של 7 דקות. ההרצאה בסרטון: דביר רוס, רישיון CC BY (הפרטים למטה). הסרטון המלא של דקה אחת מתחת.</figcaption>
+    </figure>
     <div class="howtop">
     <figure class="howvid">
       <video controls preload="metadata" poster="/howto.jpg" src="/howto.mp4" aria-label="סרטון הסבר: איך משתמשים בהבנתי"></video>

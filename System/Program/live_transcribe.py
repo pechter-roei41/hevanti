@@ -7883,6 +7883,7 @@ class VideoSlides(threading.Thread):
 # it stops everything. Only this computer can open the page.
 APP_HTML = os.path.join(SCRIPT_DIR, "app.html")
 HOWTO_VIDEO = os.path.join(SCRIPT_DIR, "media", "howto.mp4")   # the "איך משתמשים" video
+TEASER_VIDEO = os.path.join(SCRIPT_DIR, "media", "teaser.mp4")   # the half-minute video above it
 FONT_FILES = ("SecularOne-Regular.ttf", "Assistant-Variable.ttf")   # the app's fonts (System/Program/fonts, SIL OFL)
 KATEX_JS = os.path.join(SCRIPT_DIR, "katex", "katex.min.js")   # draws the formulas in the answers (MIT, see katex\LICENSE.txt)
 ASK_JS = os.path.join(SCRIPT_DIR, "ask.js")  # the "ask the AI" box (app + player)
@@ -9368,6 +9369,15 @@ def _app_handler():
                     poster = os.path.join(SCRIPT_DIR, "media", "howto-poster.jpg")
                     if os.path.isfile(poster):
                         return self._file(poster, "image/jpeg")
+                    return self._send(404, b"", "text/plain")
+                if p == "/teaser.jpg":
+                    poster = os.path.join(SCRIPT_DIR, "media", "teaser-poster.jpg")
+                    if os.path.isfile(poster):
+                        return self._file(poster, "image/jpeg")
+                    return self._send(404, b"", "text/plain")
+                if p == "/teaser.mp4":
+                    if os.path.isfile(TEASER_VIDEO):
+                        return self._file(TEASER_VIDEO, "video/mp4")
                     return self._send(404, b"", "text/plain")
                 if p == "/howto.mp4":
                     if os.path.isfile(HOWTO_VIDEO):
