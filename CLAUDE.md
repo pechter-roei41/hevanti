@@ -62,7 +62,7 @@ Read before larger changes:
 ## Layout
 
 - `System/Program/live_transcribe.py` (~9,300 lines): the whole computer side. Sections are marked with `# ----------` comments: settings, audio, model, QuickDraft, screenshots, OCR, MathReader (Gemini reads slides), the tutor, ScreenWatcher, YouTube, courses, AI connection, floating window and button, update check, recordings, the app and server, library, course guessing, `main`.
-- `System/Program/app.html` (the app: top tabs בית · הקורסים שלי · איך משתמשים · הגדרות; views for live, YouTube, a saved lecture, a course), `mini.html` (floating window), `quick.html` (quick-start window), `player.html` (recording player), `ask.js` (the ask box, shared). `media/howto.mp4` and its poster (made by `tools/make_howto.py`), `fonts/` (Secular One, Assistant, OFL), `katex/` (formulas).
+- `System/Program/app.html` (the app: top tabs בית · הקורסים שלי · איך משתמשים · הגדרות; views for live, YouTube, a saved lecture, a course), `mini.html` (floating window), `quick.html` (quick-start window), `player.html` (recording player), `ask.js` (the ask box, shared). `media/teaser.mp4` and its poster (the half-minute video), `fonts/` (Secular One, Assistant, OFL), `katex/` (formulas).
 - Settings page tabs (`SET_TABS` in `app.html`): מפתח · התאמת התשובות · צילום וטשטוש · נגישות · מתקדם · פרטיות.
 - `System/Program/hevanti_mcp.py`: MCP server, standard library only. Tools `now`, `transcript`, `slide`, `search`, `moment`, `lectures`; prompts `exam`, `summary`, `find_moment`. Every tool takes `course`. Claude for desktop, Codex and `agy` connect to it. Optional cloud sync (Google Drive / OneDrive) for AIs that cannot read the computer.
 - `System/Program/course_terms.json`: suggested glossary per course name (55 courses).
@@ -97,7 +97,7 @@ Then open `http://127.0.0.1:8765/` (and `/mini` for the floating window) with Pl
 
 `System/Program/media/teaser.mp4` (poster `teaser-poster.jpg`): 35 s, 1280x720, **no audio**, captions on screen, 1.7 MB. It shows a full-screen lecture, the green round button at the bottom right, a question, "מה פספסתי" (7 minutes) and a ★. The lecture is by Dvir Ross (CC BY), credited under the video and on the website. It is served at `/teaser.mp4` and `/teaser.jpg` and is the only video in the app and on the site.
 
-The earlier one-minute video (`howto.mp4`, version 2.20, with clickable chapters) was removed on 15.11.2026. Its recording tools (`tools/make_howto.py`, `tools/howto_win.py`, `tools/howto/`) are still in the repository but they build that old video and its chapter captions; they are not used for the teaser.
+The earlier one-minute video (`howto.mp4`, version 2.20, with clickable chapters) was removed on 15.11.2026. Its recording tools were removed too; the teaser was made outside the repository.
 
 If the flow the teaser shows changes (a button, the quick-start window, the floating window), make it again and check every frame for anything personal first.
 
