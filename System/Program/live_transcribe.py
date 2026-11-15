@@ -2377,7 +2377,9 @@ def _gemini_http_error(e):
             return MathError("ה-API של Gemini לא מופעל בפרויקט של המפתח. להפעיל אותו ב-Google AI Studio ולנסות שוב (" + _short(msg) + ").")
         if "model" in low or "resource" in low:   # (this model, not the key: another model may answer)
             return MathError("אין למפתח הרשאה למודל הזה של Gemini (" + _short(msg) + ").", other=True)
-        return MathError("Gemini סירב (403): " + (_short(msg) or status or "בלי פירוט") + ".")
+        if not msg and not status:   # not Google's own answer: something on the way (a school or office network, a proxy) said no
+            return MathError("משהו ברשת חסם את הבקשה ל-Google (למשל מסנן של מוסד או של רשת ציבורית). אפשר לנסות רשת אחרת, ואז לשמור שוב: המפתח עצמו לא נבדק.")
+        return MathError("Gemini סירב (403): " + (_short(msg) or status) + ".")
     if e.code >= 500:
         return MathError(f"Gemini עמוס כרגע ({e.code}). לנסות שוב עוד רגע.", 60, other=True)
     return MathError(f"Gemini החזיר שגיאה {e.code}: {_short(msg, 160)}")
@@ -4113,6 +4115,10 @@ def clean_name(name, fallback=""):
 
 
 def course_dir(course):
+    raw = str(course or "")
+    plain = raw and raw == raw.strip() and not raw.startswith(".") and all(ord(ch) >= 32 and ch not in '/:*?"<>|' + chr(92) for ch in raw)
+    if plain and os.path.isdir(os.path.join(LIB_DIR, raw)):
+        return os.path.join(LIB_DIR, raw)   # (a folder that exists as it is - a double space, 90 characters, from Explorer - keeps its name)
     return os.path.join(LIB_DIR, clean_name(course, NO_COURSE))
 
 
@@ -4143,7 +4149,7 @@ def course_names():
         names = [n for n in os.listdir(LIB_DIR) if not n.startswith(".") and os.path.isdir(os.path.join(LIB_DIR, n))]
     except OSError:
         names = []
-    return sorted(names, key=lambda n: (n == NO_COURSE, n))
+    return sorted(names, key=lambda n: (n == NO_COURSE, n.casefold(), n))   # (a small letter does not fall after every capital)
 
 
 def lecture_dirs():
@@ -4165,7 +4171,7 @@ def lecture_dirs():
 def lecture_from_rel(rel):
     """"<course>/<lecture>" from the page -> the lecture folder, only inside "הקורסים שלי"."""
     parts = [x for x in str(rel or "").replace("\\", "/").split("/") if x]
-    if len(parts) != 2 or any(x in (".", "..") or clean_name(x) != x for x in parts):
+    if len(parts) != 2 or any(x.startswith(".") or x != x.strip() for x in parts):   # (a name that exists as it is - a double space, 90 characters, from Explorer - is opened; ".." and hidden names never)
         return None
     d = os.path.join(LIB_DIR, *parts)
     root = os.path.realpath(LIB_DIR)
@@ -4428,7 +4434,7 @@ def import_syllabus(course, filename, data):
         return {"ok": False, "error": "הקובץ ריק."}
     key = read_secret(math_settings().get("key"))
     if not key:
-        return {"ok": False, "error": "כדי לקרוא את הסילבוס צריך מפתח Gemini: בגלגל השיניים (הגדרות) ← מפתח API."}
+        return {"ok": False, "error": "כדי לקרוא את הסילבוס צריך מפתח Gemini: בהגדרות ← מפתח."}
     if ext == ".pdf":
         parts = [{"inline_data": {"mime_type": "application/pdf", "data": base64.b64encode(data).decode("ascii")}}]
     else:
@@ -4478,12 +4484,16 @@ def delete_syllabus(course):
     return {"ok": True}
 
 
+CREATED_COURSE = {"existed": False}   # (what the last create_course found: the page says "already there")
+
+
 def create_course(name, terms=None):
     """A new course folder, with the terms the student chose from the suggestions (or an empty glossary)."""
     name = clean_name(name)
     if not name:
         return None
     d = course_dir(name)
+    CREATED_COURSE["existed"] = os.path.isdir(d)
     os.makedirs(d, exist_ok=True)
     if not os.path.exists(glossary_path(name)):
         terms = [str(t) for t in terms if isinstance(t, str)] if isinstance(terms, list) else []
@@ -8107,13 +8117,14 @@ class App:
             save_settings(course=course)
             return {"ok": True}
         if a == "new_course":
+            asked = str(d.get("name") or "").strip()
             name = create_course(d.get("name"), d.get("terms"))
             if not name:
                 return {"ok": False, "error": "צריך לכתוב שם לקורס."}
             save_settings(course=name)
             with self.lock:
                 self.lib_rev += 1
-            return {"ok": True, "course": name}
+            return {"ok": True, "course": name, "existed": CREATED_COURSE["existed"], "renamed": name != asked}
         if a == "save_glossary":
             if not os.path.isdir(course_dir(course)):
                 return {"ok": False, "error": "הקורס לא נמצא."}
@@ -8709,7 +8720,7 @@ def open_in_explorer(what, fname=None):
         d = lecture_from_rel(fname)
         if d is not None:
             p = lecture_txt(d) if what == "file" else d
-    elif what == "course" and fname and clean_name(fname) == fname and os.path.isdir(course_dir(fname)):
+    elif what == "course" and fname and os.path.isdir(course_dir(fname)):
         p = course_dir(fname)
     try:
         if what != "file":
@@ -9513,7 +9524,7 @@ def _app_handler():
             s = math_settings()
             key = read_secret(s.get("key"))
             if not key or s.get("ask") is False:
-                return self._json({"ok": False, "error": "התשובות בתוך הבנתי לא מוגדרות: בגלגל השיניים (הגדרות) ← מפתח API."}, 400)
+                return self._json({"ok": False, "error": "התשובות בתוך הבנתי לא מוגדרות: בהגדרות ← מפתח."}, 400)
             reader = math_reader()
             try:
                 if d.get("where") == "mini":   # the small window: the server knows what was said

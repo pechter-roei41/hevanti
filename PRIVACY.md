@@ -44,7 +44,7 @@ Google עשויה להשתמש במה שנשלח ל-Gemini לפי התנאים �
 
 ## השרת המקומי
 
-כדי שהחלונות של הבנתי ידברו עם התוכנה, היא מפעילה שרת קטן על `127.0.0.1` בלבד. הדפים וכל מה שהם מציגים (תמלולים, תמונות) ניתנים רק לדפדפן שנפתח מהבנתי עצמה (הוא מקבל סוד שמשתנה בכל הפעלה), והפקודות דורשות את הסוד וכותרת מיוחדת. כך אתר בדפדפן שלך, תוכנה אחרת, או משתמש אחר במחשב משותף לא יכולים לקרוא את ההרצאות שלך או להפעיל את התוכנה.
+כדי שהחלונות של הבנתי ידברו עם התוכנה, היא מפעילה שרת קטן על `127.0.0.1` בלבד. הדפים וכל מה שהם מציגים (תמלולים, תמונות) ניתנים רק לדפדפן שנפתח מהבנתי עצמה (הוא מקבל סוד שמשתנה בכל הפעלה), והפקודות דורשות את הסוד וכותרת מיוחדת. כך אתר בדפדפן שלך או משתמש אחר במחשב משותף לא יכולים לקרוא את ההרצאות שלך או להפעיל את התוכנה. תוכנה שרצה תחת אותו משתמש Windows שלך יכולה למצוא את הסוד בקובץ בתיקיית המשתמש, כמו שהיא יכולה לקרוא כל קובץ שלך.
 
 ## מחיקה והסרה
 
@@ -75,6 +75,6 @@ Hevanti (version 2.22, 15 Nov 2026) runs on your computer. It has no server and 
 
 **Sent to others:** (1) If you saved a Gemini key: your question, the last minutes of the transcript, the current slide and the text of earlier slides go to Google when you ask; and, without a click, slide pictures that are not clear printed text go to Google for formula and handwriting reading (can be turned off in Settings). Slides can show other people's faces and names. On the free tier Google may use this to improve its products. (2) A daily check of which Gemini models answer (with the key, no content). (3) Download of the speech model from Hugging Face, of Python and packages from python.org and PyPI, of Tesseract from GitHub (checked by SHA-256), and of yt-dlp and NVIDIA libraries from PyPI when needed. (4) On start, a request to GitHub for the latest version (can be turned off). (5) Recordings from links are downloaded from the address you give; YouTube plays in YouTube's own player under its terms and is never downloaded. (6) Cloud sync (off by default) and your own AI apps read lectures only when you turn them on or ask. "Report a problem" sends nothing: it only shows text you copy.
 
-**Local server:** it listens on `127.0.0.1` only; pages and everything they show are given only to a browser opened by Hevanti (a secret that changes every run), so other sites, other programs and other Windows users cannot read your lectures.
+**Local server:** it listens on `127.0.0.1` only; pages and everything they show are given only to a browser opened by Hevanti (a secret that changes every run), so other sites and other Windows users cannot read your lectures. A program that runs as you (the same Windows user) can find the secret in a file in your user folder, the same way it can read your own files.
 
 **Deleting:** uninstalling removes the program, the settings with the key and the models; your lectures are never deleted by an update or an uninstall. Contact: hevanti.support@gmail.com.
