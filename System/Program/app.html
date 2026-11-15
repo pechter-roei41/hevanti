@@ -308,7 +308,7 @@ input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--acce
 .courserow select{padding:6px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);font:inherit;min-height:36px}
 .courserow .sub{margin:0}
 .sugbox{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 10px;border-radius:10px;background:var(--sunk)}
-.livebar .acts{display:flex;align-items:center;gap:10px;flex:none}   /* the actions stay one row: they wrap together, never "stop" alone */
+.livebar .acts{display:flex;align-items:center;gap:10px;flex:none;margin-inline-start:auto}   /* the actions stay one row: they wrap together, never "stop" alone */
 @media (max-width:400px){.livebar .acts{flex:1 1 100%;flex-wrap:wrap;gap:6px}}   /* 320px: the three buttons were 14px too wide */
 .livebar .what b{font-size:22px;font-family:var(--f-display);font-weight:400}
 #liveStop{border-color:var(--line);color:var(--muted)}

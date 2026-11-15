@@ -823,5 +823,8 @@ check("light/dark and no-motion reach the small window within a second: /api/the
 check("the top bar is not a half circle (999px cut its chips when it wrapped), and a choice group keeps its selected ring whole at both ends",
       "border-radius:26px}" in _app_src.split(".bar{", 1)[1].split("}", 1)[0] + "}" and ".seg{display:inline-flex;gap:2px;padding:2px;" in _app_src and ".seg button{border:0;background:var(--surface);padding:7px 16px;cursor:pointer;border-radius:999px}" in _app_src)
 
+check("the live screen buttons (mark, small window, stop) stay at the left end even when a narrow window wraps them onto their own row",
+      ".livebar .acts{display:flex;align-items:center;gap:10px;flex:none;margin-inline-start:auto}" in _app_src)
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)
