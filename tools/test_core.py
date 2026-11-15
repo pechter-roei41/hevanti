@@ -843,5 +843,28 @@ check("CLAUDE.md-level claim: the secret file is readable by the same Windows us
       "same Windows user" in open(os.path.join(os.path.dirname(L.SCRIPT_DIR), "..", "CLAUDE.md"), encoding="utf-8").read()
       if os.path.exists(os.path.join(os.path.dirname(L.SCRIPT_DIR), "..", "CLAUDE.md")) else True)
 
+# --- 15.11.2026, a real run with the lecture of Dvir Ross: slides of YouTube, quiet sound, a star in a YouTube lecture ---
+_marks = chr(0x202b), chr(0x202c)
+check("the title of Hevanti's window is recognised with Edge's direction marks around it (YouTube slides were never saved without this)",
+      L.is_page_title(_marks[0] + L.PAGE_TITLE + _marks[1]) and L.is_page_title(L.PAGE_TITLE) and L.is_page_title(_marks[0] + L.PAGE_TITLE + " - Edge" + _marks[1])
+      and not L.is_page_title(_marks[0] + "Claude" + _marks[1]) and not L.is_page_title(""))
+_qs = {}
+_msgs = [L.quiet_sound_warning(_qs, 0.0006, 10.0, 1000.0 + i) for i in range(6)]
+check("quiet sound (0.0006, the level of speech at 6% volume): no word for 40 s, then one warning that names the volume",
+      _msgs[:4] == [None] * 4 and _msgs[4] and "עוצמת ההשמעה" in _msgs[4] and _msgs[5] is None, _msgs)
+_qs = {}
+check("normal speech and real silence never warn",
+      all(L.quiet_sound_warning(_qs, lv, 10.0, 2000.0 + i) is None for i in range(30) for lv in (0.03, 0.0)))
+_qs = {}
+for i in range(4): L.quiet_sound_warning(_qs, 0.0006, 10.0, 3000.0 + i)
+L.quiet_sound_warning(_qs, 0.05, 10.0, 3005.0)
+check("a loud piece resets the count of quiet seconds", _qs["quiet_s"] == 0.0)
+check("speech at 6% volume (0.0006) is not skipped as silence any more", 0.0006 >= L.SILENCE_RMS and 0.0 < L.SILENCE_RMS)
+_yp = L.yt_mark(76.8, "חשוב")
+check("a star in a YouTube lecture: a line at the video's own time, in the form the course page lists",
+      _yp == (76, "[00:01:16] [סימון: חשוב]", "[סימון: חשוב]") and L.yt_mark(None, "חשוב")[0] == 0 and L.yt_mark(-5, "חשוב")[0] == 0, _yp)
+_ml = L.REC_LINE.match(_yp[1])
+check("... and that line is read back as a mark (a note) by the lecture page", bool(_ml) and _ml.group(4) == "[סימון: חשוב]")
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)

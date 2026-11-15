@@ -196,7 +196,9 @@ MIN_CHUNK_S = 10     # earliest point to cut a chunk (seconds)
 MAX_CHUNK_S = 18     # latest point to cut a chunk
 GPU_MIN_CHUNK_S = 15 # on a GPU: longer chunks = more context = better accuracy
 GPU_MAX_CHUNK_S = 26 #   (Whisper looks at up to 30 s at once)
-SILENCE_RMS = 0.0015 # chunks quieter than this are skipped
+SILENCE_RMS = 0.0002 # chunks quieter than this are skipped (was 0.0015: at 6% playback volume speech is 0.0006 and a whole lecture was skipped, 15.11.2026)
+QUIET_RMS = 0.003    # sound that reaches us but is this quiet (and not silent): the playback volume is probably very low
+QUIET_WARN_S = 45    # ... for this long: say so (once every 3 minutes)
 FAST_ON_LAG_S = 10   # on a GPU, falling this far behind -> fast mode (1 option per sentence instead of 5)
 FAST_OFF_LAG_S = 4   # caught up for 3 pieces in a row -> back to full accuracy
 FAST_MAX_SWITCHES = 2  # after this many slow-downs, stay in fast mode for the rest of the lecture
@@ -3648,6 +3650,15 @@ class YtClock:
 PAGE_TITLE = "הבנתי · האפליקציה"   # app.html's <title>: the browser window that shows it is named after it
 
 
+_DIR_MARKS = "".join(chr(c) for c in (0x202a, 0x202b, 0x202c, 0x200e, 0x200f)) + " "   # (the marks Edge puts around a Hebrew title)
+
+
+def is_page_title(title):
+    """True for the title of a window that shows Hevanti's page. Edge puts a direction mark (U+202B ... U+202C) around a Hebrew title:
+    without stripping it no window was found and a YouTube lecture saved no slide at all (found on a real Windows run, 15.11.2026)."""
+    return str(title or "").strip(_DIR_MARKS).startswith(PAGE_TITLE)
+
+
 def _page_windows():
     """Windows: the browser windows showing Hevanti's page, as (left, top, right, bottom) in screen pixels."""
     import ctypes
@@ -3664,7 +3675,7 @@ def _page_windows():
             if user32.IsWindowVisible(hwnd) and not user32.IsIconic(hwnd):
                 buf = ctypes.create_unicode_buffer(300)
                 user32.GetWindowTextW(hwnd, buf, 300)
-                if buf.value.startswith(PAGE_TITLE):
+                if is_page_title(buf.value):
                     rc = wintypes.RECT()   # DWMWA_EXTENDED_FRAME_BOUNDS: always real pixels, on any monitor
                     if dwm.DwmGetWindowAttribute(hwnd, 9, ctypes.byref(rc), ctypes.sizeof(rc)) == 0:
                         out.append((rc.left, rc.top, rc.right, rc.bottom))
@@ -4088,6 +4099,27 @@ MEDIA_TYPES = {".mp4": "video/mp4", ".m4v": "video/mp4", ".mov": "video/mp4", ".
                ".mkv": "video/x-matroska", ".ogv": "video/ogg", ".avi": "video/x-msvideo", ".wmv": "video/x-ms-wmv",
                ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".aac": "audio/aac", ".wav": "audio/wav",
                ".ogg": "audio/ogg", ".opus": "audio/ogg", ".flac": "audio/flac", ".wma": "audio/x-ms-wma"}
+
+
+def quiet_sound_warning(state, level, seconds, now):
+    """The sound arrives but is very quiet (playback volume low - the capture follows the volume of the speakers): after QUIET_WARN_S seconds
+    of it, the text to tell the student (at most once in 3 minutes); None otherwise. `state` keeps the count."""
+    if SILENCE_RMS * 0.1 < level < QUIET_RMS:
+        state["quiet_s"] = state.get("quiet_s", 0.0) + seconds
+    else:
+        state["quiet_s"] = 0.0
+    if state["quiet_s"] >= QUIET_WARN_S and now - state.get("quiet_warned", 0.0) > 180:
+        state["quiet_warned"] = now
+        return "הקול שמגיע להבנתי שקט מאוד (עוצמת ההשמעה נמוכה במחשב). כדי שהתמלול יהיה מדויק, כדאי להגביר את עוצמת ההשמעה."
+    return None
+
+
+def yt_mark(pos_s, kind):
+    """A ★ in a YouTube lecture: (the second of the video, the line for the transcript file, the text) - the line has the video's own time, like
+    the other lines of that file, and the course page lists it with what was said just before."""
+    pos = int(max(0.0, float(pos_s or 0.0)))
+    text = f"[סימון: {kind}]"
+    return pos, f"[{hms(pos)}] {text}", text
 
 
 def hms(t):
@@ -10461,7 +10493,14 @@ def run_live(sess, lang, course=""):
         capture_control().set_paused(False)   # a new lecture always starts un-paused
     else:
         log("צילום מסך כבוי - רק תמלול")
-    if not yt:
+    if yt:
+        def mark(kind):
+            """The student marked this moment of the video (★): a line at the video's own time, as marks of a recording are listed."""
+            pos, line, text = yt_mark(clock.now()[0], kind)
+            write_line(line)
+            now_file.add(float(pos), text)
+        sess.mark_fn = mark
+    else:
         def mark(kind):
             """The student marked this moment (★ = "חשוב"): a line in the transcript - the AI sees it too."""
             t = time.time()
@@ -10620,6 +10659,11 @@ def run_live(sess, lang, course=""):
         """Transcribe one piece of audio and write it out (the final text replaces the draft line).
         heard_until: when the newest sound we already have arrived - the delay is measured from there
         (not from the end of this piece: waiting for a piece to fill up is not being late)."""
+        if len(chunk) >= chunk_sr:
+            qmsg = quiet_sound_warning(state, rms(chunk), len(chunk) / chunk_sr, time.time())
+            if qmsg:
+                log("אזהרה: " + qmsg)
+                note("קול שקט מאוד")
         if len(chunk) < chunk_sr or rms(chunk) < SILENCE_RMS:
             draft_clear()
             now_file.set_draft("")
