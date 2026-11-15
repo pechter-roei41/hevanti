@@ -807,5 +807,12 @@ check("backup does not change the library", os.path.isfile(L.lecture_txt(_d5)) a
 _pg = open(os.path.join(L.SCRIPT_DIR, "app.html"), encoding="utf-8").read()
 check("the page has the backup button and warns that a downloaded recording is deleted for good", 'id="libBackup"' in _pg and "נמחקת, לצמיתות" in _pg and "backup_status" in _pg)
 
+# get-pip.py of the ZIP and of the first install: one pinned file in release.yml and in get_python.ps1, not the 26.3 tag (that file fails on Windows: "To modify pip", no pip left; found 15.11.2026)
+import re as _re2
+_gp_a, _gp_b = _re2.search(r"get-pip/([0-9.]+)/public", _rel), _re2.search(r"get-pip/([0-9.]+)/public", _gp)
+_sha_a, _sha_b = _re2.search(r"([0-9a-f]{64})  get-pip.py", _rel), _re2.search(r"getPipSha = '([0-9A-Fa-f]{64})'", _gp)
+check("get-pip.py is pinned to the same version and SHA-256 in release.yml and get_python.ps1, and it is not the broken 26.3 file",
+      bool(_gp_a and _gp_b and _sha_a and _sha_b) and _gp_a.group(1) == _gp_b.group(1) == "26.2" and _sha_a.group(1).lower() == _sha_b.group(1).lower())
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)
