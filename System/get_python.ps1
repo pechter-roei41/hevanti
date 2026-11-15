@@ -8,8 +8,8 @@ $ProgressPreference = 'SilentlyContinue'
 $ver = '3.12.10'
 # Every download is checked against its SHA-256 (pinned 12.11.2026): a file that was replaced on the way or at the source is refused (audit #25).
 $embedSha = '4ACBED6DD1C744B0376E3B1CF57CE906F9DC9E95E68824584C8099A63025A3C3'
-$getPipUrl = 'https://raw.githubusercontent.com/pypa/get-pip/26.3/public/get-pip.py'
-$getPipSha = 'F7654C5589318E1D0789575B2586CE76937EB9943602ADDA8B15B3BE3AA0DAC3'
+$getPipUrl = 'https://raw.githubusercontent.com/pypa/get-pip/26.2/public/get-pip.py'
+$getPipSha = '25B5C39ADE96BAB5EABE6404CE83CAB6DA2DEB5FE3C07D9881F43803EDB6F9C8'
 function Assert-Sha($path, $sha) {
   if ((Get-FileHash $path -Algorithm SHA256).Hash -ne $sha) { Remove-Item $path -ErrorAction SilentlyContinue; throw "The file $path is not the expected one (SHA-256). Try again later." }
 }
