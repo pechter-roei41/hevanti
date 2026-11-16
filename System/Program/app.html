@@ -1136,7 +1136,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 const $ = s => document.querySelector(s);
 const api = (p, body) => fetch(p, body === undefined ? {cache: "no-store"} :
   {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify(body)}).then(r => r.json());
-let app = null, notesSince = 0, libRev = -1, libItems = [], fails = 0, lastQ = null, lastOffer = null, lastSaveFail = null;
+let app = null, notesSince = 0, libRev = -1, libItems = [], fails = 0, lastQ = null, lastOffer = null, lastSaveFail = null, lastDamage = null;
 let wantPlayer = null, recSource = "", recLang = "he", view = "home", pastFile = null, shownErr = "";
 const NO_COURSE = "ללא קורס";
 let courses = [], curCourse = "", libCourse = "", searchSeq = 0, appSeen = false, libSeen = false;   // appSeen: /api/app has answered (it knows the saved course); the list of courses may come first
@@ -1889,6 +1889,7 @@ function render(d) {
   }
   // a settings save that failed: said once, in words (nothing is lost quietly)
   if (d.save_failed && d.save_failed.n !== lastSaveFail) { lastSaveFail = d.save_failed.n; toast(d.save_failed.msg); }
+  if (d.settings_damaged && d.settings_damaged.n !== lastDamage) { lastDamage = d.settings_damaged.n; toast(d.settings_damaged.msg); }
   // a question (passcode for a link)
   if (d.question && (!lastQ || lastQ !== d.question.id)) {
     lastQ = d.question.id; $("#askT").textContent = d.question.text; $("#askIn").type = d.question.secret ? "password" : "text";
