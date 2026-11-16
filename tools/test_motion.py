@@ -128,7 +128,7 @@ with sync_playwright() as p:
 
     # ---- a choice group: the language of a recording (home), and a group that is hidden ----
     pg = page()
-    pg.click("#recTile")   # (the language of a recording is chosen in the panel this tile opens)
+    pg.evaluate("location.hash = 'rec'")   # (the recording panel opens from "המשך באפליקציה" of the quick-start window: #rec; the home screen has no tile for it any more)
     pg.wait_for_timeout(500)
     LANG = ".seg:has([data-lang])"
     g = pg.evaluate(GEOM, LANG)
