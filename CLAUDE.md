@@ -66,6 +66,7 @@ Read before larger changes:
 - Settings page tabs (`SET_TABS` in `app.html`): מפתח · התאמת התשובות · צילום וטשטוש · נגישות · מתקדם · פרטיות.
 - `System/Program/hevanti_mcp.py`: MCP server, standard library only. Tools `now`, `transcript`, `slide`, `search`, `moment`, `lectures`; prompts `exam`, `summary`, `find_moment`. Every tool takes `course`. Claude for desktop, Codex and `agy` connect to it. Optional cloud sync (Google Drive / OneDrive) for AIs that cannot read the computer.
 - `System/Program/course_terms.json`: suggested glossary per course name (55 courses).
+- `CHANGELOG.md`: short English history; `docs/building.md`: running from source and building the packages.
 - `System/VERSION.txt`: release notes in Hebrew, newest first. Setup and removal: `Install.bat`, `System/get_python.ps1`, `System/install_ocr.*`, `System/install_gpu.bat`, `System/uninstall.bat`.
 - Packaging: `tools/build_zip.py`, `tools/build_setup_dir.py`, `installer/hevanti.iss` (Inno Setup). Workflows: `tests.yml`, `release.yml` (tag `v*` builds the ZIP and the installer), `installer-smoke.yml` (installs on a clean Windows runner; runs only when `installer/**`, the setup build/smoke tools or the workflow change, so a merge of pages-only changes does not start it, use `gh workflow run installer-smoke.yml --ref <branch>`).
 - Design files for the Impeccable tool: `.impeccable/config.json`, `design.json` (shared). Private ones are ignored.
