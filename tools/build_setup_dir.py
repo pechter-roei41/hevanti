@@ -31,18 +31,23 @@ def make_icon(path):
     """The logo (a green bubble with a short tail and a white letter ה) as a Windows .ico, drawn here - no image file in the repo.
     Every size is drawn on its own (8x, then smoothed down) and fills its square, so the taskbar and Start icons stay crisp."""
     from PIL import Image, ImageDraw
-    green = (31, 122, 85, 255)
+    green, cream = (31, 122, 85, 255), (246, 243, 233, 255)
 
     def draw(S):
         k = 8
         N = S * k
         im = Image.new("RGBA", (N, N), (0, 0, 0, 0))
         d = ImageDraw.Draw(im)
-        u = N * 0.98 / 108   # the mark is 108 x 106 units: fill the square
-        ox, oy = N * 0.01 - 6 * u, N * 0.01 + (N * 0.98 - 106 * u) / 2 - 8 * u
+        u = N * 0.94 / 108   # the mark is 108 x 106 units: fill the square
+        ox, oy = N * 0.03 - 6 * u, N * 0.03 + (N * 0.94 - 106 * u) / 2 - 8 * u
 
         def P(x, y):
             return (ox + x * u, oy + y * u)
+        # a thin light outline (3 units, Paper), so the green bubble stays visible on a dark taskbar or tab strip (2.8:1 without it)
+        d.rounded_rectangle([P(4.5, 6.5), P(115.5, 95.5)], radius=25.5 * u, fill=cream)
+        tail = [P(68, 93), P(92, 93), P(100, 114)]
+        d.polygon(tail, fill=cream)
+        d.line(tail + [tail[0]], fill=cream, width=int(round(3 * u)), joint="curve")
         d.rounded_rectangle([P(6, 8), P(114, 94)], radius=24 * u, fill=green)
         d.polygon([P(68, 93), P(92, 93), P(100, 114)], fill=green)
         for (x0, y0), (x1, y1), col in HE_BARS:
