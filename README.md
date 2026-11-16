@@ -36,8 +36,6 @@ Everything else supports these two.
 
 **Virus scan:** [`Hevanti-Setup.exe` 2.19 on VirusTotal](https://www.virustotal.com/gui/file/60b54391dbad6269d08d412452b1b0433dfaa5d9747b02071c09000f16621bec/detection): none of the 67 engines that scanned it flagged it as malicious (6 could not process the file type and 2 timed out). SHA-256: `60b54391dbad6269d08d412452b1b0433dfaa5d9747b02071c09000f16621bec`. The installer is not signed yet, so Windows may still show "Windows protected your PC" once. A scan describes one exact file; later releases are scanned again.
 
-Full guide (Hebrew): [the Hevanti guide](https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD)
-
 ## Privacy
 
 The full policy is [PRIVACY.md](PRIVACY.md) and the terms of use are [TERMS.md](TERMS.md); both come with the installer, and the app and the website link to them. In short:

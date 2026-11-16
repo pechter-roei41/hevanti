@@ -81,6 +81,8 @@ jobs:
         run: python tools/test_mcp.py
       - name: The AI of each course
         run: python tools/test_course_ai.py
+      - name: Findings of the review of 16.11.2026 (P0/P1) - known bugs are listed, a fixed one must lose its mark
+        run: python tools/test_review_p1.py
       - name: The free quota and the paid-plan question
         run: python tools/test_quota.py
       - name: Photographing the YouTube player
