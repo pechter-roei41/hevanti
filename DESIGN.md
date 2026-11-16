@@ -1,6 +1,6 @@
 ---
 name: Hevanti (הבנתי)
-description: A lecture companion that looks like an open notebook: cream paper, white cards with a hairline, one green action, yellow only for marks and the logo.
+description: A lecture companion that looks like an open notebook: cream paper, white cards with a hairline, one green action, yellow only for marks.
 colors:
   paper: "#F6F3E9"
   sheet: "#FFFFFF"
@@ -103,7 +103,7 @@ components:
 
 **Creative North Star: "The Open Notebook"**
 
-Hevanti is designed to sit on a page, not on a screen. The ground is cream paper, the surfaces are white sheets with a hairline edge, the headings are set in a warm, rounded Hebrew display face, and exactly one thing per screen is allowed to be solid green: the next action. Yellow is the highlighter: it marks a moment (★) and it is the check in the logo, and it is used nowhere else.
+Hevanti is designed to sit on a page, not on a screen. The ground is cream paper, the surfaces are white sheets with a hairline edge, the headings are set in a warm, rounded Hebrew display face, and exactly one thing per screen is allowed to be solid green: the next action. Yellow is the highlighter: it marks a moment (★) and it is used nowhere else.
 
 The student is listening to a lecture while using it, so the system is quiet. Surfaces are flat, spacing is generous, and the interface never competes with the lecture. The dark theme keeps the same paper feeling: warm brown-black ground and warm ink, not the cold green-black of a code editor. Right-to-left Hebrew is the primary reading direction, and every layout is built for it first.
 
@@ -112,7 +112,7 @@ The student is listening to a lecture while using it, so the system is quiet. Su
 - Flat by default: tonal layers and a 1px hairline, one soft shadow for the primary action only.
 - Hebrew first and right-to-left: empty text boxes start at the right, shortcut keys stay left-to-right.
 - Warm in both themes: cream paper by day, warm dark paper at night.
-- One logo, drawn the same at every size: a bubble with a short tail and a thick check.
+- One logo, drawn the same at every size: a bubble with a short tail and the letter ה.
 
 ## Colors
 
@@ -123,7 +123,7 @@ A cream-and-board-green palette with a highlighter yellow. Neutrals lean warm; t
 - **Board Green Soft** (#DCEBDF, night #25382B): icon plates, selected tabs, the quiet banner behind a suggestion (for example "install the NVIDIA libraries").
 
 ### Secondary
-- **Highlighter** (#F7D44C, night #E8C547): the ★ mark, the highlighter band over a transcript line the student marked (the **Mark Line** token, #F7DD7B, night #594E25: the highlighter at 70% over paper, and at 30% over the night paper; text on it stays ink), and the check in the logo. Never a button, never decoration.
+- **Highlighter** (#F7D44C, night #E8C547): the ★ mark, the highlighter band over a transcript line the student marked (the **Mark Line** token, #F7DD7B, night #594E25: the highlighter at 70% over paper, and at 30% over the night paper; text on it stays ink), and nothing else. Never a button, never decoration.
 
 ### Tertiary
 - **Recording Red** (#C2412D, night #FF7A63): a lecture in progress (the pill and the pulsing dot), and destructive actions.
@@ -140,7 +140,7 @@ A cream-and-board-green palette with a highlighter yellow. Neutrals lean warm; t
 ### Named Rules
 **The One Green Rule.** On any screen, only one control is solid green. Everything else, however useful, is a ghost button or a text link.
 
-**The Highlighter Rule.** Yellow means "marked by the student" or "this is the logo". On a marked transcript line it is the highlighter band behind the line; it is never used as a button, a card background or an accent. A mark never relies on yellow alone: the line also carries ★ and the words "מסומנת" for the screen reader.
+**The Highlighter Rule.** Yellow means "marked by the student". On a marked transcript line it is the highlighter band behind the line; it is never used as a button, a card background or an accent. A mark never relies on yellow alone: the line also carries ★ and the words "מסומנת" for the screen reader.
 
 ## Typography
 
@@ -222,7 +222,7 @@ The course offer (a course read from the first slide) is a quiet strip: Sunk Pap
 The stop button of the small window is a quiet ghost button in the title row ("עצירה"); the first press turns it to "לעצור?" with a Recording Red edge and text for 3 seconds, the second stops. When the lecture is saved a card replaces the question box: a Green Soft round chip with a green check, "ההרצאה נשמרה בהצלחה" (bold), the course, minutes and slides in Muted, a ghost "פתיחת ההרצאה באפליקציה" and a ghost "סגירה". The same card shape (Sheet, 1px Hairline, a Green Soft chip with a check, never yellow) shows above the place of the round button, drawn as a native window, when the small window is closed.
 
 ### The Floating Button
-A native window, 56 px (drawn at 8 times the size and reduced, so the edge is smooth), at the edge of the screen for as long as Hevanti runs (with or without a lecture; the Recording Red dot is drawn only while a live lecture is recorded, not while it is stopping or saving): a solid Board Green circle (`#1B6E4B`, a little see-through overall, no ring, no white), the logo as a thin line inside it (Paper `#F6F3E9` bubble stroke 9, yellow check 17; yellow only on the check), and a Recording Red dot (`#C2412D`, 14 px, with a 2 px ring in the colour of the page) at the top corner on the side of the screen's edge; it beats very gently, and is still when motion is off. While the small window is open (or opening) the logo is a white X (2.6 on a 24 viewBox, about 24 px) and the button stays where it is. Opening: the window grows out of the circle for 0.26 s with the easing cubic-bezier(0.2, 0.8, 0.2, 1), the content comes in after about 0.12 s, and the logo turns a quarter and fades while the X turns in and grows from 0.6 to 1; closing is the reverse. With "no animations and motion" (or Windows animations off) it changes at once. The window sits above the button (below it at a top corner), 8 px away, inside the work area.
+A native window, 56 px (drawn at 8 times the size and reduced, so the edge is smooth), at the edge of the screen for as long as Hevanti runs (with or without a lecture; the Recording Red dot is drawn only while a live lecture is recorded, not while it is stopping or saving): a solid Board Green circle (`#1B6E4B`, a little see-through overall, no ring, no white), the logo as a thin line inside it (Paper `#F6F3E9` bubble stroke 9, the letter ה in Paper, its left leg in Green Soft `#DCEBDF`), and a Recording Red dot (`#C2412D`, 14 px, with a 2 px ring in the colour of the page) at the top corner on the side of the screen's edge; it beats very gently, and is still when motion is off. While the small window is open (or opening) the logo is a white X (2.6 on a 24 viewBox, about 24 px) and the button stays where it is. Opening: the window grows out of the circle for 0.26 s with the easing cubic-bezier(0.2, 0.8, 0.2, 1), the content comes in after about 0.12 s, and the logo turns a quarter and fades while the X turns in and grows from 0.6 to 1; closing is the reverse. With "no animations and motion" (or Windows animations off) it changes at once. The window sits above the button (below it at a top corner), 8 px away, inside the work area.
 
 ### The Quick-Start Window
 A small window in the middle of the screen when Hevanti opens (the name and the logo are in the title bar of the window, and not written again inside): the heading "הקלטה חדשה", the field "איזה קורס?" with a note under it ("זוהה מכותרת החלון. אפשר להחליף." with a small sparkle), three kinds of lecture as a radio group (the chosen one Green Soft with Ink and a Green edge, never a second solid green), the one solid-green action "התחל תמלול" (it becomes "המשך באפליקציה" for a recording, which only opens the app), and a ghost button "פתח את האפליקציה", the same width and height as the start button (the two are a pair). Tokens as everywhere, light and night.
@@ -231,14 +231,14 @@ A small window in the middle of the screen when Hevanti opens (the name and the 
 Motion is rare, short and never over the lecture. Three small things move, all with the easing `cubic-bezier(0.2, 0.8, 0.2, 1)` (the same as the floating window opening), and nothing else:
 - **A mark made now:** the Mark Line band is drawn over the line said just before the mark, from the right (as Hebrew is read), in 0.6 s, and the ★ pops once (scale 0.4 to 1.3 to 1). Only for a mark that arrives while the lecture runs; a saved lecture opens with the finished band. Yellow is still only the mark.
 - **The selected shape slides:** the "where am I" pill of the top tabs and the Green Soft choice of a segmented group (`glideGroup`) glide to the new place in 0.28 s, instead of jumping. The glide only follows the `aria-current`, `aria-selected` or `aria-pressed` the code already sets; a group that is hidden cannot be measured and keeps its own selected look.
-- **The check of "saved":** the check in the Green Soft chip of "ההרצאה נשמרה בהצלחה" is drawn in 0.4 s after the chip pops, the same check shape as the logo.
+- **The check of "saved":** the check in the Green Soft chip of "ההרצאה נשמרה בהצלחה" is drawn in 0.4 s after the chip pops, a plain check, not the logo.
 
 ### Named Rules
 **The Finished Look Rule.** The end of every animation is the static look, so with motion off nothing is missing. Animations are written as `from`-only keyframes or inside `@media (prefers-reduced-motion: no-preference)`, and `html.a-still` ("no animations and motion" in the accessibility settings, also sent to the floating window) removes them all. A new motion needs a test in `tools/test_motion.py` for both switches.
 **The Quiet Rule.** Animate `transform`, `opacity`, a background size or a stroke only; no loop except the recording dot; nothing that moves text the student is reading.
 
 ### Logo
-One mark, everywhere: a green bubble with a short tail at its lower right and a thick yellow check (viewBox 120; bubble `M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z`, check `M33 52L52 71L87 33`, stroke width 17). The floating button places the same mark on a solid Board Green circle, as a thin line (the bubble a 9-wide Paper stroke without fill, the check Highlighter yellow, 17 wide); the installer icon keeps its own file. No second variant of the mark is made anywhere else.
+One mark, everywhere: a green bubble with a short tail at its lower right and the Hebrew letter ה built from rounded bars (viewBox 120; bubble `M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z` in Board Green; the ה is one L-shaped path `M41.5 26H78.5A7.5 7.5 0 0 1 86 33.5V66.5A7.5 7.5 0 0 1 71 66.5V41H41.5A7.5 7.5 0 0 1 41.5 26Z` in Sheet white, plus a detached left leg, `rect x34 y50 w15 h24 rx7.5`, in Green Soft; the mark keeps these light-theme colours in the dark theme too, one mark in both themes). The floating button places the same mark on a solid Board Green circle, as a thin line (the bubble a 9-wide Paper stroke without fill, the ה in Paper with its left leg in Green Soft); the installer icon keeps its own file. No second variant of the mark is made anywhere else.
 
 ## Do's and Don'ts
 
@@ -251,7 +251,7 @@ One mark, everywhere: a green bubble with a short tail at its lower right and a 
 - **Do** show a missing state with its fix: "חסר מפתח Gemini" with a link to the setting, "יש כרטיס NVIDIA" with an install button.
 
 ### Don't:
-- **Don't** use yellow for anything but the ★ mark (the star, and the highlighter band behind a marked transcript line) and the logo check.
+- **Don't** use yellow for anything but the ★ mark (the star, and the highlighter band behind a marked transcript line) .
 - **Don't** nest cards, and don't mark a state with a thick side border; use a dot, a tint or an icon.
 - **Don't** use emoji as icons or Secular One for body text or controls.
 - **Don't** add a second logo variant or a decorative gradient.

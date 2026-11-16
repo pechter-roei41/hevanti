@@ -1062,27 +1062,37 @@ def gpu_install():
     threading.Thread(target=run, daemon=True).start()
 
 
+# the letter ה of the logo (viewBox 120): the top bar and the right leg are one L (two round-ended bars 15 wide that meet at the
+# rounded corner), the left leg is a separate bar. (start, end, colour): white sheet and the soft green.
+HE_BARS = [((41.5, 33.5), (78.5, 33.5), (255, 255, 255, 255)), ((78.5, 33.5), (78.5, 66.5), (255, 255, 255, 255)), ((41.5, 57.5), (41.5, 66.5), (220, 235, 223, 255))]
+
+
 def _write_window_icon(path):
     """The one Hevanti mark as a multi-size .ico (each size drawn on its own, filling its square)."""
     from PIL import Image, ImageDraw
-    green, yellow = (31, 122, 85, 255), (247, 212, 76, 255)
+    green, cream = (31, 122, 85, 255), (246, 243, 233, 255)
 
     def draw(S):
         k = 8
         N = S * k
         im = Image.new("RGBA", (N, N), (0, 0, 0, 0))
         d = ImageDraw.Draw(im)
-        u = N * 0.98 / 108
-        ox, oy = N * 0.01 - 6 * u, N * 0.01 + (N * 0.98 - 106 * u) / 2 - 8 * u
+        u = N * 0.94 / 108
+        ox, oy = N * 0.03 - 6 * u, N * 0.03 + (N * 0.94 - 106 * u) / 2 - 8 * u
 
         def P(x, y):
             return (ox + x * u, oy + y * u)
+        # a thin light outline (3 units, Paper), so the green bubble stays visible on a dark taskbar or tab strip (2.8:1 without it)
+        d.rounded_rectangle([P(4.5, 6.5), P(115.5, 95.5)], radius=25.5 * u, fill=cream)
+        tail = [P(68, 93), P(92, 93), P(100, 114)]
+        d.polygon(tail, fill=cream)
+        d.line(tail + [tail[0]], fill=cream, width=int(round(3 * u)), joint="curve")
         d.rounded_rectangle([P(6, 8), P(114, 94)], radius=24 * u, fill=green)
         d.polygon([P(68, 93), P(92, 93), P(100, 114)], fill=green)
-        pts = [P(33, 52), P(52, 71), P(87, 33)]
-        d.line(pts, fill=yellow, width=int(17 * u), joint="curve")
-        for x, y in pts:
-            d.ellipse((x - 8.5 * u, y - 8.5 * u, x + 8.5 * u, y + 8.5 * u), fill=yellow)
+        for (x0, y0), (x1, y1), col in HE_BARS:
+            d.line([P(x0, y0), P(x1, y1)], fill=col, width=int(round(15 * u)))
+            for x, y in ((x0, y0), (x1, y1)):
+                d.ellipse((P(x, y)[0] - 7.5 * u, P(x, y)[1] - 7.5 * u, P(x, y)[0] + 7.5 * u, P(x, y)[1] + 7.5 * u), fill=col)
         return im.resize((S, S), Image.LANCZOS)
     sizes = [16, 24, 32, 48, 64, 128, 256]
     frames = [draw(n) for n in sizes]
@@ -6013,7 +6023,7 @@ def mini_button_why():
 
 
 # --- the floating button: a solid green circle with the Hevanti logo as a thin line (an X while the small window is open) and a red recording dot ---
-BTN_GREEN, BTN_CREAM, BTN_YELLOW, BTN_WHITE, BTN_REC = (27, 110, 75), (246, 243, 233), (247, 212, 76), (255, 255, 255), (194, 65, 45)   # 1B6E4B F6F3E9 F7D44C FFFFFF C2412D
+BTN_GREEN, BTN_CREAM, BTN_SOFT, BTN_WHITE, BTN_REC = (27, 110, 75), (246, 243, 233), (220, 235, 223), (255, 255, 255), (194, 65, 45)   # 1B6E4B F6F3E9 DCEBDF FFFFFF C2412D
 BTN_RING = ((246, 243, 233), (28, 27, 22))   # the ring round the dot: the colour of the page (paper, night paper)
 MINI_ANIM_S = 0.16   # the window grows from the circle (and the logo turns into an X) in this many seconds
 _BTN_CACHE = {}
@@ -6063,7 +6073,7 @@ def _bubble_points():
 
 
 def _button_layers(S, K=8):
-    """The two pictures of the button, drawn K times larger and kept: the logo (a thin cream line bubble and a yellow check, no fill)
+    """The two pictures of the button, drawn K times larger and kept: the logo (a thin cream line bubble and the cream letter ה with its left leg in soft green, no fill)
     and the X (white), each on a transparent square of S*K."""
     key = ("layers", S, K)
     if key in _BTN_CACHE:
@@ -6080,7 +6090,9 @@ def _button_layers(S, K=8):
     logo = Image.new("RGBA", (N, N), (0, 0, 0, 0))
     d = ImageDraw.Draw(logo)
     line(d, [(ox + x * sc, oy + y * sc) for x, y in _bubble_points()], 9 * sc, BTN_CREAM + (255,))
-    line(d, [(ox + 33 * sc, oy + 52 * sc), (ox + 52 * sc, oy + 71 * sc), (ox + 87 * sc, oy + 33 * sc)], 17 * sc, BTN_YELLOW + (255,))
+    for (x0, y0), (x1, y1), col in HE_BARS:   # the ה: its bars are 15 units wide, with round ends (the same shape as the logo)
+        col = BTN_CREAM if col[0] == 255 else BTN_SOFT
+        line(d, [(ox + x0 * sc, oy + y0 * sc), (ox + x1 * sc, oy + y1 * sc)], 15 * sc, col + (255,))
     xg = Image.new("RGBA", (N, N), (0, 0, 0, 0))
     d = ImageDraw.Draw(xg)
     u_ = (S / 56.0) * K   # one unit of the 24-unit square, which is 24 pixels on a button of 56

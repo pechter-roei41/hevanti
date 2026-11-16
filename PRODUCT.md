@@ -51,7 +51,7 @@ During a live lecture the student is listening, so interactions must be quick an
 
 ## Brand Commitments
 
-Name הבנתי / Hevanti and its logo: one mark everywhere (green speech bubble with a short tail and a thick yellow check; drawn the same in the app and player headers, favicon, floating button, installer icon and video). No second small-size variant. Hebrew first: interface and guide in Hebrew, GitHub README in English. App fonts are Secular One and Assistant (existing assets).
+Name הבנתי / Hevanti and its logo: one mark everywhere (green speech bubble with a short tail and the Hebrew letter ה in white; drawn the same in the app and player headers, favicon, floating button, installer icon and video). No second small-size variant. Hebrew first: interface and guide in Hebrew, GitHub README in English. App fonts are Secular One and Assistant (existing assets).
 
 ## Evidence on Hand
 

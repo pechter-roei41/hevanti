@@ -275,7 +275,7 @@
       },
       {
         "name": "The Highlighter Rule",
-        "body": "Yellow means marked by the student, or the logo check. Never a button or a background.",
+        "body": "Yellow means marked by the student. Never a button or a background.",
         "section": "colors"
       },
       {
@@ -297,7 +297,7 @@
       "Do show a missing state together with its fix"
     ],
     "donts": [
-      "Don't use yellow except for the star and the logo check",
+      "Don't use yellow except for the star",
       "Don't nest cards or use thick side borders",
       "Don't use emoji as icons",
       "Don't add a second logo variant",
