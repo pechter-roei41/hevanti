@@ -16,14 +16,15 @@ Israeli university students, mostly on an ordinary laptop (no discrete GPU assum
 
 Hevanti (הבנתי) is a lecture companion. It transcribes lectures on the student's computer in Hebrew or English and saves a picture of every new slide or board. Two things sit at the core:
 
-- "Report a problem" shows the details to copy and the student sends them herself, in a GitHub issue or by e-mail (a mail window opens; Hevanti sends nothing).
-- A small always-on-top floating window (Ctrl+Alt+Q), also over a full-screen lecture: type a question and get an answer based on the last minutes of the lecture and the slide on screen.
-- One-click marks (★ only, since 2.13; Ctrl+Alt+M; in a live lecture, a recording or a YouTube lecture) that mark the moment without stopping to listen, then list every mark with what was said just before it. In a transcript the line said just before the mark carries a highlighter band, a ★ and the words "מסומנת" for a screen reader. "?" marks from older lectures are still read and shown, with the same band.
+- **The floating window** (Ctrl+Alt+Q), always on top, also over a full-screen lecture: type a question and get an answer based on the last minutes of the lecture and the slide on screen. It has three "what did I miss" buttons (3, 7, 15 minutes), and answers cite the time of the transcript line they rely on (a link only when the page can open that line).
+- **One-click marks** (★ only, since 2.13; Ctrl+Alt+M; in a live lecture, a recording or a YouTube lecture) that mark the moment without stopping to listen, then list every mark with what was said just before it. In a transcript the line said just before the mark carries a highlighter band, a ★ and the words "מסומנת" for a screen reader. "?" marks from older lectures are still read and shown, with the same band.
+
+Around them:
+
 - The floating button: a green circle with the logo as a thin line and a red recording dot; a click opens the small window, which grows out of it while the logo turns into an X that closes it; no motion when the student asks for none.
 - The floating window can stop the recording (two presses) and then says the lecture was saved, with a link to open it; when the window is closed the same message shows above the round button.
 - A quick-start window in the middle of the screen when Hevanti opens: the course (guessed from a window title or the weekly schedule, never silently) and the kind of lecture, then "start" runs the transcript in the background; the home screen stays one click away and is what a first start, a missing key or a GPU problem shows.
 - A lecture that started with no course offers the course named on its first slide (local OCR; offered, never applied by itself), and the course of a recording lecture can be changed at any moment: the lecture moves there when it is saved.
-- Three "what did I miss" buttons (3, 7, 15 minutes) in the floating window, and answers that cite the time of the transcript line they rely on (a link only when the page can open that line).
 
 Success is measured by study time saved, number of users, and being a project worth showing.
 
@@ -47,7 +48,7 @@ During a live lecture the student is listening, so interactions must be quick an
 - Only computer audio is captured, not the microphone.
 - YouTube plays in YouTube's own player, never downloaded.
 - Formulas are rendered with KaTeX.
-- Undecided: possible paid tier in the future.
+- "Report a problem" shows the details to copy and the student sends them herself, in a GitHub issue or by e-mail (a mail window opens; Hevanti sends nothing).
 
 ## Brand Commitments
 

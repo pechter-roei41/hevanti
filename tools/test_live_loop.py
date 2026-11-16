@@ -344,6 +344,23 @@ check("a lecture deleted right after it started: no lecture folder (transcript, 
 check("...it is not reported as saved (no 'saved' card)", app.session.saved is None, app.session.saved)
 check("...and its transcript is gone", not app.session.transcript or not os.path.exists(app.session.transcript), app.session.transcript)
 
+# ------------------------------- K: stopped with a long backlog on a slow computer: the save does not wait minutes (16.11.2026)
+L.TAIL_BUDGET_S = 2
+wK = FakeWhisper(delay=1.5)
+t_stop = [0.0]
+
+
+def stop_timed(live, audio):
+    t_stop[0] = time.time()
+
+
+live, audio, tr = run("זנב", [np.concatenate([speech(3.8), silence(0.2)] * 8)], wK, speed=400, wait_s=5, during=stop_timed)
+took = time.time() - t_stop[0]
+check("stopped with a backlog on a slow computer: the last seconds are skipped past the budget, and said",
+      any("דילגתי על" in x and "אחרונות" in x for x in logged) and any("אחרונות: התמלול מאחר" in x for x in tr), (logged[-4:], tr[-3:]))
+check("...so the lecture is saved within seconds (not after the whole backlog)", took < 15 and tr and tr[-1].startswith("# סוף"), (took, tr[-2:]))
+L.TAIL_BUDGET_S = 20
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.stdout.flush()
 os._exit(1 if fails else 0)

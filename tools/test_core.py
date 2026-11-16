@@ -891,5 +891,19 @@ check("a star in a YouTube lecture: a line at the video's own time, in the form 
 _ml = L.REC_LINE.match(_yp[1])
 check("... and that line is read back as a mark (a note) by the lecture page", bool(_ml) and _ml.group(4) == "[סימון: חשוב]")
 
+# ---- the saved questions and answers of a lecture, read back for the "after the lecture" page (16.11.2026)
+_qc = "קורס שאלות שמורות"
+L.create_course(_qc)
+_qd = os.path.join(L.course_dir(_qc), "הרצאה 1")
+os.makedirs(_qd, exist_ok=True)
+open(L.lecture_txt(_qd), "w", encoding="utf-8").write("# תמלול\n")
+check("saved Q&A: none yet", L.lecture_qa(L.lib_rel(_qd)) == [])
+open(os.path.join(_qd, L.QA_NAME), "w", encoding="utf-8").write(
+    "## 16.11 12:30 · 0:41:32\n**שאלה:** מה זה?\n\nתשובה א\nשורה 2\n\n## 16.11 12:40\n**שאלה:** עוד?\n\nתשובה ב\n\n")
+_qa = L.lecture_qa(L.lib_rel(_qd))
+check("saved Q&A: newest first, with the time of day and the moment, and a multi-line answer",
+      [x["q"] for x in _qa] == ["עוד?", "מה זה?"] and _qa[1]["at"] == "0:41:32" and _qa[1]["a"] == "תשובה א\nשורה 2" and _qa[0]["at"] == "", _qa)
+check("saved Q&A: a name outside the library gives nothing", L.lecture_qa("../x/y") == [])
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)
