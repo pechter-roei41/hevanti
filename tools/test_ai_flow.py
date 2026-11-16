@@ -447,6 +447,30 @@ tr = open(sess.transcript, encoding="utf-8").read().splitlines() if os.path.isfi
 check("...and it ends properly, with everything that was said", tr and tr[0].startswith("# תמלול הרצאה") and tr[-1].startswith("# סוף")
       and sum("המרצה הסביר" in x for x in tr) >= len(words), tr[-3:])
 
+# ----------------------------------------------- "what it is based on": lines of what was sent, shown under the answer
+ctx = ("אני בהרצאה חיה. זה התמלול:\n\n[00:40:01] בוקר טוב לכולם ברוכים הבאים\n[00:41:10] הפרדת משתנים זה להעביר את y לאגף אחד\n"
+       "[00:41:32] [על השקופית כתוב: dy/dx = y]\n[00:41:40] ואז עושים אינטגרל על שני האגפים\n(ממש עכשיו, עוד לא סופי: משהו)\n"
+       "\nמה הופיע על השקופיות והלוח קודם בהרצאה:\n[00:10:00] שקף ישן עם הפרדת משתנים\n\nהשאלה שלי: מה זה הפרדת משתנים?")
+src = L.answer_sources(ctx, "מה זה הפרדת משתנים?")
+check("sources: the line that shares words with the question, with its time", src and src[0] == {"t": "00:41:10", "x": "הפרדת משתנים זה להעביר את y לאגף אחד"}, src)
+check("sources: never a slide's text, a note, an older slide or the question itself",
+      all("על השקופית" not in s["x"] and "שקף ישן" not in s["x"] and "השאלה שלי" not in s["x"] and "ממש עכשיו" not in s["x"] for s in src), src)
+src2 = L.answer_sources(ctx, "תסביר בפשטות את מה שנאמר עכשיו")
+check("sources: no shared words - the newest two lines, oldest first", [s["t"] for s in src2] == ["00:41:10", "00:41:40"], src2)
+check("sources: nothing was sent - nothing is shown", L.answer_sources("(עוד אין תמלול)\nהשאלה שלי: x", "x") == [])
+code, body, hdr = None, None, None
+reset()
+req = urllib.request.Request(srv.url.rstrip("/") + "/api/ask", method="POST", headers={"Content-Type": "application/json", "X-BZM": "1"},
+                             data=json.dumps({"context": ctx, "question": "מה זה הפרדת משתנים?", "history": [], "where": "live"}).encode())
+try:
+    with urllib.request.urlopen(req, timeout=20) as r:
+        hdr = r.headers.get("X-BZM-Src")
+        r.read()
+except urllib.error.URLError:
+    hdr = None
+from urllib.parse import unquote  # noqa: E402
+check("sources: sent with the answer in a header (ASCII), as a list of lines", hdr and json.loads(unquote(hdr))[0]["t"] == "00:41:10", hdr)
+
 srv.stop()
 print()
 print("all passed" if not fails else "FAILED: " + ", ".join(fails))

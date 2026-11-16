@@ -150,6 +150,31 @@ with open(F, "w", encoding="utf-8-sig") as f:   # (a BOM written by Notepad: val
 check("P1 settings: a file with a BOM is read, not treated as damaged", L.load_settings() == good and not os.path.exists(F + ".corrupt"),
       os.path.exists(F + ".corrupt"))
 
+for p in (F, F + ".bak", F + ".corrupt"):
+    if os.path.exists(p):
+        os.remove(p)
+with open(F, "w", encoding="utf-8") as f:
+    f.write('{"course": "x", "key": "ENC')   # cut in the middle, and there is no .bak
+L._DAMAGE.update(n=0, lost=False, at=0.0)
+check("P1 settings: damaged with no good copy starts empty", L.load_settings() == {})
+dm = L.settings_damage_public()
+check("P1 settings: the pages are told that the key is gone and where to put it back",
+      bool(dm) and dm["lost"] is True and "מפתח" in dm["msg"] and "הגדרות" in dm["msg"], dm)
+for p in (F, F + ".bak", F + ".corrupt"):
+    if os.path.exists(p):
+        os.remove(p)
+for p in (F, F + ".bak"):
+    with open(p, "w", encoding="utf-8") as f:
+        json.dump(good, f, ensure_ascii=False)
+with open(F, "r+b") as f:
+    f.truncate(15)
+L._DAMAGE.update(n=0, lost=False, at=0.0)
+L.load_settings()
+dm = L.settings_damage_public()
+check("P1 settings: a restore from the copy is told too, without saying the key is gone", bool(dm) and dm["lost"] is False and "שחזרתי" in dm["msg"], dm)
+check("P1 settings: the notice is in what the app polls (settings_damaged)", "settings_damaged" in open(os.path.join(PROG, "live_transcribe.py"), encoding="utf-8").read()
+      and "settings_damaged" in published["app.html"] and "settings_damaged" in published["mini.html"])
+
 # ------------------------------------------------------------------------------------------------ 5. rename that fails halfway (P1)
 C = "קורס שינוי שם"
 L.create_course(C)

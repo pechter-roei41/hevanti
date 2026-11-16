@@ -95,6 +95,20 @@ with sync_playwright() as p:
         check(f"floating window, {theme}: the answer button shows a 2px solid focus ring", got and got[1] == "solid" and got[2] == "2px", got)
         mn.unroute_all(behavior="ignoreErrors")
         mn.context.close()
+    # the text size, reading spacing and contrast chosen in the app reach the small windows (audit 16.11.2026, P1 #6): they change the look and nothing runs off the side
+    L.save_settings(a11y_view={"tx": 2.0, "read": True, "contrast": True})
+    for theme in ("light", "dark"):
+        for name, path in (("floating window", "/mini"), ("quick-start window", "/quick")):
+            for width in (320, 380):
+                sm = b.new_context(viewport={"width": width, "height": 700}, locale="he-IL", color_scheme=theme).new_page()
+                live_routes(sm)
+                sm.goto(url + path)
+                sm.wait_for_timeout(1300)
+                got = sm.evaluate("() => { const r = document.documentElement; return [r.classList.contains('a-contrast'), r.classList.contains('a-read'), r.style.zoom, r.scrollWidth - r.clientWidth]; }")
+                check(f"{name} at {width}px, {theme}: the saved contrast, reading spacing and text size are applied", got[0] and got[1] and got[2] == "1.4", got)
+                check(f"{name} at {width}px, {theme}, large text: nothing scrolls sideways", got[3] <= 0, f"{got[3]}px")
+                sm.unroute_all(behavior="ignoreErrors")
+                sm.context.close()
     b.close()
 srv.stop()
 print()

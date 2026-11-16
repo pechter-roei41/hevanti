@@ -251,7 +251,8 @@ async function getJson(u) { return (await fetch(u, {cache: "no-store"})).json();
 async function pollApp() {
   try {
     const d = await getJson("/api/app"), s = d.session;
-    if (d.save_failed && d.save_failed.n !== lastSaveFail) { lastSaveFail = d.save_failed.n; toast(d.save_failed.msg); }   // (a settings save that failed: said once)
+    if (d.save_failed && d.save_failed.n !== lastSaveFail) { lastSaveFail = d.save_failed.n; toast(d.save_failed.msg); }
+    if (d.settings_damaged && d.settings_damaged.n !== lastDamage) { lastDamage = d.settings_damaged.n; toast(d.settings_damaged.msg); }   // (a settings save that failed: said once)
     const mine = (document.querySelector('meta[name="bzm-run"]') || {}).content;   // a window left open from an earlier run of Hevanti has the old page: it loads the new one
     if (d.run && mine && mine !== "__" + "RUN__" && mine !== d.run) {
       let again = true;   // (never more often than every 20 seconds: a mismatch that does not go away must not make the window reload without end)
@@ -323,7 +324,7 @@ async function pollLive() {
   } catch (e) {}
 }
 const LAG_SHOW_S = 10;
-let lastSaveFail = null;
+let lastSaveFail = null, lastDamage = null;
 pollApp(); setInterval(pollApp, 4000);
 // light/dark and "no motion" follow the app within a second: a tiny request of its own, apart from the slower full poll above
 function a11yView(v) {   // text size, reading spacing and contrast chosen in the app (this window has its own browser profile, so the tool passes them)

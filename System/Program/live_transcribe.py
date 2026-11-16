@@ -1652,6 +1652,56 @@ def pick_window(wins, want):
     return None
 
 
+LECTURE_APP = re.compile(r"zoom|teams|meet\.google|google meet|webex|panopto|powerpnt|powerpoint|acrord|acrobat|vlc|youtube|moodle|kaltura|"
+                         r"נגן|מצגת|הרצאה", re.I)   # (a program or a window title that is probably the lecture)
+
+
+def _overlap(rc, mon):
+    w = min(rc[2], mon["left"] + mon["width"]) - max(rc[0], mon["left"])
+    h = min(rc[3], mon["top"] + mon["height"]) - max(rc[1], mon["top"])
+    return max(0, w) * max(0, h)
+
+
+def monitor_of_rect(mons, rc, default=1):
+    """The number (in mss's list) of the screen that holds most of the rect; `default` when it is on none."""
+    best, at = 0, default
+    for i, mon in enumerate(mons):
+        if i == 0:
+            continue
+        o = _overlap(rc, mon)
+        if o > best:
+            best, at = o, i
+    return at
+
+
+def pick_lecture_monitor(mons, wins, current=1):
+    """Which screen the lecture is on, from the windows in view (wins: [(title, exe, rect)], top first). mons: mss's list (0 = all
+    screens together). Every ordinary window counts by how much of a screen it covers, a program that looks like a lecture (Zoom,
+    Teams, a video player, a presentation) three times as much, the higher windows more. The screen stays as it is unless another one is
+    clearly more of a lecture, so a chat window on the other screen does not make the picture jump. The AI's and Hevanti's own
+    windows never count."""
+    n = len(mons) - 1
+    if n < 2:
+        return 1 if n >= 1 else current
+    score = [0.0] * len(mons)
+    for rank, (title, exe, rc) in enumerate(wins):
+        title = _plain_title(title)
+        prog = os.path.splitext(os.path.basename(str(exe or "")))[0].lower()
+        if mask_title(title) or prog in MASK_EXE or title.lower() in SHELL_TITLES or rc[2] - rc[0] < 200 or rc[3] - rc[1] < 150:
+            continue
+        i = monitor_of_rect(mons, rc, 0)
+        if not i:
+            continue
+        cover = min(1.0, _overlap(rc, mons[i]) / max(1, mons[i]["width"] * mons[i]["height"]))
+        boost = 3.0 if LECTURE_APP.search(prog + " " + title) else 1.0
+        score[i] += cover * boost / (1 + 0.25 * rank)
+    cur = current if 0 < current < len(mons) else 1
+    best = max(range(1, len(mons)), key=lambda i: score[i])
+    if best != cur and score[best] > score[cur] * 1.5 + 0.2:
+        return best
+    return cur
+
+
 def covering_rects(wins, idx, rc):
     """The windows IN FRONT of wins[idx] that overlap rc (a chat that pops over the lecture) - they get a mosaic."""
     l, t, r, b = rc
@@ -1660,7 +1710,7 @@ def covering_rects(wins, idx, rc):
             and w[2][2] - w[2][0] >= 40 and w[2][3] - w[2][1] >= 40]
 
 
-def capture_area(mode, want, box, mon):
+def capture_area(mode, want, box, mon, mons=None):
     """(what to photograph: an mss area, [rects in screen pixels to mosaic]). area None: nothing to photograph now
     (a window that is not on the screen, or nothing chosen yet) - it never falls back to the whole screen."""
     if mode == "region":
@@ -1679,6 +1729,8 @@ def capture_area(mode, want, box, mon):
         if not hit:
             return None, []
         idx, rc = hit
+        if mons:   # (the window may be on another screen than the lecture's: its own screen)
+            mon = mons[monitor_of_rect(mons, rc, 1)]
         l, t = max(rc[0], mon["left"]), max(rc[1], mon["top"])
         r, b = min(rc[2], mon["left"] + mon["width"]), min(rc[3], mon["top"] + mon["height"])
         if r - l < 80 or b - t < 80:
@@ -1898,6 +1950,31 @@ def strip_shot_lines(txt_path, names):
         os.replace(tmp, txt_path)
 
 
+_LECTURE_MON = {"idx": 0, "at": 0.0}   # the screen being photographed (0: not chosen yet) and when it was last looked at
+
+
+def lecture_monitor(mons, force=False):
+    """The screen to photograph: LT_MONITOR when the student set it, else the one the lecture is on (looked at again every few seconds,
+    and said once when it changes). One screen: that one."""
+    if "LT_MONITOR" in os.environ and 0 < SCREEN_MONITOR < len(mons):
+        return mons[SCREEN_MONITOR]
+    if len(mons) <= 2:
+        return mons[1]
+    now = time.time()
+    st = _LECTURE_MON
+    if force or not st["idx"] or now - st["at"] >= 3.0:
+        before = st["idx"] or 1
+        try:
+            wins = visible_windows()
+        except Exception:
+            save_error("pick screen")
+            wins = []
+        st["idx"], st["at"] = pick_lecture_monitor(mons, wins, before), now
+        if st["idx"] != before and before:
+            log(f"צילום השקופיות עבר למסך {st['idx']}, שם נמצאת ההרצאה.")
+    return mons[st["idx"] if 0 < st["idx"] < len(mons) else 1]
+
+
 def capture_preview(delay=0):
     """One picture of the whole main screen for the page (to draw the part to photograph, or to hide). Not saved.
     The page asks for a few seconds' delay: time to bring the lecture to the front."""
@@ -1909,7 +1986,7 @@ def capture_preview(delay=0):
         time.sleep(max(0, min(10, int(delay or 0))))
         with (getattr(mss, "MSS", None) or mss.mss)() as sct:
             mons = sct.monitors
-            shot = sct.grab(mons[SCREEN_MONITOR] if 0 < SCREEN_MONITOR < len(mons) else mons[1])
+            shot = sct.grab(lecture_monitor(mons, force=True))
         img = Image.frombytes("RGB", shot.size, shot.bgra, "raw", "BGRX")
         img.thumbnail((1100, 1100))
         buf = io.BytesIO()
@@ -2786,7 +2863,8 @@ TUTOR_SYSTEM = (
     "מקורות: בסוף משפט שמסתמך על שורה בתמלול, הוסף את השעה של אותה שורה כפי שהיא כתובה בתמלול, בסוגריים מרובעים "
     "(למשל [00:20:44] או [11:04:05]; כל שעה בסוגריים משלה, לא [11:04:05, 11:09:12]) - עד שלושה מקורות בתשובה, ורק שעות שבאמת מופיעות בתמלול שנשלח אליך. לעולם אל "
     "תכתוב שעה שלא מופיעה שם, ואל תחשב כמה זמן עבר. תשובה מהידע הכללי או מהשקופית - בלי שעה. "
-    "כתוב בעברית פשוטה וברורה. כתוב מונחים בעברית. מונח באנגלית רק אם המרצה אמר אותו באנגלית בהרצאה, או שהוא כתוב באנגלית בשקופית. שאלה בזמן הרצאה: תשובה קצרה, 3-6 שורות, כי "
+    "כתוב בעברית פשוטה וברורה. כתוב מונחים בעברית. מונח באנגלית רק אם המרצה אמר אותו באנגלית בהרצאה, או שהוא כתוב באנגלית בשקופית. שאלה בזמן הרצאה: קודם תשובה קצרה מאוד, 2-3 משפטים (עד כ-40 מילים) שעונים ישר על השאלה "
+    "(סיכום של \"מה פספסתי\" יכול להגיע ל-6 שורות), כי "
     "הסטודנט מקשיב. אל תסיים בהצעה או בשאלה (כמו \"תרחיב?\"): באפליקציה יש כפתור \"עוד פרטים\". נוסחאות כתוב ב-LaTeX: בתוך שורה בין $...$ "
     "(למשל $I = \\int r^2\\,dm$), ונוסחה חשובה בשורה נפרדת בין $$...$$. האפליקציה מציגה אותן כנוסחאות. טקסט בעברית "
     "כתוב מחוץ לנוסחה, לא בתוכה. התמלול אוטומטי: מילה שלא מתאימה היא כנראה טעות שמיעה - נחש מההקשר, בלי להעיר על זה אלא אם זה משנה. "
@@ -3013,6 +3091,29 @@ def tutor_body(d):
             "contents": contents, "generationConfig": {"temperature": 0.3}}
 
 
+_SRC_LINE = re.compile(r"^\[(\d{1,2}:\d{2}(?::\d{2})?)\]\s+(.{6,})$")
+
+
+def answer_sources(context, question, n=2):
+    """"What it is based on", shown under an answer: one or two lines of the transcript that was sent with the question, with
+    their times: the ones that share the most words with the question, else the newest. Only what was really sent (never a
+    line made up), and never a slide's text or the 'not transcribed yet' notes. Returns [{"t": "00:41:32", "x": "..."}]."""
+    text = str(context or "").split("\nהשאלה שלי:")[0].split("\nמה הופיע על השקופיות")[0]
+    lines = []
+    for ln in text.splitlines():
+        m = _SRC_LINE.match(ln.strip())
+        if not m or m.group(2).startswith(("[על השקופית", "[כאן הופיעה", "(")):
+            continue
+        lines.append((m.group(1), m.group(2).strip()))
+    if not lines:
+        return []
+    words = {w for w in re.findall(r"[\w\-]{3,}", str(question or "")) if len(w) >= 3}
+    scored = sorted(range(len(lines)), key=lambda i: (-sum(1 for w in words if w in lines[i][1]), -i))
+    best = [i for i in scored if words and any(w in lines[i][1] for w in words)][:n]
+    pick = sorted(best or range(max(0, len(lines) - n), len(lines)))
+    return [{"t": lines[i][0], "x": lines[i][1][:160]} for i in pick]
+
+
 def tutor_lecture_dir(d):
     """The lecture the question is about (to keep the answer in its folder)."""
     if d.get("f"):
@@ -3204,10 +3305,12 @@ class ScreenWatcher(threading.Thread):
         try:
             with (getattr(mss, "MSS", None) or mss.mss)() as sct:
                 mons = sct.monitors
-                mon = mons[SCREEN_MONITOR] if 0 < SCREEN_MONITOR < len(mons) else mons[1]
+                mon = lecture_monitor(mons, force=True)
                 while not self.stop_evt.is_set():
                     try:
                         paused, mode, want, box, blur = cap.snapshot()
+                        if self.region_fn is None:   # (a YouTube video is photographed where its player is, not by screen)
+                            mon = lecture_monitor(mons)
                         if paused:   # the student paused it: nothing is looked at, nothing is saved
                             resume, self.snap_at = True, 0.0
                             self._idle()
@@ -3220,7 +3323,7 @@ class ScreenWatcher(threading.Thread):
                                 continue
                             area = mon if r == "screen" else r
                         elif mode != "screen":
-                            area, cover = capture_area(mode, want, box, mon)
+                            area, cover = capture_area(mode, want, box, mon, mons if "LT_MONITOR" not in os.environ else None)
                             cap.found = area is not None
                             if area is None:   # the window is not on the screen / nothing chosen yet: no picture
                                 prev, before = None, None
@@ -6654,6 +6757,26 @@ def lecture_summary(f):
         return ""
 
 
+def lecture_qa(f):
+    """The questions and answers kept in the lecture's folder (tutor_save wrote them), newest first:
+    [{"when": "16.11 12:30", "at": "0:41:32" or "", "q": ..., "a": ...}]. Anything that cannot be read is skipped."""
+    ld = lecture_from_rel(f)
+    try:
+        with open(os.path.join(ld, QA_NAME), encoding="utf-8") as fh:
+            text = fh.read()
+    except (OSError, TypeError):
+        return []
+    out = []
+    for block in re.split(r"(?m)^## ", text)[1:]:
+        head, _, rest = block.partition("\n")
+        m = re.match(r"\*\*שאלה:\*\*\s*(.*?)\n\n(.*)$", rest.strip("\n"), re.S)
+        if not m:
+            continue
+        when, _, at = head.partition(" · ")
+        out.append({"when": when.strip(), "at": at.strip(), "q": m.group(1).strip(), "a": m.group(2).strip()})
+    return out[::-1]
+
+
 _SETTINGS_LOCK = threading.RLock()   # one reader-changer-writer at a time (the page, the slide reader and the hotkeys all save settings)
 
 
@@ -6689,6 +6812,19 @@ def load_settings_patient(seconds=3.0):
         time.sleep(0.2)
 
 
+_DAMAGE = {"n": 0, "lost": False, "at": 0.0}   # a settings file that was damaged: the pages tell the student once (settings_damaged in /api/app)
+
+
+def settings_damage_public():
+    """What the pages show after a damaged settings file (for ten minutes): {"n": count, "msg": text}, else None. When no good copy was
+    left, the key is gone too, and the text says so and where to put it back."""
+    if not _DAMAGE["n"] or time.time() - _DAMAGE["at"] > 600:
+        return None
+    msg = ("קובץ ההגדרות היה פגום ולא היה העתק תקין, ולכן ההגדרות והמפתח נמחקו. צריך להכניס את המפתח מחדש (הגדרות ← מפתח)."
+           if _DAMAGE["lost"] else "קובץ ההגדרות היה פגום. שחזרתי את ההעתק האחרון התקין.")
+    return {"n": _DAMAGE["n"], "msg": msg, "lost": _DAMAGE["lost"]}
+
+
 def _settings_damaged():
     import shutil
     with _SETTINGS_LOCK:
@@ -6711,6 +6847,7 @@ def _settings_damaged():
                 raise ValueError("not a dict")
         except (OSError, ValueError):
             d = {}
+        _DAMAGE.update(n=_DAMAGE["n"] + 1, lost=not d, at=time.time())
         save_error_text("settings damaged", f"{SETTINGS_FILE} could not be read; a copy is in settings.json.corrupt; "
                         + ("the last good copy was restored." if d else "there is no good copy: settings start empty."))
         log("קובץ ההגדרות היה פגום. " + ("שחזרתי את ההעתק האחרון התקין." if d else "אין העתק תקין, ולכן ההגדרות התחילו מחדש (גם המפתח).")
@@ -7976,7 +8113,8 @@ FONT_FILES = ("SecularOne-Regular.ttf", "Assistant-Variable.ttf")   # the app's 
 KATEX_JS = os.path.join(SCRIPT_DIR, "katex", "katex.min.js")   # draws the formulas in the answers (MIT, see katex\LICENSE.txt)
 ASK_JS = os.path.join(SCRIPT_DIR, "ask.js")  # the "ask the AI" box (app + player)
 APP_FILE = os.path.join(LOCAL_DIR, "app.json")  # where the running tool listens - a second launch opens it
-TAB_CLOSED_WAIT_S = 8   # seconds the program waits after the app's tab was closed (a reload, or another tab, keeps it open)
+TAIL_BUDGET_S = 20   # when a live lecture stops, at most this long is spent transcribing the sound that still waits (the rest is skipped and said)
+TAB_CLOSED_WAIT_S = 8  # seconds the program waits after the app's tab was closed (a reload, or another tab, keeps it open)
 IDLE_EXIT_S = float(os.environ.get("BZM_IDLE_EXIT_S") or 15 * 60)  # nothing running, no page open -> the tool closes
 RECORDING_EXTS = (".mp4", ".m4v", ".mov", ".mkv", ".webm", ".avi", ".wmv", ".mpg", ".mpeg", ".ts", ".3gp",
                   ".mp3", ".m4a", ".aac", ".wav", ".ogg", ".opus", ".flac", ".wma", ".ogv")
@@ -8080,7 +8218,7 @@ class App:
                     "screens": SCREEN_ENABLED, "capture": capture_control().public(), "math": math_reader().status(), "gpu": gpu_public(),
                     "product": PRODUCT, "migrated": self.migrated,
                     "course": load_settings().get("course") or "", "connect": self.connect_info(),
-                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme(), "still": bool(load_settings().get("a11y_still")), "a11y": a11y_view(), "save_failed": save_failed_public(), "mark_n": self.mark_n, "saved_n": self.saved_n, "run": RUN_ID}
+                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme(), "still": bool(load_settings().get("a11y_still")), "a11y": a11y_view(), "save_failed": save_failed_public(), "settings_damaged": settings_damage_public(), "mark_n": self.mark_n, "saved_n": self.saved_n, "run": RUN_ID}
 
     def connect_info(self):
         """Which AI apps are connected (reading two small config files - at most every few seconds)."""
@@ -9535,7 +9673,7 @@ def _app_handler():
                 if p == "/api/transcript":
                     v = transcript_view(q.get("f", [""])[0])
                     if v:
-                        v = dict(v, summary=lecture_summary(q.get("f", [""])[0]))
+                        v = dict(v, summary=lecture_summary(q.get("f", [""])[0]), qa=lecture_qa(q.get("f", [""])[0]))
                     return self._json(v if v else {"none": True}, 200 if v else 404)
                 if p == "/api/slide_text":
                     f = safe_shot(q.get("p", [""])[0]) if q.get("p") else None
@@ -9682,6 +9820,14 @@ def _app_handler():
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Connection", "close")
+            if not d.get("task") and not d.get("minutes"):   # (a whole-lecture task or "what I missed": no short list of lines)
+                try:
+                    from urllib.parse import quote
+                    src = answer_sources(d.get("context"), d.get("question"))
+                    if src:
+                        self.send_header("X-BZM-Src", quote(json.dumps(src, ensure_ascii=False)))
+                except Exception:
+                    save_error("answer sources")
             self.end_headers()
             out, ok = [first], True
             try:
@@ -10437,8 +10583,10 @@ def main():
     except KeyboardInterrupt:
         draft_clear()
         log("עוצר...")
+    # The lecture is saved first, with the small window and the button still on screen ("שומר וסוגר..."); only then they close.
+    # (Before: they closed at once and the student saw nothing while a slow computer finished the last seconds.)
+    APP.stop_session(wait=90)
     close_our_windows()
-    APP.stop_session(wait=180)
     server.stop()
     _remove_quietly(APP_FILE)
     with APP.lock:
@@ -10865,10 +11013,16 @@ def run_live(sess, lang, course=""):
         warn_lag(lag)
         return True
 
-    def in_pieces(buf, buf_t, buf_sr):
-        """Transcribe a long stretch piece by piece (the normal way)."""
+    def in_pieces(buf, buf_t, buf_sr, deadline=None):
+        """Transcribe a long stretch piece by piece (the normal way). deadline: when stopping, the rest is skipped (and said)
+        once the time for the last seconds is used up, so a slow computer never keeps the save waiting for minutes."""
         pos = 0
         while pos < len(buf):
+            if deadline is not None and time.time() > deadline:
+                secs = (len(buf) - pos) / buf_sr
+                log(f"עצירה: דילגתי על {secs:.0f} שניות אחרונות שלא הספקתי לתמלל, כדי לשמור את ההרצאה מיד.")
+                note(f"דילגתי על {secs:.0f} שניות אחרונות: התמלול מאחר")
+                break
             inflight[:] = [(buf[pos:], buf_t + pos / buf_sr, buf_sr)]
             left = len(buf) - pos
             c = find_cut(buf[pos:], buf_sr, min_s, max_s) if left > max_s * buf_sr else left
@@ -10950,8 +11104,9 @@ def run_live(sess, lang, course=""):
                     more.append(to_mono(d2, ch))
             if more:
                 rest.append((np.concatenate(more), first_t, sr))
+            deadline = time.time() + TAIL_BUDGET_S
             for buf, bt, bsr in rest:
-                in_pieces(buf, bt, bsr)
+                in_pieces(buf, bt, bsr, deadline)
         except KeyboardInterrupt:
             pass  # Ctrl+C again: stop right now
         except Exception:

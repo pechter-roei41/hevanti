@@ -77,7 +77,18 @@ with sync_playwright() as p:
     pg.evaluate("openPast('c/t')")
     pg.wait_for_timeout(800)
     check("marks tab: shown when the lecture has marks", not pg.evaluate("document.querySelector('#pastTabs').hidden"))
-    check("marks tab: study first", not pg.evaluate("document.querySelector('#pastPanelStudy').hidden"))
+    check("after the lecture: the Q&A tab is first when marks wait for an answer", not pg.evaluate("document.querySelector('#pastPanelQa').hidden") and pg.evaluate("document.querySelector('#pastPanelStudy').hidden"))
+    check("...and it lists each mark as a question put off, with a button", pg.evaluate("document.querySelectorAll('#pastPending .pend').length") == 2
+          and "הסבר לי את הרגע הזה" in pg.evaluate("document.querySelector('#pastPending .pend button').textContent"))
+    asked = []
+    pg.route("**/api/ask", lambda r: (asked.append(json.loads(r.request.post_data)), r.fulfill(status=200, content_type="text/plain; charset=utf-8", body="הסבר קצר לרגע")))
+    pg.evaluate("BZMAsk.setBuiltin(true)")
+    pg.click("#pastPending .pend button")
+    pg.wait_for_timeout(900)
+    check("a mark's question goes with the minutes around it only (not the whole lecture), titled with its time",
+          len(asked) == 1 and asked[0]["question"].startswith("★ הרגע 00:20") and "שורה מספר 3" in asked[0]["context"] and "שורה מספר 11" not in asked[0]["context"], asked and asked[0]["context"][:300])
+    check("...its answer is kept in the Q&A tab and that mark is no longer waiting", pg.evaluate("document.querySelectorAll('#pastPending .pend').length") == 1
+          and pg.evaluate("document.querySelector('#pastQaList').innerText").count("הסבר קצר לרגע") == 1, pg.evaluate("document.querySelector('#pastQaList').innerText"))
     pg.click("[data-pt=marks]")
     rows = pg.evaluate("[...document.querySelectorAll('#pastMkList .mk')].map(x => x.innerText)")
     check("marks tab: a row per mark, with what was said before", len(rows) == 2 and "לפני הסימון נאמר" in rows[0] and "לא הבנתי" in rows[0] and "חשוב" in rows[1], rows)
@@ -749,6 +760,8 @@ with sync_playwright() as p:
               r["studyBorder"] == "0px" and r["studyBg"] == "rgba(0, 0, 0, 0)" and r["studyPad"] == "0px" and r["nested"] == 0, r)
         check(f"lecture page, {theme}: the three cards are still cards (a border each)", r["tiles"] == 3 and r["tileBorder"] != "0px", r)
         check(f"lecture page, {theme}, the question box open: 'answer here' is the one solid green control", r["solid"] == ["תשובה כאן"], r["solid"])
+        lead = lp.evaluate("document.querySelector('#studyLead').textContent")
+        check(f"lecture page, {theme}: with a key, the line over the study cards says where a click goes (Gemini, answer below)", "ל-Gemini" in lead and "למטה" in lead, lead)
         check(f"lecture page, {theme}: no script errors", lp.errs == [], lp.errs)
         lp.context.close()
 

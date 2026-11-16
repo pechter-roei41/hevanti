@@ -85,6 +85,10 @@ jobs:
         run: python tools/test_review_p1.py
       - name: Findings of the review of 16.11.2026 (P2) - the backup folder, settings log, report cleaner, uninstall, course names, glossary, player, tabs, headings, wording (the browser part runs where Edge or Chrome exists)
         run: python tools/test_review_p2.py
+      - name: A rename that fails on a path over 260 characters keeps the lecture (Windows)
+        run: python tools/test_long_rename.py
+      - name: Which screen is photographed when there are two or more
+        run: python tools/test_monitor.py
       - name: The free quota and the paid-plan question
         run: python tools/test_quota.py
       - name: Photographing the YouTube player
