@@ -46,6 +46,12 @@ check("a small window on the other screen does not make the picture jump",
 check("a window across both screens belongs to the one that holds most of it",
       L.monitor_of_rect(TWO, (1500, 0, 3300, 1000)) == 2 and L.monitor_of_rect(TWO, (100, 0, 2000, 1000)) == 1)
 
+# found on a real computer (16.11.2026): the AI window fills screen 1 and hides an explorer and a browser window under it, a browser plays on screen 2
+REAL = [("Claude", "claude.exe", FULL1), ("Video - Google Chrome", "chrome.exe", FULL2), ("Home - File Explorer", "explorer.exe", FULL1),
+        ("Docs - Google Chrome", "chrome.exe", FULL1), ("Program Manager", "explorer.exe", (0, 0, 3840, 1080))]
+check("windows hidden under the AI window do not count: the browser on screen 2 wins", L.pick_lecture_monitor(TWO, REAL, 1) == 2)
+check("the same without the video: screen 1 stays (nothing to move to)", L.pick_lecture_monitor(TWO, [REAL[0], REAL[2], REAL[3]], 1) == 1)
+
 # one window photographed: its own screen, not the main one
 real = L.visible_windows
 L.visible_windows = lambda: [("Lecture - Zoom", "Zoom.exe", (2000, 50, 3700, 1000))]
