@@ -5,5 +5,20 @@
       "maxFindings": 5,
       "maxChars": 8000
     }
+  },
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "System/Program/player.html"
+        ],
+        "createdAt": "2026-11-16T15:32:33.453Z",
+        "reason": "Claude: both <img> tags (#slide, #big img) get their src from player.js at run time; an empty src is intentional until a slide exists"
+      }
+    ]
   }
 }

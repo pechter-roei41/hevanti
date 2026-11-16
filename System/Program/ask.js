@@ -54,6 +54,11 @@
 .askp .plan button{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;padding:4px 12px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .askp .plan button:hover{background:var(--accent);color:var(--accent-ink)}
 .askp .ais button.here.alt{background:transparent;color:var(--accent);font-weight:600}
+.askp .basis{justify-self:end;max-width:96%;display:flex;gap:10px;align-items:flex-start;font-size:calc(13px * var(--tx, 1));line-height:1.5;color:var(--muted)}
+.askp .basis img{width:56px;height:38px;object-fit:cover;border-radius:4px;border:1px solid var(--line);flex:none;background:var(--bg)}
+.askp .basis .bl{display:grid;gap:2px;min-width:0}
+.askp .basis .bl b{font-weight:600;color:var(--fg)}
+.askp .basis .bl span{overflow-wrap:anywhere}
 .askp .alt-box{margin-top:6px;display:grid;gap:6px;font-size:14px;line-height:1.5;color:var(--fg)}
 .askp .conv{gap:12px;padding-block:4px}
 .askp .qa{display:grid;gap:6px;background:none;border:0;padding:0}
@@ -287,6 +292,20 @@
       }
       bx.appendChild(rw); qa.appendChild(bx);
     }
+    // "What it is based on": under the answer, a small picture of the slide that was sent and one or two transcript lines with their times
+    // (the server picks the lines from what was really sent; the header is missing when there is nothing to show)
+    function addBasis(qa, body, hdr) {
+      let lines = [];
+      try { lines = hdr ? JSON.parse(decodeURIComponent(hdr)) : []; } catch (e) { lines = []; }
+      const url = body.img ? "/shot?p=" + encodeURIComponent(body.img) : (body.n && body.where === "rec" ? "/shots/" + encodeURIComponent(body.n) : "");
+      if (!url && !lines.length) return;
+      const bx = mk("div", "basis"), bl = mk("div", "bl");
+      if (url) { const im = doc.createElement("img"); im.src = url; im.alt = "השקופית שהתשובה מתבססת עליה"; im.loading = "lazy"; im.addEventListener("error", () => im.remove()); bx.appendChild(im); }
+      bl.appendChild(mk("b", "", "על מה זה מבוסס"));
+      for (const l of lines.slice(0, 2)) bl.appendChild(mk("span", "", "⏱ " + String(l.t) + "  " + String(l.x)));
+      if (!lines.length) bl.appendChild(mk("span", "", "השקופית שעל המסך"));
+      bx.appendChild(bl); qa.appendChild(bx);
+    }
     // ask Gemini through Hevanti; the answer appears here as it is written
     async function askHere(q, extra) {
       extra = extra || {};
@@ -309,6 +328,12 @@
         where: val(opts.where), f: val(opts.lecture), img: val(opts.image), n: val(opts.shotName), at: val(opts.at)};
       setBusy(true); ctl = new AbortController();
       let text = "", firstChunk = false;
+      // waiting: how long it has been (the live question gives up after about 25 seconds; a whole-lecture task waits longer)
+      const t0 = Date.now(), tick = setInterval(() => {
+        if (text) return;
+        const s = Math.round((Date.now() - t0) / 1000);
+        ae.textContent = "חושב... " + s + " שניות" + (!extra.task && s >= 12 ? " (אחרי כ-25 שניות אני מוותר)" : "");
+      }, 1000);
       try {
         const r = await fetch("/api/ask", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
           body: JSON.stringify(body), signal: ctl.signal});
@@ -322,6 +347,7 @@
           text += dec.decode(value, {stream: true}); renderAnswer(doc, ae, text, src); if (!opts.compact || !firstChunk) follow(); firstChunk = true;   // (the small window: once, so the question stays at the top of the pane and the answer reads from its start)
         }
         text += dec.decode(); renderAnswer(doc, ae, text || "(לא התקבלה תשובה)", src);
+        if (text && !text.includes("\n\n⚠ ") && !extra.task) addBasis(qa, body, r.headers.get("X-BZM-Src"));
         if (opts.compact) follow();
         if (text && !text.includes("\n\n⚠ ")) { hist.push({q: shown, a: text}); if (extra.onDone) extra.onDone(text); }
         sayReady(text ? "התשובה מוכנה" : "לא התקבלה תשובה");
@@ -331,7 +357,7 @@
           qa.classList.add("err"); ae.textContent = e.message || "לא הצלחתי לקבל תשובה."; sayReady(ae.textContent);
           if (e.quota) offerElsewhere(qa, q || DEF_Q, extra, e.wait);   // the free quota is used up
         }
-      } finally { setBusy(false); ctl = null; if (opts.compact) { try { ta.focus(); } catch (e) {} } }
+      } finally { clearInterval(tick); setBusy(false); ctl = null; if (opts.compact) { try { ta.focus(); } catch (e) {} } }
     }
     here.addEventListener("click", () => {
       if (busy) { if (ctl) ctl.abort(); return; }
