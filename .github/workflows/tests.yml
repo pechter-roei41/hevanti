@@ -61,6 +61,9 @@ jobs:
       - name: The quiet motion - the sliding tabs, a mark drawn like a highlighter, the check of the saved card; all off with motion off (browser)
         if: runner.os == 'Windows'
         run: python tools/test_motion.py
+      - name: The review of 2.22 - the saved course at home whichever answer is late, the top bar, the settings, the star (browser)
+        if: runner.os == 'Windows'
+        run: python tools/test_review_222.py
       - name: The question to Gemini, from the sound to the answer - a model that fails, the quota, what is kept (made-up Gemini)
         run: python tools/test_ai_flow.py
       - name: The page offers the student's own AI apps when the quota is used up (browser, made-up Gemini)

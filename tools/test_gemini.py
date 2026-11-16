@@ -317,6 +317,14 @@ d = json.loads(body)
 check("through the server: 403 with the API off is said in Google's words, and it is not the quota",
       code == 400 and "לא מופעל" in d.get("error", "") and not d.get("quota"), (code, body))
 
+# 403 that is not Google's own answer (a school or office network, a proxy): say the network blocked it, not that Gemini refused
+import io
+_net = L._gemini_http_error(urllib.error.HTTPError("https://x", 403, "Forbidden", {}, io.BytesIO(b"<html><body>Blocked by policy</body></html>")))
+check("403 from the network (not Google's JSON): the message says something on the way blocked it, and the key is not blamed",
+      "ברשת" in str(_net) and "בלי פירוט" not in str(_net) and "סירב" not in str(_net) and "לא קיבל את המפתח" not in str(_net), str(_net))
+_g = L._gemini_http_error(urllib.error.HTTPError("https://x", 403, "Forbidden", {}, io.BytesIO(json.dumps({"error": {"message": "nope", "status": "PERMISSION_DENIED"}}).encode())))
+check("403 in Google's own words is still Gemini's refusal with its reason", "סירב (403)" in str(_g) and "nope" in str(_g), str(_g))
+
 srv.stop()
 print()
 print("all passed" if not fails else "FAILED: " + ", ".join(fails))
