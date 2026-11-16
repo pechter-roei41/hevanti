@@ -39,7 +39,7 @@ except Exception:  # lets "uninstall" run even if the install never finished
 VERSION = "2.22"
 VERSION_DATE = "15.11.2026"
 PRODUCT = "הבנתי"
-GUIDE_URL = "https://claude.ai/artifact/Rho2yLpowLsxqy1Zsw6QAD"
+RELEASES_URL = "https://github.com/pechter-roei41/hevanti/releases/latest"
 
 # ---------------- settings ----------------
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -6569,7 +6569,7 @@ def check_update():
     theirs = key(version, date)
     if theirs[0] < mine[0] or (theirs[0] == mine[0] and (not theirs[1] or theirs[1] <= mine[1])):
         return None
-    APP.update = {"version": version, "date": date, "url": str(d.get("html_url") or GUIDE_URL),
+    APP.update = {"version": version, "date": date, "url": str(d.get("html_url") or RELEASES_URL),
                   "notes": str(d.get("name") or "")[:300]}
     return APP.update
 

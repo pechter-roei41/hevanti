@@ -51,11 +51,11 @@ During a live lecture the student is listening, so interactions must be quick an
 
 ## Brand Commitments
 
-Name הבנתי / Hevanti and its logo: one mark everywhere (green speech bubble with a short tail and a thick yellow check; drawn the same in the app and player headers, favicon, floating button, installer icon, web guide and video). No second small-size variant. Hebrew first: interface and guide in Hebrew, GitHub README in English. App fonts are Secular One and Assistant (existing assets).
+Name הבנתי / Hevanti and its logo: one mark everywhere (green speech bubble with a short tail and a thick yellow check; drawn the same in the app and player headers, favicon, floating button, installer icon and video). No second small-size variant. Hebrew first: interface and guide in Hebrew, GitHub README in English. App fonts are Secular One and Assistant (existing assets).
 
 ## Evidence on Hand
 
-Real code, tests (`tools/test_*.py`), a half-minute how-to video (`System/Program/media/teaser.mp4`, footage of the interface), a beta release, the in-app guide ("איך משתמשים") and a public web guide (a claude.ai Artifact linked from the README). No proof of a large user base yet (the code-signing application was declined for lack of it); do not fabricate user counts or testimonials.
+Real code, tests (`tools/test_*.py`), a half-minute how-to video (`System/Program/media/teaser.mp4`, footage of the interface), a beta release, the in-app guide ("איך משתמשים"). No proof of a large user base yet (the code-signing application was declined for lack of it); do not fabricate user counts or testimonials.
 
 ## Product Principles
 
