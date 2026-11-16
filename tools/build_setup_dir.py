@@ -22,11 +22,16 @@ def policy_text():
     return (chr(10) * 2 + "=" * 70 + chr(10) * 2).join(parts) + chr(10)
 
 
+# the letter ה of the logo (viewBox 120): the top bar and the right leg are one L (two round-ended bars 15 wide that meet at the
+# rounded corner), the left leg is a separate bar. (start, end, colour): white sheet and the soft green.
+HE_BARS = [((41.5, 33.5), (78.5, 33.5), (255, 255, 255, 255)), ((78.5, 33.5), (78.5, 66.5), (255, 255, 255, 255)), ((41.5, 57.5), (41.5, 66.5), (220, 235, 223, 255))]
+
+
 def make_icon(path):
-    """The logo (a green bubble with a short tail and a thick yellow tick) as a Windows .ico, drawn here - no image file in the repo.
+    """The logo (a green bubble with a short tail and a white letter ה) as a Windows .ico, drawn here - no image file in the repo.
     Every size is drawn on its own (8x, then smoothed down) and fills its square, so the taskbar and Start icons stay crisp."""
     from PIL import Image, ImageDraw
-    green, yellow = (31, 122, 85, 255), (247, 212, 76, 255)
+    green = (31, 122, 85, 255)
 
     def draw(S):
         k = 8
@@ -40,10 +45,10 @@ def make_icon(path):
             return (ox + x * u, oy + y * u)
         d.rounded_rectangle([P(6, 8), P(114, 94)], radius=24 * u, fill=green)
         d.polygon([P(68, 93), P(92, 93), P(100, 114)], fill=green)
-        pts = [P(33, 52), P(52, 71), P(87, 33)]
-        d.line(pts, fill=yellow, width=int(17 * u), joint="curve")
-        for x, y in pts:
-            d.ellipse((x - 8.5 * u, y - 8.5 * u, x + 8.5 * u, y + 8.5 * u), fill=yellow)
+        for (x0, y0), (x1, y1), col in HE_BARS:
+            d.line([P(x0, y0), P(x1, y1)], fill=col, width=int(round(15 * u)))
+            for x, y in ((x0, y0), (x1, y1)):
+                d.ellipse((P(x, y)[0] - 7.5 * u, P(x, y)[1] - 7.5 * u, P(x, y)[0] + 7.5 * u, P(x, y)[1] + 7.5 * u), fill=col)
         return im.resize((S, S), Image.LANCZOS)
     sizes = [16, 20, 24, 32, 40, 48, 64, 96, 128, 256]
     frames = [draw(n) for n in sizes]
