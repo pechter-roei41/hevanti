@@ -1652,6 +1652,56 @@ def pick_window(wins, want):
     return None
 
 
+LECTURE_APP = re.compile(r"zoom|teams|meet\.google|google meet|webex|panopto|powerpnt|powerpoint|acrord|acrobat|vlc|youtube|moodle|kaltura|"
+                         r"נגן|מצגת|הרצאה", re.I)   # (a program or a window title that is probably the lecture)
+
+
+def _overlap(rc, mon):
+    w = min(rc[2], mon["left"] + mon["width"]) - max(rc[0], mon["left"])
+    h = min(rc[3], mon["top"] + mon["height"]) - max(rc[1], mon["top"])
+    return max(0, w) * max(0, h)
+
+
+def monitor_of_rect(mons, rc, default=1):
+    """The number (in mss's list) of the screen that holds most of the rect; `default` when it is on none."""
+    best, at = 0, default
+    for i, mon in enumerate(mons):
+        if i == 0:
+            continue
+        o = _overlap(rc, mon)
+        if o > best:
+            best, at = o, i
+    return at
+
+
+def pick_lecture_monitor(mons, wins, current=1):
+    """Which screen the lecture is on, from the windows in view (wins: [(title, exe, rect)], top first). mons: mss's list (0 = all
+    screens together). Every ordinary window counts by how much of a screen it covers, a program that looks like a lecture (Zoom,
+    Teams, a video player, a presentation) three times as much, the higher windows more. The screen stays as it is unless another one is
+    clearly more of a lecture, so a chat window on the other screen does not make the picture jump. The AI's and Hevanti's own
+    windows never count."""
+    n = len(mons) - 1
+    if n < 2:
+        return 1 if n >= 1 else current
+    score = [0.0] * len(mons)
+    for rank, (title, exe, rc) in enumerate(wins):
+        title = _plain_title(title)
+        prog = os.path.splitext(os.path.basename(str(exe or "")))[0].lower()
+        if mask_title(title) or prog in MASK_EXE or title.lower() in SHELL_TITLES or rc[2] - rc[0] < 200 or rc[3] - rc[1] < 150:
+            continue
+        i = monitor_of_rect(mons, rc, 0)
+        if not i:
+            continue
+        cover = min(1.0, _overlap(rc, mons[i]) / max(1, mons[i]["width"] * mons[i]["height"]))
+        boost = 3.0 if LECTURE_APP.search(prog + " " + title) else 1.0
+        score[i] += cover * boost / (1 + 0.25 * rank)
+    cur = current if 0 < current < len(mons) else 1
+    best = max(range(1, len(mons)), key=lambda i: score[i])
+    if best != cur and score[best] > score[cur] * 1.5 + 0.2:
+        return best
+    return cur
+
+
 def covering_rects(wins, idx, rc):
     """The windows IN FRONT of wins[idx] that overlap rc (a chat that pops over the lecture) - they get a mosaic."""
     l, t, r, b = rc
@@ -1660,7 +1710,7 @@ def covering_rects(wins, idx, rc):
             and w[2][2] - w[2][0] >= 40 and w[2][3] - w[2][1] >= 40]
 
 
-def capture_area(mode, want, box, mon):
+def capture_area(mode, want, box, mon, mons=None):
     """(what to photograph: an mss area, [rects in screen pixels to mosaic]). area None: nothing to photograph now
     (a window that is not on the screen, or nothing chosen yet) - it never falls back to the whole screen."""
     if mode == "region":
@@ -1679,6 +1729,8 @@ def capture_area(mode, want, box, mon):
         if not hit:
             return None, []
         idx, rc = hit
+        if mons:   # (the window may be on another screen than the lecture's: its own screen)
+            mon = mons[monitor_of_rect(mons, rc, 1)]
         l, t = max(rc[0], mon["left"]), max(rc[1], mon["top"])
         r, b = min(rc[2], mon["left"] + mon["width"]), min(rc[3], mon["top"] + mon["height"])
         if r - l < 80 or b - t < 80:
@@ -1898,6 +1950,31 @@ def strip_shot_lines(txt_path, names):
         os.replace(tmp, txt_path)
 
 
+_LECTURE_MON = {"idx": 0, "at": 0.0}   # the screen being photographed (0: not chosen yet) and when it was last looked at
+
+
+def lecture_monitor(mons, force=False):
+    """The screen to photograph: LT_MONITOR when the student set it, else the one the lecture is on (looked at again every few seconds,
+    and said once when it changes). One screen: that one."""
+    if "LT_MONITOR" in os.environ and 0 < SCREEN_MONITOR < len(mons):
+        return mons[SCREEN_MONITOR]
+    if len(mons) <= 2:
+        return mons[1]
+    now = time.time()
+    st = _LECTURE_MON
+    if force or not st["idx"] or now - st["at"] >= 3.0:
+        before = st["idx"] or 1
+        try:
+            wins = visible_windows()
+        except Exception:
+            save_error("pick screen")
+            wins = []
+        st["idx"], st["at"] = pick_lecture_monitor(mons, wins, before), now
+        if st["idx"] != before and before:
+            log(f"צילום השקופיות עבר למסך {st['idx']}, שם נמצאת ההרצאה.")
+    return mons[st["idx"] if 0 < st["idx"] < len(mons) else 1]
+
+
 def capture_preview(delay=0):
     """One picture of the whole main screen for the page (to draw the part to photograph, or to hide). Not saved.
     The page asks for a few seconds' delay: time to bring the lecture to the front."""
@@ -1909,7 +1986,7 @@ def capture_preview(delay=0):
         time.sleep(max(0, min(10, int(delay or 0))))
         with (getattr(mss, "MSS", None) or mss.mss)() as sct:
             mons = sct.monitors
-            shot = sct.grab(mons[SCREEN_MONITOR] if 0 < SCREEN_MONITOR < len(mons) else mons[1])
+            shot = sct.grab(lecture_monitor(mons, force=True))
         img = Image.frombytes("RGB", shot.size, shot.bgra, "raw", "BGRX")
         img.thumbnail((1100, 1100))
         buf = io.BytesIO()
@@ -3203,10 +3280,12 @@ class ScreenWatcher(threading.Thread):
         try:
             with (getattr(mss, "MSS", None) or mss.mss)() as sct:
                 mons = sct.monitors
-                mon = mons[SCREEN_MONITOR] if 0 < SCREEN_MONITOR < len(mons) else mons[1]
+                mon = lecture_monitor(mons, force=True)
                 while not self.stop_evt.is_set():
                     try:
                         paused, mode, want, box, blur = cap.snapshot()
+                        if self.region_fn is None:   # (a YouTube video is photographed where its player is, not by screen)
+                            mon = lecture_monitor(mons)
                         if paused:   # the student paused it: nothing is looked at, nothing is saved
                             resume, self.snap_at = True, 0.0
                             self._idle()
@@ -3219,7 +3298,7 @@ class ScreenWatcher(threading.Thread):
                                 continue
                             area = mon if r == "screen" else r
                         elif mode != "screen":
-                            area, cover = capture_area(mode, want, box, mon)
+                            area, cover = capture_area(mode, want, box, mon, mons if "LT_MONITOR" not in os.environ else None)
                             cap.found = area is not None
                             if area is None:   # the window is not on the screen / nothing chosen yet: no picture
                                 prev, before = None, None
