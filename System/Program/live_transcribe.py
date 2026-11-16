@@ -1674,27 +1674,45 @@ def monitor_of_rect(mons, rc, default=1):
     return at
 
 
+def _visible_fraction(rc, above, n=8):
+    """About how much of the window shows, 0 to 1: the share of an n x n grid of points in it that no window above covers."""
+    l, t, r, b = rc
+    if r <= l or b <= t:
+        return 0.0
+    hit = 0
+    for gy in range(n):
+        y = t + (gy + 0.5) * (b - t) / n
+        for gx in range(n):
+            x = l + (gx + 0.5) * (r - l) / n
+            if not any(a[0] <= x < a[2] and a[1] <= y < a[3] for a in above):
+                hit += 1
+    return hit / (n * n)
+
+
 def pick_lecture_monitor(mons, wins, current=1):
     """Which screen the lecture is on, from the windows in view (wins: [(title, exe, rect)], top first). mons: mss's list (0 = all
-    screens together). Every ordinary window counts by how much of a screen it covers, a program that looks like a lecture (Zoom,
-    Teams, a video player, a presentation) three times as much, the higher windows more. The screen stays as it is unless another one is
+    screens together). Every ordinary window counts by how much of a screen it covers AND shows (a window hidden behind another one counts for
+    nothing), a program that looks like a lecture (Zoom, Teams, a video player, a presentation) three times as much. The screen stays as it is unless another one is
     clearly more of a lecture, so a chat window on the other screen does not make the picture jump. The AI's and Hevanti's own
     windows never count."""
     n = len(mons) - 1
     if n < 2:
         return 1 if n >= 1 else current
     score = [0.0] * len(mons)
+    above = []   # every window higher up, the AI's and Hevanti's too: they hide what is under them even if they do not count
     for rank, (title, exe, rc) in enumerate(wins):
         title = _plain_title(title)
         prog = os.path.splitext(os.path.basename(str(exe or "")))[0].lower()
+        seen = _visible_fraction(rc, above)
+        above.append(rc)
         if mask_title(title) or prog in MASK_EXE or title.lower() in SHELL_TITLES or rc[2] - rc[0] < 200 or rc[3] - rc[1] < 150:
             continue
         i = monitor_of_rect(mons, rc, 0)
         if not i:
             continue
-        cover = min(1.0, _overlap(rc, mons[i]) / max(1, mons[i]["width"] * mons[i]["height"]))
+        cover = min(1.0, _overlap(rc, mons[i]) / max(1, mons[i]["width"] * mons[i]["height"])) * seen   # (only what shows counts)
         boost = 3.0 if LECTURE_APP.search(prog + " " + title) else 1.0
-        score[i] += cover * boost / (1 + 0.25 * rank)
+        score[i] += cover * boost
     cur = current if 0 < current < len(mons) else 1
     best = max(range(1, len(mons)), key=lambda i: score[i])
     if best != cur and score[best] > score[cur] * 1.5 + 0.2:
