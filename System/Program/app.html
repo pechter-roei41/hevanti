@@ -211,7 +211,7 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .sumtext ul{margin:0 0 6px;padding-inline-start:20px}
 .cstate{font-size:15px;color:var(--muted);margin:0}
 .cstate.ok{color:var(--ok);font-weight:700}
-.modal .card.wide{max-width:860px}
+.modal .card.wide{max-width:min(860px,calc(100vw / var(--zoom,1) - 32px))}
 .conns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 @media (max-width:720px){.conns{grid-template-columns:minmax(0,1fr)}}
 .conncard{border:1.5px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:8px;align-content:start;background:var(--bg)}
@@ -228,9 +228,10 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .mk{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 14px;background:var(--surface)}
 .mk .ic{grid-row:span 2;font-size:24px;line-height:1}
 .mk .ic.lost{color:var(--rec);font-weight:800}
-.mk .ic.imp{color:#C79A00}
+.mk .ic.imp{color:var(--fg);background:var(--mark-line);border-radius:50%;width:38px;height:38px;display:grid;place-items:center;font-size:22px}   /* the ★ in ink on the highlighter band (was yellow on white, 2.6:1) */
 .mk b{font-size:16px}
-.mk .sa{color:var(--muted);font-size:15px;line-height:1.5;grid-column:2}
+.mk .sa{color:var(--muted);font-size:15px;line-height:1.5;grid-column:2;overflow-wrap:anywhere}
+@media (max-width:480px){.mk .ic{grid-row:auto}.mk .sa{grid-column:1/-1}}   /* narrow: the star and the button share the title row, the text gets the whole width */
 .mklist{display:grid;gap:10px;margin:12px 0}
 @media (max-width:760px){.ctabs{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .ctabs button{display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:center;text-align:start;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer;color:var(--fg)}
@@ -314,7 +315,7 @@ input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--acce
 .sugbox{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 10px;border-radius:10px;background:var(--sunk)}
 .livebar .acts{display:flex;align-items:center;gap:10px;flex:none;margin-inline-start:auto}   /* the actions stay one row: they wrap together, never "stop" alone */
 @media (max-width:400px){.livebar .acts{flex:1 1 100%;flex-wrap:wrap;gap:6px}}   /* 320px: the three buttons were 14px too wide */
-.livebar .what b{font-size:22px;font-family:var(--f-display);font-weight:400}
+.livebar .what b,.livebar .what h1{font-size:22px;font-family:var(--f-display);font-weight:400;margin:0;line-height:1.3}
 #liveStop{border-color:var(--line);color:var(--muted)}
 #liveStop:hover{border-color:var(--rec);color:var(--rec);background:transparent}
 .livebar .back{border-color:var(--line);color:var(--muted)}
@@ -340,7 +341,7 @@ input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--acce
 .shotdelbox{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
 .shotdelbox summary{cursor:pointer;color:var(--muted);font-size:14px;font-weight:600}
 .lines:empty::before{content:"התמלול יופיע כאן ברגע שמתחילים לדבר.";display:block;color:var(--muted);text-align:center;padding:48px 16px}
-.lines li{line-height:1.7}
+.lines li{line-height:1.7;overflow-wrap:anywhere}   /* a line with no spaces (a link, OCR output) wraps instead of pushing the page sideways */
 li.shot details.ocr{grid-column:2;font-size:14px;color:var(--muted)}
 li.shot details.ocr summary{cursor:pointer}
 li.shot details.ocr p{white-space:pre-wrap;margin:4px 0 0;color:var(--fg)}
@@ -378,7 +379,8 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 
 /* overlays */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:16px;z-index:20}
-.modal .card{max-width:520px;width:100%;display:grid;gap:12px;box-shadow:0 18px 48px rgba(0,0,0,.25)}
+.modal{overflow:auto}
+.modal .card{max-width:min(520px,calc(100vw / var(--zoom,1) - 32px));width:100%;box-sizing:border-box;display:grid;gap:12px;box-shadow:0 18px 48px rgba(0,0,0,.25)}
 .modal h3{margin:0;font-size:19px}
 .big{position:fixed;inset:0;background:rgba(0,0,0,.85);display:grid;place-items:center;padding:20px;z-index:30;cursor:zoom-out}
 .big img{max-width:100%;max-height:100%;border-radius:8px}
@@ -419,9 +421,9 @@ textarea:placeholder-shown,input:not([dir="ltr"]):not([type=password]):not([type
 /* the placeholder is ink-muted (DESIGN.md), never the browser's own grey (#757575: 3.74:1 on the dark paper): 5.74:1 by day, 7.89:1 at night on paper */
 ::placeholder{color:var(--muted);opacity:1}
 input[dir="ltr"]::placeholder{direction:rtl;text-align:right}
-.cfiles h3{margin:0;font-size:17px}
+.cfiles h2{margin:0;font-size:17px}
 .cfrow{display:flex;gap:12px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding:12px 2px 0}
-.cfiles h3+.cfrow{border-top:0;padding-top:0}
+.cfiles h2+.cfrow{border-top:0;padding-top:0}
 .cfrow > div{display:grid;gap:2px;min-width:0}
 .cfrow small{color:var(--muted);font-size:14px;line-height:1.5}
 .optbox2{display:grid;gap:8px;border:1px solid var(--line);border-radius:12px;padding:12px 16px;background:var(--surface)}
@@ -458,7 +460,7 @@ label.miniopt{align-items:flex-start;flex-wrap:nowrap}label.miniopt>input[type="
 @media (max-width:560px){.gfix{grid-template-columns:minmax(0,1fr)}.gfix dd{margin-bottom:6px}}
 .kk{unicode-bidi:isolate;white-space:nowrap}
 kbd{font-family:var(--f-mono);font-size:13px;background:var(--surface);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;direction:ltr;unicode-bidi:isolate}
-.optbox h4{margin:0;font-size:17px;font-weight:800}
+.optbox h2{margin:0;font-size:17px;font-weight:800}
 .optbox p{margin:0;font-size:15px;line-height:1.55;color:var(--muted)}
 .optbox ol{margin:0;padding-inline-start:20px;font-size:15px;line-height:1.6;display:grid;gap:2px}
 .optbox label.row{gap:8px;cursor:pointer;line-height:1.5}
@@ -562,7 +564,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 </header>
 
 <main>
-  <div class="tip" id="tipSet" role="note" hidden><span>כדי שהבנתי תתאים לך בדיוק, כדאי להגדיר בעצמך בהגדרות כמה דברים: גודל כתב, אטימות החלון הקטן, מקום הכפתור הצף ומה לצלם. זה לוקח דקה.</span><button class="btn ghost small" id="tipSetGo" type="button">לפתוח את ההגדרות</button><button class="iconbtn" id="tipSetX" type="button" aria-label="סגירת ההערה" title="סגירה">✕</button></div>
+  <div class="tip" id="tipSet" role="note" hidden><span>כדי שהבנתי תתאים לך בדיוק, כדאי להגדיר בעצמך בהגדרות כמה דברים: גודל כתב, אטימות החלון הקטן, מקום העיגול הירוק ומה לצלם. זה לוקח דקה.</span><button class="btn ghost small" id="tipSetGo" type="button">לפתוח את ההגדרות</button><button class="iconbtn" id="tipSetX" type="button" aria-label="סגירת ההערה" title="סגירה">✕</button></div>
   <!-- HOME -->
   <section id="vHome" aria-label="מסך הבית">
     <h1 class="hero">מה לומדים היום?</h1>
@@ -588,15 +590,15 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <li id="stKey">
           <div class="row"><b>1. תשובות בתוך הבנתי</b><span class="stdone">✓ מוכן</span></div>
           <p class="sub" style="margin:0">הבנתי שואלת את Gemini של Google בשבילך. לשם כך צריך "מפתח": קוד חינמי, בלי כרטיס אשראי. עם המפתח, שקופיות שאינן טקסט מודפס ברור (נוסחאות, כתב יד, תמונות) נשלחות ל-Gemini כדי לקרוא אותן (אפשר לכבות בהגדרות).</p>
-          <div class="row"><a class="btn small" id="setupOpen" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">פתיחת Google ליצירת המפתח</a><span class="sub2" style="font-size:14px;color:var(--muted)">שם: Create API key, ואז Copy key.</span></div>
+          <div class="row"><a class="btn ghost small" id="setupOpen" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">פתיחת Google ליצירת המפתח</a><span class="sub2" style="font-size:14px;color:var(--muted)">שם: Create API key, ואז Copy key.</span></div>
           <div class="row"><input type="password" id="setupKey" placeholder="להדביק כאן את המפתח (Ctrl+V)" autocomplete="off" aria-label="מפתח Gemini" dir="ltr"><button class="btn small" id="setupKeySave" type="button">שמירה ובדיקה</button></div>
           <p class="capstat" id="setupKeyStat" style="margin:0;color:var(--muted)"></p>
         </li>
       </ol>
       <div class="row" style="margin-top:8px"><span class="sub2" style="font-size:14px;color:var(--muted)">ואז: <b>הרצאה חיה</b> (זום או שידור) או <b>הרצאה מוקלטת</b>. הבנתי מצלמת את כל המסך. מה לטשטש: ב"הגדרות".</span><button class="btn quiet small" id="setupLater" type="button" style="margin-inline-start:auto">לא עכשיו</button></div>
     </div></div>
-    <div class="connbar" id="howBar" hidden><span><b>פעם ראשונה בהבנתי?</b> הדגמה של דקה מראה הכל: בחירת חלון, הרצאה חיה, שאלה ותשובה, ולימוד אחרי ההרצאה.</span><button class="btn small" type="button" data-how>לצפייה בהדגמה</button><button class="btn quiet small" id="howNo" type="button">לא עכשיו</button></div>
-    <div class="connbar" id="connBar" hidden><span><b>יש לך מנוי?</b> מחברים פעם אחת את Claude או ChatGPT למחשב להבנתי, ואז שואלים אותם ישר בחלון שלהם, בלי מכסה ובלי להעתיק: הם קוראים לבד מה נאמר ואת השקופית.</span><button class="btn small" type="button" data-conn-open>חיבור AI</button></div>
+    <div class="connbar" id="howBar" hidden><span><b>פעם ראשונה בהבנתי?</b> סרטון של חצי דקה, בלי קול: איך שואלים באמצע הרצאה ואיך מסמנים רגע.</span><button class="btn small" type="button" data-how>לצפייה בהדגמה</button><button class="btn quiet small" id="howNo" type="button">לא עכשיו</button></div>
+    <div class="connbar" id="connBar" hidden><span><b>יש לך מנוי?</b> מחברים פעם אחת את Claude או ChatGPT למחשב להבנתי, ואז שואלים אותם ישר בחלון שלהם, בלי להשתמש במכסה החינמית של Google ובלי להעתיק: הם קוראים לבד מה נאמר ואת השקופית.</span><button class="btn small" type="button" data-conn-open>חיבור AI</button></div>
 
     <div class="connbar" id="tutorBar" hidden><span><b>חדש: תשובות בתוך הבנתי, תוך כדי ההרצאה.</b> שואלים "מה הוא אמר עכשיו?" ו-Gemini עונה כאן, עם מה שנאמר והשקופית. צריך פעם אחת מפתח חינמי של Google (דקה).</span><button class="btn small" id="tutorGo" type="button">להגדרה</button><button class="btn quiet small" id="tutorNo" type="button">לא עכשיו</button></div>
 
@@ -664,34 +666,34 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <summary><b>מפתח Gemini ותשובות בתוך הבנתי</b> <span class="sub2" id="mathSum" style="color:var(--muted)"></span></summary>
       <div style="display:grid;gap:12px;margin-top:10px">
         <div class="optbox">
-          <h4>מפתח Gemini ותשובות בתוך הבנתי</h4>
+          <h2>מפתח Gemini ותשובות בתוך הבנתי</h2>
           <p>הבנתי עונה בעצמה על שאלות, בעזרת Gemini של Google. לשם כך צריך "מפתח": קוד חינמי של Google, בלי כרטיס אשראי.</p>
           <ol><li>נכנסים ל-<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> עם חשבון Google רגיל.</li><li>לוחצים <b>Create API key</b>, ואז <b>Copy key</b>.</li><li>מדביקים כאן ולוחצים <b>"שמירה ובדיקה"</b>. המפתח נשמר מוצפן, רק במחשב הזה.</li></ol>
           <div class="row"><input type="password" id="mathKey" placeholder="להדביק כאן את מפתח Gemini" autocomplete="off" aria-label="מפתח Gemini" dir="ltr"><button class="btn small" id="mathSave" type="button">שמירה ובדיקה</button></div>
-          <label class="row"><input type="checkbox" id="askOn"><b>להפעיל "תשובה כאן" בכל תיבת שאלה</b></label>
+          <label class="row miniopt"><input type="checkbox" id="askOn"><b>להפעיל "תשובה כאן" בכל תיבת שאלה</b></label>
           <p>הבנתי שולחת ל-Gemini את מה ששואלים: השאלה, הדקות האחרונות מההרצאה, השקופית שעל המסך והטקסט של השקופיות הקודמות. התשובה נכתבת מתחת לשאלה, כמו בצ'אט.</p>
           <div class="keystat"><p class="capstat" id="mathStat" style="margin:0"></p><button class="linkish muted" id="mathForget" type="button" hidden>מחיקת המפתח</button></div>
         </div>
         <div class="optbox">
-          <h4>הוראות אישיות לתשובות</h4>
+          <h2>הוראות אישיות לתשובות</h2>
           <p>מה שכתוב כאן נוסף להוראות של הבנתי בכל "תשובה כאן": אורך, שפה, איך להסביר. למשל: <button class="linkish" type="button" data-note="תענה בשורה או שתיים.">שורה או שתיים</button> <button class="linkish" type="button" data-note="תסביר כמו למתחיל, עם דוגמה.">כמו למתחיל</button> <button class="linkish" type="button" data-note="תענה באנגלית.">באנגלית</button> <button class="linkish" type="button" data-note="בלי נוסחאות, רק במילים.">בלי נוסחאות</button>. נוסחאות נכתבות ב-LaTeX כברירת מחדל, ואפשר לשנות גם את זה. הבנתי תמיד לא תמציא מה המרצה אמר.</p>
           <textarea id="notesIn" maxlength="500" rows="3" dir="auto" placeholder="למשל: תענה בעברית פשוטה, עד 4 שורות, ותוסיף דוגמה אם יש." aria-label="הוראות אישיות לתשובות" style="width:100%;box-sizing:border-box;font:inherit;font-size:15px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px"></textarea>
           <div class="row"><button class="btn small" id="notesSave" type="button">שמירה</button><span class="sub" id="notesCount" style="color:var(--muted)">0/500</span></div>
           <p class="warn">הטקסט נשלח ל-Google עם כל שאלה. לא לכתוב כאן מידע אישי.</p>
         </div>
         <div class="optbox">
-          <h4>יש לי מנוי בתשלום</h4>
-          <label class="row"><input type="checkbox" id="planPaid"><b>יש לי מנוי ל-ChatGPT, Claude או Gemini</b></label>
-          <p>שאלות והרצאות שלמות ילכו ישר לאפליקציה שלך, בלי מכסה. "תשובה כאן" נשארת אפשרות נוספת, במכסה החינמית של Google.</p>
+          <h2>יש לי מנוי בתשלום</h2>
+          <label class="row miniopt"><input type="checkbox" id="planPaid"><b>יש לי מנוי ל-ChatGPT, Claude או Gemini</b></label>
+          <p>שאלות והרצאות שלמות ילכו ישר לאפליקציה שלך, בלי להשתמש במכסה החינמית של Google. "תשובה כאן" נשארת אפשרות נוספת, במכסה החינמית של Google.</p>
         </div>
         <div class="optbox">
-          <h4>קריאת נוסחאות וכתב יד</h4>
-          <label class="row"><input type="checkbox" id="mathOn"><b>לקרוא נוסחאות וכתב יד בכל שקופית חדשה</b></label>
+          <h2>קריאת נוסחאות וכתב יד</h2>
+          <label class="row miniopt"><input type="checkbox" id="mathOn"><b>לקרוא נוסחאות וכתב יד בכל שקופית חדשה</b></label>
           <p>הקריאה הרגילה של השקופיות לא מבינה נוסחאות וכתב יד. כשזה פועל, שקופית שאינה טקסט מודפס ברור (נוסחה, כתב יד, תמונה) נשלחת ל-Gemini (טקסט מודפס ברור נקרא במחשב, בלי לשלוח), והוא כותב את הטקסט והנוסחאות (למשל <code dir="ltr">$I = \int r^2\,dm$</code>) לחיפוש, לסיכומים ולתשובות.</p>
           <p class="warn">שימו לב: זה פועל מעצמו כשמוסיפים מפתח, ושולח ל-Google שקופיות שאינן טקסט מודפס ברור (נוסחאות, כתב יד, תמונות). אפשר לכבות כאן בכל רגע.</p>
         </div>
         <div class="optbox">
-          <h4>פרטיות ומכסה</h4>
+          <h2>פרטיות ומכסה</h2>
           <p>מה שנשלח ל-Gemini עובר ל-Google. בתוכנית החינמית Google עשויה להשתמש בו כדי לשפר את המוצרים שלה. המכסה החינמית מוגבלת לדקה וליום; כשהיא נגמרת, הכפתורים שמעתיקים ל-ChatGPT, Gemini ו-Claude ממשיכים לעבוד.</p>
         </div>
       </div>
@@ -704,7 +706,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <li><b>מה נשמר:</b> התמלול של ההרצאות, צילומי המסך של מה שבחרת לצלם, והטקסט שנקרא מהם.</li>
         <li><b>איפה:</b> רק במחשב שלך, בתיקייה "הקורסים שלי". אין חשבון ואין שרת של הבנתי. אם התיקייה נמצאת בתוך OneDrive או Google Drive (למשל Documents שמסונכרן), התוכנה של הענן מעתיקה אותה לחשבון שלך שם.</li>
         <li><b>מה נשלח לבינה המלאכותית:</b> בלחיצה על כפתור "שאלה ל-AI" או על אחת המשימות (סיכום, מבחן דמה, דף נוסחאות), או כשמבקשים ממנה דרך חיבור: הטקסט, והתמונה אם מצרפים אותה, עוברים לחברה שמאחוריה. <b>יוצא מן הכלל:</b> אם הוזן מפתח Gemini, קריאת הנוסחאות וכתב היד פועלת מעצמה ושולחת ל-Google, בלי לחיצה, שקופיות שאינן טקסט מודפס ברור (אפשר לכבות בהגדרות). בשקופית יכולים להופיע גם פנים ושמות של משתתפים בשיחת וידאו, והם נשלחים כמו שהם. בחשבון חינמי Google עשויה להשתמש בתוכן כדי לשפר את המוצרים שלה. מלבד זה, שום דבר לא יוצא מהמחשב.</li>
-        <li><b>מה עוד עובר ברשת:</b> בדיקת גרסה חדשה ב-GitHub (אפשר לכבות בתיבה שלמעלה), הורדה חד-פעמית של מודל התמלול (Hugging Face) ושל קריאת השקופיות (GitHub). ורק אם הגדרת "AI מובנה": בלחיצה על "תשובה כאן" נשלחים ל-Google השאלה, הדקות האחרונות והשקופית; ובנוסף, כי "קריאת נוסחאות וכתב יד" פועלת כברירת מחדל כשיש מפתח (אפשר לכבות בהגדרות), גם שקופיות שאינן טקסט מודפס ברור. עם השאלה נשלח גם הטקסט של השקופיות הקודמות בהרצאה.</li>
+        <li><b>מה עוד עובר ברשת:</b> בדיקת גרסה חדשה ב-GitHub (אפשר לכבות בתיבה שלמעלה), הורדה חד-פעמית של מודל התמלול (Hugging Face) ושל קריאת השקופיות (GitHub). ורק אם שמרתם מפתח Gemini: בלחיצה על "תשובה כאן" נשלחים ל-Google השאלה, הדקות האחרונות, השקופית והטקסט של השקופיות הקודמות. בנוסף, קריאת נוסחאות וכתב יד פועלת מעצמה (אפשר לכבות בהגדרות) ושולחת שקופיות שאינן טקסט מודפס ברור.</li>
         <li><b>מה בשליטתך:</b> לבחור חלון אחד או חלק מהמסך במקום כל המסך, להשהות את הצילום (גם עם <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd></span>), לטשטש אזורים קבועים, ולמחוק צילומים לצמיתות.</li>
         <li><b>אחריות:</b> הבנתי ניתנת כמו שהיא, בלי אחריות מכל סוג. השימוש בה, כולל הקלטה, תמלול ושמירה של הרצאות ושקופיות, הוא באחריות המשתמש בלבד. <b>לפני שמשתמשים, כל משתמש צריך לבדוק מה הנהלים והכללים במוסד שלו ואצל המרצה.</b> מפתחי הכלי אינם אחראים לשימוש בה.</li>
       </ul>
@@ -741,10 +743,10 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <section id="vLive" aria-label="הרצאה חיה" hidden>
     <div class="livebar">
       <button class="btn ghost back" type="button" data-home>→ למסך הבית</button>
-      <div class="what"><b id="liveWhat">הרצאה חיה</b><small id="liveSub">טוען...</small></div>
+      <div class="what"><h1 id="liveWhat">הרצאה חיה</h1><small id="liveSub">טוען...</small></div>
       <div class="acts">
         <button class="btn ghost" id="markImp" type="button" title="מסמן את הרגע הזה בתמלול. אחרי ההרצאה ה-AI יסביר את כל הרגעים שסימנת. גם Ctrl+Alt+M מכל תוכנה."><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align:-2px;margin-inline-end:6px"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2 6.3 20.3l1.2-6.4L2.8 9.5l6.4-.8z"/></svg>סימון</button>
-        <button class="btn ghost" type="button" data-float title="חלון קטן לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">חלון שאלות קטן</button>
+        <button class="btn ghost" type="button" data-float title="חלון קטן לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">החלון הקטן</button>
         <button class="btn ghost" id="liveStop" type="button">עצירה</button>
       </div>
     </div>
@@ -782,9 +784,9 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <section id="vYt" aria-label="סרטון יוטיוב" hidden>
     <div class="livebar">
       <button class="btn ghost back" type="button" data-home>→ למסך הבית</button>
-      <div class="what"><b id="ytWhat">סרטון יוטיוב</b><small id="ytSub">טוען...</small></div>
+      <div class="what"><h1 id="ytWhat">סרטון יוטיוב</h1><small id="ytSub">טוען...</small></div>
       <div class="acts">
-        <button class="btn ghost" type="button" data-float title="חלון קטן לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">חלון שאלות קטן</button>
+        <button class="btn ghost" type="button" data-float title="חלון קטן לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">החלון הקטן</button>
         <button class="btn ghost" id="ytStop" type="button">עצירה</button>
       </div>
     </div>
@@ -809,7 +811,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <section id="vPast" aria-label="תמלול" hidden>
     <div class="livebar">
       <button class="btn ghost back" id="pastBack" type="button">→ חזרה</button>
-      <div class="what"><b id="pastTitle"></b><small id="pastSub"></small></div>
+      <div class="what"><h1 id="pastTitle"></h1><small id="pastSub"></small></div>
       <button class="btn ghost" id="pastPlay" type="button" hidden>צפייה בנגן</button>
       <details class="moremenu" id="pastMenu">
         <summary class="btn quiet" aria-label="עוד פעולות להרצאה" title="עוד פעולות">⋯</summary>
@@ -849,7 +851,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <span>איפה לעשות את זה?</span>
         <div class="seg" role="group" aria-label="איפה לעשות את המשימה">
           <button type="button" data-w="here">בתוך הבנתי (מכסה חינמית)</button>
-          <button type="button" data-w="app">באפליקציית ה-AI שלי (בלי מכסה)</button>
+          <button type="button" data-w="app">באפליקציית ה-AI שלי (בלי המכסה החינמית)</button>
         </div>
       </div>
       <p class="sub2" id="studyHint" hidden></p>
@@ -877,7 +879,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <section id="vCourse" aria-label="קורס" hidden>
     <div class="livebar">
       <button class="btn ghost back" id="cBack" type="button">→ הקורסים שלי</button>
-      <div class="what"><b id="cTitle"></b><small id="cSub"></small></div>
+      <div class="what"><h1 id="cTitle"></h1><small id="cSub"></small></div>
     </div>
     <nav class="ctabs" id="cTabs" role="tablist" aria-label="חלקי הקורס">
       <button type="button" role="tab" data-ct="lec"><span class="ic" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></span><b>ההרצאות</b><small id="ctLec"></small></button>
@@ -888,7 +890,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <p class="sub" id="cSize" style="margin:0 0 10px"></p>
       <ol class="lib" id="cLib"></ol>
       <div class="card cfiles">
-        <h3>קבצים וניהול</h3>
+        <h2>קבצים וניהול</h2>
         <div class="cfrow"><div><b>קובץ אחד של כל הקורס</b><small>שומר את התמלולים של כל ההרצאות בקובץ טקסט אחד, כדי להעלות אותו לצ'אט של AI באתר (למשל ChatGPT).</small></div><button class="btn ghost small" id="cExport" type="button">יצירת הקובץ</button></div>
         <div class="cfrow"><div><b>התיקייה במחשב</b><small>פותחת ב-Windows את התיקייה של הקורס: ההרצאות, השקופיות והקובץ הנ"ל.</small></div><button class="btn quiet small" id="cFolder" type="button">פתיחת התיקייה</button></div>
         <div class="cfrow"><div><b>שינוי שם הקורס</b><small>הקורס, ההרצאות והקבצים שלו נשארים כמו שהם, רק השם מתחלף.</small></div><button class="btn ghost small" id="cRename" type="button">שינוי שם</button></div>
@@ -914,7 +916,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <p class="sub">מונח בכל שורה. התמלול משתמש בהם כדי לכתוב נכון מונחים, שמות ומילים באנגלית, מההרצאה הבאה. כדאי להוסיף גם את <b>שם המרצה והמתרגלים</b> ושמות שחוזרים בקורס (חוקרים, משפטים). הכי חשובים למעלה: נכנסים בערך 30-40 הראשונים, ואחריהם גם מילים שנקראו מהשקופית שעל המסך.</p>
           <div class="sug" id="cSug" hidden></div>
           <label for="glossIn" class="sub" style="display:block;margin:0 0 4px">המונחים של הקורס</label>
-          <textarea class="gloss" id="glossIn" dir="auto" spellcheck="false"></textarea>
+          <textarea class="gloss" id="glossIn" dir="auto" spellcheck="false" maxlength="20000"></textarea>
           <div class="row" style="margin-top:10px">
             <button class="btn" id="glossSave" type="button" style="margin-inline-start:auto">שמירה</button>
           </div>
@@ -1006,7 +1008,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <dt>התמלול איטי, ויש כרטיס מסך של NVIDIA</dt><dd>בסרגל העליון (ובדף הבית) מופיעה הצעה: לחיצה על <b>התקנה</b> מתקינה את מה שהכרטיס צריך (כ-1GB, פעם אחת), ואז סוגרים את הבנתי ופותחים אותה שוב.</dd>
           <dt>שורת ⚠ במקום תשובה</dt><dd>Gemini חסם את השאלה או קטע את התשובה. הסיבה כתובה בשורה: אפשר לנסח את השאלה אחרת או לקצר אותה.</dd>
           <dt>"לא הצלחתי להצפין את המפתח"</dt><dd>המפתח לא נשמר (הבנתי לא שומרת מפתח בלי הצפנה). מנסים שוב, ואם זה חוזר: "דיווח על תקלה" בתחתית מסך הבית.</dd>
-          <dt>החלון הקטן לא נפתח</dt><dd>מנסים את הכפתור "חלון שאלות קטן" במסך ההרצאה החיה, או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>.</dd>
+          <dt>החלון הקטן לא נפתח</dt><dd>מנסים את הכפתור "החלון הקטן" במסך ההרצאה החיה, או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>.</dd>
           <dt>האפליקציה לא נפתחת</dt><dd>לוחצים שוב על "הבנתי" (בתפריט התחל או על הכפתור העגול). כתובת שהועתקה ידנית לא תיפתח</dd>
           <dt>משהו אחר</dt><dd>ב<b>בית</b>, למטה: <b>דיווח על תקלה</b>. אפשר לשלוח את הפרטים ב-GitHub או במייל.</dd>
         </dl>
@@ -1052,6 +1054,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 </div></div>
 <div class="modal" id="offer" hidden role="dialog" aria-modal="true" aria-labelledby="offT"><div class="card">
   <h3 id="offT">הקלטה חדשה</h3><p class="chosen" id="offName" style="margin:0"></p>
+  <p class="sub" id="offVia" style="margin:0;overflow-wrap:anywhere" hidden></p>
   <p style="margin:0">באיזו שפה ההרצאה?</p>
   <div class="row"><button class="btn" type="button" data-offer="he">עברית</button><button class="btn" type="button" data-offer="en">אנגלית</button><button class="btn quiet" type="button" data-offer="">ביטול</button></div>
 </div></div>
@@ -1094,13 +1097,14 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 <div class="modal" id="capModal" hidden role="dialog" aria-modal="true" aria-labelledby="capT"><div class="card wide">
   <h3 id="capT">בחירת אזור על המסך</h3>
   <p class="sub" id="capHint" style="margin:0"></p>
+  <p class="sub" style="margin:0">הבחירה היא בגרירה עם העכבר. בלי עכבר: בהגדרות ← צילום וטשטוש אפשר לבחור "חלון אחד" לפי שם.</p>
   <div class="row"><button class="btn small" id="capShot" type="button">צילום מסך לבחירה (בעוד 5 שניות)</button><span class="sub" id="capWait" style="margin:0"></span></div>
   <div class="capcanvas" id="capCanvas" aria-label="המסך. לגרור עם העכבר כדי לסמן אזור"><div class="none" id="capNone">לוחצים על "צילום מסך לבחירה", עוברים להרצאה, ואחרי כמה שניות חוזרים לכאן.</div></div>
   <div class="row"><button class="btn" id="capSave" type="button">שמירה</button><button class="btn quiet" id="capCancel" type="button">ביטול</button><button class="btn ghost small" id="capClear" type="button">ניקוי</button></div>
 </div></div>
 <div class="modal" id="a11y" hidden role="dialog" aria-modal="true" aria-labelledby="a11yT"><div class="card">
   <h3 id="a11yT">תצוגה ונגישות</h3>
-  <p class="sub" style="margin:0">נשמר בדפדפן הזה, וחל גם על החלון הצף ועל חלון ההתחלה המהירה.</p>
+  <p class="sub" style="margin:0">נשמר בדפדפן הזה, וחל גם על החלון הקטן ועל חלון ההתחלה המהירה.</p>
   <div class="a11y-row"><b>גודל הכל:</b><div class="seg" role="group" aria-label="גודל הכל" id="a11yZoom"><button type="button" data-v="1">100%</button><button type="button" data-v="1.15">115%</button><button type="button" data-v="1.3">130%</button><button type="button" data-v="1.5">150%</button></div></div>
   <div class="a11y-row"><b>גודל התמלול:</b><div class="seg" role="group" aria-label="גודל התמלול" id="a11yTx"><button type="button" data-v="1">רגיל</button><button type="button" data-v="1.25">גדול</button><button type="button" data-v="1.5">גדול מאוד</button><button type="button" data-v="1.9">ענק</button></div></div>
   <label><input type="checkbox" id="a11yRead"><span><b>ריווח לקריאה נוחה.</b> שורות, אותיות ומילים מרווחות יותר ושורות קצרות יותר. עוזר בדיסלקציה ובקשב.</span></label>
@@ -1111,9 +1115,9 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <div class="row"><button class="btn" id="a11yClose" type="button">סגירה</button></div>
 </div></div>
 <div class="sr-only" id="srLive" aria-live="polite"></div>
-<div class="big" id="big" hidden><img alt=""></div>
+<div class="big" id="big" hidden role="dialog" aria-modal="true" aria-label="צילום מסך מוגדל. Esc לסגירה" tabindex="-1"><img alt="צילום מסך מוגדל"></div>
 <div class="toast" id="toast" role="status"></div>
-<div class="gone" id="gone" hidden><div><h1>האפליקציה סגורה</h1><p class="lead">כדי לפתוח אותה שוב: לחיצה כפולה על Hevanti בתיקייה של הבנתי.<br>אפשר לסגור את הלשונית הזו.</p></div></div>
+<div class="gone" id="gone" hidden><div><h1>האפליקציה סגורה</h1><p class="lead">כדי לפתוח אותה שוב: פותחים אותה מהקיצור של הבנתי (בתפריט התחל), או ב-Hevanti.bat אם הורדתם ZIP.<br>אפשר לסגור את הלשונית הזו.</p></div></div>
 
 <script src="/ask.js"></script>
 <script>
@@ -1129,7 +1133,7 @@ let courses = [], curCourse = "", libCourse = "", searchSeq = 0, appSeen = false
 const CONN = [
   {id: "claude", name: "Claude", where: "Claude למחשב (Windows)", ask: "שואלים בחלון של Claude למחשב."},
   {id: "chatgpt", name: "ChatGPT", where: "ChatGPT ל-Windows, במצב Codex", ask: "שואלים בחלון של ChatGPT, במצב Codex."},
-  {id: "gemini", name: "Gemini", where: "Antigravity CLI (Gemini בחלון פקודות, agy)", ask: "פותחים אותו בתיקיית הקורס ושואלים שם."},
+  {id: "gemini", name: "Gemini", where: "Antigravity CLI (למתקדמים: Gemini בחלון פקודות)", ask: "פותחים אותו בתיקיית הקורס ושואלים שם."},
 ];
 let lastConn = "";
 function connInfo() { return (app && app.connect) || {}; }
@@ -1203,16 +1207,23 @@ const nSlide = n => heN(n, "שקופית אחת", "שתי שקופיות", "שק
 const nLine = n => heN(n, "שורה אחת", "שתי שורות", "שורות");
 const nShot = n => heN(n, "צילום אחד", "שני צילומים", "צילומים");
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
-function big(src) { $("#big img").src = src; $("#big").hidden = false; }
-$("#big").addEventListener("click", () => { $("#big").hidden = true; });
-document.addEventListener("keydown", e => { if (e.key === "Escape") { $("#big").hidden = true; } });
+let bigFrom = null;
+function big(src) { bigFrom = document.activeElement; $("#big img").src = src; $("#big").hidden = false; $("#big").focus(); }
+function bigClose() { if ($("#big").hidden) return; $("#big").hidden = true; if (bigFrom && bigFrom.focus) bigFrom.focus(); bigFrom = null; }
+$("#big").addEventListener("click", bigClose);
+document.addEventListener("keydown", e => { if (e.key === "Escape" || ((e.key === "Enter" || e.key === " ") && document.activeElement === $("#big"))) { if (!$("#big").hidden) e.preventDefault(); bigClose(); } });
+// a picture that opens bigger: reachable and pressable with the keyboard too
+function zoomable(im, label) { im.tabIndex = 0; im.setAttribute("role", "button"); im.setAttribute("aria-label", label); im.onclick = () => big(im.src); im.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); big(im.src); } }; }
+// a button that runs a slow command: a second click while the first still runs does nothing (it used to run twice and show a false error)
+function busyGuard(btn, fn) { return async () => { if (btn.disabled) return; btn.disabled = true; try { await fn(); } finally { btn.disabled = false; } }; }
 function confirmBox(title, text, okLabel, noLabel) {
   return new Promise(res => {
     $("#confT").textContent = title; $("#confP").textContent = text || ""; $("#confirm").hidden = false;
     $("#confOk").textContent = okLabel || "כן"; $("#confOk").className = okLabel ? "btn danger" : "btn";
     $("#confNo").textContent = noLabel || "ביטול";
     const done = v => { $("#confirm").hidden = true; $("#confOk").onclick = $("#confNo").onclick = null; res(v); };
-    $("#confOk").onclick = () => done(true); $("#confNo").onclick = () => done(false); $("#confOk").focus();
+    $("#confOk").onclick = () => done(true); $("#confNo").onclick = () => done(false);
+    (okLabel ? $("#confNo") : $("#confOk")).focus();   // (a deleting button is never the one Enter presses at once)
   });
 }
 async function copyText(t) {
@@ -1532,6 +1543,7 @@ function a11yApply(doc, pip) {
   const r = (doc || document).documentElement;
   r.style.zoom = pip || a11y.zoom === 1 ? "" : String(a11y.zoom);   // (the floating window keeps its size; its text grows)
   r.style.setProperty("--tx", String(a11y.tx));
+  r.style.setProperty("--zoom", pip ? "1" : String(a11y.zoom));
   r.classList.toggle("a-read", !!a11y.read); r.classList.toggle("a-contrast", !!a11y.contrast); r.classList.toggle("a-still", !!a11y.still);
 }
 function a11yDraw() {
@@ -1572,13 +1584,13 @@ const setPanels = {};
   const mb = $("#mathBox"); mb.open = true; setPanels.key.appendChild(mb);
   // design 3: the answers tab was 933px long, four parts. The key, the plan and the privacy of the quota stay in "מפתח"; how the answers
   // are written (personal instructions) and what slides are read (formulas, handwriting) move to a tab of their own
-  const optOf = t => [...mb.querySelectorAll(".optbox")].find(o => { const h = o.querySelector("h4"); return h && h.textContent.trim() === t; });
+  const optOf = t => [...mb.querySelectorAll(".optbox")].find(o => { const h = o.querySelector("h2"); return h && h.textContent.trim() === t; });
   const tune = setPanels.tune; tune.style.display = "grid"; tune.style.gap = "12px";
   tune.append(el("h2", "", "התאמת התשובות"), el("p", "sub", "איך התשובות נכתבות, ואיזה שקופיות נקראות. הכל נשמר וחל על כל תיבת שאלה."), optOf("הוראות אישיות לתשובות"), optOf("קריאת נוסחאות וכתב יד"));
   setPanels.cap.appendChild($("#capHome"));
   const ml = el("label", "row miniopt"), mc = el("input"); mc.type = "checkbox"; mc.id = "miniAuto";
   mc.addEventListener("change", () => api("/api/cmd", {action: "mini_auto", on: mc.checked}));
-  ml.append(mc, el("b", "", "לפתוח את חלון השאלות עצמו (ולא רק את הכפתור הצף) כשהרצאה מתחילה"));
+  ml.append(mc, el("b", "", "לפתוח את חלון השאלות עצמו (ולא רק את העיגול הירוק) כשהרצאה מתחילה"));
   setPanels.cap.appendChild(ml);
   const ql = el("label", "row miniopt"), qc = el("input"); qc.type = "checkbox"; qc.id = "quickStart";
   qc.addEventListener("change", () => api("/api/cmd", {action: "quick_start", on: qc.checked}));
@@ -1596,7 +1608,7 @@ const setPanels = {};
   setPanels.cap.appendChild(bl);
   // which corner of the screen the floating button sits in
   const pl = el("div", "row miniopt"), cs = el("div", "seg");
-  cs.id = "miniCorner"; cs.setAttribute("role", "group"); cs.setAttribute("aria-label", "מיקום הכפתור הצף");
+  cs.id = "miniCorner"; cs.setAttribute("role", "group"); cs.setAttribute("aria-label", "מיקום העיגול הירוק");
   for (const [k, label] of [["br", "ימין למטה"], ["bl", "שמאל למטה"], ["tl", "שמאל למעלה"], ["tr", "ימין למעלה"]]) {
     const cb = el("button", "", label); cb.type = "button"; cb.dataset.k = k; cb.setAttribute("aria-pressed", "false");
     cb.addEventListener("click", async () => {
@@ -1606,7 +1618,7 @@ const setPanels = {};
     });
     cs.appendChild(cb);
   }
-  pl.append(el("b", "", "מיקום הכפתור הצף על המסך"), cs);
+  pl.append(el("b", "", "מיקום העיגול הירוק על המסך"), cs);
   setPanels.cap.appendChild(pl);
   glideGroup(cs);
   // how see-through the small window is (the lecture behind it stays visible)
@@ -1641,7 +1653,7 @@ const setPanels = {};
   mec.addEventListener("change", async () => { const r = await api("/api/cmd", {action: "math_every", on: mec.checked}); toast(r.ok ? (mec.checked ? "מעכשיו כל שקופית נשלחת ל-Gemini לקריאה." : "מעכשיו שקופיות עם טקסט מודפס ברור לא נשלחות ל-Gemini.") : "לא הצלחתי לשמור."); });
   mel.append(mec, el("b", "", "לשלוח ל-Gemini כל שקופית, גם כזו שנראית כטקסט רגיל (מבזבז מכסה)"));
   ai.append(qwl, mel, el("p", "sub", "כשקריאת הנוסחאות פועלת, שקופית של טקסט מודפס ברור נקראת במחשב ולא נשלחת. כל השאר (נוסחאות, כתב יד, תמונות) נשלח."), exl, el("p", "sub", "ברירת המחדל: התשובות מגיעות רק בתוך הבנתי (מפתח Gemini חינמי). כשזה פועל, תיבת השאלה מציגה גם כפתורים להעתקה, ואפשר להגיד שיש לך מנוי בתשלום כדי שמשימות על הרצאה שלמה ילכו לאפליקציה שלך."));
-  const paid = $("#planPaid").closest(".optbox"); paid.querySelector("h4").textContent = "מנוי בתשלום"; ai.appendChild(paid);
+  const paid = $("#planPaid").closest(".optbox"); paid.querySelector("h2").textContent = "מנוי בתשלום"; ai.appendChild(paid);
   const row = el("div", "row"), go = el("button", "btn", "חיבור AI (Claude, ChatGPT, Gemini)"); go.type = "button"; go.addEventListener("click", () => { $("#connBtn").click(); });
   row.appendChild(go); ai.append(el("h3", "", "חיבור האפליקציה של ה-AI שלך"), el("p", "sub", "אם יש לך מנוי ל-Claude או ל-ChatGPT, אפשר לחבר אותם להבנתי: הם קוראים לבד מה נאמר ואת השקופית. כולל סנכרון לענן (כבוי כברירת מחדל)."), row);
 })();
@@ -1697,7 +1709,16 @@ function show(v) {
   const tab = {past: "courses", course: "courses", live: "home", yt: "home"}[v] || v;
   document.querySelectorAll("[data-nav]").forEach(a => { if (a.dataset.nav === tab) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
   window.scrollTo(0, 0);
+  setDocTitle();
 }
+// the tab's title says where you are (a screen reader says it on every change of page)
+function setDocTitle() {
+  const names = {home: "בית", courses: "הקורסים שלי", how: "איך משתמשים", settings: "הגדרות", live: "", yt: "", past: "", course: ""};
+  const h = {live: "#liveWhat", yt: "#ytWhat", past: "#pastTitle", course: "#cTitle"}[view];
+  const name = h ? (document.querySelector(h) || {}).textContent : names[view];
+  document.title = (name ? name.trim() + " · " : "") + "הבנתי";
+}
+["#liveWhat", "#ytWhat", "#pastTitle", "#cTitle"].forEach(id => { const e = document.querySelector(id); if (e) new MutationObserver(setDocTitle).observe(e, {childList: true, characterData: true, subtree: true}); });
 let backTo = "";  // where "חזרה" on a lecture goes: the course page it was opened from, or home
 function route() {
   const raw = location.hash.slice(1), h = decodeURIComponent(raw);
@@ -1712,7 +1733,7 @@ function route() {
   if (raw.startsWith("rec=")) {   // a recording sent from another tab (the Panopto bookmark): offer it, then home
     const q = new URLSearchParams(raw), src = q.get("rec") || "", name = q.get("name") || "";
     history.replaceState(null, "", location.pathname);
-    if (/^https:\/\//i.test(src)) api("/api/cmd", {action: "offer", source: src, name});   // the regular poll shows the question   // the regular poll shows the question
+    if (/^https:\/\//i.test(src)) api("/api/cmd", {action: "offer", source: src, name, via: "link"});   // the regular poll shows the question (marked: it came from a link, not from a button of Hevanti)
     show("home"); loadLib(true); return;
   }
   show("home");
@@ -1727,6 +1748,24 @@ document.querySelectorAll("[data-home]").forEach(b => b.addEventListener("click"
 // from a lecture: back to where it was opened from (its course page or home)
 $("#pastBack").addEventListener("click", () => { location.hash = backTo; });
 
+// tabs (settings, a lecture, a course): one stop in the Tab order, arrows move between them (reversed in right-to-left), Home / End
+(function () {
+  for (const id of ["setTabs", "pastTabs", "cTabs"]) {
+    const list = document.getElementById(id); if (!list) continue;
+    const tabs = () => [...list.querySelectorAll('[role="tab"]')];
+    const sync = () => { const t = tabs(), cur = t.find(b => b.getAttribute("aria-selected") === "true") || t[0]; t.forEach(b => { const v = b === cur ? 0 : -1; if (b.tabIndex !== v) b.tabIndex = v; }); };
+    new MutationObserver(sync).observe(list, {subtree: true, childList: true, attributes: true, attributeFilter: ["aria-selected"]});
+    sync();
+    list.addEventListener("keydown", e => {
+      const t = tabs(), i = t.indexOf(document.activeElement); if (i < 0) return;
+      const rtl = getComputedStyle(list).direction === "rtl"; let j = -1;
+      if (e.key === "ArrowDown") j = i + 1; else if (e.key === "ArrowUp") j = i - 1;
+      else if (e.key === "ArrowLeft") j = i + (rtl ? 1 : -1); else if (e.key === "ArrowRight") j = i + (rtl ? -1 : 1);
+      else if (e.key === "Home") j = 0; else if (e.key === "End") j = t.length - 1; else return;
+      e.preventDefault(); j = (j + t.length) % t.length; t[j].click(); t[j].focus();
+    });
+  }
+})();
 // ---------- the app state ----------
 async function poll() {
   try {
@@ -1784,7 +1823,7 @@ async function drawResume() {
   const items = (libItems || []).filter(e => e.kind !== "other" || e.lines).slice().sort((a, b) => b.mtime - a.mtime);
   const e = items[0];
   if (!e || (s && !s.done)) { box.hidden = true; return; }
-  $("#resTitle").textContent = e.title;
+  $("#resTitle").textContent = $("#resTitle").title = e.title;
   $("#resSub").textContent = [e.course && e.course !== NO_COURSE ? e.course : "", e.length, e.shots ? nSlide(e.shots) : ""].filter(Boolean).join(" · ") || e.when;
   $("#resOpen").onclick = () => { location.hash = "t=" + encodeURIComponent(e.f); };
   const mb = $("#resMarks"); mb.hidden = true;
@@ -1793,7 +1832,7 @@ async function drawResume() {
     let r; try { r = await api("/api/marks?c=" + encodeURIComponent(e.course)); } catch (x) { return; }
     if (tok !== resumeTok) return;
     const mine = (r.marks || []).filter(m => m.f === e.f);
-    if (mine.length) { mb.textContent = mine.length + " ★ סימונים מחכים"; mb.hidden = false; mb.onclick = () => { location.hash = "c=" + encodeURIComponent(e.course); }; }
+    if (mine.length) { mb.textContent = heN(mine.length, "סימון אחד ★ מחכה", "שני סימונים ★ מחכים", "סימונים ★ מחכים"); mb.hidden = false; mb.onclick = () => { location.hash = "c=" + encodeURIComponent(e.course); }; }
   }
 }
 // an NVIDIA card that Hevanti cannot use yet: say it plainly, and install what is missing with one click
@@ -1880,9 +1919,11 @@ function render(d) {
     $("#askIn").value = ""; $("#ask").hidden = false; $("#askIn").focus();
   } else if (!d.question && !$("#ask").hidden) { $("#ask").hidden = true; lastQ = null; }
   // a recording that arrived from outside (dragged onto Hevanti)
-  if (d.pending && lastOffer !== d.pending.source) { lastOffer = d.pending.source; $("#offName").textContent = d.pending.name + offerHost(d.pending.source); $("#offer").hidden = false; }
+  if (d.pending && lastOffer !== d.pending.source) { lastOffer = d.pending.source; $("#offName").textContent = d.pending.name + offerHost(d.pending.source);
+    $("#offVia").hidden = !d.pending.via; $("#offVia").textContent = d.pending.via ? "הגיע מקישור בדפדפן, לא מכפתור בהבנתי. ממשיכים רק אם לחצתם על הסימנייה של פנופטו. הכתובת המלאה: " + d.pending.source : "";
+    $("#offer").hidden = false; }
   if (!d.pending) { $("#offer").hidden = true; lastOffer = null; }
-  if (d.lib_rev !== libRev && view === "home") loadLib();
+  if (d.lib_rev !== libRev && ["home", "courses", "course", "past"].includes(view)) loadLib();   // (another window may have deleted or renamed something this one shows)
   if (view === "live") renderLiveHead(s);
   drawCaps(); drawMath();
   document.documentElement.classList.toggle("plan-paid", !!(d.math && d.math.plan === "paid")); drawConnBar();
@@ -2041,7 +2082,7 @@ async function stopSession() {
 }
 $("#quitBtn").addEventListener("click", async () => {
   const s = app && app.session, running = s && !s.done;
-  if (!(await confirmBox("לסגור את האפליקציה?", running ? sessionName(s) + " ייעצר, ומה שכבר תומלל נשמר." : "אפשר לפתוח אותה שוב מ-Hevanti."))) return;
+  if (!(await confirmBox("לסגור את האפליקציה?", running ? sessionName(s) + " ייעצר, ומה שכבר תומלל נשמר." : "אפשר לפתוח אותה שוב מהקיצור של הבנתי."))) return;
   await api("/api/cmd", {action: "quit"}); $("#gone").hidden = false;
 });
 $("#libBackup").addEventListener("click", async () => {
@@ -2069,6 +2110,10 @@ async function loadLib(force) {
     if (libCourse && !courses.some(c => c.name === libCourse)) libCourse = "";
     drawCourseSel(); drawTabs(); drawLib(); drawResume();
     if (view === "course" && courseName) drawCourseLib();
+    // what this window shows may be gone: another window deleted it or gave it another name
+    if (curCourse && curCourse !== NO_COURSE && !courses.some(c => c.name === curCourse) && appSeen) { curCourse = ""; drawCourseSel(); }
+    if (view === "course" && courseName && !courses.some(c => c.name === courseName)) { toast("הקורס \"" + courseName + "\" נמחק או שונה שמו בחלון אחר."); location.hash = "courses"; }
+    else if (view === "past" && pastFile && libItems.length && !libItems.some(x => x.f === pastFile)) { toast("ההרצאה הזו נמחקה או הועברה בחלון אחר."); location.hash = backTo; }
   } catch (e) {}
 }
 function courseList() {
@@ -2138,7 +2183,7 @@ function lecItem(e, withCourse) {
     ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="m17 10 4-2v8l-4-2z"/></svg>'
     : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 11v2"/></svg>';
   k.setAttribute("aria-hidden", "true");
-  const t = el("div", "t", e.title);
+  const t = el("div", "t", e.title); t.title = e.title;   // (the name is cut with … when narrow: the whole one on hover)
   if (e.running) t.appendChild(el("span", "tag run", "פועל עכשיו"));
   else if (!e.complete) t.appendChild(el("span", "tag part", e.kind !== "rec" ? "לא הסתיים כרגיל" :
     (e.progress != null ? "תומלל " + e.progress + "%" : "השקופיות לא הושלמו")));
@@ -2284,13 +2329,13 @@ async function newCourse(done) {
   $("#ncName").oninput = () => { clearTimeout(timer); timer = setTimeout(look, 250); };
   const close = () => { $("#newCourse").hidden = true; $("#ncOk").onclick = $("#ncNo").onclick = $("#ncName").oninput = null; clearTimeout(timer); };
   $("#ncNo").onclick = close;
-  $("#ncOk").onclick = async () => {
+  $("#ncOk").onclick = busyGuard($("#ncOk"), async () => {
     const terms = (sug.terms || []).filter(t => chosen.has(t));
     const r = await api("/api/cmd", {action: "new_course", name: $("#ncName").value, terms});
     if (!r.ok) { toast(r.error || "לא הצלחתי"); return; }
     close(); if (r.existed) toast("כבר יש קורס בשם \"" + r.course + "\". בחרתי אותו."); else if (r.renamed) toast("הקורס נוצר בשם \"" + r.course + "\" (תווים או רווחים שאי אפשר בשם תיקייה הוחלפו)."); else toast("הקורס \"" + r.course + "\" נוצר" + (terms.length ? " עם " + terms.length + " מונחים במילון." : ". אפשר להוסיף מונחים בדף הקורס."));
     if (done) done(r.course);
-  };
+  });
 }
 $("#ncName").addEventListener("keydown", e => { if (e.key === "Enter") $("#ncOk").click(); });
 function lectureMenu(e) {
@@ -2303,15 +2348,15 @@ function lectureMenu(e) {
     $("#lecMenu").hidden = true; loadLib(true);
     if (view === "past" && pastFile === e.f) location.hash = "t=" + encodeURIComponent(r.f);
   };
-  $("#lmMove").onclick = async () => { const r = await api("/api/cmd", {action: "move_lecture", f: e.f, course: sel.value}); if (r.ok) toast("הועבר ל" + sel.value + "."); after(r); };
-  $("#lmRename").onclick = async () => { const r = await api("/api/cmd", {action: "rename_lecture", f: e.f, name: $("#lmName").value}); if (r.ok) toast("השם נשמר."); after(r); };
+  $("#lmMove").onclick = busyGuard($("#lmMove"), async () => { const r = await api("/api/cmd", {action: "move_lecture", f: e.f, course: sel.value}); if (r.ok) toast("הועבר ל" + sel.value + "."); after(r); });
+  $("#lmRename").onclick = busyGuard($("#lmRename"), async () => { const r = await api("/api/cmd", {action: "rename_lecture", f: e.f, name: $("#lmName").value}); if (r.ok) toast("השם נשמר."); after(r); });
   $("#lmFolder").onclick = () => api("/api/cmd", {action: "open_folder", what: "folder", f: e.f});
   $("#lmDelete").onclick = async () => {
     $("#lecMenu").hidden = true;
     if (!(await confirmBox("למחוק את \"" + e.title + "\"?", "התמלול, השקופיות והסיכום שלה יימחקו. אפשר לשחזר מסל המחזור של Windows. אם הבנתי הורידה את ההקלטה, גם היא נמחקת, לצמיתות.", "מחיקה"))) { $("#lecMenu").hidden = false; return; }
     const r = await api("/api/cmd", {action: "delete_lecture", f: e.f});
     if (!r.ok) { toast(r.error || "לא הצלחתי"); return; }
-    toast(r.where === "bin" ? "ההרצאה נמחקה. אפשר לשחזר אותה מסל המחזור." : "ההרצאה נמחקה (עותק נשמר ב-Hevanti\\deleted).");
+    toast(r.where === "bin" ? "ההרצאה נמחקה. אפשר לשחזר אותה מסל המחזור." : "ההרצאה נמחקה (עותק נשמר בתיקייה deleted של הבנתי).");
     await loadLib(true);
     if (view === "past" && pastFile === e.f) location.hash = backTo;
     else if (view === "course") openCourse(courseName);
@@ -2446,8 +2491,9 @@ async function addGlossTerms(list) {
   drawCourseSuggest();
 }
 $("#glossSave").addEventListener("click", async () => {
-  const r = await api("/api/cmd", {action: "save_glossary", course: courseName, text: $("#glossIn").value});
-  toast(r.ok ? "נשמר: " + r.terms + " מונחים. מההרצאה הבאה התמלול ישתמש בהם." : (r.error || "לא הצלחתי לשמור."));
+  let r; try { r = await api("/api/cmd", {action: "save_glossary", course: courseName, text: $("#glossIn").value}); } catch (e) { r = {ok: false}; }
+  if (r.ok) $("#glossIn").value = r.text != null ? r.text : $("#glossIn").value;   // (what was really saved: no duplicates, at most 300)
+  toast(r.ok ? (r.dropped ? "נשמרו " + r.terms + " מונחים. עוד " + r.dropped + " לא נכנסו: המקסימום 300." : "נשמר: " + r.terms + " מונחים.") + " מההרצאה הבאה התמלול ישתמש בהם." : (r.error || "לא הצלחתי לשמור."));
   if (r.ok) { loadLib(true); drawCourseSuggest(); }
 });
 $("#cExport").addEventListener("click", async () => {
@@ -2480,7 +2526,7 @@ $("#cDelete").addEventListener("click", async () => {
       "אפשר לשחזר אותו מסל המחזור של Windows. הקלטות שהבנתי הורידה להרצאות הקורס נמחקות לצמיתות.", "מחיקה"))) return;
   const r = await api("/api/cmd", {action: "delete_course", course: name});
   if (!r.ok) { toast(r.error || "לא הצלחתי"); return; }
-  toast(r.where === "bin" ? "הקורס \"" + name + "\" נמחק. אפשר לשחזר אותו מסל המחזור." : "הקורס נמחק (עותק נשמר ב-Hevanti\\deleted).");
+  toast(r.where === "bin" ? "הקורס \"" + name + "\" נמחק. אפשר לשחזר אותו מסל המחזור." : "הקורס נמחק (עותק נשמר בתיקייה deleted של הבנתי).");
   if (curCourse === name) curCourse = "";
   if (libCourse === name) libCourse = "";
   courseName = "";
@@ -2550,7 +2596,7 @@ function lineEl(x) {
   const li = el("li", x.img ? "shot" : (x.note ? "note" : (x.gap ? "gap" : "")));
   li.appendChild(el("span", "ts", x.c));
   if (x.img) {
-    const im = el("img"); im.loading = "lazy"; im.src = shotUrl(x.img); im.alt = "צילום מסך מ-" + x.c; im.onclick = () => big(im.src); li.appendChild(im);
+    const im = el("img"); im.loading = "lazy"; im.src = shotUrl(x.img); im.alt = "צילום מסך מ-" + x.c; zoomable(im, "הגדלת צילום המסך מ-" + x.c); li.appendChild(im);
     if (x.ocr) { const dt = el("details", "ocr"); dt.appendChild(el("summary", "", "הטקסט מהשקופית")); const pre = el("p", "", x.ocr); pre.dir = "auto"; dt.appendChild(pre); li.appendChild(dt); }
     const dl = el("button", "shotdel", "מחיקת התמונה"); dl.type = "button"; dl.title = "מוחק את התמונה הזו לצמיתות. התמלול נשאר.";
     dl.onclick = async () => {
@@ -2595,7 +2641,7 @@ async function pollLive() {
   if (d.shot) {
     const slot = $("#shotSlot"), src = shotUrl(d.shot);
     if (!slot.querySelector("img") || slot.querySelector("img").dataset.src !== src) {
-      const im = el("img"); im.src = src; im.dataset.src = src; im.alt = "צילום המסך האחרון"; im.onclick = () => big(src); slot.replaceChildren(im);
+      const im = el("img"); im.src = src; im.dataset.src = src; im.alt = "צילום המסך האחרון"; zoomable(im, "הגדלת צילום המסך האחרון"); slot.replaceChildren(im);
     }
     if ($("#shotCopy").hidden && liveAskBox) liveAskBox.refresh();
     $("#shotCopy").hidden = false; $("#shotDel").hidden = false;

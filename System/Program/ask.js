@@ -223,7 +223,7 @@
     // asked once, in every box, until it is answered
     const planBox = mk("div", "plan"); planBox.hidden = true;
     planBox.append(mk("span", "", "יש לך מנוי בתשלום ל-ChatGPT, Claude או Gemini? (שאלה חד-פעמית)"),
-      mk("span", "hint", "אם כן, שאלות והרצאות שלמות ילכו ישר לאפליקציה שלך, בלי מכסה. אם לא, הבנתי תענה כאן במכסה החינמית."));
+      mk("span", "hint", "אם כן, שאלות והרצאות שלמות ילכו ישר לאפליקציה שלך, בלי להשתמש במכסה החינמית של Google. אם לא, הבנתי תענה כאן במכסה החינמית."));
     const planBtns = mk("div", "btns");
     for (const [val, label] of [["paid", "כן, יש לי מנוי"], ["free", "לא, רק המפתח"]]) {
       const pb = mk("button", "", label); pb.type = "button";
