@@ -26,22 +26,26 @@ addEventListener("storage", e => { if (e.key === "bzm.theme") bzmTheme(e.newValu
 <style>
 :root{
   --bg:#F6F3E9; --surface:#FFFFFF; --sunk:#ECE7D8; --fg:#17261F; --muted:#56625B; --line:#DDD7C4;
-  --accent:#1B6E4B; --accent-ink:#FFFFFF; --accent-soft:#DCEBDF; --mark:#F7D44C; --ready:#1F7A55; --notready:#D6D0BE;
+  --accent:#1B6E4B; --accent-ink:#FFFFFF; --accent-soft:#DCEBDF; --mark:#F7D44C; --mark-line:#F7DD7B; --rec:#C2412D; --ready:#1F7A55; --notready:#D6D0BE;
   --now:#FBEFB5; --now-ink:#17261F; --warn-bg:#FBF0DA; --warn-fg:#6B5020;
   --f-body:"Assistant","Segoe UI","Arial Hebrew",Arial,system-ui,sans-serif; --f-display:"Secular One","Assistant",sans-serif;
   --f-mono:Consolas,"Cascadia Mono",ui-monospace,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#1C1B16; --surface:#26241D; --sunk:#2F2C23; --fg:#F1ECDF; --muted:#B5AFA0; --line:#3E3A2E;
-  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --mark:#E8C547; --ready:#5BC79A; --notready:#463F31;
+  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --mark:#E8C547; --mark-line:#594E25; --rec:#FF7A63; --ready:#5BC79A; --notready:#463F31;
   --now:#3D3816; --now-ink:#FFF6CF; --warn-bg:#3A3122; --warn-fg:#EBD08E; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#1C1B16; --surface:#26241D; --sunk:#2F2C23; --fg:#F1ECDF; --muted:#B5AFA0; --line:#3E3A2E;
-  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --mark:#E8C547; --ready:#5BC79A; --notready:#463F31;
+  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --mark:#E8C547; --mark-line:#594E25; --rec:#FF7A63; --ready:#5BC79A; --notready:#463F31;
   --now:#3D3816; --now-ink:#FFF6CF; --warn-bg:#3A3122; --warn-fg:#EBD08E; color-scheme:dark}
 :root[data-theme="light"]{color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
+html.a-contrast{--muted:var(--fg);--line:#7d7d7d}
+html.a-contrast :focus-visible{outline:3px solid var(--fg)!important;outline-offset:2px}
+html.a-still *,html.a-still *::before,html.a-still *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+html.a-read body{line-height:1.95;letter-spacing:.015em;word-spacing:.14em}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:17px;line-height:1.6;display:flex;flex-direction:column}
 button{font:inherit;color:inherit}
 textarea:placeholder-shown,input:not([dir="ltr"]):not([type=password]):not([type=checkbox]):not([type=radio]):placeholder-shown{direction:rtl;text-align:right}
@@ -85,17 +89,18 @@ video{width:100%;max-height:calc(100vh - 230px);display:block;background:#000}
 .transcript{min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .tools{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid var(--line)}
 .tools input{flex:1;min-width:0;font:inherit;font-size:15px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
-#lines{list-style:none;margin:0;padding:8px 6px 40vh;overflow-y:auto;flex:1;min-height:0;position:relative}
+#lines{font-size:calc(17px * var(--tx, 1));list-style:none;margin:0;padding:8px 6px 40vh;overflow-y:auto;flex:1;min-height:0;position:relative}
 #lines li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:5px 8px;border-radius:8px;cursor:pointer;align-items:start}
 #lines li:hover{background:var(--sunk)}
-#lines li.mk-imp{background:rgba(232,176,0,.16)}
-#lines li.mk-lost{background:rgba(217,83,79,.14)}
-#lines li.mk-imp.mk-lost{background:linear-gradient(90deg,rgba(217,83,79,.14),rgba(232,176,0,.16))}
+#lines li.mk-imp{background:var(--mark-line)}   /* the band of a marked line: the token of DESIGN.md (yellow is only for marks) */
+#lines li.mk-lost{background:var(--sunk)}
+#lines li.mk-imp.mk-lost{background:var(--mark-line)}
 .mk{display:inline-block;min-width:1.1em;margin-inline-end:5px;font:700 14px/1 var(--f-ui,inherit);text-align:center;border-radius:50%;padding:2px 3px}
-.mk.imp{color:#fff;background:#d99a00}
-.mk.lost{color:#fff;background:#d9534f}
+.mk.imp{color:var(--fg);background:transparent}   /* the ★ in ink on the band (4.5:1 and more in both themes) */
+.mk.lost{color:var(--rec);background:transparent;border:1.5px solid var(--rec)}
 #lines li.now{background:var(--now);color:var(--now-ink)}
 .ts{font-family:var(--f-mono);font-size:13px;color:var(--muted);direction:ltr;unicode-bidi:isolate;padding-top:3px;white-space:nowrap}
+#lines li:focus-visible{outline-offset:-2px}
 #lines li.gap{cursor:default;color:var(--muted);font-style:italic}
 #lines li.gap:hover{background:none}
 #lines li.shot img{max-width:min(100%,260px);border-radius:6px;border:1px solid var(--line);display:block}
@@ -147,6 +152,12 @@ video{width:100%;max-height:calc(100vh - 230px);display:block;background:#000}
 </div>
 <div id="toast" role="status"></div>
 <div id="big"><img alt=""></div>
+<script>/* the display and accessibility settings of the app (text size, interface size, spacing, contrast, no motion), kept in this browser */
+try { const a = JSON.parse(localStorage.getItem("bzm.a11y") || "{}"), r = document.documentElement;
+  if (a.zoom && a.zoom !== 1) r.style.zoom = String(a.zoom);
+  r.style.setProperty("--tx", String(a.tx || 1));
+  r.classList.toggle("a-read", !!a.read); r.classList.toggle("a-contrast", !!a.contrast); r.classList.toggle("a-still", !!a.still); } catch (e) {}
+addEventListener("storage", e => { if (e.key === "bzm.a11y") location.reload(); });</script>
 <script src="/ask.js"></script>
 <script>
 "use strict";
@@ -180,7 +191,7 @@ async function poll() {
     if (fails >= 3 && !closedMsg) {
       closedMsg = true;
       msg("הכלי נסגר. הסרטון ימשיך רק עד איפה שהוא כבר נטען, וה-AI המחובר לא יודע איפה אתה. " +
-          "כדי להמשיך: להפעיל שוב את Hevanti ולפתוח את ההקלטה מהספרייה.");
+          "כדי להמשיך: להפעיל שוב את הבנתי (מהקיצור) ולפתוח את ההקלטה מהספרייה.");
       $("#chip").textContent = "הכלי סגור"; $("#chip").className = "chip err";
     }
   }
@@ -264,7 +275,11 @@ function render(lines) {
       const sp = document.createElement("span"); sp.className = "tx"; sp.dir = "auto"; sp.textContent = x.x;
       li.appendChild(sp);
     }
-    if (x.gap == null) li.addEventListener("click", () => seek(x.t));
+    if (x.gap == null) {
+      li.addEventListener("click", () => seek(x.t));
+      li.tabIndex = 0; li.setAttribute("role", "button"); li.setAttribute("aria-label", hms(x.t) + ": " + (x.x || "שקופית"));   // reachable with the keyboard: Enter or Space jumps there
+      li.addEventListener("keydown", ev => { if (ev.target === li && (ev.key === "Enter" || ev.key === " ")) { ev.preventDefault(); seek(x.t); } });
+    }
     els.push(li); frag.appendChild(li);
   });
   list.replaceChildren(frag);
@@ -289,9 +304,11 @@ function drawMarks() {
     li.classList.add(imp ? "mk-imp" : "mk-lost");
     const b = document.createElement("span");
     b.className = "mk " + (imp ? "imp" : "lost"); b.textContent = imp ? "★" : "?";
+    b.tabIndex = 0; b.setAttribute("role", "button"); b.setAttribute("aria-label", (imp ? "מסומנת: חשוב" : "מסומנת: לא הבנתי") + ". מתחיל " + MARK_LEAD_S + " שניות לפני");
     b.title = (imp ? "סימנת: חשוב" : "סימנת: לא הבנתי") + ". לחיצה: מתחיל " + MARK_LEAD_S + " שניות לפני";
     // a mark is made a moment after the lecturer said it: clicking it plays from a few seconds before
     b.addEventListener("click", ev => { ev.stopPropagation(); seek(Math.max(0, m.t - MARK_LEAD_S)); });
+    b.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); ev.stopPropagation(); seek(Math.max(0, m.t - MARK_LEAD_S)); } });
     li.querySelector(".ts").prepend(b);
   }
 }

@@ -202,12 +202,12 @@ t, info, e, _ = stream("ok")
 check("a good stream: the words, no warning", t == "שלום לכולם" and e is None and not info, (t, info, e))
 t, info, e, _ = stream("blocked")
 check("the question was blocked by Google: no words, and a line saying why (with the code)",
-      t == "" and e is None and "נחסמה" in info.get("warn", "") and "SAFETY" in info.get("warn", ""), (t, info))
+      t == "" and e is None and "נחסמה" in info.get("warn", "") and "SAFETY" not in info.get("warn", ""), (t, info))
 t, info, e, _ = stream("finish-safety")
-check("the safety filter stopped the answer before any word: why", t == "" and "מסנן הבטיחות" in info.get("warn", "") and "SAFETY" in info["warn"], (t, info))
+check("the safety filter stopped the answer before any word: why", t == "" and "מסנן הבטיחות" in info.get("warn", "") and "SAFETY" not in info["warn"], (t, info))
 t, info, e, _ = stream("max-tokens")
 check("the answer was too long: what came out is kept, and it says it was cut",
-      t == "תשובה חלקית" and "נקטעה" in info.get("warn", "") and "MAX_TOKENS" in info["warn"], (t, info))
+      t == "תשובה חלקית" and "נקטעה" in info.get("warn", "") and "MAX_TOKENS" not in info["warn"], (t, info))
 t, info, e, _ = stream("nothing")
 check("an empty answer with no reason: it says so", t == "" and info.get("warn") == "Gemini לא החזיר תשובה.", (t, info))
 
@@ -289,7 +289,7 @@ os.makedirs(lec)
 open(os.path.join(lec, "הרצאה 1.txt"), "w", encoding="utf-8").write("[09:01:00 | +0:01:00] שלום\n")
 code, body, _ = ask(f=course + "/הרצאה 1")
 check("a blocked question: the page gets a line saying why, not an empty answer",
-      code == 200 and "⚠ Gemini לא ענה: השאלה נחסמה" in body and "SAFETY" in body, (code, body))
+      code == 200 and "⚠ Gemini לא ענה: השאלה נחסמה" in body and "SAFETY" not in body, (code, body))
 check("...and nothing is kept in the lecture's folder", not os.path.exists(os.path.join(lec, L.QA_NAME)))
 
 reset()

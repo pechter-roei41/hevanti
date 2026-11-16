@@ -263,7 +263,7 @@ rel = course + "/הרצאה 1"
 qa = os.path.join(lecdir, L.QA_NAME)
 code, body = ask("שאלה שנחסמת", f=rel)
 check("a blocked answer is not an error: the page gets a line saying why, and nothing is written to the lecture's folder",
-      code == 200 and body.strip().startswith("⚠") and "SAFETY" in body and not os.path.exists(qa), (code, body, os.path.exists(qa)))
+      code == 200 and body.strip().startswith("⚠") and "SAFETY" not in body and not os.path.exists(qa), (code, body, os.path.exists(qa)))
 
 # ---------------------------------------------------------------------------------- 5. what is kept in the lecture's folder
 reset()

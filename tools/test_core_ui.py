@@ -589,7 +589,7 @@ with sync_playwright() as p:
 
     pg.evaluate("openSettings('key')")
     pg.wait_for_timeout(500)
-    heads = pg.evaluate("[...document.querySelectorAll('#set-key .optbox h4')].map(h => h.textContent.trim())")
+    heads = pg.evaluate("[...document.querySelectorAll('#set-key .optbox h2')].map(h => h.textContent.trim())")
     check("settings: the groups are not numbered", heads and not any(h[:1].isdigit() for h in heads), heads)
     check("settings: the privacy notes are in the caution colours, not the error red",
           pg.evaluate("""() => { const n = document.querySelector('#setBody .optbox .warn'), p = document.createElement('div');
@@ -838,7 +838,7 @@ with sync_playwright() as p:
     check("live lecture screen: exactly one solid green control, and it is 'answer here'", solid == ["תשובה כאן"], solid)
     for sel, what in (("[data-float]", "the small window"), ("#markImp", "mark ★"), ("#liveStop", "stop")):
         check(f"live lecture screen: {what} is a ghost button", lv.evaluate(f"getComputedStyle(document.querySelector('#vLive {sel}')).backgroundColor") == "rgba(0, 0, 0, 0)")
-    rects = lv.evaluate("['#markImp', '[data-float]', '#liveStop', '.livebar .what b'].map(s => { const r = document.querySelector('#vLive ' + s).getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; })")
+    rects = lv.evaluate("['#markImp', '[data-float]', '#liveStop', '.livebar .what h1'].map(s => { const r = document.querySelector('#vLive ' + s).getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom)]; })")
     check("live lecture screen: stop is in the same row as the title and the other actions (not a row of its own)",
           max(r[0] for r in rects[:3]) < min(r[1] for r in rects[:3]) and abs(rects[2][0] - rects[0][0]) < 4, rects)
     lv.set_viewport_size({"width": 600, "height": 900})

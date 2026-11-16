@@ -28,7 +28,7 @@ HLS = "https://s-cloudfront.cdn.ap.panopto.com/sessions/abc/master.m3u8?Invocati
 # the page offers what the bookmark sent, with the recording's name (made safe for a folder name)
 app.command({"action": "offer", "source": MP4, "name": "הרצאה 5: מומנט התמד"})
 p = app.state()["pending"]
-check("offer keeps the name", p and p["name"] == p["title"] == "הרצאה 5 מומנט התמד", p)
+check("offer keeps the name", p and p["name"] == p["title"] == "הרצאה 5 - מומנט התמד", p)
 app.command({"action": "offer", "source": MP4})
 check("offer without a name: named from the link", app.state()["pending"]["title"] == "")
 app.command({"action": "dismiss_pending"})

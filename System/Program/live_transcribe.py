@@ -1224,7 +1224,7 @@ def load_model(stub_av=True):
                 if has_cuda_libs:
                     log(f"כרטיס מסך לא זמין ({err.__class__.__name__}) - עובד על המעבד.")
                 else:
-                    log("טיפ: יש במחשב כרטיס מסך של NVIDIA. כדי שהתמלול יהיה מהיר יותר, להריץ פעם אחת את install_gpu (בתיקייה Setup).")
+                    log("טיפ: יש במחשב כרטיס מסך של NVIDIA. כדי שהתמלול יהיה מהיר יותר, להריץ פעם אחת את install_gpu (בתיקייה System של הבנתי; אם התקנת עם Hevanti-Setup.exe: להתקין אותו מחדש).")
             m = WhisperModel(path, device="cpu", compute_type="int8",
                              download_root=MODEL_DIR, cpu_threads=os.cpu_count() or 4)
             list(m.transcribe(test, language=LANG)[0])
@@ -2208,7 +2208,7 @@ class OcrWorker(threading.Thread):
             self.cfg = ocr_config(self.exe) if self.exe else None
             self.ready = self.cfg is not None
             if not self.ready:
-                log("טיפ: כדי שהבנתי תקרא את הטקסט בשקופיות (חיפוש בשקופיות, הכנה למבחן, מילים באנגלית לתמלול), "
+                log("טיפ: כדי שהבנתי תקרא את הטקסט בשקופיות (חיפוש בשקופיות, מילים באנגלית לתמלול), "
                     "להריץ פעם אחת את install_ocr בתיקייה System.")
         return self.ready
 
@@ -2441,7 +2441,7 @@ def gemini_call(path, key, body=None, timeout=90):
     except TimeoutError:
         raise MathError("Gemini לא ענה בזמן. לנסות שוב עוד רגע.", 60, other=True)
     except (urllib.error.URLError, OSError, ValueError) as e:
-        raise MathError(f"אין חיבור ל-Gemini ({e.__class__.__name__}). ממשיך לבד אחר כך.", 60)
+        raise MathError("אין חיבור ל-Gemini. ממשיך לבד אחר כך.", 60)
 
 
 def _google_error(raw):
@@ -2481,7 +2481,7 @@ def _gemini_http_error(e):
         return MathError("Gemini לא זמין באזור שבו המחשב נמצא (" + _short(msg) + ").")
     if e.code == 403:   # a key that is fine, and Google still says no: say why, in Google's words
         if "SERVICE_DISABLED" in reasons or "has not been used in project" in low or "is disabled" in low:
-            return MathError("ה-API של Gemini לא מופעל בפרויקט של המפתח. להפעיל אותו ב-Google AI Studio ולנסות שוב (" + _short(msg) + ").")
+            return MathError("Gemini לא מופעל בחשבון Google של המפתח. להפעיל אותו ב-Google AI Studio ולנסות שוב (" + _short(msg) + ").")
         if "model" in low or "resource" in low:   # (this model, not the key: another model may answer)
             return MathError("אין למפתח הרשאה למודל הזה של Gemini (" + _short(msg) + ").", other=True)
         if not msg and not status:   # not Google's own answer: something on the way (a school or office network, a proxy) said no
@@ -3000,10 +3000,11 @@ def _stream_warning(text_seen, block, finish):
     why_code = block or (finish if finish not in ("", "STOP", "FINISH_REASON_UNSPECIFIED") else "")
     if not why_code:
         return None if text_seen else "Gemini לא החזיר תשובה."
-    why = _FINISH_WHY.get(why_code, "Gemini עצר אותה (" + why_code + ")")
+    why = _FINISH_WHY.get(why_code, "Gemini עצר אותה")
+    log("Gemini עצר את התשובה, הקוד של Google: " + why_code)   # (the code is for the log, not for the student)
     if text_seen:
-        return "התשובה נקטעה: " + why + " (" + why_code + ")."
-    return ("Gemini לא ענה: השאלה נחסמה. " if block else "Gemini לא ענה: ") + why + " (" + why_code + ")."
+        return "התשובה נקטעה: " + why + "."
+    return ("Gemini לא ענה: השאלה נחסמה. " if block else "Gemini לא ענה: ") + why + "."
 
 
 def _set_read_timeout(r, secs):
@@ -3034,7 +3035,7 @@ def gemini_stream(key, model, body, usage=None, timeout=None, read_timeout=None,
     except (urllib.error.URLError, OSError) as e:
         if isinstance(getattr(e, "reason", None), TimeoutError):
             raise MathError("Gemini לא ענה בזמן. לנסות שוב עוד רגע.", other=True)
-        raise MathError(f"אין חיבור ל-Gemini ({e.__class__.__name__}). לבדוק את האינטרנט.")
+        raise MathError("אין חיבור ל-Gemini. לבדוק את האינטרנט.")
     text_seen, block, finish = False, "", ""
     with r:
         lines = iter(r)
@@ -4270,7 +4271,8 @@ _RESERVED = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f
 
 def clean_name(name, fallback=""):
     """A course or lecture name that is safe as a Windows folder name (no / \\ : * ? " < > |, no '..')."""
-    n = re.sub(r'[\\/:*?"<>|\x00-\x1f]', " ", str(name or ""))
+    n = str(name or "").replace('"', "״").replace(":", " - ")   # (a name like חדו"א keeps its gershayim; a colon becomes " - ")
+    n = re.sub(r'[\\/*?<>|\x00-\x1f]', " ", n)
     n = " ".join(n.split()).strip(" .")[:80].strip(" .")
     if n.upper() in _RESERVED:
         n += "_"
@@ -4506,9 +4508,19 @@ def glossary_text(course):
         return ""
 
 
+GLOSSARY_MAX = 300
+
+
 def write_glossary(course, text):
-    words = [" ".join(w.split()) for w in re.split(r"[\n,،;]+", str(text or ""))]
-    words = [w[:60] for w in words if w and not w.startswith("#")][:300]
+    words = [" ".join(w.split()) for w in re.split(r"[\n;]+", str(text or ""))]   # (a comma stays: f(x,y) is one term)
+    seen, kept = set(), []
+    for w in words:
+        w = w[:60]
+        if w and not w.startswith("#") and w.lower() not in seen:   # (Newton / newton / NEWTON are one term)
+            seen.add(w.lower())
+            kept.append(w)
+    write_glossary.dropped = max(0, len(kept) - GLOSSARY_MAX)
+    words = kept[:GLOSSARY_MAX]
     os.makedirs(course_dir(course), exist_ok=True)
     tmp = glossary_path(course) + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
@@ -4655,6 +4667,10 @@ def create_course(name, terms=None):
     name = clean_name(name)
     if not name:
         return None
+    for have in course_names():   # (NTFS ignores case: "math" next to "Math" is the same folder)
+        if os.path.normcase(have) == os.path.normcase(name):
+            name = have
+            break
     d = course_dir(name)
     CREATED_COURSE["existed"] = os.path.isdir(d)
     os.makedirs(d, exist_ok=True)
@@ -5181,7 +5197,7 @@ def project_instructions(course, app):
             "מהשקופית שעל המסך. מתעדכן כל כמה שניות.\n"
             '- "כל ההרצאות.txt": כל ההרצאות של הקורס, מהישנה לחדשה.\n'
             "בכל שאלה על ההרצאה (\"מה הוא אמר עכשיו?\", \"לא הבנתי את החלק האחרון\") - לפתוח מחדש את הגרסה הנוכחית של "
-            '"עכשיו.txt" מ-Google Drive לפני שעונים, גם אם כבר נפתח קודם בשיחה. למבחן, סיכום וכרטיסיות - '
+            '"עכשיו.txt" מ-Google Drive לפני שעונים, גם אם כבר נפתח קודם בשיחה. למבחן דמה, לסיכום ולדף נוסחאות - '
             '"כל ההרצאות.txt".\n'
             "לענות בעברית, צעד אחר צעד, בלי מונחים באנגלית אלא אם המרצה אמר או כתב אותם באנגלית. התמלול אוטומטי: מילה מוזרה היא כנראה "
             "טעות תמלול.")
@@ -6836,8 +6852,10 @@ def _settings_damaged():
             return d if isinstance(d, dict) else {}
         except (OSError, ValueError):
             pass
+        kept = False
         try:
             shutil.copy2(SETTINGS_FILE, SETTINGS_FILE + ".corrupt")
+            kept = True
         except OSError:
             pass
         try:
@@ -6852,7 +6870,7 @@ def _settings_damaged():
                         + ("the last good copy was restored." if d else "there is no good copy: settings start empty."))
         log("קובץ ההגדרות היה פגום. " + ("שחזרתי את ההעתק האחרון התקין." if d else "אין העתק תקין, ולכן ההגדרות התחילו מחדש (גם המפתח).")
             + " הקובץ הפגום נשמר ליד, בשם settings.json.corrupt.")
-        if d:
+        if d or kept:   # (a good file goes back; with no good copy an empty one does, so the next read is quiet - the damaged one is in .corrupt)
             try:
                 _write_settings(d)
             except OSError:
@@ -7052,11 +7070,12 @@ def diag_text():
     text = "\n".join(lines) + "\n\nשגיאות אחרונות:\n" + (tail.strip() or "(אין)")
     text = scrub_log(scrub_secrets(text))   # (links lose their query string: it can carry a token)
     home, user = os.path.expanduser("~"), os.environ.get("USERNAME") or ""
-    for a, b in ((home, "%USERPROFILE%"), (home.replace("\\", "/"), "%USERPROFILE%")):
+    for a in (home, home.replace("\\", "/")):
         if a and len(a) > 3:
-            text = text.replace(a, b)
-    if len(user) >= 3:
-        text = text.replace(user, "<user>")
+            text = re.sub(re.escape(a), lambda m: "%USERPROFILE%", text, flags=re.I)
+    if user:
+        text = re.sub(r"(?<![\w])" + re.escape(user) + r"(?![\w])", "<user>", text, flags=re.I)
+    text = re.sub(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", "<email>", text)
     return text
 
 
@@ -7145,7 +7164,7 @@ def save_download(resp, url):
                     _progress_line(f"מוריד את ההקלטה: {got >> 20}MB")
     except Exception as e:
         _progress_line("", end=True)
-        problem(f"ההורדה נקטעה באמצע ({e.__class__.__name__}). להפעיל שוב.")
+        problem("ההורדה נקטעה באמצע. להפעיל שוב.")
         return None
     _progress_line("", end=True)
     if size and got < size:
@@ -7197,7 +7216,7 @@ def _fetch_link(url):
     try:
         resp = _http(direct_link(url), headers={"User-Agent": "Mozilla/5.0"}, timeout=60)
     except Exception as e:
-        problem(f"לא הצלחתי להוריד מהקישור ({e.__class__.__name__}). לבדוק את הקישור ואת החיבור לאינטרנט.")
+        problem("לא הצלחתי להוריד מהקישור. לבדוק את הקישור ואת החיבור לאינטרנט.")
         return None
     ctype = (resp.headers.get("Content-Type") or "").lower()
     if "text/html" in ctype:
@@ -8347,7 +8366,7 @@ class App:
             words = write_glossary(course, d.get("text"))
             with self.lock:
                 self.lib_rev += 1
-            return {"ok": True, "terms": len(words)}
+            return {"ok": True, "terms": len(words), "dropped": write_glossary.dropped, "text": "\n".join(words)}
         if a in ("toggle_mini", "hide_mini", "show_mini"):
             return toggle_mini(hide_only=(a == "hide_mini"), show_only=(a == "show_mini"))
         if a == "mini_opacity":
@@ -8519,7 +8538,7 @@ class App:
             src = str(d.get("source") or "")
             title = clean_name(str(d.get("name") or "")[:120]) if d.get("name") else ""
             with self.lock:
-                self.pending = {"source": src, "name": title or display_name(src), "title": title} if src else None
+                self.pending = {"source": src, "name": title or display_name(src), "title": title, "via": "link" if d.get("via") == "link" else ""} if src else None
             return {"ok": True}
         if a == "dismiss_pending":
             with self.lock:
@@ -8775,7 +8794,7 @@ APP = App()
 
 
 MISSING_PARTS = ("רכיבי התמלול לא מותקנים במחשב הזה (או שההתקנה לא הסתיימה). להריץ את Install בתיקייה של הבנתי, "
-                 "לחכות ל-Installed OK, ואז לפתוח שוב את Hevanti.")
+                 "לחכות ל-Installed OK, ואז לפתוח שוב את הבנתי מהקיצור (או מ-Hevanti.bat).")
 
 
 def friendly_error(tb):
@@ -8899,7 +8918,7 @@ def backup_library(out_dir=None):
     import zipfile
     if not os.path.isdir(LIB_DIR):
         return {"ok": False, "error": "עוד אין ספרייה לגבות."}
-    out_dir = out_dir or os.path.join(os.path.expanduser("~"), "Documents")
+    out_dir = out_dir or _documents()   # (the real Documents folder, which OneDrive may have moved)
     files, total = [], 0
     for root, dirs, names in os.walk(LIB_DIR):
         for n in names:
@@ -9565,6 +9584,8 @@ def _app_handler():
 
         def _body_json(self, limit=65536):
             try:
+                if int(self.headers.get("Content-Length") or 0) > limit:
+                    return {"_too_big": True}   # (the command says so, instead of "unknown command")
                 d = json.loads(self._body(limit).decode("utf-8") or "{}")
                 return d if isinstance(d, dict) else {}
             except ValueError:
@@ -9732,6 +9753,9 @@ def _app_handler():
                     question, minutes = mini_question(d)
                     return self._json({"context": mini_context(question, minutes or ASK_MINUTES)})
                 d = self._body_json()  # always read it: the connection is reused
+                if d.get("_too_big"):
+                    self.close_connection = True   # (the rest of the body is unread)
+                    return self._json({"ok": False, "error": "הבקשה גדולה מדי (יותר מ-64KB). קצרו את הטקסט ונסו שוב."}, 413)
                 if p == "/api/place":
                     rec, live = APP.rec, APP.live
                     if d.get("yt") and live is not None and getattr(live, "clock", None) is not None:
@@ -10271,7 +10295,7 @@ def run_recording(sess, source, lang, course=""):
         tb = traceback.format_exc()
         save_error_text("PyAV", tb)
         sess.error = ("\n".join(block_text(tb)) if is_blocked(tb) else
-                      "רכיב קריאת ההקלטות (PyAV) לא נטען. להריץ שוב את install בתיקייה Setup.") + \
+                      "רכיב קריאת ההקלטות (PyAV) לא נטען. להריץ שוב את Install בתיקייה של הבנתי (אם התקנת עם Hevanti-Setup.exe: להתקין אותו מחדש).") + \
             "\nבינתיים אפשר לנגן את ההקלטה בנגן אחר ולהשתמש בהרצאה חיה."
         return
     if SCREEN_ENABLED:
@@ -10564,7 +10588,7 @@ def main():
             s = APP.session
             idle = s is None or s.done
             if idle and time.time() - APP.last_seen > IDLE_EXIT_S and not _button_keeps_running():
-                log(f"האפליקציה סגורה ושום דבר לא רץ כבר {max(1, round(IDLE_EXIT_S / 60))} דקות - {PRODUCT} נסגרה. כדי לפתוח שוב: Hevanti.")
+                log(f"האפליקציה סגורה ושום דבר לא רץ כבר {max(1, round(IDLE_EXIT_S / 60))} דקות - {PRODUCT} נסגרה. כדי לפתוח שוב: מהקיצור של הבנתי.")
                 break
             if idle and (app_window_closed() or app_gone):   # the app's window was closed with nothing running: the tool closes too, unless the floating button is on (it stays: the next lecture starts from it)
                 app_gone = True
@@ -10976,7 +11000,7 @@ def run_live(sess, lang, course=""):
                     "כדאי לסגור תוכנות כבדות (משחקים, עריכת וידאו, הרבה לשוניות בדפדפן).")
             else:
                 log(f"אזהרה: התמלול מאחר ב-{lag:.0f} שניות. הכלי עובד על המעבד, והוא איטי מדי במחשב הזה. "
-                    "יש כרטיס מסך של NVIDIA? לעדכן את הדרייבר שלו, להפעיל מחדש את המחשב ולהריץ install_gpu (בתיקייה Setup). "
+                    "יש כרטיס מסך של NVIDIA? לעדכן את הדרייבר שלו, להפעיל מחדש את המחשב ולהריץ install_gpu (בתיקייה System של הבנתי; אם התקנת עם Hevanti-Setup.exe: להתקין אותו מחדש). "
                     "אין? לסגור תוכנות כבדות, ובמחשב נייד לחבר למטען.")
 
     def handle_backlog(buf, buf_t, buf_sr):
@@ -11276,6 +11300,10 @@ def _size_gb(path):
     return total / 1024 ** 3
 
 
+def _hevanti_model_subdirs():
+    return ["models--" + r.replace("/", "--") for r in MODEL_PINS] + ["fast", "zipformer-he"]
+
+
 def uninstall():
     import shutil
     import subprocess
@@ -11291,8 +11319,14 @@ def uninstall():
     for md in dict.fromkeys((MODEL_DIR, OLD_MODEL_DIR)):
         if os.path.isdir(md):
             gb = _size_gb(md)
-            shutil.rmtree(md, ignore_errors=True)
-            show(f"נמחקו מודלי התמלול ({gb:.1f}GB) מ- {md}")
+            if os.path.normcase(os.path.abspath(md)) == os.path.normcase(os.path.abspath(OLD_MODEL_DIR)):
+                # the shared Public folder may hold other programs' models: only Hevanti's own go
+                for sub in _hevanti_model_subdirs():
+                    shutil.rmtree(os.path.join(md, sub), ignore_errors=True)
+                show(f"נמחקו מודלי התמלול של הבנתי מ- {md} (מה שאינו שלנו נשאר)")
+            else:
+                shutil.rmtree(md, ignore_errors=True)
+                show(f"נמחקו מודלי התמלול ({gb:.1f}GB) מ- {md}")
     show("מסיר את רכיבי Python של הכלי...")
     subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", *TOOL_PKGS])
     if _ask("להסיר גם ספריות כלליות שהכלי התקין (" + ", ".join(SHARED_PKGS) + ")? אם יש לך תוכנות Python אחרות, עדיף לבחור N."):
@@ -11302,7 +11336,7 @@ def uninstall():
     for local in (LOCAL_DIR, OLD_LOCAL_DIR):
         if os.path.isdir(local):
             gb = _size_gb(local)
-            if gb < 0.01 or _ask(f"למחוק גם הקלטות שהורדו מקישורים או נגררו לאפליקציה ({gb:.1f}GB, ב-{local})?"):
+            if gb < 0.01 or _ask(f"למחוק גם הקלטות שהורדו מקישורים או נגררו לאפליקציה, את התיקייה deleted (הרצאות שמחקת, שעוד אפשר לשחזר) ואת קבצי ה-OCR ({gb:.1f}GB, ב-{local})?"):
                 shutil.rmtree(local, ignore_errors=True)
                 show("ההקלטות שהורדו נמחקו.")
     for d, label in ((LIB_DIR, "ההרצאות שלך (תמלולים ושקופיות)"), (OUT_DIR, "התמלולים הישנים"),

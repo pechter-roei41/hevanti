@@ -135,6 +135,8 @@ html.a-still *,html.a-still *::before,html.a-still *::after{animation:none!impor
 <div id="toast" role="status"></div>
 <script src="/ask.js"></script>
 <script>
+// counts in Hebrew: "דקה אחת", "שתי דקות", "5 דקות" - never "1 דקות"
+function heN(n, one, two, many, zero) { n = +n || 0; return n === 0 ? (zero || "אין " + many) : n === 1 ? one : n === 2 ? two : n + " " + many; }
 "use strict";
 const $ = s => document.querySelector(s);
 let shot = null, total = 0, live = false, kind0 = "", lastMark = null, sawLive = false, savedFor = null, savedGone = "", stopTimer = 0, curS = null;
@@ -214,7 +216,7 @@ function drawSaved(s) {   // the lecture this window saw running is saved: a car
   $("#saved").hidden = !show;
   if (show) {
     $("#saved").dataset.f = sv.f;
-    $("#savedInfo").textContent = (sv.course && sv.course !== "ללא קורס" ? "בקורס \"" + sv.course + "\", " : "") + sv.minutes + " דקות, " + sv.slides + (sv.slides === 1 ? " שקף" : " שקפים") + ".";
+    $("#savedInfo").textContent = (sv.course && sv.course !== "ללא קורס" ? "בקורס \"" + sv.course + "\", " : "") + heN(sv.minutes, "דקה אחת", "שתי דקות", "דקות") + ", " + sv.slides + (sv.slides === 1 ? " שקף" : " שקפים") + ".";
     $("#note").hidden = true; $("#miss").hidden = true; $("#sug").hidden = true; $("#box").hidden = true;
   } else { $("#box").hidden = false; }
 }

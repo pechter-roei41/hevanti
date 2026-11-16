@@ -68,4 +68,4 @@ Real code, tests (`tools/test_*.py`), a half-minute how-to video (`System/Progra
 
 ## Accessibility & Inclusion
 
-Existing features to preserve: adjustable text and interface size, reading spacing, high contrast, no-motion mode, screen-reader announcements, keyboard-friendly floating window.
+Existing features to preserve: adjustable text and interface size, reading spacing, high contrast, no-motion mode, screen-reader announcements, keyboard-friendly floating window; the recording player follows the same display settings; tabs move with the arrow keys; every screen has a main heading and a page title.
