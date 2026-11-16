@@ -6673,6 +6673,19 @@ def load_settings_patient(seconds=3.0):
         time.sleep(0.2)
 
 
+_DAMAGE = {"n": 0, "lost": False, "at": 0.0}   # a settings file that was damaged: the pages tell the student once (settings_damaged in /api/app)
+
+
+def settings_damage_public():
+    """What the pages show after a damaged settings file (for ten minutes): {"n": count, "msg": text}, else None. When no good copy was
+    left, the key is gone too, and the text says so and where to put it back."""
+    if not _DAMAGE["n"] or time.time() - _DAMAGE["at"] > 600:
+        return None
+    msg = ("קובץ ההגדרות היה פגום ולא היה העתק תקין, ולכן ההגדרות והמפתח נמחקו. צריך להכניס את המפתח מחדש (הגדרות ← מפתח)."
+           if _DAMAGE["lost"] else "קובץ ההגדרות היה פגום. שחזרתי את ההעתק האחרון התקין.")
+    return {"n": _DAMAGE["n"], "msg": msg, "lost": _DAMAGE["lost"]}
+
+
 def _settings_damaged():
     import shutil
     with _SETTINGS_LOCK:
@@ -6693,6 +6706,7 @@ def _settings_damaged():
                 raise ValueError("not a dict")
         except (OSError, ValueError):
             d = {}
+        _DAMAGE.update(n=_DAMAGE["n"] + 1, lost=not d, at=time.time())
         save_error_text("settings damaged", f"{SETTINGS_FILE} could not be read; a copy is in settings.json.corrupt; "
                         + ("the last good copy was restored." if d else "there is no good copy: settings start empty."))
         log("קובץ ההגדרות היה פגום. " + ("שחזרתי את ההעתק האחרון התקין." if d else "אין העתק תקין, ולכן ההגדרות התחילו מחדש (גם המפתח).")
@@ -8061,7 +8075,7 @@ class App:
                     "screens": SCREEN_ENABLED, "capture": capture_control().public(), "math": math_reader().status(), "gpu": gpu_public(),
                     "product": PRODUCT, "migrated": self.migrated,
                     "course": load_settings().get("course") or "", "connect": self.connect_info(),
-                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme(), "still": bool(load_settings().get("a11y_still")), "a11y": a11y_view(), "save_failed": save_failed_public(), "mark_n": self.mark_n, "saved_n": self.saved_n, "run": RUN_ID}
+                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme(), "still": bool(load_settings().get("a11y_still")), "a11y": a11y_view(), "save_failed": save_failed_public(), "settings_damaged": settings_damage_public(), "mark_n": self.mark_n, "saved_n": self.saved_n, "run": RUN_ID}
 
     def connect_info(self):
         """Which AI apps are connected (reading two small config files - at most every few seconds)."""
