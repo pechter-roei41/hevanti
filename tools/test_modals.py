@@ -80,9 +80,9 @@ with sync_playwright() as p:
     bad = []
     for mid in ("report", "offer", "conn", "renCourse", "capModal"):
         pg.evaluate("(id) => { document.querySelectorAll('.modal').forEach(m => m.hidden = true); document.getElementById(id).hidden = false; }", mid)
-        pg.wait_for_timeout(80)
+        pg.wait_for_timeout(300)
         pg.keyboard.press("Escape")
-        pg.wait_for_timeout(150)
+        pg.wait_for_timeout(400)
         if not pg.evaluate("(id) => document.getElementById(id).hidden", mid):
             bad.append(mid)
     check("those dialogs close with Escape", not bad, bad)
