@@ -257,6 +257,15 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 #vPast .card h2{margin:0 0 2px}
 .ppanel{display:grid;gap:14px;align-content:start}
 .ppanel[hidden]{display:none}
+.pending{display:grid;gap:10px;margin:10px 0 4px}
+.pending h3{margin:0;font-size:16px}
+.pending .pend{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;border-inline-start:3px solid var(--line);padding:8px 12px;background:var(--bg);border-radius:0 10px 10px 0}
+.pending .pend .ts{font-weight:700}
+.pending .pend .sa{flex:1 1 220px;color:var(--muted);font-size:14px;line-height:1.5}
+.qalist{display:grid;gap:18px;margin-top:10px}
+.qalist .qa{display:grid;gap:6px}
+.qalist .qa .q{justify-self:start;max-width:92%;margin:0;padding:7px 13px;border-radius:16px;background:var(--accent-soft);color:var(--fg);font-weight:600;line-height:1.5}
+.qalist .qa .a{line-height:1.65;padding:8px 13px;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
 .ptabs{display:flex;gap:8px}
 .ptabs button{font:inherit;font-size:16px;font-weight:700;padding:8px 18px;border:1.5px solid var(--line);border-radius:999px;background:var(--surface);color:var(--fg);cursor:pointer}
 .ptabs button small{font-weight:400;color:var(--muted);margin-inline-start:4px}
@@ -606,15 +615,11 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="card capcard" id="capHome"></div>
 
     <div class="starts">
-      <button class="start" type="button" data-start="he">
+      <button class="start" type="button" data-start="he" id="startQuick">
         <span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 11v2"/></svg></span>
-        <b>הרצאה חיה בעברית</b><span>זום או שידור. נכתבת תוך כדי, עם השקופיות.</span>
+        <b>התחל הרצאה</b><span>נפתח חלון קטן: קורס, סוג ההרצאה (חיה בעברית או באנגלית, או מוקלטת), והתחלה.</span>
       </button>
-      <button class="start" type="button" data-start="en">
-        <span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 11v2"/></svg></span>
-        <b>הרצאה חיה באנגלית</b><span>אותו דבר, באנגלית.</span>
-      </button>
-      <button class="start" type="button" id="recTile">
+      <button class="start" type="button" id="recTile" hidden>
         <span class="ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="m17 10 4-2v8l-4-2z"/></svg></span>
         <b>הרצאה מוקלטת</b><span>קובץ, קישור או סרטון ביוטיוב.</span>
       </button>
@@ -824,8 +829,17 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       </details>
     </div>
     <div class="ptabs" id="pastTabs" role="tablist" aria-label="חלקי הדף" hidden>
+      <button type="button" role="tab" data-pt="qa" aria-selected="false" hidden>שאלות ותשובות <small id="ptQa"></small></button>
       <button type="button" role="tab" data-pt="study" aria-selected="true">לימוד</button>
       <button type="button" role="tab" data-pt="marks" aria-selected="false">הסימונים שלי <small id="ptMarks"></small></button>
+    </div>
+    <div class="ppanel" id="pastPanelQa" hidden>
+      <div class="card">
+        <h2>שאלות ותשובות</h2>
+        <p class="sub">מה ששאלת בזמן ההרצאה ואחריה, מהחדש לישן. התשובות נשמרות גם בקובץ "שאלות ותשובות.md" בתיקיית ההרצאה.</p>
+        <div id="pastPending" class="pending" hidden></div>
+        <div id="pastQaList" class="qalist"></div>
+      </div>
     </div>
     <div class="ppanel" id="pastPanelMarks" hidden>
       <div class="card">
@@ -838,7 +852,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     <div class="ppanel" id="pastPanelStudy">
     <div class="study plain" id="pastStudy">
       <h2>לימוד בלחיצה אחת</h2>
-      <p class="sub">הבנתי שולחת לבינה המלאכותית את ההרצאה הזו (התמלול והטקסט מהשקופיות) עם המשימה, וזוכרת לאיזו מהן.</p>
+      <p class="sub" id="studyLead">הבנתי שולחת לבינה המלאכותית את ההרצאה הזו (התמלול והטקסט מהשקופיות) עם המשימה.</p>
       <div class="tiles">
         <button class="tile main" type="button" data-study="summary"><b>סיכום ההרצאה</b><small>הרעיונות, ההגדרות והנוסחאות</small></button>
         <button class="tile" type="button" data-study="exam"><b>מבחן דמה</b><small>שאלות מהקלה לקשה</small></button>
@@ -951,10 +965,10 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <h2 id="g-liveT">בהרצאה</h2>
         <ol class="gsteps">
           <li><b>פתיחה מהירה:</b> כשפותחים את הבנתי (אחרי שהסכמתם פעם אחת ויש מפתח) נפתח חלון קטן באמצע המסך: בוחרים קורס (או <b>+ קורס חדש</b>) וסוג ולוחצים <b>התחל תמלול</b>, והתמלול רץ ברקע. <b>פתח את האפליקציה</b> פותח את מסך הבית בלי להתחיל כלום. אפשר לכבות את החלון הקטן ב<b>הגדרות</b>.</li>
-          <li>או ב<b>בית</b>: בוחרים קורס (הוא נבחר לבד אם על המסך יש חלון עם שם הקורס) ולוחצים <b>הרצאה חיה בעברית</b> (או <b>באנגלית</b>).</li>
+          <li>או ב<b>בית</b>: לוחצים <b>התחל הרצאה</b>. זה פותח את אותו חלון התחלה מהירה (קורס, סוג: חיה בעברית, חיה באנגלית או מוקלטת, והתחלה). זו הדרך היחידה להתחיל הרצאה.</li>
           <li>מפעילים את ההרצאה, גם במסך מלא. בקצה המסך מופיע כפתור עגול ירוק עם הלוגו, ונקודה אדומה קטנה שמראה שההרצאה מוקלטת.</li>
           <li>התחלתם בלי קורס? אם על השקף הראשון כתוב שם של קורס שלכם, מופיעה הצעה (בחלון הקטן ובמסך ההרצאה): <b>להעביר</b> או <b>לא עכשיו</b>. אפשר גם לבחור קורס אחר במסך ההרצאה. ההרצאה עוברת לקורס כשעוצרים ושומרים אותה. שום דבר לא משתנה לבד.</li>
-          <li>לוחצים עליו (או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>): החלון הקטן גדל מהכפתור, והלוגו הופך ל-X. כותבים שאלה ו-<kbd>Enter</kbd>. התשובה מופיעה מתחת.</li>
+          <li>לוחצים עליו (או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>): החלון הקטן גדל מהכפתור, והלוגו הופך ל-X. כותבים שאלה ו-<kbd>Enter</kbd>. התשובה מופיעה מתחת, ומתחתיה "על מה זה מבוסס": תמונה קטנה של השקופית ושורה או שתיים מהתמלול, עם הזמן שלהן.</li>
           <li>בסוף: <b>עצירה</b> (במסך ההרצאה, בבית או בחלון הקטן, שם לוחצים פעמיים). הכל נשמר בקורס, וכרטיס "ההרצאה נשמרה בהצלחה" מופיע בחלון הקטן, או מעל הכפתור העגול אם החלון הקטן סגור.</li>
         </ol>
         <ul class="glist">
@@ -973,6 +987,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <li>ב<b>הקורסים שלי</b> כל הרצאה מראה תאריך, אורך ומספר שקופיות. השפה ומספר השורות נמצאים בדף ההרצאה, ליד התמלול.</li>
           <li>בבית מופיעה <b>ההרצאה האחרונה</b>, עם מספר הסימונים ★ שמחכים בה. לחיצה אחת פותחת אותה.</li>
           <li>ב<b>הקורסים שלי</b> פותחים הרצאה: <b>סיכום</b>, <b>מבחן דמה</b> ו<b>דף נוסחאות</b> בלחיצה אחת, והסבר לכל רגע שסימנת ★.</li>
+          <li>בדף ההרצאה הלשונית הראשונה היא <b>שאלות ותשובות</b>: כל מה ששאלת בהרצאה ואחריה, מהחדש לישן. לידה <b>לימוד</b>, <b>הסימונים שלי</b> והתמלול. כל ★ שסימנת מחכה שם כשאלה שנדחתה: <b>הסבר לי את הרגע הזה</b> שואל רק על הדקות סביבו, ושומר את התשובה.</li>
           <li><b>חיפוש</b> ב"הקורסים שלי" מוצא כל מילה בכל ההרצאות, ופותח בדיוק שם.</li>
           <li><b>דף הקורס</b> בנוי משלוש לשוניות: <b>ההרצאות</b>, <b>סימונים</b> (כל הרגעים שסימנת, עם "פתיחה ברגע הזה") ו<b>סילבוס ומילון</b>. סילבוס שמעלים שם משפר את התמלול של מונחים ושמות.</li>
           <li>בלשונית ההרצאות, בכרטיס <b>קבצים וניהול</b>: קובץ אחד של כל הקורס, פתיחת התיקייה, שינוי שם ומחיקה.</li>
@@ -1963,10 +1978,10 @@ async function waitStopped() {
 }
 document.querySelectorAll("[data-start]").forEach(b => b.addEventListener("click", async () => {
   if (!(await consentOk()) || !(await okToReplace())) return;
-  if (!curCourse && !appSeen) { try { const st = await api("/api/app"); if (st.course) curCourse = st.course; } catch (e) {} }   // (the saved course, if the page was too quick)
-  const r = await api("/api/cmd", {action: "start_live", lang: b.dataset.start, course: curCourse || NO_COURSE});
-  if (!r.ok) { toast(r.error || "לא הצלחתי להתחיל."); return; }
-  location.hash = "live";
+  // The only way to start a lecture from home is the quick-start window (decided 16.11.2026): it opens in the middle of the screen
+  const r = await api("/api/cmd", {action: "quick_new"});
+  if (!r.ok) { toast(r.error || "לא הצלחתי לפתוח את חלון ההתחלה."); return; }
+  if (r.opened === false && !r.already) toast("חלון ההתחלה המהירה לא נפתח.");
 }));
 function closeRec() { $("#recBox").hidden = true; $("#recTile").classList.remove("on"); $("#linkIn").value = ""; choose("", ""); $("#recTile").focus(); }
 $("#recClose").addEventListener("click", closeRec);
@@ -2682,6 +2697,8 @@ async function openPast(f, at) {
   $("#pastDelShots").hidden = !d.lines.some(x => x.img);
   pastHasImgs = d.lines.some(x => x.img); drawMath();
   $("#studyMarks").hidden = !d.lines.some(markOf);
+  pastMarkList = [];
+  drawPastQa(d.qa);
   drawPastMarks(d.lines);
   drawStudyWhere();
   $("#pastTitle").textContent = e.title;
@@ -2702,7 +2719,58 @@ async function openPast(f, at) {
 // the marks of this lecture: a tab beside the study tasks, with what was said just before each
 function setPTab(k) {
   document.querySelectorAll("#pastTabs [data-pt]").forEach(b => b.setAttribute("aria-selected", b.dataset.pt === k ? "true" : "false"));
-  $("#pastPanelStudy").hidden = k !== "study"; $("#pastPanelMarks").hidden = k !== "marks";
+  $("#pastPanelStudy").hidden = k !== "study"; $("#pastPanelMarks").hidden = k !== "marks"; $("#pastPanelQa").hidden = k !== "qa";
+}
+// the lecture's saved questions and answers: the first tab when there are any (what the student asked is what they come back for)
+let pastQa = [], pastMarkList = [];
+// A ★ is a question put off ("I did not understand here, I will come back"). After the lecture each one waits in the Q&A tab with a button;
+// one click asks about that moment only (the minutes around it, not the whole lecture: it costs one question of the free quota, and only when the
+// student chooses). Its answer is saved like any other (the question starts with "★ <time>"), and the mark is then answered.
+const markTitle = m => "★ הרגע " + m.x.c;
+const markAnswered = m => pastQa.some(it => it.q.startsWith(markTitle(m)));
+function markContext(m) {
+  const from = m.x.t - MARK_LEAD_S - 240, to = m.x.t + 20;
+  let out = "זה קטע מתמלול אוטומטי של הרצאה (יכולות להיות בו טעויות תמלול), מכמה דקות לפני רגע שהסטודנט סימן ★ ועד רגע אחריו:\n\n";
+  for (const y of pastData.lines) {
+    if (y.t < from || y.t > to || markOf(y)) continue;
+    if (y.x) out += `[${y.c}] ${y.x}\n`;
+    else if (y.ocr) out += `[${y.c}] [על השקופית כתוב: ${y.ocr.replace(/\n+/g, " | ").slice(0, 700)}]\n`;
+  }
+  return out + ANSWER_HINT + "\nהשאלה שלי: " + markQuestion(m);
+}
+const markQuestion = m => "סימנתי ★ ברגע " + m.x.c + " כי לא הבנתי. תסביר בפשטות מה נאמר ברגע הזה ובדקה-שתיים שלפניו, עם דוגמה, ולמה זה חשוב. ענה קצר.";
+function drawPendingMarks() {
+  const todo = pastMarkList.filter(m => !markAnswered(m));
+  const box = $("#pastPending");
+  box.hidden = !todo.length;
+  box.replaceChildren(...(todo.length ? [el("h3", "", "סימנים שמחכים לתשובה (" + todo.length + ")")] : []), ...todo.map(m => {
+    const row = el("div", "pend"), b = el("button", "btn small", "הסבר לי את הרגע הזה"); b.type = "button";
+    b.addEventListener("click", () => {
+      if (!pastAskBox || !pastAskBox.builtin()) { toast("כדי לקבל תשובה בתוך הבנתי צריך מפתח Gemini (בהגדרות). אפשר גם \"הסבר לכל הרגעים\" בלשונית הסימונים."); return; }
+      setPTab("study"); $("#pastAskFold").open = true;
+      pastAskBox.askHere(markQuestion(m), {title: markTitle(m), at: m.x.c, context: async () => markContext(m),
+        onDone: t => { pastQa.unshift({when: "עכשיו", at: m.x.c, q: markTitle(m), a: t}); drawPastQa(pastQa); toast("התשובה נשמרה ב\"שאלות ותשובות\"."); }});
+      $("#pastAsk").scrollIntoView({block: "start", behavior: "smooth"});
+    });
+    const said = el("span", "sa", m.said ? "לפני הסימון נאמר: " + m.said : "(אין תמלול סמוך)");
+    row.append(el("span", "ts", "★ " + m.x.c), said, b);
+    return row;
+  }));
+}
+function drawPastQa(qa) {
+  pastQa = Array.isArray(qa) ? qa : [];
+  $("#ptQa").textContent = pastQa.length ? "(" + pastQa.length + ")" : "";
+  const nPend = pastMarkList.filter(m => !markAnswered(m)).length;
+  document.querySelector('#pastTabs [data-pt="qa"]').hidden = !pastQa.length && !nPend;
+  drawPendingMarks();
+  $("#pastQaList").replaceChildren(...pastQa.map(it => {
+    const row = el("div", "qa"), q = el("p", "q", it.q), a = el("div", "a");
+    q.dir = "auto";
+    if (window.BZMAsk && BZMAsk.render) BZMAsk.render(document, a, it.a); else a.textContent = it.a;
+    const meta = el("small", "sub", [it.when, it.at ? "ברגע " + it.at : ""].filter(Boolean).join(" · "));
+    row.append(meta, q, a);
+    return row;
+  }));
 }
 document.querySelectorAll("#pastTabs [data-pt]").forEach(b => b.addEventListener("click", () => setPTab(b.dataset.pt)));
 function drawPastMarks(lines) {
@@ -2718,9 +2786,13 @@ function drawPastMarks(lines) {
     list.push({x, kind, said: said.join(" ").slice(0, 300)});
   });
   const lost = list.filter(m => m.kind !== "חשוב").length, imp = list.length - lost;
-  $("#pastTabs").hidden = !list.length;
+  pastMarkList = list;
+  drawPastQa(pastQa);   // (the marks that wait for an answer are listed in the Q&A tab)
+  const hasQa = !document.querySelector('#pastTabs [data-pt="qa"]').hidden;
+  $("#pastTabs").hidden = !list.length && !hasQa;
   $("#ptMarks").textContent = list.length ? "(" + list.length + ")" : "";
-  setPTab("study");
+  document.querySelector('#pastTabs [data-pt="marks"]').hidden = !list.length;
+  setPTab(hasQa ? "qa" : "study");
   $("#pastMkList").replaceChildren(...list.map(m => {
     const lostM = m.kind !== "חשוב", row = el("div", "mk");
     const head = el("b", "", m.kind); head.appendChild(el("span", "ts", m.x.c));
@@ -2805,8 +2877,17 @@ function drawStudyWhere() {
   box.hidden = !(m.ask && m.external);   // (without a key there is only "the app"; without "external AI" only "here")
   const w = studyWhere();
   box.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.w === w ? "true" : "false"));
+  // say what a click on a card does in this state: where it goes and where the answer shows up
+  const lead = $("#studyLead"), what = "את ההרצאה הזו (התמלול והטקסט מהשקופיות) עם המשימה";
+  lead.replaceChildren();
+  if (!m.ask) {
+    lead.append("בלי מפתח Gemini, לחיצה על כרטיס מכינה את המשימה ופותחת למטה כפתורים לשליחה ל-ChatGPT, Gemini או Claude. בפעם הבאה היא תישלח ישר לאפליקציה שבחרת. ");
+    const g = el("button", "btn ghost small", "הדבקת מפתח (בערך דקה)"); g.type = "button"; g.id = "studyKeyGo";
+    g.addEventListener("click", () => openSettings("key")); lead.append(g);
+  } else if (w === "here") lead.textContent = "לחיצה על כרטיס שולחת " + what + " ל-Gemini, והתשובה מופיעה למטה.";
+  else lead.textContent = "לחיצה על כרטיס מכינה את המשימה ושולחת אותה, יחד עם ההרצאה, לאפליקציית ה-AI שבחרת בפעם הקודמת. בפעם הראשונה בוחרים למטה לאיזו.";
   const big = pastData ? pastText().length : 0;
-  hint.hidden = !(m.ask && m.external && w === "here" && big >= STUDY_BIG);
+  hint.hidden =!(m.ask && m.external && w === "here" && big >= STUDY_BIG);
   if (!hint.hidden) hint.textContent = "ההרצאה הזו ארוכה (בערך " + Math.round(big / 1000) + " אלף תווים), ומשימה על כולה צורכת חלק גדול מהמכסה החינמית. אם יש לך מנוי ל-ChatGPT, Claude או Gemini, עדיף \"באפליקציית ה-AI שלי\".";
 }
 $("#studyWhere").querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
