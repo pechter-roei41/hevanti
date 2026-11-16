@@ -119,7 +119,7 @@ The student is listening to a lecture while using it, so the system is quiet. Su
 A cream-and-board-green palette with a highlighter yellow. Neutrals lean warm; the single accent is a deep board green.
 
 ### Primary
-- **Board Green** (#1B6E4B, night #5BC79A): the one action per screen, selected states, links, the logo bubble. Text on it is white by day and a near-black green (#0E1A14) at night.
+- **Board Green** (#1B6E4B, night #5BC79A): the one action per screen, selected states, links. (The logo bubble is the day colour in both themes; it is not this token.) Text on it is white by day and a near-black green (#0E1A14) at night.
 - **Board Green Soft** (#DCEBDF, night #25382B): icon plates, selected tabs, the quiet banner behind a suggestion (for example "install the NVIDIA libraries").
 
 ### Secondary
@@ -238,7 +238,7 @@ Motion is rare, short and never over the lecture. Three small things move, all w
 **The Quiet Rule.** Animate `transform`, `opacity`, a background size or a stroke only; no loop except the recording dot; nothing that moves text the student is reading.
 
 ### Logo
-One mark, everywhere: a green bubble with a short tail at its lower right and the Hebrew letter ה built from rounded bars (viewBox 120; bubble `M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z` in Board Green; the ה is one L-shaped path `M41.5 26H78.5A7.5 7.5 0 0 1 86 33.5V66.5A7.5 7.5 0 0 1 71 66.5V41H41.5A7.5 7.5 0 0 1 41.5 26Z` in Sheet white, plus a detached left leg, `rect x34 y50 w15 h24 rx7.5`, in Green Soft; the mark keeps these light-theme colours in the dark theme too, one mark in both themes). The floating button places the same mark on a solid Board Green circle, as a thin line (the bubble a 9-wide Paper stroke without fill, the ה in Paper with its left leg in Green Soft); the installer icon keeps its own file. No second variant of the mark is made anywhere else.
+One mark, everywhere: a green bubble with a short tail at its lower right and the Hebrew letter ה built from rounded bars (viewBox 120; bubble `M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z` in Board Green; the ה is one L-shaped path `M41.5 26H78.5A7.5 7.5 0 0 1 86 33.5V66.5A7.5 7.5 0 0 1 71 66.5V41H41.5A7.5 7.5 0 0 1 41.5 26Z` in Sheet white, plus a detached left leg, `rect x34 y50 w15 h24 rx7.5`, in Green Soft; the mark keeps these light-theme colours in the dark theme too, one mark in both themes). The floating button places the same mark on a solid Board Green circle, as a thin line (the bubble a 9-wide Paper stroke without fill, the ה in Paper with its left leg in Green Soft); the installer icon keeps its own file. The mark is the same in the light and the dark theme (day colours: bubble #1B6E4B, ה white, left leg #DCEBDF); on the night paper the bubble is 2.77:1, a known exception, decided 16.11.2026. The favicons and the .ico add a thin Paper outline (3 units of 108) round the bubble so it stays visible on a dark taskbar or tab strip; the page logo and the floating button have none. No second variant of the mark is made anywhere else.
 
 ## Do's and Don'ts
 
