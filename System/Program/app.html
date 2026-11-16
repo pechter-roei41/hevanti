@@ -669,7 +669,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <ol><li>נכנסים ל-<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> עם חשבון Google רגיל.</li><li>לוחצים <b>Create API key</b>, ואז <b>Copy key</b>.</li><li>מדביקים כאן ולוחצים <b>"שמירה ובדיקה"</b>. המפתח נשמר מוצפן, רק במחשב הזה.</li></ol>
           <div class="row"><input type="password" id="mathKey" placeholder="להדביק כאן את מפתח Gemini" autocomplete="off" aria-label="מפתח Gemini" dir="ltr"><button class="btn small" id="mathSave" type="button">שמירה ובדיקה</button></div>
           <label class="row"><input type="checkbox" id="askOn"><b>להפעיל "תשובה כאן" בכל תיבת שאלה</b></label>
-          <p>הבנתי שולחת ל-Gemini רק מה ששואלים: השאלה, הדקות האחרונות מההרצאה והשקופית שעל המסך. התשובה נכתבת מתחת לשאלה, כמו בצ'אט.</p>
+          <p>הבנתי שולחת ל-Gemini את מה ששואלים: השאלה, הדקות האחרונות מההרצאה, השקופית שעל המסך והטקסט של השקופיות הקודמות. התשובה נכתבת מתחת לשאלה, כמו בצ'אט.</p>
           <div class="keystat"><p class="capstat" id="mathStat" style="margin:0"></p><button class="linkish muted" id="mathForget" type="button" hidden>מחיקת המפתח</button></div>
         </div>
         <div class="optbox">
@@ -992,7 +992,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <h2 id="g-privT">פרטיות</h2>
         <ul class="glist">
           <li>התמלול והשקופיות נשמרים <b>רק במחשב שלך</b>. אין חשבון ואין שרת של הבנתי.</li>
-          <li>ל-Google נשלח רק כששואלים: השאלה, הדקות האחרונות והשקופית. עם מפתח, גם שקופיות של נוסחאות וכתב יד (אפשר לכבות ב<b>הגדרות ← התאמת התשובות</b>).</li>
+          <li>ל-Google נשלחים: השאלה, הדקות האחרונות, השקופית והטקסט של השקופיות הקודמות. עם מפתח נשלחות גם תמונות של שקופיות שאינן טקסט מודפס ברור (נוסחאות, כתב יד), בלי לחיצה (אפשר לכבות ב<b>הגדרות ← התאמת התשובות</b>).</li>
           <li>כדאי לצלם חלון אחד ולא את כל המסך: <b>הגדרות ← צילום וטשטוש</b>.</li>
           <li>לפני שמקליטים: לבדוק את הכללים של המוסד ושל המרצה. השימוש באחריותך.</li>
         </ul>
@@ -1007,7 +1007,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <dt>שורת ⚠ במקום תשובה</dt><dd>Gemini חסם את השאלה או קטע את התשובה. הסיבה כתובה בשורה: אפשר לנסח את השאלה אחרת או לקצר אותה.</dd>
           <dt>"לא הצלחתי להצפין את המפתח"</dt><dd>המפתח לא נשמר (הבנתי לא שומרת מפתח בלי הצפנה). מנסים שוב, ואם זה חוזר: "דיווח על תקלה" בתחתית מסך הבית.</dd>
           <dt>החלון הקטן לא נפתח</dt><dd>מנסים את הכפתור "חלון שאלות קטן" במסך ההרצאה החיה, או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>.</dd>
-          <dt>האפליקציה לא נפתחת</dt><dd>פותחים בדפדפן <span class="say">http://127.0.0.1:8765/</span></dd>
+          <dt>האפליקציה לא נפתחת</dt><dd>לוחצים שוב על "הבנתי" (בתפריט התחל או על הכפתור העגול). כתובת שהועתקה ידנית לא תיפתח</dd>
           <dt>משהו אחר</dt><dd>ב<b>בית</b>, למטה: <b>דיווח על תקלה</b>. אפשר לשלוח את הפרטים ב-GitHub או במייל.</dd>
         </dl>
       </section>
@@ -1033,7 +1033,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 <div class="modal" id="liveTip" hidden role="dialog" aria-modal="true" aria-labelledby="liveTipT"><div class="card">
   <h3 id="liveTipT">ההרצאה פועלת, והבנתי כותבת אותה ברקע</h3>
   <p style="margin:0">אפשר לעבור עכשיו לחלון ההרצאה (זום, דפדפן או נגן) ולהגדיל אותו <b>למסך מלא</b>. הבנתי ממשיכה לעבוד גם אז.</p>
-  <ul style="margin:6px 0;padding-inline-start:20px;line-height:1.6"><li><b>לשאול:</b> הכפתור עם הלוגו בקצה המסך, או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>. חלון קטן נפתח מעל ההרצאה, גם במסך מלא.</li><li><b>לסמן:</b> לא הבנת משהו? לוחצים על <b>?</b> בחלון הצף וחוזרים לזה אחרי ההרצאה. ככה גם עם <b>★</b>: לוחצים כשמשהו חשוב, וחוזרים אליו אחר כך.</li></ul>
+  <ul style="margin:6px 0;padding-inline-start:20px;line-height:1.6"><li><b>לשאול:</b> הכפתור עם הלוגו בקצה המסך, או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>. חלון קטן נפתח מעל ההרצאה, גם במסך מלא.</li><li><b>לסמן:</b> משהו חשוב או לא ברור? לוחצים על <b>★</b> בחלון הקטן (או Ctrl+Alt+M) וחוזרים אליו אחרי ההרצאה, ב"הסימונים שלי".</li></ul>
   <label class="row" style="cursor:pointer"><input type="checkbox" id="liveTipNo"><b>אל תציג שוב</b></label>
   <div class="row"><button class="btn" id="liveTipOk" type="button">הבנתי</button></div>
 </div></div>
@@ -1100,7 +1100,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 </div></div>
 <div class="modal" id="a11y" hidden role="dialog" aria-modal="true" aria-labelledby="a11yT"><div class="card">
   <h3 id="a11yT">תצוגה ונגישות</h3>
-  <p class="sub" style="margin:0">נשמר בדפדפן הזה, וחל גם על החלון הצף.</p>
+  <p class="sub" style="margin:0">נשמר בדפדפן הזה, וחל גם על החלון הצף ועל חלון ההתחלה המהירה.</p>
   <div class="a11y-row"><b>גודל הכל:</b><div class="seg" role="group" aria-label="גודל הכל" id="a11yZoom"><button type="button" data-v="1">100%</button><button type="button" data-v="1.15">115%</button><button type="button" data-v="1.3">130%</button><button type="button" data-v="1.5">150%</button></div></div>
   <div class="a11y-row"><b>גודל התמלול:</b><div class="seg" role="group" aria-label="גודל התמלול" id="a11yTx"><button type="button" data-v="1">רגיל</button><button type="button" data-v="1.25">גדול</button><button type="button" data-v="1.5">גדול מאוד</button><button type="button" data-v="1.9">ענק</button></div></div>
   <label><input type="checkbox" id="a11yRead"><span><b>ריווח לקריאה נוחה.</b> שורות, אותיות ומילים מרווחות יותר ושורות קצרות יותר. עוזר בדיסלקציה ובקשב.</span></label>
@@ -1539,11 +1539,11 @@ function a11yDraw() {
     $(id).querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", +b.dataset.v === +a11y[k] ? "true" : "false"));
   for (const [id, k] of [["#a11yRead", "read"], ["#a11yContrast", "contrast"], ["#a11yStill", "still"], ["#a11ySay", "say"]]) $(id).checked = !!a11y[k];
 }
-function tellStill() { try { api("/api/cmd", {action: "a11y_still", on: !!a11y.still}).catch(() => {}); } catch (e) {} }   // the tool needs to know (the floating button is drawn by it, not by this page)
+function tellStill() { try { api("/api/cmd", {action: "a11y_still", on: !!a11y.still, tx: +a11y.tx || 1, read: !!a11y.read, contrast: !!a11y.contrast}).catch(() => {}); } catch (e) {} }   // (also the text size, reading spacing and contrast: the small windows follow them)   // the tool needs to know (the floating button is drawn by it, not by this page)
 setTimeout(tellStill, 700);
 function a11ySet(k, v) {
   a11y[k] = v;
-  if (k === "still") tellStill();
+  if (k === "still" || k === "tx" || k === "read" || k === "contrast") tellStill();
   try { localStorage.setItem(A11Y_KEY, JSON.stringify(a11y)); } catch (e) {}
   a11yApply();
   if (pipWin && !pipWin.closed) { a11yApply(pipWin.document, true); pipWin.document.body.classList.toggle("caps", !!a11y.caps); pipKey = ""; }

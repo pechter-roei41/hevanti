@@ -41,7 +41,9 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15
 button,select{font:inherit;color:inherit}
 [hidden]{display:none!important}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-html.a-contrast :focus-visible{outline-color:var(--fg)}
+html.a-read body{line-height:1.9;letter-spacing:.015em;word-spacing:.14em}
+html.a-contrast{--muted:var(--fg);--line:#7d7d7d}
+html.a-contrast :focus-visible{outline:3px solid var(--fg)!important;outline-offset:2px}
 .top{margin:0;font-family:var(--f-body);font-size:22px;font-weight:800;line-height:1.3;letter-spacing:0;font-synthesis:none}   /* one even weight: Secular One drew these Hebrew letters in uneven heights */
 .field{display:flex;flex-direction:column;gap:6px}
 .field>label,.field>.lab{font-size:14px;font-weight:700}
@@ -153,6 +155,12 @@ $("#newOk").addEventListener("click", async () => {
   note(r.existed ? "כבר יש קורס בשם \"" + c + "\". בחרתי אותו." : "הקורס \"" + c + "\" נוצר" + (r.renamed ? " בשם הזה (תווים שאי אפשר בשם תיקייה הוחלפו)" : "") + ". מונחים למילון אפשר להוסיף בדף הקורס.");
 });
 
+function a11yView(v) {   // text size, reading spacing and contrast chosen in the app (this window has its own browser profile, so the tool passes them)
+  if (!v) return; const r = document.documentElement;
+  r.classList.toggle("a-read", !!v.read); r.classList.toggle("a-contrast", !!v.contrast);
+  r.style.zoom = v.tx > 1 ? String(Math.min(+v.tx, 1.4)) : "";
+}
+
 async function load() {
   let names = [], last = "";
   try {
@@ -160,6 +168,7 @@ async function load() {
     names = (lib.courses || []).map(c => c.name);
     const st = await (await fetch("/api/app", {cache: "no-store"})).json();
     last = st.course || "";
+    if (st.a11y) a11yView(st.a11y);
     if ("theme" in st) { try { localStorage.setItem("bzm.theme", st.theme || ""); } catch (e) {} bzmTheme(st.theme || ""); }
   } catch (e) {}
   const list = names.filter(n => n !== NO_COURSE).concat([NO_COURSE]);

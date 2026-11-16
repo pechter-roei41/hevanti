@@ -31,7 +31,7 @@ def read(*parts):
         return f.read()
 
 
-def check(name, ok, detail="", known=False):
+def check(name, ok, detail="", known=False):   # (known=True: a bug that is still open - none are left)
     if ok and known:
         print("FIXED: remove known=True from: " + name, flush=True)
         return
@@ -53,7 +53,7 @@ def check(name, ok, detail="", known=False):
 published = {"README.txt": read("README.txt"), "app.html": read("System", "Program", "app.html"),
              "mini.html": read("System", "Program", "mini.html"), "quick.html": read("System", "Program", "quick.html")}
 bad = [(f, m.group(0)) for f, t in published.items() for m in re.finditer(r"רק (?:מה )?ש(?:ו)?שואלים|רק כששואלים", t)]
-check("P0 no page says Google gets 'only what you ask'", not bad, bad, known=True)
+check("P0 no page says Google gets 'only what you ask'", not bad, bad)
 
 # ------------------------------------------------------------------------------------------------ 2. upload overwrites (P1)
 srv = L.AppServer()
@@ -79,12 +79,12 @@ try:
     p2 = r2.get("path")
     a_after = open(p1, "rb").read() if p1 and os.path.isfile(p1) else None
     check("P1 upload: a second recording with the same name does not replace the first",
-          a_before is not None and a_after == a_before, (p1, p2, a_after[:12] if a_after else a_after), known=True)
+          a_before is not None and a_after == a_before, (p1, p2, a_after[:12] if a_after else a_after))
     check("P1 upload: the second recording is whole in its own file",
-          bool(p2) and p2 != p1 and os.path.isfile(p2 or "") and open(p2, "rb").read() == b"LECTURE-B-" * 20, (p1, p2), known=True)
+          bool(p2) and p2 != p1 and os.path.isfile(p2 or "") and open(p2, "rb").read() == b"LECTURE-B-" * 20, (p1, p2))
     s3, r3 = upload("Zoom recording.mp4", b"")
     size_now = os.path.getsize(p1) if p1 and os.path.isfile(p1) else None
-    check("P1 upload: an empty body does not shrink an existing recording to 0 bytes", size_now != 0, size_now, known=True)
+    check("P1 upload: an empty body does not shrink an existing recording to 0 bytes", size_now != 0, size_now)
 finally:
     try:
         srv.stop()
@@ -94,7 +94,7 @@ finally:
 # ------------------------------------------------------------------------------------------------ 3. YouTube front-ends (P1)
 check("P1 is_youtube: youtube.com / youtu.be are youtube", L.is_youtube("https://www.youtube.com/watch?v=x") and L.is_youtube("https://youtu.be/x"))
 check("P1 is_youtube: a front-end of YouTube (yewtu.be, piped.video) is youtube",
-      L.is_youtube("https://yewtu.be/watch?v=dQw4w9WgXcQ") and L.is_youtube("https://piped.video/watch?v=dQw4w9WgXcQ"), known=True)
+      L.is_youtube("https://yewtu.be/watch?v=dQw4w9WgXcQ") and L.is_youtube("https://piped.video/watch?v=dQw4w9WgXcQ"))
 
 # Whatever the link looks like, if yt-dlp says the video is YouTube's, site_download must refuse before it downloads anything.
 attempts = []
@@ -110,7 +110,7 @@ try:
     L.draft_clear = lambda *a, **k: None
     L.site_download("https://example-frontend.test/watch?v=x")
     check("P1 site_download: a link that yt-dlp resolves to YouTube is refused with no download", not attempts and L.YOUTUBE_MSG in shown,
-          (attempts, shown), known=True)
+          (attempts, shown))
 finally:
     for k, v in saved.items():
         setattr(L, k, v)
@@ -138,17 +138,17 @@ def bak_ok():
         return False
 
 
-check("P1 settings: after a restore the .bak is still the good copy (not the damaged file)", bak_ok(), open(F + ".bak", "rb").read()[:20], known=True)
+check("P1 settings: after a restore the .bak is still the good copy (not the damaged file)", bak_ok(), open(F + ".bak", "rb").read()[:20])
 with open(F, "r+b") as f:
     f.truncate(15)
-check("P1 settings: a second damage still restores the key", L.load_settings() == good, L.load_settings(), known=True)
+check("P1 settings: a second damage still restores the key", L.load_settings() == good, L.load_settings())
 for p in (F, F + ".bak", F + ".corrupt"):
     if os.path.exists(p):
         os.remove(p)
 with open(F, "w", encoding="utf-8-sig") as f:   # (a BOM written by Notepad: valid settings, not damage)
     json.dump(good, f, ensure_ascii=False)
 check("P1 settings: a file with a BOM is read, not treated as damaged", L.load_settings() == good and not os.path.exists(F + ".corrupt"),
-      os.path.exists(F + ".corrupt"), known=True)
+      os.path.exists(F + ".corrupt"))
 
 # ------------------------------------------------------------------------------------------------ 5. rename that fails halfway (P1)
 C = "קורס שינוי שם"
@@ -173,9 +173,9 @@ try:
     r = app.change_lecture("rename_lecture", {"f": C + "/הרצאה", "name": "שם חדש"})
 finally:
     os.replace = real_replace
-names = [os.path.basename(x) for x in L.lecture_dirs()]
+names = [x[1] for x in L.lecture_dirs()]
 check("P1 rename: a rename that fails halfway reports the failure", r.get("ok") is False, r)
-check("P1 rename: after a failed rename the lecture is still in the library", len(names) == 1, names, known=True)
+check("P1 rename: after a failed rename the lecture is still in the library", len(names) == 1, names)
 
 # ------------------------------------------------------------------------------------------------ 6. accessibility settings reach the small windows (P1)
 mini, quick = published["mini.html"], published["quick.html"]
@@ -185,18 +185,23 @@ def applies(t):   # (a CSS rule for .a-contrast is not enough: the page must rea
     return bool(re.search(r"a11y|classList\.(?:add|toggle)\([^)]*a-(?:contrast|read|big)", t))
 
 
-check("P1 a11y: mini.html applies the saved text size / contrast / reading settings", applies(mini), known=True)
-check("P1 a11y: quick.html applies the saved contrast / text size settings", applies(quick), known=True)
+check("P1 a11y: mini.html applies the saved text size / contrast / reading settings", applies(mini))
+check("P1 a11y: quick.html applies the saved contrast / text size settings", applies(quick))
+
+L.save_settings(a11y_view={"tx": 1.5, "read": True, "contrast": True})
+check("P1 a11y: the tool keeps the text size, reading spacing and contrast for the small windows", L.a11y_view() == {"tx": 1.5, "read": True, "contrast": True}, L.a11y_view())
+L.save_settings(a11y_view={"tx": "big", "read": 1})
+check("P1 a11y: a wrong value is never passed on", L.a11y_view() == {"tx": 1.0, "read": True, "contrast": False}, L.a11y_view())
 
 # ------------------------------------------------------------------------------------------------ 7. the 403 address (P1)
 app_html, readme_txt = published["app.html"], published["README.txt"]
 check("P1 guide: nothing tells the student to type http://127.0.0.1:8765/ by hand",
       "127.0.0.1:8765" not in app_html and "127.0.0.1:8765" not in readme_txt,
-      [f for f, t in (("app.html", app_html), ("README.txt", readme_txt)) if "127.0.0.1:8765" in t], known=True)
+      [f for f, t in (("app.html", app_html), ("README.txt", readme_txt)) if "127.0.0.1:8765" in t])
 
 # ------------------------------------------------------------------------------------------------ 8. the removed "?" button (P1)
 check("P1 guide: the guide does not tell to press a ? button in the floating window",
-      "**?**" not in app_html and not re.search(r"<b>\?</b>", app_html), known=True)
+      "**?**" not in app_html and not re.search(r"<b>\?</b>", app_html))
 check("P1 guide: the floating window has the ★ and no ? mark button", "★" in mini and not re.search(r'id="markQ"|data-mark="\?"', mini))
 
 print()

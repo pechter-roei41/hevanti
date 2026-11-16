@@ -6634,7 +6634,7 @@ def _read_settings():
     (Windows: another program - a virus scanner, a sync tool - holds it for a moment). A damaged file: see _settings_damaged."""
     for _ in range(4):
         try:
-            with open(SETTINGS_FILE, encoding="utf-8") as f:
+            with open(SETTINGS_FILE, encoding="utf-8-sig") as f:
                 d = json.load(f)
             return d if isinstance(d, dict) else {}
         except FileNotFoundError:
@@ -6665,7 +6665,7 @@ def _settings_damaged():
     import shutil
     with _SETTINGS_LOCK:
         try:   # (another thread may have put a good file back meanwhile)
-            with open(SETTINGS_FILE, encoding="utf-8") as f:
+            with open(SETTINGS_FILE, encoding="utf-8-sig") as f:
                 d = json.load(f)
             return d if isinstance(d, dict) else {}
         except (OSError, ValueError):
@@ -6675,7 +6675,7 @@ def _settings_damaged():
         except OSError:
             pass
         try:
-            with open(SETTINGS_FILE + ".bak", encoding="utf-8") as f:
+            with open(SETTINGS_FILE + ".bak", encoding="utf-8-sig") as f:
                 d = json.load(f)
             if not isinstance(d, dict):
                 raise ValueError("not a dict")
@@ -6702,9 +6702,12 @@ def _write_settings(d):
         json.dump(d, f, ensure_ascii=False)
         f.flush()
         os.fsync(f.fileno())
-    try:
-        shutil.copy2(SETTINGS_FILE, SETTINGS_FILE + ".bak")   # (the file as it was: it was read as good just before)
-    except OSError:
+    try:   # (the file as it was becomes the .bak - but only if it is good: a damaged file must never replace the last good copy)
+        with open(SETTINGS_FILE, encoding="utf-8-sig") as f:
+            _was = json.load(f)
+        if isinstance(_was, dict):
+            shutil.copy2(SETTINGS_FILE, SETTINGS_FILE + ".bak")
+    except (OSError, ValueError):
         pass
     for i in range(40):   # (Windows: the file may be open for a moment - by another program, or by a page asking for the settings: up to 2 seconds)
         try:
@@ -6729,6 +6732,15 @@ def _save_failed():
 def save_failed_public():
     """What the pages show after a save that failed (for a minute): {"n": count, "msg": text}, else None."""
     return {"n": _SAVE_FAIL["n"], "msg": SAVE_FAIL_MSG} if _SAVE_FAIL["n"] and time.time() - _SAVE_FAIL["at"] < 60 else None
+
+
+def a11y_view():
+    """The display choices the small windows follow (text size, reading spacing, high contrast), as the app saved them."""
+    v = load_settings().get("a11y_view")
+    v = v if isinstance(v, dict) else {}
+    tx = v.get("tx")
+    return {"tx": min(2.0, max(1.0, float(tx))) if isinstance(tx, (int, float)) and not isinstance(tx, bool) else 1.0,
+            "read": bool(v.get("read")), "contrast": bool(v.get("contrast"))}
 
 
 def save_settings(**kw):
@@ -6982,7 +6994,8 @@ SITE_HOSTS = ("vimeo.com", "zoom.us", "panopto", "kaltura", "facebook.com", "fb.
 
 # YouTube is not downloaded: its terms don't allow it. A YouTube lecture is transcribed as a live lecture
 # while it plays on the screen.
-YOUTUBE_HOSTS = ("youtube.com", "youtu.be", "youtube-nocookie.com")
+YOUTUBE_HOSTS = ("youtube.com", "youtu.be", "youtube-nocookie.com",
+                 "yewtu.be", "piped.video", "piped.kavin.rocks", "invidio.us", "invidious.io", "inv.nadeko.net")   # (YouTube front-ends: the same videos)
 YOUTUBE_MSG = ("הבנתי לא מורידה סרטונים מיוטיוב (התנאים של יוטיוב לא מתירים). אפשר לפתוח את הסרטון ביוטיוב, "
                "לבחור כאן \"הרצאה חיה\" ולנגן אותו על המסך - הבנתי תתמלל ותצלם את השקופיות תוך כדי.")
 
@@ -7251,6 +7264,9 @@ def site_download(url):
         return None
     if info.get("_type") == "playlist" and info.get("entries"):
         info = info["entries"][0]
+    if "youtube" in str(info.get("extractor_key") or info.get("extractor") or "").lower()             or is_youtube(info.get("webpage_url")) or is_youtube(info.get("original_url")):
+        problem(YOUTUBE_MSG)   # (a front-end or a page with YouTube inside: yt-dlp says what it really is)
+        return None
     if info.get("is_live") or info.get("live_status") in ("is_live", "is_upcoming"):
         problem(LINK_MESSAGES["live"])
         return None
@@ -8033,7 +8049,7 @@ class App:
                     "screens": SCREEN_ENABLED, "capture": capture_control().public(), "math": math_reader().status(), "gpu": gpu_public(),
                     "product": PRODUCT, "migrated": self.migrated,
                     "course": load_settings().get("course") or "", "connect": self.connect_info(),
-                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme(), "still": bool(load_settings().get("a11y_still")), "save_failed": save_failed_public(), "mark_n": self.mark_n, "saved_n": self.saved_n, "run": RUN_ID}
+                    "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme(), "still": bool(load_settings().get("a11y_still")), "a11y": a11y_view(), "save_failed": save_failed_public(), "mark_n": self.mark_n, "saved_n": self.saved_n, "run": RUN_ID}
 
     def connect_info(self):
         """Which AI apps are connected (reading two small config files - at most every few seconds)."""
@@ -8195,7 +8211,9 @@ class App:
                 save_settings(consent_ok=True)
             return {"ok": True}
         if a == "a11y_still":   # "no animations and motion" in the app: the floating button and the small window respect it too
-            save_settings(a11y_still=bool(d.get("on")))
+            v = {"tx": min(2.0, max(1.0, float(d.get("tx") or 1))) if isinstance(d.get("tx"), (int, float)) else 1.0,
+                 "read": bool(d.get("read")), "contrast": bool(d.get("contrast"))}
+            save_settings(a11y_still=bool(d.get("on")), a11y_view=v)   # (the small windows run in their own browser profile: they are told through the tool)
             return {"ok": True}
         if a == "quick_start":   # the quick-start window instead of the home screen when Hevanti opens (a setting)
             save_settings(quick_start=bool(d.get("on")))
@@ -8549,9 +8567,18 @@ class App:
             os.makedirs(parent, exist_ok=True)
             name = free_folder(parent, name)
             dest = os.path.join(parent, name)
-            shutil.move(src, dest)
-            if name != old:
-                os.replace(os.path.join(dest, old + ".txt"), lecture_txt(dest))
+            new_txt = os.path.join(src, name + ".txt")
+            if name != old:   # (the transcript first, inside the old folder: if the move then fails, it is put back - never a folder with no transcript)
+                os.replace(os.path.join(src, old + ".txt"), new_txt)
+            try:
+                shutil.move(src, dest)
+            except OSError:
+                if name != old:
+                    try:
+                        os.replace(new_txt, os.path.join(src, old + ".txt"))
+                    except OSError:
+                        pass
+                raise
         except OSError:
             save_error(a)
             return {"ok": False, "error": "לא הצלחתי (אולי קובץ מההרצאה פתוח בתוכנה אחרת)."}
@@ -9437,7 +9464,7 @@ def _app_handler():
                 if p == "/api/app":
                     return self._json(APP.state(qint("notes")))
                 if p == "/api/theme":   # tiny and cheap: the small window asks it every second, so a change of light/dark in the app shows there at once (not up to 4 s later)
-                    return self._json({"theme": ui_theme(), "still": bool(load_settings().get("a11y_still"))})
+                    return self._json({"theme": ui_theme(), "still": bool(load_settings().get("a11y_still")), "a11y": a11y_view()})
                 if p == "/api/live":
                     return self._json(live_state(qint("since")))
                 if p == "/api/library":
@@ -9647,33 +9674,69 @@ def _app_handler():
                 tutor_save(d, answer, ld_at_start)
 
         def _upload(self, name):
-            """A recording dragged onto the page: the browser sends the file, it is kept in the videos folder."""
+            """A recording dragged onto the page: the browser sends the file, it is kept in the videos folder.
+            A file is never replaced by another one that has the same name: the same bytes -> the copy we have, other bytes -> a free name."""
+            import hashlib
             size = int(self.headers.get("Content-Length") or 0)
+            if size <= 0:
+                return {"path": "", "error": "הקובץ ריק. לנסות שוב."}
             stem, ext = os.path.splitext(os.path.basename(name or "recording"))
             ext = ext.lower() if ext.lower() in RECORDING_EXTS else ".mp4"
-            os.makedirs(VIDEO_DIR, exist_ok=True)
-            path = os.path.join(VIDEO_DIR, safe_stem(stem) + ext)
-            if size and os.path.isfile(path) and os.path.getsize(path) == size:
+            stem = safe_stem(stem) or "recording"
+            try:
+                os.makedirs(VIDEO_DIR, exist_ok=True)
+            except OSError:
+                save_error("upload")
+                return {"path": "", "error": "לא הצלחתי לשמור את הקובץ."}
+            if not _room_for(size):
                 left = size
-                while left > 0:  # read it anyway (the browser is sending it), keep the copy we have
+                while left > 0:   # (the browser is sending it: read it so the answer can be understood)
                     buf = self.rfile.read(min(1 << 20, left))
                     if not buf:
                         break
                     left -= len(buf)
-                return {"path": path}
-            part, left = path + ".part", size
-            with open(part, "wb") as f:
-                while left > 0:
-                    buf = self.rfile.read(min(1 << 20, left))
-                    if not buf:
-                        break
-                    f.write(buf)
-                    left -= len(buf)
+                return {"path": "", "error": f"אין מספיק מקום פנוי בדיסק להקלטה הזו ({size >> 20}MB). לפנות מקום ולנסות שוב."}
+            part, left, h = os.path.join(VIDEO_DIR, stem + ext + f".{os.getpid()}.part"), size, hashlib.sha256()
+            try:
+                with open(part, "wb") as f:
+                    while left > 0:
+                        buf = self.rfile.read(min(1 << 20, left))
+                        if not buf:
+                            break
+                        f.write(buf)
+                        h.update(buf)
+                        left -= len(buf)
+            except OSError:
+                _remove_quietly(part)
+                save_error("upload")
+                return {"path": "", "error": "לא הצלחתי לשמור את הקובץ."}
             if left:
                 _remove_quietly(part)
                 return {"path": "", "error": "ההעלאה נקטעה באמצע. לנסות שוב."}
-            os.replace(part, path)
-            return {"path": path}
+
+            def same(p):
+                if os.path.getsize(p) != size:
+                    return False
+                d = hashlib.sha256()
+                with open(p, "rb") as g:
+                    for chunk in iter(lambda: g.read(1 << 20), b""):
+                        d.update(chunk)
+                return d.digest() == h.digest()
+            try:
+                n = 1
+                while True:
+                    path = os.path.join(VIDEO_DIR, stem + ("" if n == 1 else f" ({n})") + ext)
+                    if not os.path.exists(path):
+                        os.replace(part, path)
+                        return {"path": path}
+                    if same(path):   # (the same recording again: keep the one we have)
+                        _remove_quietly(part)
+                        return {"path": path}
+                    n += 1
+            except OSError:
+                _remove_quietly(part)
+                save_error("upload")
+                return {"path": "", "error": "לא הצלחתי לשמור את הקובץ."}
 
     return Handler
 
