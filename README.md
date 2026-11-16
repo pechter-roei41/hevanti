@@ -67,7 +67,7 @@ The full policy is [PRIVACY.md](PRIVACY.md) and the terms of use are [TERMS.md](
 | `installer/hevanti.iss`, `tools/build_setup_dir.py` | `Hevanti-Setup.exe` (Inno Setup): per-user, its own Python with the packages inside |
 | `tools/test_*.py` | Tests run on every push (`.github/workflows/tests.yml`); `test_core.py` and `test_core_ui.py` cover the core: the marks, the first-time consent, the ask box and the floating window |
 
-New version: push a tag such as `v2.0-20261014` (same number, new build) or `v2.1`. GitHub Actions builds both ZIPs and attaches them to a release, and the app tells students that an update is available.
+New version: push a tag `v<version>`, the same number as the version in the code (for example `v2.22`; see "Releasing a version" in `CLAUDE.md`). GitHub Actions builds both ZIPs and attaches them to a release, and the app tells students that an update is available.
 
 Code signing: see [Code signing policy](#code-signing-policy).
 

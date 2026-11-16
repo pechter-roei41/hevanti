@@ -832,6 +832,57 @@ check("a first-time tip about the settings: closable, shown once (remembered), o
       'id="tipSet"' in _app_src and 'id="tipSetX"' in _app_src and '"bzm.tipSet"' in _app_src and '$("#setBtn").click()' in _app_src)
 check("the app window opened from the quick-start window is drawn again by a one-pixel size change (it stayed black until minimized)",
       "def _nudge_paint(u, hwnd)" in _src and "target=_nudge_paint" in _src)
+# --- 15.11.2026 review of 2.22: names that exist as they are, sorting, new course, wording ---
+_odd = {"double": "הרצאה  עם  רווחים כפולים", "long": "ארוכה " * 15 + "סוף"}
+for _k, _n in _odd.items():
+    _dd = os.path.join(L.LIB_DIR, "קורס רווחים", _n); os.makedirs(_dd, exist_ok=True)
+    open(os.path.join(_dd, _n + ".txt"), "w", encoding="utf-8").write("[09:00:00 | +0:00:01] שלום" + chr(10))
+    check("a lecture folder named with a " + _k + " is listed AND opens (not 'transcript not found')",
+          any(x[1] == _n for x in L.lecture_dirs()) and L.lecture_from_rel("קורס רווחים/" + _n) == _dd, _n)
+check("lecture_from_rel still refuses '..', hidden names and a path out of the library",
+      L.lecture_from_rel("../x/y") is None and L.lecture_from_rel("קורס רווחים/..") is None and L.lecture_from_rel("קורס רווחים/.hid") is None
+      and L.lecture_from_rel("קורס רווחים/a/b") is None)
+os.makedirs(os.path.join(L.LIB_DIR, "פיזיקה  1"), exist_ok=True)
+check("a course folder that exists as it is (double space) is the folder used, not a cleaned copy",
+      L.course_dir("פיזיקה  1") == os.path.join(L.LIB_DIR, "פיזיקה  1") and L.course_dir("קורס חדש לגמרי") == os.path.join(L.LIB_DIR, "קורס חדש לגמרי"))
+for _c in ("calculus", "Zoology", "a b c"):
+    os.makedirs(os.path.join(L.LIB_DIR, _c), exist_ok=True)
+_names = L.course_names()
+check("courses sort without regard to capitals (a small letter does not fall after every capital)",
+      [x for x in _names if x in ("a b c", "calculus", "Zoology")] == ["a b c", "calculus", "Zoology"], _names)
+_r1 = L.APP.command({"action": "new_course", "name": "קורס חדש א"})
+_r2 = L.APP.command({"action": "new_course", "name": "קורס חדש א"}); _r3 = L.APP.command({"action": "new_course", "name": "CON"})
+check("a new course says when it already existed, and when its name was changed",
+      _r1.get("ok") and not _r1.get("existed") and _r2.get("existed") and _r3.get("renamed") and _r3.get("course") == "CON_", (_r1, _r2, _r3))
+_srcs = [open(os.path.join(L.SCRIPT_DIR, f), encoding="utf-8").read() for f in ("live_transcribe.py", "app.html", "ask.js", "mini.html", "quick.html")]
+check("no message points to a 'gear' or an 'API key' setting that does not exist (it is Settings, then 'מפתח')",
+      not any("גלגל השיניים" in x or "מפתח API" in x for x in _srcs) and "בהגדרות ← מפתח" in _srcs[0], "")
+check("CLAUDE.md-level claim: the secret file is readable by the same Windows user (honest wording in the docs)",
+      "same Windows user" in open(os.path.join(os.path.dirname(L.SCRIPT_DIR), "..", "CLAUDE.md"), encoding="utf-8").read()
+      if os.path.exists(os.path.join(os.path.dirname(L.SCRIPT_DIR), "..", "CLAUDE.md")) else True)
+
+# --- 15.11.2026, a real run with the lecture of Dvir Ross: slides of YouTube, quiet sound, a star in a YouTube lecture ---
+_marks = chr(0x202b), chr(0x202c)
+check("the title of Hevanti's window is recognised with Edge's direction marks around it (YouTube slides were never saved without this)",
+      L.is_page_title(_marks[0] + L.PAGE_TITLE + _marks[1]) and L.is_page_title(L.PAGE_TITLE) and L.is_page_title(_marks[0] + L.PAGE_TITLE + " - Edge" + _marks[1])
+      and not L.is_page_title(_marks[0] + "Claude" + _marks[1]) and not L.is_page_title(""))
+_qs = {}
+_msgs = [L.quiet_sound_warning(_qs, 0.0006, 10.0, 1000.0 + i) for i in range(6)]
+check("quiet sound (0.0006, the level of speech at 6% volume): no word for 40 s, then one warning that names the volume",
+      _msgs[:4] == [None] * 4 and _msgs[4] and "עוצמת ההשמעה" in _msgs[4] and _msgs[5] is None, _msgs)
+_qs = {}
+check("normal speech and real silence never warn",
+      all(L.quiet_sound_warning(_qs, lv, 10.0, 2000.0 + i) is None for i in range(30) for lv in (0.03, 0.0)))
+_qs = {}
+for i in range(4): L.quiet_sound_warning(_qs, 0.0006, 10.0, 3000.0 + i)
+L.quiet_sound_warning(_qs, 0.05, 10.0, 3005.0)
+check("a loud piece resets the count of quiet seconds", _qs["quiet_s"] == 0.0)
+check("speech at 6% volume (0.0006) is not skipped as silence any more", 0.0006 >= L.SILENCE_RMS and 0.0 < L.SILENCE_RMS)
+_yp = L.yt_mark(76.8, "חשוב")
+check("a star in a YouTube lecture: a line at the video's own time, in the form the course page lists",
+      _yp == (76, "[00:01:16] [סימון: חשוב]", "[סימון: חשוב]") and L.yt_mark(None, "חשוב")[0] == 0 and L.yt_mark(-5, "חשוב")[0] == 0, _yp)
+_ml = L.REC_LINE.match(_yp[1])
+check("... and that line is read back as a mark (a note) by the lecture page", bool(_ml) and _ml.group(4) == "[סימון: חשוב]")
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)

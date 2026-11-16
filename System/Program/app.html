@@ -57,6 +57,7 @@ header{position:sticky;top:0;z-index:5;padding:10px 16px 0;background:linear-gra
   background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:26px}   /* not 999px: when larger text or a narrow window wraps the bar into two rows, a half-circle end cut the chips at its corners (15.11.2026) */
 .brand{display:flex;align-items:center;gap:9px;font-family:var(--f-display);font-weight:400;font-size:22px;cursor:pointer;background:none;border:0;padding:0 6px}
 .nav{display:flex;gap:2px;flex-wrap:wrap;margin-inline-end:auto}
+.mp{white-space:nowrap}
 .nav button{color:var(--muted);background:transparent;border:0;font:inherit;cursor:pointer;font-weight:600;font-size:15.5px;padding:5px 13px;border-radius:999px;white-space:nowrap}   /* buttons, not links: the browser then shows no address bubble on hover */
 .nav button:hover{color:var(--fg);background:var(--sunk)}
 .nav button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
@@ -65,6 +66,7 @@ header{position:sticky;top:0;z-index:5;padding:10px 16px 0;background:linear-gra
 .iconbtn:hover{background:var(--sunk);color:var(--fg)}
 @media (max-width:520px){.brand small{display:none}}
 @media (max-width:700px){.bar{border-radius:18px}.nav{order:3;width:100%;margin:0}.brand{margin-inline-end:auto}}
+@media (min-width:361px) and (max-width:460px){.nav button{padding:5px 8px;font-size:14.5px}}   /* the bold current tab is wider: on a phone the four tabs stay on one line (below 361 px they may wrap, as before) */
 .brand small{font-family:var(--f-body);font-weight:600;font-size:13px;color:var(--muted);background:var(--sunk);border-radius:999px;padding:1px 9px}
 .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--accent)}
 .pill{font-size:14px;padding:3px 12px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}
@@ -273,7 +275,7 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .moremenu .menu button.menudanger{color:var(--rec)}   /* design 3: the one destructive item is apart and in the destructive colour (5.14:1 on a sheet, 6.07:1 at night) */
 @media (max-width:560px){.moremenu .menu{position:fixed;inset-inline:12px;top:auto;bottom:12px;min-width:0}}   /* design 3: on a narrow screen the menu opens as a sheet at the bottom (it ran off the screen at 320 to 480px) */
 /* 320px: nothing may scroll sideways (DESIGN.md, Layout). Measured on 12.11.2026: the segmented controls (1 to 4px) and the AI connection button (8px) in the settings. */
-@media (max-width:400px){.seg button{padding:7px 9px;font-size:14px}.setpanel label.row{flex-wrap:wrap}.btn{max-width:100%;white-space:normal}}   /* the AI connection button in the settings was 8px too wide */
+@media (max-width:400px){.seg button{padding:7px 9px;font-size:14px}.setpanel label.row:not(.miniopt){flex-wrap:wrap}.btn{max-width:100%;white-space:normal}}   /* the AI connection button in the settings was 8px too wide */
 .tag{display:inline-block;max-width:100%;white-space:normal}
 .log summary,.shotdelbox summary{padding-block:3px}   /* click target: these two summaries were 22px high (WCAG 2.2, 2.5.8: 24px) */
 .study .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}
@@ -430,9 +432,12 @@ input[dir="ltr"]::placeholder{direction:rtl;text-align:right}
 #setBody .optbox2.drag{background:var(--accent-soft);border-radius:12px;padding:12px 16px}
 .howcredit{color:var(--muted);font-size:13.5px;line-height:1.5;margin:14px 0 0}
 .howteaser{margin:16px 0 0;display:grid;gap:8px;max-width:760px}
+.howteaser video:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 .howteaser video{width:100%;border-radius:14px;border:1px solid var(--line);background:#000;aspect-ratio:16/9}
 .howteaser figcaption{color:var(--muted);font-size:15px}
 .miniopt{display:flex;gap:8px;align-items:center;margin-top:14px;cursor:pointer;font-size:16px}
+label.miniopt{align-items:flex-start;flex-wrap:nowrap}label.miniopt>input[type="checkbox"]{flex:none;margin-top:6px}   /* the box stays on the first line of its text (the logo made the line taller) */
+.setpanel>p.sub{font-size:15px;margin:0}
 /* the guide inside the app (2.14) */
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px}
 .chips button{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:4px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
@@ -838,7 +843,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <button class="tile main" type="button" data-study="summary"><b>סיכום ההרצאה</b><small>הרעיונות, ההגדרות והנוסחאות</small></button>
         <button class="tile" type="button" data-study="exam"><b>מבחן דמה</b><small>שאלות מהקלה לקשה</small></button>
         <button class="tile" type="button" data-study="formulas"><b>דף נוסחאות</b><small>כל נוסחה, סימנים ויחידות</small></button>
-        <button class="tile" type="button" data-study="marks" id="studyMarks" hidden><b>הרגעים שסימנתי</b><small>הסבר לכל ★ ו-?</small></button>
+        <button class="tile" type="button" data-study="marks" id="studyMarks" hidden><b>הרגעים שסימנתי</b><small>הסבר לכל רגע שסימנת</small></button>
       </div>
       <div class="where" id="studyWhere" hidden>
         <span>איפה לעשות את זה?</span>
@@ -1119,7 +1124,7 @@ const api = (p, body) => fetch(p, body === undefined ? {cache: "no-store"} :
 let app = null, notesSince = 0, libRev = -1, libItems = [], fails = 0, lastQ = null, lastOffer = null, lastSaveFail = null;
 let wantPlayer = null, recSource = "", recLang = "he", view = "home", pastFile = null, shownErr = "";
 const NO_COURSE = "ללא קורס";
-let courses = [], curCourse = "", libCourse = "", searchSeq = 0;
+let courses = [], curCourse = "", libCourse = "", searchSeq = 0, appSeen = false, libSeen = false;   // appSeen: /api/app has answered (it knows the saved course); the list of courses may come first
 // ---------- connecting an AI app (Claude, ChatGPT, Gemini - the same card for each) ----------
 const CONN = [
   {id: "claude", name: "Claude", where: "Claude למחשב (Windows)", ask: "שואלים בחלון של Claude למחשב."},
@@ -1620,6 +1625,7 @@ const setPanels = {};
   const pb = $("#privBox"); pb.open = true; setPanels.priv.appendChild(pb);
   setPanels.priv.insertBefore($("#checkUpd").closest("label"), pb);   // the update check: here (first), not in "AI connection"
   const card = $("#a11y .card");   // accessibility: its choices (not its own title and close button)
+  setPanels.a11y.appendChild(el("h2", "", "תצוגה ונגישות"));   // (the other tabs open with a title)
   for (const x of [...card.children]) if (x.id !== "a11yT" && !x.querySelector("#a11yClose")) setPanels.a11y.appendChild(x);
   const ai = setPanels.ai;   // advanced: everything that is not the floating window and the marks
   ai.append(el("p", "sub", "אלה דברים אופציונליים. בלי אף אחד מהם הבנתי עובדת במלואה: שואלים בחלון הצף, מסמנים ★, והתשובות מגיעות בתוך הבנתי."));
@@ -1823,7 +1829,8 @@ function render(d) {
     let mine = ""; try { mine = localStorage.getItem("bzm.theme") || ""; } catch (e) {}
     if (!mine && d.theme) { bzmTheme(d.theme); drawThemeBtn(); } }
   $("#verTop").textContent = "בטא " + d.version; $("#verTop").title = "גרסת בטא: עדיין בבדיקה, ועלולות להיות תקלות. אם משהו לא עובד, יש \"דיווח על תקלה\" בתחתית מסך הבית.";
-  if (!curCourse && d.course) { curCourse = d.course; drawCourseSel(); }
+  const firstApp = !appSeen; appSeen = true;
+  if (!curCourse && d.course) { curCourse = d.course; drawCourseSel(); } else if (firstApp && libSeen) drawCourseSel();
   const up = d.update;
   $("#updBar").hidden = !up;
   if (up) { $("#updText").textContent = "יש גרסה חדשה: " + up.version + (up.date ? " (" + up.date + ")" : "") + (up.notes ? ". " + up.notes : "");
@@ -1956,6 +1963,7 @@ async function waitStopped() {
 }
 document.querySelectorAll("[data-start]").forEach(b => b.addEventListener("click", async () => {
   if (!(await consentOk()) || !(await okToReplace())) return;
+  if (!curCourse && !appSeen) { try { const st = await api("/api/app"); if (st.course) curCourse = st.course; } catch (e) {} }   // (the saved course, if the page was too quick)
   const r = await api("/api/cmd", {action: "start_live", lang: b.dataset.start, course: curCourse || NO_COURSE});
   if (!r.ok) { toast(r.error || "לא הצלחתי להתחיל."); return; }
   location.hash = "live";
@@ -2056,7 +2064,7 @@ document.querySelectorAll("[data-open]").forEach(b => b.addEventListener("click"
 async function loadLib(force) {
   if (!app && !force) return;
   try {
-    const d = await api("/api/library"); libItems = d.items || []; courses = d.courses || [];
+    const d = await api("/api/library"); libItems = d.items || []; courses = d.courses || []; libSeen = true;
     libRev = app ? app.lib_rev : -1;
     if (libCourse && !courses.some(c => c.name === libCourse)) libCourse = "";
     drawCourseSel(); drawTabs(); drawLib(); drawResume();
@@ -2071,7 +2079,7 @@ function courseList() {
 }
 function drawCourseSel() {
   const sel = $("#courseSel"), names = courseList();
-  if (!curCourse) curCourse = (courses.find(c => c.name !== NO_COURSE) || {}).name || NO_COURSE;
+  if (!curCourse && appSeen && libSeen) curCourse = (courses.find(c => c.name !== NO_COURSE) || {}).name || NO_COURSE;   // (not before the saved course is known: that was the wrong course at home)
   sel.replaceChildren(...names.map(n => { const o = el("option", "", n); o.value = n; return o; }));
   const add = el("option", "", "+ קורס חדש..."); add.value = "__new"; sel.appendChild(add);
   sel.value = curCourse;
@@ -2136,11 +2144,19 @@ function lecItem(e, withCourse) {
     (e.progress != null ? "תומלל " + e.progress + "%" : "השקופיות לא הושלמו")));
   const bits = lecInfo(e);   // date, length, slides - nothing else (the language and the lines are on the lecture's page)
   const m = el("div", "m");
+  const parts = [];   // each part keeps its dot and never breaks inside: on a narrow screen the "·" no longer hangs at the start of a line
   if (withCourse) {   // the course name leads to the course page
     const ct = el("a", "ctag", e.course); ct.href = "#c=" + encodeURIComponent(e.course); ct.title = "לדף הקורס";
-    m.appendChild(ct); m.append(" · ");
+    parts.push(ct);
   }
-  m.append(bits.filter(Boolean).join(" · "));
+  for (const b of bits.filter(Boolean)) parts.push(b);
+  parts.forEach((x, i) => {
+    const w = el("span", "mp");
+    if (typeof x === "string") w.textContent = x; else w.appendChild(x);
+    if (i < parts.length - 1) w.append(" ·");
+    if (i) m.append(" ");
+    m.appendChild(w);
+  });
   const acts = el("div", "acts");
   if (e.kind === "rec" && e.has_media) {
     const p = el("button", "btn small", "צפייה"); p.type = "button"; p.onclick = () => playRecording(e.f); acts.appendChild(p);
@@ -2272,7 +2288,7 @@ async function newCourse(done) {
     const terms = (sug.terms || []).filter(t => chosen.has(t));
     const r = await api("/api/cmd", {action: "new_course", name: $("#ncName").value, terms});
     if (!r.ok) { toast(r.error || "לא הצלחתי"); return; }
-    close(); toast("הקורס \"" + r.course + "\" נוצר" + (terms.length ? " עם " + terms.length + " מונחים במילון." : ". אפשר להוסיף מונחים בדף הקורס."));
+    close(); if (r.existed) toast("כבר יש קורס בשם \"" + r.course + "\". בחרתי אותו."); else if (r.renamed) toast("הקורס נוצר בשם \"" + r.course + "\" (תווים או רווחים שאי אפשר בשם תיקייה הוחלפו)."); else toast("הקורס \"" + r.course + "\" נוצר" + (terms.length ? " עם " + terms.length + " מונחים במילון." : ". אפשר להוסיף מונחים בדף הקורס."));
     if (done) done(r.course);
   };
 }

@@ -150,7 +150,7 @@ $("#newOk").addEventListener("click", async () => {
     sel.insertBefore(o, [...sel.options].find(x => x.value === NO_COURSE) || null);
   }
   sel.value = c; lastSel = c; touched = true;
-  note("הקורס \"" + c + "\" נוצר. מונחים למילון אפשר להוסיף בדף הקורס.");
+  note(r.existed ? "כבר יש קורס בשם \"" + c + "\". בחרתי אותו." : "הקורס \"" + c + "\" נוצר" + (r.renamed ? " בשם הזה (תווים שאי אפשר בשם תיקייה הוחלפו)" : "") + ". מונחים למילון אפשר להוסיף בדף הקורס.");
 });
 
 async function load() {

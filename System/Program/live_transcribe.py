@@ -196,7 +196,9 @@ MIN_CHUNK_S = 10     # earliest point to cut a chunk (seconds)
 MAX_CHUNK_S = 18     # latest point to cut a chunk
 GPU_MIN_CHUNK_S = 15 # on a GPU: longer chunks = more context = better accuracy
 GPU_MAX_CHUNK_S = 26 #   (Whisper looks at up to 30 s at once)
-SILENCE_RMS = 0.0015 # chunks quieter than this are skipped
+SILENCE_RMS = 0.0002 # chunks quieter than this are skipped (was 0.0015: at 6% playback volume speech is 0.0006 and a whole lecture was skipped, 15.11.2026)
+QUIET_RMS = 0.003    # sound that reaches us but is this quiet (and not silent): the playback volume is probably very low
+QUIET_WARN_S = 45    # ... for this long: say so (once every 3 minutes)
 FAST_ON_LAG_S = 10   # on a GPU, falling this far behind -> fast mode (1 option per sentence instead of 5)
 FAST_OFF_LAG_S = 4   # caught up for 3 pieces in a row -> back to full accuracy
 FAST_MAX_SWITCHES = 2  # after this many slow-downs, stay in fast mode for the rest of the lecture
@@ -2377,7 +2379,9 @@ def _gemini_http_error(e):
             return MathError("ה-API של Gemini לא מופעל בפרויקט של המפתח. להפעיל אותו ב-Google AI Studio ולנסות שוב (" + _short(msg) + ").")
         if "model" in low or "resource" in low:   # (this model, not the key: another model may answer)
             return MathError("אין למפתח הרשאה למודל הזה של Gemini (" + _short(msg) + ").", other=True)
-        return MathError("Gemini סירב (403): " + (_short(msg) or status or "בלי פירוט") + ".")
+        if not msg and not status:   # not Google's own answer: something on the way (a school or office network, a proxy) said no
+            return MathError("משהו ברשת חסם את הבקשה ל-Google (למשל מסנן של מוסד או של רשת ציבורית). אפשר לנסות רשת אחרת, ואז לשמור שוב: המפתח עצמו לא נבדק.")
+        return MathError("Gemini סירב (403): " + (_short(msg) or status) + ".")
     if e.code >= 500:
         return MathError(f"Gemini עמוס כרגע ({e.code}). לנסות שוב עוד רגע.", 60, other=True)
     return MathError(f"Gemini החזיר שגיאה {e.code}: {_short(msg, 160)}")
@@ -3646,6 +3650,15 @@ class YtClock:
 PAGE_TITLE = "הבנתי · האפליקציה"   # app.html's <title>: the browser window that shows it is named after it
 
 
+_DIR_MARKS = "".join(chr(c) for c in (0x202a, 0x202b, 0x202c, 0x200e, 0x200f)) + " "   # (the marks Edge puts around a Hebrew title)
+
+
+def is_page_title(title):
+    """True for the title of a window that shows Hevanti's page. Edge puts a direction mark (U+202B ... U+202C) around a Hebrew title:
+    without stripping it no window was found and a YouTube lecture saved no slide at all (found on a real Windows run, 15.11.2026)."""
+    return str(title or "").strip(_DIR_MARKS).startswith(PAGE_TITLE)
+
+
 def _page_windows():
     """Windows: the browser windows showing Hevanti's page, as (left, top, right, bottom) in screen pixels."""
     import ctypes
@@ -3662,7 +3675,7 @@ def _page_windows():
             if user32.IsWindowVisible(hwnd) and not user32.IsIconic(hwnd):
                 buf = ctypes.create_unicode_buffer(300)
                 user32.GetWindowTextW(hwnd, buf, 300)
-                if buf.value.startswith(PAGE_TITLE):
+                if is_page_title(buf.value):
                     rc = wintypes.RECT()   # DWMWA_EXTENDED_FRAME_BOUNDS: always real pixels, on any monitor
                     if dwm.DwmGetWindowAttribute(hwnd, 9, ctypes.byref(rc), ctypes.sizeof(rc)) == 0:
                         out.append((rc.left, rc.top, rc.right, rc.bottom))
@@ -4088,6 +4101,27 @@ MEDIA_TYPES = {".mp4": "video/mp4", ".m4v": "video/mp4", ".mov": "video/mp4", ".
                ".ogg": "audio/ogg", ".opus": "audio/ogg", ".flac": "audio/flac", ".wma": "audio/x-ms-wma"}
 
 
+def quiet_sound_warning(state, level, seconds, now):
+    """The sound arrives but is very quiet (playback volume low - the capture follows the volume of the speakers): after QUIET_WARN_S seconds
+    of it, the text to tell the student (at most once in 3 minutes); None otherwise. `state` keeps the count."""
+    if SILENCE_RMS * 0.1 < level < QUIET_RMS:
+        state["quiet_s"] = state.get("quiet_s", 0.0) + seconds
+    else:
+        state["quiet_s"] = 0.0
+    if state["quiet_s"] >= QUIET_WARN_S and now - state.get("quiet_warned", 0.0) > 180:
+        state["quiet_warned"] = now
+        return "הקול שמגיע להבנתי שקט מאוד (עוצמת ההשמעה נמוכה במחשב). כדי שהתמלול יהיה מדויק, כדאי להגביר את עוצמת ההשמעה."
+    return None
+
+
+def yt_mark(pos_s, kind):
+    """A ★ in a YouTube lecture: (the second of the video, the line for the transcript file, the text) - the line has the video's own time, like
+    the other lines of that file, and the course page lists it with what was said just before."""
+    pos = int(max(0.0, float(pos_s or 0.0)))
+    text = f"[סימון: {kind}]"
+    return pos, f"[{hms(pos)}] {text}", text
+
+
 def hms(t):
     t = max(0, int(t))
     return f"{t // 3600:02d}:{t % 3600 // 60:02d}:{t % 60:02d}"
@@ -4113,6 +4147,10 @@ def clean_name(name, fallback=""):
 
 
 def course_dir(course):
+    raw = str(course or "")
+    plain = raw and raw == raw.strip() and not raw.startswith(".") and all(ord(ch) >= 32 and ch not in '/:*?"<>|' + chr(92) for ch in raw)
+    if plain and os.path.isdir(os.path.join(LIB_DIR, raw)):
+        return os.path.join(LIB_DIR, raw)   # (a folder that exists as it is - a double space, 90 characters, from Explorer - keeps its name)
     return os.path.join(LIB_DIR, clean_name(course, NO_COURSE))
 
 
@@ -4143,7 +4181,7 @@ def course_names():
         names = [n for n in os.listdir(LIB_DIR) if not n.startswith(".") and os.path.isdir(os.path.join(LIB_DIR, n))]
     except OSError:
         names = []
-    return sorted(names, key=lambda n: (n == NO_COURSE, n))
+    return sorted(names, key=lambda n: (n == NO_COURSE, n.casefold(), n))   # (a small letter does not fall after every capital)
 
 
 def lecture_dirs():
@@ -4165,7 +4203,7 @@ def lecture_dirs():
 def lecture_from_rel(rel):
     """"<course>/<lecture>" from the page -> the lecture folder, only inside "הקורסים שלי"."""
     parts = [x for x in str(rel or "").replace("\\", "/").split("/") if x]
-    if len(parts) != 2 or any(x in (".", "..") or clean_name(x) != x for x in parts):
+    if len(parts) != 2 or any(x.startswith(".") or x != x.strip() for x in parts):   # (a name that exists as it is - a double space, 90 characters, from Explorer - is opened; ".." and hidden names never)
         return None
     d = os.path.join(LIB_DIR, *parts)
     root = os.path.realpath(LIB_DIR)
@@ -4428,7 +4466,7 @@ def import_syllabus(course, filename, data):
         return {"ok": False, "error": "הקובץ ריק."}
     key = read_secret(math_settings().get("key"))
     if not key:
-        return {"ok": False, "error": "כדי לקרוא את הסילבוס צריך מפתח Gemini: בגלגל השיניים (הגדרות) ← מפתח API."}
+        return {"ok": False, "error": "כדי לקרוא את הסילבוס צריך מפתח Gemini: בהגדרות ← מפתח."}
     if ext == ".pdf":
         parts = [{"inline_data": {"mime_type": "application/pdf", "data": base64.b64encode(data).decode("ascii")}}]
     else:
@@ -4478,12 +4516,16 @@ def delete_syllabus(course):
     return {"ok": True}
 
 
+CREATED_COURSE = {"existed": False}   # (what the last create_course found: the page says "already there")
+
+
 def create_course(name, terms=None):
     """A new course folder, with the terms the student chose from the suggestions (or an empty glossary)."""
     name = clean_name(name)
     if not name:
         return None
     d = course_dir(name)
+    CREATED_COURSE["existed"] = os.path.isdir(d)
     os.makedirs(d, exist_ok=True)
     if not os.path.exists(glossary_path(name)):
         terms = [str(t) for t in terms if isinstance(t, str)] if isinstance(terms, list) else []
@@ -8107,13 +8149,14 @@ class App:
             save_settings(course=course)
             return {"ok": True}
         if a == "new_course":
+            asked = str(d.get("name") or "").strip()
             name = create_course(d.get("name"), d.get("terms"))
             if not name:
                 return {"ok": False, "error": "צריך לכתוב שם לקורס."}
             save_settings(course=name)
             with self.lock:
                 self.lib_rev += 1
-            return {"ok": True, "course": name}
+            return {"ok": True, "course": name, "existed": CREATED_COURSE["existed"], "renamed": name != asked}
         if a == "save_glossary":
             if not os.path.isdir(course_dir(course)):
                 return {"ok": False, "error": "הקורס לא נמצא."}
@@ -8709,7 +8752,7 @@ def open_in_explorer(what, fname=None):
         d = lecture_from_rel(fname)
         if d is not None:
             p = lecture_txt(d) if what == "file" else d
-    elif what == "course" and fname and clean_name(fname) == fname and os.path.isdir(course_dir(fname)):
+    elif what == "course" and fname and os.path.isdir(course_dir(fname)):
         p = course_dir(fname)
     try:
         if what != "file":
@@ -9515,7 +9558,7 @@ def _app_handler():
             s = math_settings()
             key = read_secret(s.get("key"))
             if not key or s.get("ask") is False:
-                return self._json({"ok": False, "error": "התשובות בתוך הבנתי לא מוגדרות: בגלגל השיניים (הגדרות) ← מפתח API."}, 400)
+                return self._json({"ok": False, "error": "התשובות בתוך הבנתי לא מוגדרות: בהגדרות ← מפתח."}, 400)
             reader = math_reader()
             try:
                 if d.get("where") == "mini":   # the small window: the server knows what was said
@@ -10478,7 +10521,14 @@ def run_live(sess, lang, course=""):
         capture_control().set_paused(False)   # a new lecture always starts un-paused
     else:
         log("צילום מסך כבוי - רק תמלול")
-    if not yt:
+    if yt:
+        def mark(kind):
+            """The student marked this moment of the video (★): a line at the video's own time, as marks of a recording are listed."""
+            pos, line, text = yt_mark(clock.now()[0], kind)
+            write_line(line)
+            now_file.add(float(pos), text)
+        sess.mark_fn = mark
+    else:
         def mark(kind):
             """The student marked this moment (★ = "חשוב"): a line in the transcript - the AI sees it too."""
             t = time.time()
@@ -10637,6 +10687,11 @@ def run_live(sess, lang, course=""):
         """Transcribe one piece of audio and write it out (the final text replaces the draft line).
         heard_until: when the newest sound we already have arrived - the delay is measured from there
         (not from the end of this piece: waiting for a piece to fill up is not being late)."""
+        if len(chunk) >= chunk_sr:
+            qmsg = quiet_sound_warning(state, rms(chunk), len(chunk) / chunk_sr, time.time())
+            if qmsg:
+                log("אזהרה: " + qmsg)
+                note("קול שקט מאוד")
         if len(chunk) < chunk_sr or rms(chunk) < SILENCE_RMS:
             draft_clear()
             now_file.set_draft("")
