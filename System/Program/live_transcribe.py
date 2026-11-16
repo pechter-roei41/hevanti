@@ -9436,6 +9436,8 @@ def _app_handler():
                         APP.page_seen = time.time()
                 if p == "/api/app":
                     return self._json(APP.state(qint("notes")))
+                if p == "/api/theme":   # tiny and cheap: the small window asks it every second, so a change of light/dark in the app shows there at once (not up to 4 s later)
+                    return self._json({"theme": ui_theme(), "still": bool(load_settings().get("a11y_still"))})
                 if p == "/api/live":
                     return self._json(live_state(qint("since")))
                 if p == "/api/library":
@@ -9824,6 +9826,30 @@ def _bring_front(u, hwnd):
         pass
 
 
+def _nudge_paint(u, hwnd):
+    """The app opened from the quick-start window stayed black until the student minimized it and opened it again (15.11.2026): the browser
+    window was created while another one closed and never drew its first picture. A window gets drawn again when its size changes, so
+    it is made one pixel wider and back (twice, a little apart: the first draw may still be on its way), without a flicker."""
+    try:
+        import ctypes
+        from ctypes import wintypes
+        for wait in (1.2, 2.5):
+            time.sleep(wait)
+            if not u.IsWindow(hwnd) or u.IsIconic(hwnd):
+                return
+            r = wintypes.RECT()
+            u.GetWindowRect(hwnd, ctypes.byref(r))
+            w, h = r.right - r.left, r.bottom - r.top
+            flags = 0x0002 | 0x0004 | 0x0010   # SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE
+            if u.IsZoomed(hwnd):
+                u.SetWindowPos(hwnd, 0, 0, 0, 0, 0, flags | 0x0001 | 0x0020)   # (maximized: no size change - a new frame is enough)
+            else:
+                u.SetWindowPos(hwnd, 0, 0, 0, w + 1, h, flags)
+                u.SetWindowPos(hwnd, 0, 0, 0, w, h, flags)
+    except Exception:
+        pass
+
+
 def _watch_app_window(u, before):
     """The window that just opened for the app: found by its title, remembered (the tool closes it, and closes itself
     when the student closes it)."""
@@ -9837,6 +9863,7 @@ def _watch_app_window(u, before):
                 _APP_WIN["hwnd"] = h
                 if title != QUICK_TITLE:
                     _bring_front(u, h)
+                    threading.Thread(target=_nudge_paint, args=(u, h), daemon=True).start()
                 return
 
 
@@ -10258,6 +10285,7 @@ def main():
     if os.name == "nt":
         MiniHotkey(daemon=True).start()   # Ctrl+Alt+Q
         MiniButton(mini_button_wanted, _mini_button_click).start()   # the floating button
+        threading.Timer(0.3, prewarm_mini).start()   # the small window's browser starts in the background right away (off the screen), so even the first press of the button, before any lecture, shows it at once
     on_window_close(APP.emergency_close)
     os.makedirs(LIB_DIR, exist_ok=True)
     try:

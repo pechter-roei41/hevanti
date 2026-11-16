@@ -319,6 +319,9 @@ async function pollLive() {
 const LAG_SHOW_S = 10;
 let lastSaveFail = null;
 pollApp(); setInterval(pollApp, 4000);
+// light/dark and "no motion" follow the app within a second: a tiny request of its own, apart from the slower full poll above
+async function pollTheme() { try { const d = await getJson("/api/theme"); if ((d.theme || "") !== (document.documentElement.dataset.theme || "")) bzmTheme(d.theme || ""); document.documentElement.classList.toggle("a-still", !!d.still); } catch (e) {} }
+setInterval(pollTheme, 1000);
 setInterval(pollLive, 3000);
 if (box) box.focus();
 </script>
