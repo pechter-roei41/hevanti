@@ -84,6 +84,8 @@ header{position:sticky;top:0;z-index:5;padding:10px 16px 0;background:linear-gra
 .btn[disabled]{opacity:.5;pointer-events:none}
 
 main{max-width:1240px;margin:0 auto;padding:22px 16px 80px}
+.tip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:10px 14px;background:var(--sunk);border:1px solid var(--line);border-radius:14px;color:var(--fg)}   /* the first-time tip about the settings: closable, shown once */
+.tip span{flex:1 1 260px}
 h1{font-family:var(--f-display);font-weight:400;font-size:clamp(28px,4.5vw,38px);line-height:1.2;margin:0 0 6px;text-wrap:balance}
 h2{font-size:21px;margin:0;text-wrap:balance}
 .lead{color:var(--muted);margin:0 0 18px}
@@ -555,6 +557,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 </header>
 
 <main>
+  <div class="tip" id="tipSet" role="note" hidden><span>כדי שהבנתי תתאים לך בדיוק, כדאי להגדיר בעצמך בהגדרות כמה דברים: גודל כתב, אטימות החלון הקטן, מקום הכפתור הצף ומה לצלם. זה לוקח דקה.</span><button class="btn ghost small" id="tipSetGo" type="button">לפתוח את ההגדרות</button><button class="iconbtn" id="tipSetX" type="button" aria-label="סגירת ההערה" title="סגירה">✕</button></div>
   <!-- HOME -->
   <section id="vHome" aria-label="מסך הבית">
     <h1 class="hero">מה לומדים היום?</h1>
@@ -1603,7 +1606,7 @@ const setPanels = {};
   glideGroup(cs);
   // how see-through the small window is (the lecture behind it stays visible)
   const ol = el("label", "row miniopt"), oc = el("input"), ov = el("span", "", "60%"); oc.type = "range"; oc.id = "miniOp";
-  oc.min = 30; oc.max = 100; oc.step = 5; oc.value = 60; oc.style.width = "160px"; oc.setAttribute("aria-label", "שקיפות החלון הקטן");
+  oc.min = 30; oc.max = 100; oc.step = 5; oc.value = 60; oc.style.width = "160px"; oc.dir = "ltr"; oc.setAttribute("aria-label", "אטימות החלון הקטן");   // dir=ltr: the slider of an RTL page runs backwards (the smallest value at the right), so "left = more see-through" was not true
   let opT = 0;
   oc.addEventListener("input", () => {
     ov.textContent = oc.value + "%"; clearTimeout(opT);
@@ -1612,7 +1615,7 @@ const setPanels = {};
       if (!r.ok) toast("כדי שהשקיפות תעבוד צריך לסגור ולפתוח מחדש את הבנתי.");
     }, 150);
   });
-  ol.append(el("b", "", "שקיפות החלון הקטן (שמאלה: יותר שקוף)"), oc, ov);
+  ol.append(el("b", "", "אטימות החלון הקטן (שמאלה: יותר שקוף)"), oc, ov);
   setPanels.cap.appendChild(ol);
   const pb = $("#privBox"); pb.open = true; setPanels.priv.appendChild(pb);
   setPanels.priv.insertBefore($("#checkUpd").closest("label"), pb);   // the update check: here (first), not in "AI connection"
@@ -1667,6 +1670,15 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawThemeB
 drawThemeBtn();
 
 // ---------- views ----------
+// the first-time tip (16.11.2026): once, closable; opening the settings counts as having seen it
+(() => {
+  const t = $("#tipSet"); if (!t) return; let seen = ""; try { seen = localStorage.getItem("bzm.tipSet") || ""; } catch (e) {}
+  const done = () => { t.hidden = true; try { localStorage.setItem("bzm.tipSet", "1"); } catch (e) {} };
+  if (!seen) t.hidden = false;
+  $("#tipSetX").addEventListener("click", done);
+  $("#tipSetGo").addEventListener("click", () => { done(); $("#setBtn").click(); });
+})();
+
 function show(v) {
   const was = view;
   view = v;

@@ -817,7 +817,7 @@ check("get-pip.py is pinned to the same version and SHA-256 in release.yml and g
 # 15.11.2026 (Roei): the small window opens at once the first time, follows light/dark within a second, and nothing is cut at 115/130/150% or at the ends of a choice group
 _mini_src, _app_src = _txt("System", "Program", "mini.html"), _txt("System", "Program", "app.html")
 check("the small window is prepared at start (before any lecture), not only when a lecture starts",
-      "threading.Timer(2.0, prewarm_mini).start()" in _src)
+      "threading.Timer(0.3, prewarm_mini).start()" in _src)
 check("light/dark and no-motion reach the small window within a second: /api/theme answers and the window asks every second",
       'p == "/api/theme"' in _src and "setInterval(pollTheme, 1000)" in _mini_src and 'getJson("/api/theme")' in _mini_src)
 check("the top bar is not a half circle (999px cut its chips when it wrapped), and a choice group keeps its selected ring whole at both ends",
@@ -825,6 +825,13 @@ check("the top bar is not a half circle (999px cut its chips when it wrapped), a
 
 check("the live screen buttons (mark, small window, stop) stay at the left end even when a narrow window wraps them onto their own row",
       ".livebar .acts{display:flex;align-items:center;gap:10px;flex:none;margin-inline-start:auto}" in _app_src)
+
+check("the opacity slider runs left = more see-through (dir=ltr), and it is called opacity, not transparency",
+      'oc.dir = "ltr"' in _app_src and "אטימות החלון הקטן (שמאלה: יותר שקוף)" in _app_src)
+check("a first-time tip about the settings: closable, shown once (remembered), opens the settings",
+      'id="tipSet"' in _app_src and 'id="tipSetX"' in _app_src and '"bzm.tipSet"' in _app_src and '$("#setBtn").click()' in _app_src)
+check("the app window opened from the quick-start window is drawn again by a one-pixel size change (it stayed black until minimized)",
+      "def _nudge_paint(u, hwnd)" in _src and "target=_nudge_paint" in _src)
 
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)
