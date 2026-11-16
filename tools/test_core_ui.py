@@ -65,6 +65,7 @@ with sync_playwright() as p:
         pg = b.new_context(viewport={"width": 1100, "height": 900}, locale="he-IL").new_page()
         pg.errs = []
         pg.on("pageerror", lambda e: pg.errs.append(str(e)))
+        pg.add_init_script("try { localStorage.setItem('bzm.setupNo', '1'); } catch (e) {}")   # (the first-start card is shown again by the next poll after the line below hid it: on a fast computer it covered the page)
         if data is not None:
             pg.route("**/api/transcript*", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(data)))
         pg.goto(url + "/")
