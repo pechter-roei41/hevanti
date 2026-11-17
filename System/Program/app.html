@@ -248,7 +248,7 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .connbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--accent-soft);border-radius:var(--r);padding:10px 14px;margin:0 0 18px}
 .keybar{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap;background:var(--warn-bg);color:var(--warn-fg);border-radius:var(--r);padding:14px 18px;margin:0 0 18px;font-size:16px;line-height:1.5}
 .keybar span{margin-inline-end:auto}
-.connbar span{margin-inline-end:auto}
+.connbar span{margin-inline-end:auto;min-width:0;overflow-wrap:anywhere}   /* a long text (an install error) wraps inside the bar, never beyond the screen */
 .foot{margin-top:26px;color:var(--muted);font-size:14px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 
 /* live + transcript */
@@ -258,11 +258,6 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 #vPast .card h2{margin:0 0 2px}
 .ppanel{display:grid;gap:14px;align-content:start}
 .ppanel[hidden]{display:none}
-.pending{display:grid;gap:10px;margin:10px 0 4px}
-.pending h3{margin:0;font-size:16px}
-.pending .pend{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;border-inline-start:3px solid var(--line);padding:8px 12px;background:var(--bg);border-radius:0 10px 10px 0}
-.pending .pend .ts{font-weight:700}
-.pending .pend .sa{flex:1 1 220px;color:var(--muted);font-size:14px;line-height:1.5}
 .qalist{display:grid;gap:18px;margin-top:10px}
 .qalist .qa{display:grid;gap:6px}
 .qalist .qa .q{justify-self:start;max-width:92%;margin:0;padding:7px 13px;border-radius:16px;background:var(--accent-soft);color:var(--fg);font-weight:600;line-height:1.5}
@@ -611,7 +606,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 
     <div class="connbar" id="tutorBar" hidden><span><b>חדש: תשובות בתוך הבנתי, תוך כדי ההרצאה.</b> שואלים "מה הוא אמר עכשיו?" ו-Gemini עונה כאן, עם מה שנאמר והשקופית. צריך פעם אחת מפתח חינמי של Google (דקה).</span><button class="btn small" id="tutorGo" type="button">להגדרה</button><button class="btn quiet small" id="tutorNo" type="button">לא עכשיו</button></div>
 
-    <div class="connbar gpubar" id="gpuBar" hidden><span id="gpuText"></span><button class="btn small" id="gpuGo" type="button"></button></div>
+    <div class="connbar gpubar" id="gpuBar" hidden><span id="gpuText"></span><button class="btn small" id="gpuGo" type="button"></button><button class="iconbtn" id="gpuX" type="button" aria-label="סגירת ההודעה" title="סגירה" hidden>✕</button></div>
 
     <div class="keybar" id="keyBar" role="status" hidden><span><b>חסר מפתח Gemini.</b> בלי זה אין "תשובה כאן" בתוך הבנתי. מדביקים פעם אחת, בערך דקה.</span><button class="btn ghost small" id="keyBarGo" type="button">הדבקת מפתח</button></div>
     <div class="card capcard" id="capHome"></div>
@@ -839,7 +834,6 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <div class="card">
         <h2>שאלות ותשובות</h2>
         <p class="sub">מה ששאלת בזמן ההרצאה ואחריה, מהחדש לישן. התשובות נשמרות גם בקובץ "שאלות ותשובות.md" בתיקיית ההרצאה.</p>
-        <div id="pastPending" class="pending" hidden></div>
         <div id="pastQaList" class="qalist"></div>
       </div>
     </div>
@@ -859,7 +853,6 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <button class="tile" type="button" data-study="summary"><span class="tt"><b>סיכום ההרצאה</b><span class="rectag">מומלץ</span></span><small>הרעיונות, ההגדרות והנוסחאות</small></button>
         <button class="tile" type="button" data-study="exam"><b>מבחן דמה</b><small>שאלות מהקלה לקשה</small></button>
         <button class="tile" type="button" data-study="formulas"><b>דף נוסחאות</b><small>כל נוסחה, סימנים ויחידות</small></button>
-        <button class="tile" type="button" data-study="marks" id="studyMarks" hidden><b>הרגעים שסימנתי</b><small>הסבר לכל רגע שסימנת</small></button>
       </div>
       <div class="where" id="studyWhere" hidden>
         <span>איפה לעשות את זה?</span>
@@ -989,8 +982,8 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <ul class="glist">
           <li>ב<b>הקורסים שלי</b> כל הרצאה מראה תאריך, אורך ומספר שקופיות. השפה ומספר השורות נמצאים בדף ההרצאה, ליד התמלול.</li>
           <li>בבית מופיעה <b>ההרצאה האחרונה</b>, עם מספר הסימונים ★ שמחכים בה. לחיצה אחת פותחת אותה.</li>
-          <li>ב<b>הקורסים שלי</b> פותחים הרצאה, ובלשונית <b>לימוד</b> יש כרטיסים: <b>סיכום</b> (הכרטיס עם התג <b>מומלץ</b>), <b>מבחן דמה</b>, <b>דף נוסחאות</b>, ואם סימנת ★ גם הסבר לכל רגע שסימנת. כרטיס אחד לוחץ והמשימה יוצאת לדרך. השורה מעל הכרטיסים אומרת לאן היא נשלחת: ל-Gemini, והתשובה מופיעה מתחת, או לאפליקציית ה-AI שלך. בלי מפתח Gemini מופיעים מתחת כפתורים לשליחה ל-ChatGPT, Gemini או Claude, ולידם <b>הדבקת מפתח</b>.</li>
-          <li>בדף ההרצאה הלשונית הראשונה היא <b>שאלות ותשובות</b>: כל מה ששאלת בהרצאה ואחריה, מהחדש לישן. לידה <b>לימוד</b>, <b>הסימונים שלי</b> והתמלול. כל ★ שסימנת מחכה שם כשאלה שנדחתה: <b>הסבר לי את הרגע הזה</b> שואל רק על הדקות סביבו, ושומר את התשובה.</li>
+          <li>ב<b>הקורסים שלי</b> פותחים הרצאה, ובלשונית <b>לימוד</b> יש שלושה כרטיסים: <b>סיכום</b> (הכרטיס עם התג <b>מומלץ</b>), <b>מבחן דמה</b> ו<b>דף נוסחאות</b>. כרטיס אחד לוחץ והמשימה יוצאת לדרך. בהרצאה ארוכה, בתוך הבנתי, הלחיצה הראשונה רק מזהירה שהמשימה עלולה לצרוך חלק גדול מהמכסה החינמית: לוחצים שוב כדי להמשיך, או מריצים את זה באפליקציה של ה-AI שלך (לא על חשבון המכסה של Gemini). השורה מעל הכרטיסים אומרת לאן היא נשלחת: ל-Gemini, והתשובה מופיעה מתחת, או לאפליקציית ה-AI שלך. בלי מפתח Gemini מופיעים מתחת כפתורים לשליחה ל-ChatGPT, Gemini או Claude, ולידם <b>הדבקת מפתח</b>.</li>
+          <li>בדף ההרצאה הלשונית הראשונה היא <b>לימוד</b>. כשיש שאלות ששאלת, מתווספת לשונית <b>שאלות ותשובות</b> (מהחדש לישן), ויש גם <b>הסימונים שלי</b> והתמלול. כל הרגעים שסימנת ★ נמצאים רק ב<b>הסימונים שלי</b>: לכל רגע יש <b>בתמלול</b> ו<b>הסבר</b> (שואל רק על הדקות סביבו, ושומר את התשובה ב"שאלות ותשובות"), ולמעלה <b>הסבר לכל הרגעים</b>.</li>
           <li><b>חיפוש</b> ב"הקורסים שלי" מוצא כל מילה בכל ההרצאות, ופותח בדיוק שם.</li>
           <li><b>דף הקורס</b> בנוי משלוש לשוניות: <b>ההרצאות</b>, <b>סימונים</b> (כל הרגעים שסימנת, עם "פתיחה ברגע הזה") ו<b>סילבוס ומילון</b>. סילבוס שמעלים שם משפר את התמלול של מונחים ושמות.</li>
           <li>בלשונית ההרצאות, בכרטיס <b>קבצים וניהול</b>: קובץ אחד של כל הקורס, פתיחת התיקייה, שינוי שם ומחיקה.</li>
@@ -1867,8 +1860,9 @@ function drawGpu(d) {
   const pill = $("#gpuPill");
   pill.hidden = !(needs && g.state !== "installing" && view !== "home");
   if (!pill.hidden) $("#gpuPillGo").textContent = g.state === "failed" ? "לנסות שוב" : g.state === "done" ? "סגירה והפעלה מחדש" : "התקנה";
-  if (!needs) { bar.hidden = true; return; }
-  bar.hidden = false; txt.replaceChildren(); go.hidden = false; go.disabled = false;
+  if (g && g.state !== "failed") gpuSaidNo = false;   // (a new try, or a done install: the next failure shows again)
+  if (!needs || (g.state === "failed" && gpuSaidNo)) { bar.hidden = true; return; }
+  bar.hidden = false; txt.replaceChildren(); go.hidden = false; go.disabled = false; $("#gpuX").hidden = g.state !== "failed";
   if (g.state === "installing") { txt.append(el("b", "", "מתקין את מה שהכרטיס צריך... "), "כ-1GB, כמה דקות. אפשר להמשיך להשתמש בהבנתי בינתיים."); go.hidden = true; }
   else if (g.state === "done") { txt.append(el("b", "", "ההתקנה הסתיימה. "), "כדי שהתמלול ישתמש בכרטיס המסך, סוגרים את הבנתי ופותחים אותה שוב."); go.textContent = "סגירת האפליקציה"; go.dataset.act = "quit"; }
   else {
@@ -1876,6 +1870,8 @@ function drawGpu(d) {
     go.textContent = g.state === "failed" ? "לנסות שוב" : "להתקין עכשיו"; go.dataset.act = "install";
   }
 }
+let gpuSaidNo = false;   // the student closed the message of a failed install: it stays closed (the capsule in the top bar still offers another try)
+$("#gpuX").addEventListener("click", () => { gpuSaidNo = true; drawGpu(app); });
 $("#gpuPillGo").addEventListener("click", () => $("#gpuGo").click());   // (one set of states and actions)
 $("#gpuGo").addEventListener("click", async () => {
   if ($("#gpuGo").dataset.act === "quit") { $("#quitBtn").click(); return; }
@@ -2029,7 +2025,7 @@ async function waitStopped() {
 document.querySelectorAll("[data-start]").forEach(b => b.addEventListener("click", async () => {
   if (!(await consentOk()) || !(await okToReplace())) return;
   // The only way to start a lecture from home is the quick-start window (decided 16.11.2026): it opens in the middle of the screen
-  const r = await api("/api/cmd", {action: "quick_new"});
+  const r = await api("/api/cmd", {action: "quick_new", minimize_app: true});   // (the app steps aside to the taskbar: only the quick-start window stays on the screen)
   if (!r.ok) { toast(r.error || "לא הצלחתי לפתוח את חלון ההתחלה."); return; }
   if (r.opened === false && !r.already) toast("חלון ההתחלה המהירה לא נפתח.");
 }));
@@ -2751,7 +2747,6 @@ async function openPast(f, at) {
   pastData = d; const e = d.entry; pastSummary = d.summary || ""; drawSummary();
   $("#pastDelShots").hidden = !d.lines.some(x => x.img);
   pastHasImgs = d.lines.some(x => x.img); drawMath();
-  $("#studyMarks").hidden = !d.lines.some(markOf);
   pastMarkList = [];
   drawPastQa(d.qa);
   drawPastMarks(d.lines);
@@ -2794,30 +2789,10 @@ function markContext(m) {
   return out + ANSWER_HINT + "\nהשאלה שלי: " + markQuestion(m);
 }
 const markQuestion = m => "סימנתי ★ ברגע " + m.x.c + " כי לא הבנתי. תסביר בפשטות מה נאמר ברגע הזה ובדקה-שתיים שלפניו, עם דוגמה, ולמה זה חשוב. ענה קצר.";
-function drawPendingMarks() {
-  const todo = pastMarkList.filter(m => !markAnswered(m));
-  const box = $("#pastPending");
-  box.hidden = !todo.length;
-  box.replaceChildren(...(todo.length ? [el("h3", "", "סימנים שמחכים לתשובה (" + todo.length + ")")] : []), ...todo.map(m => {
-    const row = el("div", "pend"), b = el("button", "btn small", "הסבר לי את הרגע הזה"); b.type = "button";
-    b.addEventListener("click", () => {
-      if (!pastAskBox || !pastAskBox.builtin()) { toast("כדי לקבל תשובה בתוך הבנתי צריך מפתח Gemini (בהגדרות). אפשר גם \"הסבר לכל הרגעים\" בלשונית הסימונים."); return; }
-      setPTab("study"); $("#pastAskFold").open = true;
-      pastAskBox.askHere(markQuestion(m), {title: markTitle(m), at: m.x.c, context: async () => markContext(m),
-        onDone: t => { pastQa.unshift({when: "עכשיו", at: m.x.c, q: markTitle(m), a: t}); drawPastQa(pastQa); toast("התשובה נשמרה ב\"שאלות ותשובות\"."); }});
-      $("#pastAsk").scrollIntoView({block: "start", behavior: "smooth"});
-    });
-    const said = el("span", "sa", m.said ? "לפני הסימון נאמר: " + m.said : "(אין תמלול סמוך)");
-    row.append(el("span", "ts", "★ " + m.x.c), said, b);
-    return row;
-  }));
-}
 function drawPastQa(qa) {
   pastQa = Array.isArray(qa) ? qa : [];
   $("#ptQa").textContent = pastQa.length ? "(" + pastQa.length + ")" : "";
-  const nPend = pastMarkList.filter(m => !markAnswered(m)).length;
-  document.querySelector('#pastTabs [data-pt="qa"]').hidden = !pastQa.length && !nPend;
-  drawPendingMarks();
+  document.querySelector('#pastTabs [data-pt="qa"]').hidden = !pastQa.length;
   $("#pastQaList").replaceChildren(...pastQa.map(it => {
     const row = el("div", "qa"), q = el("p", "q", it.q), a = el("div", "a");
     q.dir = "auto";
@@ -2842,13 +2817,18 @@ function drawPastMarks(lines) {
   });
   const lost = list.filter(m => m.kind !== "חשוב").length, imp = list.length - lost;
   pastMarkList = list;
-  drawPastQa(pastQa);   // (the marks that wait for an answer are listed in the Q&A tab)
+  drawPastQa(pastQa);
   const hasQa = !document.querySelector('#pastTabs [data-pt="qa"]').hidden;
   $("#pastTabs").hidden = !list.length && !hasQa;
   $("#ptMarks").textContent = list.length ? "(" + list.length + ")" : "";
   document.querySelector('#pastTabs [data-pt="marks"]').hidden = !list.length;
   setPTab(hasQa ? "qa" : "study");
-  $("#pastMkList").replaceChildren(...list.map(m => {
+  drawPastMarkRows();
+}
+// the one place for the student's marks (design review 17.11.2026: they were in three tabs): a row per mark, what was said before it,
+// "in the transcript" and "explain" (one question about the minutes around it; the answer is kept in "שאלות ותשובות")
+function drawPastMarkRows() {
+  $("#pastMkList").replaceChildren(...pastMarkList.map(m => {
     const lostM = m.kind !== "חשוב", row = el("div", "mk");
     const head = el("b", "", m.kind); head.appendChild(el("span", "ts", m.x.c));
     const go = el("button", "btn ghost small", "בתמלול"); go.type = "button";
@@ -2859,12 +2839,21 @@ function drawPastMarks(lines) {
       const li = kids.filter(y => y._x && y._x.t <= from).pop() || kids.find(y => y._x === m.x);
       if (li) { li.classList.add("hit"); li.scrollIntoView({block: "center"}); }
     });
-    row.append(el("span", "ic " + (lostM ? "lost" : "imp"), lostM ? "?" : "★"), head, go,
+    const done = markAnswered(m);
+    const ex = el("button", "btn ghost small", done ? "הסבר נוסף" : "הסבר"); ex.type = "button"; ex.title = "הסבר לרגע הזה, לפי הדקות סביבו";
+    ex.addEventListener("click", () => {
+      if (!pastAskBox || !pastAskBox.builtin()) { toast("כדי לקבל תשובה בתוך הבנתי צריך מפתח Gemini (בהגדרות). אפשר גם \"הסבר לכל הרגעים\" כאן למעלה."); return; }
+      setPTab("study"); $("#pastAskFold").open = true;
+      pastAskBox.askHere(markQuestion(m), {title: markTitle(m), at: m.x.c, context: async () => markContext(m),
+        onDone: t => { pastQa.unshift({when: "עכשיו", at: m.x.c, q: markTitle(m), a: t}); drawPastQa(pastQa); drawPastMarkRows(); toast("התשובה נשמרה ב\"שאלות ותשובות\"."); }});
+      $("#pastAsk").scrollIntoView({block: "start", behavior: "smooth"});
+    });
+    row.append(el("span", "ic " + (lostM ? "lost" : "imp"), lostM ? "?" : "★"), head, go, ex,
       el("span", "sa", m.said ? "לפני הסימון נאמר: " + m.said : "(אין תמלול סמוך)"));
     return row;
   }));
 }
-$("#pastMarksAsk").addEventListener("click", () => { setPTab("study"); $("#studyMarks").click(); });
+$("#pastMarksAsk").addEventListener("click", () => { setPTab("study"); runStudy("marks", "הרגעים שסימנתי"); });
 $("#pastMore").addEventListener("click", () => { if (pastData) lectureMenu(pastData.entry); });
 $("#pastMenu .menu").addEventListener("click", () => { $("#pastMenu").open = false; });
 document.addEventListener("click", ev => { const m = $("#pastMenu"); if (m && m.open && !m.contains(ev.target)) m.open = false; });
@@ -2941,6 +2930,7 @@ function drawStudyWhere() {
     g.addEventListener("click", () => openSettings("key")); lead.append(g);
   } else if (w === "here") lead.textContent = "לחיצה על כרטיס שולחת " + what + " ל-Gemini, והתשובה מופיעה למטה.";
   else lead.textContent = "לחיצה על כרטיס מכינה את המשימה ושולחת אותה, יחד עם ההרצאה, לאפליקציית ה-AI שבחרת בפעם הקודמת. בפעם הראשונה בוחרים למטה לאיזו.";
+  if (studyArmed) return;   // (the question "press again to go on" is on the screen: it is not drawn over)
   const big = pastData ? pastText().length : 0;
   hint.hidden =!(m.ask && m.external && w === "here" && big >= STUDY_BIG);
   if (!hint.hidden) hint.textContent = "ההרצאה הזו ארוכה (בערך " + Math.round(big / 1000) + " אלף תווים), ומשימה על כולה צורכת חלק גדול מהמכסה החינמית. אם יש לך מנוי ל-ChatGPT, Claude או Gemini, עדיף \"באפליקציית ה-AI שלי\".";
@@ -2949,12 +2939,24 @@ $("#studyWhere").querySelectorAll("button").forEach(b => b.addEventListener("cli
   try { localStorage.setItem("bzm.studyWhere", b.dataset.w); } catch (e) {}
   drawStudyWhere();
 }));
-document.querySelectorAll("[data-study]").forEach(b => b.addEventListener("click", () => {
+// A whole-lecture task spends a large part of the free quota (a long lecture: most of the day): inside Hevanti, a long lecture asks once more
+// ("press the same card again to go on here"), and says where the quota-free way is. Nothing is sent by the first press.
+var studyArmed = "", studyArmT = 0;
+function studyDisarm() { clearTimeout(studyArmT); studyArmed = ""; drawStudyWhere(); }
+function runStudy(k, title) {
   if (!pastData || !pastAskBox) { toast("ההרצאה עוד נטענת."); return; }
-  const k = b.dataset.study;
+  const m = (app && app.math) || {}, big = pastText().length;
+  if (studyWhere() === "here" && pastAskBox.builtin() && big >= STUDY_BIG && studyArmed !== k) {
+    studyArmed = k; clearTimeout(studyArmT); studyArmT = setTimeout(studyDisarm, 8000);
+    const h = $("#studyHint"); h.hidden = false;
+    h.textContent = "ההרצאה הזו ארוכה (בערך " + Math.round(big / 1000) + " אלף תווים), והמשימה \"" + title + "\" שולחת את כולה ל-Gemini ועלולה לצרוך חלק גדול מהמכסה החינמית של היום. כדי להמשיך כאן, לוחצים שוב על אותו כרטיס. " +
+      (m.external ? "אפשר גם לבחור למעלה \"באפליקציית ה-AI שלי\" (לא על חשבון המכסה של Gemini)." : "לא על חשבון המכסה: להפעיל \"AI אחר\" בהגדרות ← מתקדם, ולהריץ את זה באפליקציה של ChatGPT, Claude או Gemini.");
+    return;
+  }
+  clearTimeout(studyArmT); studyArmed = ""; drawStudyWhere();
   if (studyWhere() === "here" && pastAskBox.builtin()) {   // done right here by Gemini; a summary becomes the lecture's summary
     $("#pastAskFold").open = true;
-    pastAskBox.askHere(STUDY[k], {task: k, title: b.querySelector("b").textContent,
+    pastAskBox.askHere(STUDY[k], {task: k, title,
       onDone: k === "summary" ? t => { pastSummary = t; drawSummary(); } : null});
     $("#pastAsk").scrollIntoView({block: "start", behavior: "smooth"});
     return;
@@ -2964,7 +2966,8 @@ document.querySelectorAll("[data-study]").forEach(b => b.addEventListener("click
   if (last) $("#pastAskFold").open = true;
   if (last) ta.dispatchEvent(new KeyboardEvent("keydown", {key: "Enter", ctrlKey: true, bubbles: true, cancelable: true}));   // the AI used last
   else { $("#pastAskFold").open = true; $("#pastAsk").scrollIntoView({block: "center"}); ta.focus(); toast("עכשיו לבחור לאיזה AI לשלוח: ChatGPT, Gemini או Claude."); }
-}));
+}
+document.querySelectorAll("[data-study]").forEach(b => b.addEventListener("click", () => runStudy(b.dataset.study, b.querySelector("b").textContent)));
 $("#pastDelShots").addEventListener("click", async () => {
   if (!pastFile) return;
   const r = await delShots({action: "delete_lecture_shots", f: pastFile}, "את כל צילומי המסך של ההרצאה"); if (r && r.ok) openPast(pastFile);

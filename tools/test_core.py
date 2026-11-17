@@ -377,6 +377,22 @@ if _old_nb is not None:
 L.open_app_window, L.APP.url = _old_open, _old_url
 check("quick start from the small window: opens the quick-start window as a side window (not tracked as the app's window)",
       _r.get("ok") is True and len(_calls) == 1 and _calls[0][0].endswith("/quick") and _calls[0][1].get("track") is False and _calls[0][1].get("size") == L.QUICK_SIZE, (_r, _calls))
+# starting a lecture from the app: the app steps aside (minimized, not closed) so only the quick-start window stays; the small window does not ask for it
+_calls.clear(); _old_open, _old_url = L.open_app_window, L.APP.url; _old_nb = os.environ.pop("BZM_NO_BROWSER", None)
+L.open_app_window = lambda url, **kw: (_calls.append((url, kw)), True)[1]; L.APP.url = "http://127.0.0.1:1/"
+_mins = []; _old_th = L.threading.Thread
+class _FakeThread:
+    def __init__(self, target=None, **k): self.t = target
+    def start(self): _mins.append(getattr(self.t, "__name__", ""))
+L.threading.Thread = _FakeThread
+try:
+    L.APP.command({"action": "quick_new", "minimize_app": True}); _a = list(_mins); _mins.clear()
+    L.APP.command({"action": "quick_new"}); _b = list(_mins)
+finally:
+    L.threading.Thread = _old_th; L.open_app_window, L.APP.url = _old_open, _old_url
+    if _old_nb is not None: os.environ["BZM_NO_BROWSER"] = _old_nb
+check("start a lecture from the app: the quick window opens and then the app is minimized; from the small window it is not", "_minimize_app_then_front_quick" in _a and "_front_quick_window" in _b and "_minimize_app_then_front_quick" not in _b, (_a, _b))
+check("minimizing the app window never guesses: with no known window it does nothing", L.minimize_app_window() is False)
 check("the short-lecture limit is one number on the server (10 s), and the session tells the pages", L.QUICK_STOP_S == 10 and L.Session.__dict__.get("info") is not None and "quick_stop_s" in L.Session("live", "he", None).info() if hasattr(L, "Session") else True)
 # ---- a course from the first slide (offered, never applied), and a course chosen while it records ----
 import tempfile as _tf
@@ -676,9 +692,14 @@ check("the release runs every test first; the tests run lint, pip-audit and a ke
 # audit phase D (13.11.2026): the installs Hevanti runs by itself are pinned too
 import subprocess as _sp, types as _ty
 _gpu = _txt("System", "requirements-gpu.txt")
+check("the home page asks the server to minimize the app when it opens the quick-start window", 'action: "quick_new", minimize_app: true' in _txt("System", "Program", "app.html"))
 check("the GPU libraries are pinned (exact versions with SHA-256), and the button and install_gpu.bat use that file",
-      "nvidia-cublas-cu12==" in _gpu and "nvidia-cudnn-cu12==" in _gpu and _gpu.count("--hash=sha256:") == 2
+      "nvidia-cublas-cu12==" in _gpu and "nvidia-cudnn-cu12==" in _gpu and "nvidia-cuda-nvrtc-cu12==" in _gpu and _gpu.count("--hash=sha256:") == 3
       and "requirements-gpu.txt" in _src and "--require-hashes" in _txt("System", "install_gpu.bat") and "requirements-gpu.txt" in _txt("System", "install_gpu.bat"))
+_pipmsg = "ERROR: In --require-hashes mode, all requirements must have their versions pinned with ==. These do not:\n    nvidia-cuda-nvrtc-cu12 from https://files.pythonhosted.org/packages/52/de/x.whl (from nvidia-cublas-cu12==12.9.2.10)"
+check("a failed GPU install says so in plain Hebrew, with no download address or file name",
+      "https" not in L.gpu_fail_note(_pipmsg) and "whl" not in L.gpu_fail_note(_pipmsg) and "קובץ ההתקנה" in L.gpu_fail_note(_pipmsg)
+      and "אינטרנט" in L.gpu_fail_note("ERROR: Max retries exceeded with url") and len(L.gpu_fail_note("x" * 500)) <= 83 and L.gpu_fail_note("") == "pip failed")
 _cap = {}
 def _fake_run(cmd, **k):
     if "-r" in cmd:
