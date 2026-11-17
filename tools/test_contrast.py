@@ -64,8 +64,7 @@ PAIRS = [
     ("a search match: the green underline against the paper it sits on", "board-green", "paper", "night-green", "night-paper", GRAPHIC),
     ("the question bubble (ink) on the soft green", "ink", "board-green-soft", "night-ink", "night-green-soft", TEXT),
     ("the focus ring in high-contrast mode (ink) against the paper", "ink", "paper", "night-ink", "night-paper", GRAPHIC),
-    ("text of the summary card (ink) on the soft green", "ink", "board-green-soft", "night-ink", "night-green-soft", TEXT),
-    ("the small text of the summary card (ink-muted) on the soft green", "ink-muted", "board-green-soft", "night-muted", "night-green-soft", TEXT),
+    ("the 'מומלץ' pill on the study card (ink-muted) on sunk paper", "ink-muted", "sunk-paper", "night-muted", "night-sunk", TEXT),
     ("text (ink) on the highlighter band of a marked transcript line (mark-line)", "ink", "mark-line", "night-ink", "night-mark-line", TEXT),
     ("the ★ mark (ink, a graphic part) on the mark-line", "ink", "mark-line", "night-ink", "night-mark-line", GRAPHIC),
     ("a time that can be opened (green link) on paper, where answers are", "board-green", "paper", "night-green", "night-paper", TEXT),
@@ -73,6 +72,9 @@ PAIRS = [
     ("the text of the solid green button (white by day, near black at night) on the green", "#FFFFFF", "board-green", "#0E1A14", "night-green", TEXT),
     ("the small text of the green start card ('זום או שידור...', white by day, near black at night) on the green", "#FFFFFF", "board-green", "#0E1A14", "night-green", TEXT),
     ("the delete-course button (recording red, danger outline) on a sheet", "recording-red", "sheet", "night-recording", "night-sheet", TEXT),
+    ("hovered delete button and the blur-box close X: the ink of --accent-ink (white by day, near black at night) on recording red", "#FFFFFF", "recording-red", "#0E1A14", "night-recording", TEXT),
+    ("large captions window: the draft line (night-muted) on black", "night-muted", "#000000", "night-muted", "#000000", TEXT),
+    ("large captions window: the button (night-green) on black", "night-green", "#000000", "night-green", "#000000", TEXT),
     ("a ghost button (green text) on sunk paper: the course offer in the small window and in the live view", "board-green", "sunk-paper", "night-green", "night-sunk", TEXT),
     ("text (ink) on sunk paper: the course offer", "ink", "sunk-paper", "night-ink", "night-sunk", TEXT),
     ("caution text on the caution bar", "css:--warn-fg", "css:--warn-bg", "cssdark:--warn-fg", "cssdark:--warn-bg", TEXT),
@@ -96,6 +98,9 @@ _app = open(os.path.join(C.PROG, "app.html"), encoding="utf-8").read()
 check("the small text of the green start card uses var(--accent-ink), not a mix with the green",
       '.start[data-start="he"] span:not(.ic){color:var(--accent-ink);' in _app)
 check("the delete-course button is the danger outline (red text on the sheet), not red on a sunk fill", 'id="cDelete" type="button">' in _app and 'class="btn danger small" id="cDelete"' in _app)
+check("the hovered delete button and the blur-box X use var(--accent-ink) on recording red, not a fixed white",
+      ".btn.danger:hover{background:var(--rec);color:var(--accent-ink)}" in _app and "background:var(--rec);color:var(--accent-ink);cursor:pointer" in _app)
+check("no yellow outside the star mark: the large-captions window does not use #ffd84d", "ffd84d" not in _app.lower())
 check("the opacity slider gets the same accent-colour as the check boxes (no system blue)", "input[type=range]{accent-color:var(--accent)}" in _app)
 
 print()

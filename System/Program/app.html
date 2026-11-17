@@ -81,7 +81,7 @@ header{position:sticky;top:0;z-index:5;padding:10px 16px 0;background:linear-gra
 .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);padding:7px 15px}
 .btn.quiet{background:var(--sunk);color:var(--fg)}
 .btn.danger{background:transparent;color:var(--rec);border:1.5px solid var(--rec);padding:7px 15px}
-.btn.danger:hover{background:var(--rec);color:#fff}
+.btn.danger:hover{background:var(--rec);color:var(--accent-ink)}   /* white on the day red, near black on the night red (white on #FF7A63 was 2.6:1) */
 .btn.small{font-size:14px;padding:5px 13px}
 .btn[disabled]{opacity:.5;pointer-events:none}
 
@@ -299,8 +299,8 @@ input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--acce
 .tile b{font-size:17px}
 .tile small{color:var(--muted);font-size:14px;line-height:1.4}
 .tile:hover,.tile:focus-visible{border-color:var(--accent)}
-.tile.main{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}   /* the first of the three: soft green, not solid - "answer here" is the one solid green of the page */
-.tile.main small{color:var(--muted)}
+.tile .tt{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tile .rectag{background:var(--sunk);color:var(--muted);border-radius:999px;padding:1px 10px;font-size:12.5px;font-weight:700}   /* "recommended" is a word, not the selected look (soft green means a chosen option) */
 .tile[hidden]{display:none}
 /* the three study cards are cards; what holds them is not (cards are never nested): no border, no fill, no padding */
 .study.plain{margin:0 0 16px}
@@ -410,7 +410,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 .capcanvas .none{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);text-align:center;padding:16px;font-size:15px;pointer-events:none}
 .capbox{position:absolute;border:2px solid var(--accent);background:rgba(31,122,85,.18);box-sizing:border-box}
 .capbox.blur{border-color:var(--rec);background:repeating-linear-gradient(45deg,rgba(194,65,45,.35) 0 6px,rgba(194,65,45,.15) 6px 12px)}
-.capbox .capx{position:absolute;top:-2px;right:-2px;width:22px;height:22px;border:0;border-radius:0 0 0 8px;background:var(--rec);color:#fff;cursor:pointer;font-weight:700;line-height:1;padding:0}
+.capbox .capx{position:absolute;top:-2px;right:-2px;width:22px;height:22px;border:0;border-radius:0 0 0 8px;background:var(--rec);color:var(--accent-ink);cursor:pointer;font-weight:700;line-height:1;padding:0}
 .shotdel{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;text-decoration:underline}
 .shotdel:hover{color:var(--rec)}
 .study .row .btn{flex:1 1 150px}
@@ -524,8 +524,8 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 .pipbody.caps ol{background:#000;border-color:#444;font-size:calc(26px * var(--tx, 1))}
 .pipbody.caps ol li{font-size:inherit;line-height:1.35;grid-template-columns:minmax(0,1fr);padding:6px 8px}
 .pipbody.caps ol li .ts{display:none}
-.pipbody.caps ol li.draft{color:#ffd84d;font-style:normal}
-.pipbody.caps .pbtn{color:#ffd84d;border-color:#ffd84d}
+.pipbody.caps ol li.draft{color:#B5AFA0;font-style:normal}   /* the line still being drafted: night-muted on black (yellow is only the star mark) */
+.pipbody.caps .pbtn{color:#5BC79A;border-color:#5BC79A}   /* night-green on black */
 .pipbody.caps .phead{color:#fff}
 .log{margin-top:6px}   /* design 3: the tool's messages moved from the foot of every screen into the report dialog */
 .log summary{cursor:pointer;color:var(--muted);font-size:14px}
@@ -856,7 +856,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <h2>לימוד בלחיצה אחת</h2>
       <p class="sub" id="studyLead">הבנתי שולחת לבינה המלאכותית את ההרצאה הזו (התמלול והטקסט מהשקופיות) עם המשימה.</p>
       <div class="tiles">
-        <button class="tile main" type="button" data-study="summary"><b>סיכום ההרצאה</b><small>הרעיונות, ההגדרות והנוסחאות</small></button>
+        <button class="tile" type="button" data-study="summary"><span class="tt"><b>סיכום ההרצאה</b><span class="rectag">מומלץ</span></span><small>הרעיונות, ההגדרות והנוסחאות</small></button>
         <button class="tile" type="button" data-study="exam"><b>מבחן דמה</b><small>שאלות מהקלה לקשה</small></button>
         <button class="tile" type="button" data-study="formulas"><b>דף נוסחאות</b><small>כל נוסחה, סימנים ויחידות</small></button>
         <button class="tile" type="button" data-study="marks" id="studyMarks" hidden><b>הרגעים שסימנתי</b><small>הסבר לכל רגע שסימנת</small></button>
@@ -988,7 +988,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <ul class="glist">
           <li>ב<b>הקורסים שלי</b> כל הרצאה מראה תאריך, אורך ומספר שקופיות. השפה ומספר השורות נמצאים בדף ההרצאה, ליד התמלול.</li>
           <li>בבית מופיעה <b>ההרצאה האחרונה</b>, עם מספר הסימונים ★ שמחכים בה. לחיצה אחת פותחת אותה.</li>
-          <li>ב<b>הקורסים שלי</b> פותחים הרצאה: <b>סיכום</b>, <b>מבחן דמה</b> ו<b>דף נוסחאות</b> בלחיצה אחת, והסבר לכל רגע שסימנת ★.</li>
+          <li>ב<b>הקורסים שלי</b> פותחים הרצאה, ובלשונית <b>לימוד</b> יש כרטיסים: <b>סיכום</b> (הכרטיס עם התג <b>מומלץ</b>), <b>מבחן דמה</b>, <b>דף נוסחאות</b>, ואם סימנת ★ גם הסבר לכל רגע שסימנת. כרטיס אחד לוחץ והמשימה יוצאת לדרך. השורה מעל הכרטיסים אומרת לאן היא נשלחת: ל-Gemini, והתשובה מופיעה מתחת, או לאפליקציית ה-AI שלך. בלי מפתח Gemini מופיעים מתחת כפתורים לשליחה ל-ChatGPT, Gemini או Claude, ולידם <b>הדבקת מפתח</b>.</li>
           <li>בדף ההרצאה הלשונית הראשונה היא <b>שאלות ותשובות</b>: כל מה ששאלת בהרצאה ואחריה, מהחדש לישן. לידה <b>לימוד</b>, <b>הסימונים שלי</b> והתמלול. כל ★ שסימנת מחכה שם כשאלה שנדחתה: <b>הסבר לי את הרגע הזה</b> שואל רק על הדקות סביבו, ושומר את התשובה.</li>
           <li><b>חיפוש</b> ב"הקורסים שלי" מוצא כל מילה בכל ההרצאות, ופותח בדיוק שם.</li>
           <li><b>דף הקורס</b> בנוי משלוש לשוניות: <b>ההרצאות</b>, <b>סימונים</b> (כל הרגעים שסימנת, עם "פתיחה ברגע הזה") ו<b>סילבוס ומילון</b>. סילבוס שמעלים שם משפר את התמלול של מונחים ושמות.</li>
@@ -1001,7 +1001,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <h2 id="g-lookT">מראה ונגישות</h2>
         <ul class="glist">
           <li><b>בהיר או כהה:</b> הכפתור בצד שמאל של הסרגל העליון. הבחירה נשמרת, והחלון הקטן עוקב אחריה.</li>
-          <li><b>גודל טקסט, ניגודיות גבוהה, בלי תנועה</b> ועוד: <b>הגדרות ← נגישות</b>.</li>
+          <li><b>גודל טקסט, ניגודיות גבוהה, בלי תנועה</b> ועוד: <b>הגדרות ← נגישות</b>. בפעם הראשונה מופיעה בבית הערה שמזכירה את ההגדרות. סוגרים אותה ב-✕ והיא לא חוזרת.</li>
           <li><b>הקלדה:</b> בכל תיבה הכתיבה מתחילה מימין, ועוברת לשמאל לבד כשכותבים באנגלית.</li>
         </ul>
       </section>
@@ -1706,11 +1706,14 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawThemeB
 drawThemeBtn();
 
 // ---------- views ----------
-// the first-time tip (16.11.2026): once, closable; opening the settings counts as having seen it
+// the first-time tip (16.11.2026): once, closable; opening the settings counts as having seen it.
+// It shows on the home page only (on the other pages it pushed the page's own action down, and on the settings it pointed at the page you are on)
+let drawTip = () => {};
 (() => {
   const t = $("#tipSet"); if (!t) return; let seen = ""; try { seen = localStorage.getItem("bzm.tipSet") || ""; } catch (e) {}
-  const done = () => { t.hidden = true; try { localStorage.setItem("bzm.tipSet", "1"); } catch (e) {} };
-  if (!seen) t.hidden = false;
+  const done = () => { seen = "1"; t.hidden = true; try { localStorage.setItem("bzm.tipSet", "1"); } catch (e) {} };
+  drawTip = () => { t.hidden = !!seen || view !== "home"; };
+  drawTip();
   $("#tipSetX").addEventListener("click", done);
   $("#tipSetGo").addEventListener("click", () => { done(); $("#setBtn").click(); });
 })();
@@ -1718,6 +1721,7 @@ drawThemeBtn();
 function show(v) {
   const was = view;
   view = v;
+  drawTip();
   if (app && typeof drawGpu === "function") drawGpu(app);   // (the capsule in the top bar is for every page but the home page)
   if (was === "yt" && v !== "yt") ytLeave();
   if (was === "how" && v !== "how") HOW.stop();
