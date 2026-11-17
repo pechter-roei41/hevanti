@@ -67,7 +67,7 @@ header{position:sticky;top:0;z-index:5;padding:10px 16px 0;background:linear-gra
 @media (max-width:520px){.brand small{display:none}}
 @media (max-width:700px){.bar{border-radius:18px}.nav{order:3;width:100%;margin:0}.brand{margin-inline-end:auto}}
 @media (min-width:361px) and (max-width:460px){.nav button{padding:5px 8px;font-size:14.5px}}   /* the bold current tab is wider: on a phone the four tabs stay on one line (below 361 px they may wrap, as before) */
-.brand small{font-family:var(--f-body);font-weight:600;font-size:13px;color:var(--muted);background:var(--sunk);border-radius:999px;padding:1px 9px}
+.brand small{font-family:var(--f-body);font-weight:600;font-size:14px;color:var(--muted);background:var(--sunk);border-radius:999px;padding:1px 9px}
 .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--accent)}
 .pill{font-size:14px;padding:3px 12px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}
 .pill.gpu{background:var(--warn-bg);color:var(--warn-fg);display:inline-flex;align-items:center;gap:10px}   /* a caution capsule with a text link: only while there is a card that is not used, and something to press */
@@ -153,7 +153,7 @@ h2{font-size:21px;margin:0;text-wrap:balance}
 .hero{font-size:clamp(28px,4.2vw,40px);margin:10px 0 10px;letter-spacing:-.01em}
 .libhead input{padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg);min-width:0;width:min(280px,100%)}
 .lib{list-style:none;margin:0;padding:0;display:grid;gap:8px}
-.lib .ctag{font-size:13px;color:var(--accent);font-weight:700;text-decoration:none}
+.lib .ctag{font-size:14px;color:var(--accent);font-weight:700;text-decoration:none}
 .lib a.ctag:hover,.lib a.ctag:focus-visible{text-decoration:underline}
 .sumtext .mx{display:inline-block;direction:ltr;unicode-bidi:isolate;vertical-align:middle}
 .sumtext .mx.d{display:block;text-align:center;margin:4px 0;overflow-x:auto}
@@ -166,7 +166,7 @@ h2{font-size:21px;margin:0;text-wrap:balance}
 .lib .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lib .m{grid-column:2;color:var(--muted);font-size:14px}
 .lib .acts{grid-row:1 / span 2;grid-column:3;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-.tag{font-size:12px;font-weight:600;border-radius:999px;padding:0 8px;margin-inline-start:6px;background:var(--sunk);color:var(--muted)}
+.tag{font-size:14px;font-weight:600;border-radius:999px;padding:0 8px;margin-inline-start:6px;background:var(--sunk);color:var(--muted)}
 .tag.run{background:color-mix(in srgb,var(--rec) 16%,transparent);color:var(--rec)}
 .tag.part{background:var(--warn-bg);color:var(--warn-fg)}
 .empty{color:var(--muted);padding:14px 2px}
@@ -237,7 +237,7 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .ctabs button{display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:center;text-align:start;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer;color:var(--fg)}
 .ctabs button .ic{grid-row:span 2;display:grid;place-items:center;width:38px;height:38px;border-radius:10px;background:var(--accent-soft);color:var(--accent)}
 .ctabs button b{font-size:16px}
-.ctabs button small{color:var(--muted);font-size:13px;line-height:1.3}
+.ctabs button small{color:var(--muted);font-size:14px;line-height:1.3}
 .ctabs button small.warn{color:var(--rec);font-weight:700}
 .ctabs button small.ok{color:var(--ok);font-weight:700}
 .ctabs button[aria-selected="true"]{background:var(--sunk)}   /* design 3: "where am I" is one shape everywhere: sunk paper, ink, 800 */
@@ -297,7 +297,7 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--accent)}   /* the board green, not the system blue */
 .tile{display:grid;gap:3px;text-align:start;padding:13px 16px;border:1.5px solid var(--line);border-radius:14px;background:var(--bg);color:var(--fg);font:inherit;cursor:pointer}
 .tile b{font-size:17px}
-.tile small{color:var(--muted);font-size:13.5px;line-height:1.4}
+.tile small{color:var(--muted);font-size:14px;line-height:1.4}
 .tile:hover,.tile:focus-visible{border-color:var(--accent)}
 .tile .tt{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .tile .rectag{background:var(--sunk);color:var(--muted);border-radius:999px;padding:1px 10px;font-size:12.5px;font-weight:700}   /* "recommended" is a word, not the selected look (soft green means a chosen option) */
@@ -312,7 +312,7 @@ input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--acce
 .fold{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
 .fold>summary{cursor:pointer;list-style:none;display:flex;align-items:baseline;gap:12px;padding:14px 18px;font-weight:700;font-size:17px}
 .fold>summary::-webkit-details-marker{display:none}
-.fold>summary::before{content:"\25C2";color:var(--muted);font-size:13px}
+.fold>summary::before{content:"\25C2";color:var(--muted);font-size:14px}
 .fold[open]>summary::before{content:"\25BE"}
 .fold>summary small{color:var(--muted);font-weight:400;font-size:14px}
 .fold>.card,.fold>.tbox{border:0;border-top:1px solid var(--line);border-radius:0 0 var(--r) var(--r)}
@@ -342,7 +342,7 @@ input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--acce
 .lines li.draft{color:var(--muted);font-style:italic}
 .lines li.draft .ts{color:var(--muted)}
 .lines li.hit{background:var(--now);color:var(--now-ink)}
-.ts{font-family:var(--f-mono);font-size:13px;color:var(--muted);direction:ltr;unicode-bidi:isolate;padding-top:3px;white-space:nowrap}
+.ts{font-family:var(--f-mono);font-size:14px;color:var(--muted);direction:ltr;unicode-bidi:isolate;padding-top:3px;white-space:nowrap}
 .side{display:grid;gap:12px;min-width:0}
 .side>*{min-width:0}
 /* the question box leads; the screenshot and its management come next, then what is photographed */
@@ -402,7 +402,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 .capcard .capstat b{color:var(--fg)}
 .capcard .btn{white-space:normal;text-align:start;max-width:100%}
 .capcard.paused{border-color:var(--rec);box-shadow:0 0 0 2px var(--rec) inset}
-.capcard .sub2{color:var(--muted);font-size:13.5px;margin:0;line-height:1.5}
+.capcard .sub2{color:var(--muted);font-size:14px;margin:0;line-height:1.5}
 .capcard select,.capcard input[type=text]{padding:7px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg);min-width:0;font:inherit;font-size:14.5px}
 .capcard .row input[type=text]{flex:1}
 .capcanvas{position:relative;direction:ltr;width:100%;aspect-ratio:16/9;background:var(--sunk);border:1px solid var(--line);border-radius:10px;overflow:hidden;touch-action:none;cursor:crosshair;user-select:none}
@@ -411,7 +411,7 @@ body.pipbody{min-height:0;font-size:15px;padding:10px;display:grid;gap:8px;grid-
 .capbox{position:absolute;border:2px solid var(--accent);background:rgba(31,122,85,.18);box-sizing:border-box}
 .capbox.blur{border-color:var(--rec);background:repeating-linear-gradient(45deg,rgba(194,65,45,.35) 0 6px,rgba(194,65,45,.15) 6px 12px)}
 .capbox .capx{position:absolute;top:-2px;right:-2px;width:22px;height:22px;border:0;border-radius:0 0 0 8px;background:var(--rec);color:var(--accent-ink);cursor:pointer;font-weight:700;line-height:1;padding:0}
-.shotdel{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 6px;text-decoration:underline}
+.shotdel{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;text-decoration:underline}
 .shotdel:hover{color:var(--rec)}
 .study .row .btn{flex:1 1 150px}
 /* the home screen: only the lecture types and "הקורסים שלי" - the tips and the how-to bar are gone (the settings and
@@ -441,7 +441,7 @@ input[dir="ltr"]::placeholder{direction:rtl;text-align:right}
 #setBody .optbox,#setBody .optbox2{background:transparent;border:0;border-top:1px solid var(--line);border-radius:0;padding:18px 0 0}
 #setBody .optbox:first-child,#setBody .optbox2:first-child,#setBody .setpanel>:first-child .optbox:first-child{border-top:0;padding-top:0}
 #setBody .optbox2.drag{background:var(--accent-soft);border-radius:12px;padding:12px 16px}
-.howcredit{color:var(--muted);font-size:13.5px;line-height:1.5;margin:14px 0 0}
+.howcredit{color:var(--muted);font-size:14px;line-height:1.5;margin:14px 0 0}
 .howteaser{margin:16px 0 0;display:grid;gap:8px;max-width:760px}
 .howteaser video:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 .howteaser video{width:100%;border-radius:14px;border:1px solid var(--line);background:#000;aspect-ratio:16/9}
@@ -468,7 +468,7 @@ label.miniopt{align-items:flex-start;flex-wrap:nowrap}label.miniopt>input[type="
 .gfix dd{margin:0;color:var(--muted)}
 @media (max-width:560px){.gfix{grid-template-columns:minmax(0,1fr)}.gfix dd{margin-bottom:6px}}
 .kk{unicode-bidi:isolate;white-space:nowrap}
-kbd{font-family:var(--f-mono);font-size:13px;background:var(--surface);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;direction:ltr;unicode-bidi:isolate}
+kbd{font-family:var(--f-mono);font-size:14px;background:var(--surface);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;direction:ltr;unicode-bidi:isolate}
 .optbox h2{margin:0;font-size:17px;font-weight:800}
 .optbox p{margin:0;font-size:15px;line-height:1.55;color:var(--muted)}
 .optbox ol{margin:0;padding-inline-start:20px;font-size:15px;line-height:1.6;display:grid;gap:2px}
@@ -518,7 +518,7 @@ html.a-still *,html.a-still *::before,html.a-still *::after{animation:none!impor
 .setpanel > details.card,.setpanel > .capcard{border:0;padding:0;box-shadow:none;background:none}
 .setpanel > details > summary{display:none}
 /* the floating window as large captions */
-.pipbody .pbtn{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:8px;padding:2px 9px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.pipbody .pbtn{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:8px;padding:2px 9px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
 body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1fr)}
 .pipbody.caps .card,.pipbody.caps .pshot{display:none}
 .pipbody.caps ol{background:#000;border-color:#444;font-size:calc(26px * var(--tx, 1))}
@@ -776,7 +776,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <details class="shotdelbox"><summary>מחיקת צילומים</summary>
           <div class="row" style="margin-top:8px" id="shotDelRow">
             <button class="btn danger small" id="shotDel" type="button" hidden>מחיקת הצילום הזה</button>
-            <span class="sub2" style="font-size:13.5px;color:var(--muted)">למחיקה של כמה:</span>
+            <span class="sub2" style="font-size:14px;color:var(--muted)">למחיקה של כמה:</span>
             <select id="shotDelMin" aria-label="כמה דקות אחורה"><option value="5">5 דקות אחרונות</option><option value="15">15 דקות</option><option value="30">30 דקות</option><option value="60">שעה אחרונה</option><option value="1440">כל ההרצאה</option></select>
             <button class="btn danger small" id="shotDelMany" type="button">מחיקה</button>
           </div></details></div>
@@ -968,7 +968,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <ol class="gsteps">
           <li><b>פתיחה מהירה:</b> כשפותחים את הבנתי (אחרי שהסכמתם פעם אחת ויש מפתח) נפתח חלון קטן באמצע המסך: בוחרים קורס (או <b>+ קורס חדש</b>) וסוג ולוחצים <b>התחל תמלול</b>, והתמלול רץ ברקע. <b>פתח את האפליקציה</b> פותח את מסך הבית בלי להתחיל כלום. אפשר לכבות את החלון הקטן ב<b>הגדרות</b>.</li>
           <li>או ב<b>בית</b>: לוחצים <b>התחל הרצאה</b>. זה פותח את אותו חלון התחלה מהירה (קורס, סוג: חיה בעברית, חיה באנגלית או מוקלטת, והתחלה). זו הדרך היחידה להתחיל הרצאה.</li>
-          <li>מפעילים את ההרצאה, גם במסך מלא. בקצה המסך מופיע כפתור עגול ירוק עם הלוגו, ונקודה אדומה קטנה שמראה שההרצאה מוקלטת.</li>
+          <li>מפעילים את ההרצאה, גם במסך מלא. בקצה המסך מופיע כפתור עגול ירוק עם הלוגו, ונקודה אדומה קטנה שמראה שההרצאה מוקלטת. הכפתור נשאר כל עוד הבנתי פועלת, וסגירת חלון האפליקציה לא סוגרת אותה. כדי לסגור את הבנתי לגמרי סוגרים את החלון השחור.</li>
           <li>התחלתם בלי קורס? אם על השקף הראשון כתוב שם של קורס שלכם, מופיעה הצעה (בחלון הקטן ובמסך ההרצאה): <b>להעביר</b> או <b>לא עכשיו</b>. אפשר גם לבחור קורס אחר במסך ההרצאה. ההרצאה עוברת לקורס כשעוצרים ושומרים אותה. שום דבר לא משתנה לבד.</li>
           <li>לוחצים עליו (או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>): החלון הקטן גדל מהכפתור, והלוגו הופך ל-X. כותבים שאלה ו-<kbd>Enter</kbd>. התשובה מופיעה מתחת, ומתחתיה "על מה זה מבוסס": תמונה קטנה של השקופית ושורה או שתיים מהתמלול, עם הזמן שלהן.</li>
           <li>בסוף: <b>עצירה</b> (במסך ההרצאה, בבית או בחלון הקטן, שם לוחצים פעמיים). הכל נשמר בקורס, וכרטיס "ההרצאה נשמרה בהצלחה" מופיע בחלון הקטן, או מעל הכפתור העגול אם החלון הקטן סגור.</li>
@@ -1058,7 +1058,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
   <h3 id="repT">דיווח על תקלה</h3>
   <p class="sub" style="margin:0">אלה הפרטים שעוזרים להבין מה קרה: הגרסה, המחשב ומה פועל, והשגיאות האחרונות. <b>שום דבר לא נשלח לבד</b>, ואין כאן את המפתח, תמלולים או שאלות. אפשר למחוק או להוסיף מה שרוצים. כתבו למעלה מה קרה, מה עשיתם רגע לפני ומה ציפיתם שיקרה.</p>
   <label for="repText" class="sub" style="display:block;margin:0">מה נכנס לדיווח</label>
-  <textarea class="gloss" id="repText" dir="auto" spellcheck="false" style="min-height:220px;font-size:13px"></textarea>
+  <textarea class="gloss" id="repText" dir="auto" spellcheck="false" style="min-height:220px;font-size:14px"></textarea>
   <div class="row"><button class="btn" id="repCopy" type="button">העתקה</button><a class="btn ghost" id="repGit" href="#" target="_blank" rel="noopener">פתיחת דיווח ב-GitHub</a><a class="btn ghost" id="repMail" href="#">שליחה במייל</a><button class="btn quiet" id="repClose" type="button" style="margin-inline-start:auto">סגירה</button></div>
   <details class="log" id="logBox"><summary>הודעות מהכלי (מה הכלי כתב מאז שנפתח)</summary><ol id="log"></ol></details>
   <p class="sub" style="margin:0">ב-GitHub: מדביקים (Ctrl+V) ושולחים (צריך חשבון GitHub). <span id="repMailHelp" hidden>במייל: נפתחת הודעה חדשה והטקסט מועתק, מדביקים בה (Ctrl+V) ושולחים בעצמכם. אין תוכנת דואר? כתובת: <span id="repAddr" dir="ltr"></span> <button class="btn quiet small" id="repAddrCopy" type="button">העתקת הכתובת</button></span><span id="repNoMail"> אפשר גם לשלוח את הטקסט למי שנתן לכם את הבנתי.</span></p>
@@ -1276,7 +1276,7 @@ async function copyImage(src) {
 const shotUrl = rel => "/shot?p=" + encodeURIComponent(rel);
 
 // ---------- what is photographed: the whole screen / one window / a part of the screen; pause; mosaic; delete ----------
-let capSig = "", capWins = [], capWinsAt = 0, capPurpose = "", capBoxes = [], capImg = "";
+let capSig = "", capWins = [], capWinsErr = false, capWinsAt = 0, capPurpose = "", capBoxes = [], capImg = "";
 const capOf = () => (app && app.capture) || {mode: "screen", window: "", region: null, blur: [], paused: false, found: true, hotkey: ""};
 async function capSend(d) {
   const r = await api("/api/cmd", Object.assign({action: "capture_set"}, d));
@@ -1289,7 +1289,8 @@ async function capPause() {
   toast(r.paused ? "צילום המסך הושהה. התמלול ממשיך, ושום תמונה לא נשמרת עד שממשיכים." : "צילום המסך חזר.");
 }
 async function capLoadWins() {
-  try { const r = await api("/api/cmd", {action: "capture_windows"}); capWins = r.windows || []; } catch (e) {}
+  capWinsErr = false;
+  try { const r = await api("/api/cmd", {action: "capture_windows"}); capWins = r.windows || []; } catch (e) { capWinsErr = true; }   // (an empty list that says why, not a silent one)
   capWinsAt = Date.now(); capSig = ""; drawCaps();
 }
 function capStatus(c) {
@@ -1337,6 +1338,8 @@ function drawCap(box, c) {
     for (const w of capWins) sel.appendChild(new Option(w.title.slice(0, 70) + (w.app ? " (" + w.app + ")" : ""), w.title));
     const ref = el("button", "btn ghost small", "רענון הרשימה"); ref.type = "button"; ref.onclick = capLoadWins;
     const r1 = el("div", "row"); r1.append(sel, ref); box.appendChild(r1);
+    if (capWinsErr) box.appendChild(el("p", "sub2", "לא הצלחתי לקבל את רשימת החלונות. אפשר לכתוב את הכותרת בעצמך, או ללחוץ על \"רענון הרשימה\"."));
+    else if (capWinsAt && !capWins.length) box.appendChild(el("p", "sub2", "אין עכשיו חלונות להצגה. אפשר לכתוב חלק מהכותרת בעצמך."));
     const inp = el("input"); inp.type = "text"; inp.value = c.window; inp.placeholder = "חלק מהכותרת של החלון, למשל Zoom"; inp.setAttribute("aria-label", "כותרת החלון");
     sel.onchange = () => { if (sel.value) inp.value = sel.value; };
     const save = el("button", "btn small", "שמירה"); save.type = "button"; save.onclick = () => capSend({mode: "window", window: inp.value});

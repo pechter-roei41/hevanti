@@ -2411,7 +2411,8 @@ def gemini_candidates(names):
 
     def rank(b):
         nums = re.findall(r"\d+(?:\.\d+)?", b)
-        return float(nums[0]) if nums else 0.0, "preview" not in b
+        # (the version first, a release before a preview, then the numbers after it: 001 before 002 - not left to the order Google lists them in)
+        return (float(nums[0]) if nums else 0.0), "preview" not in b, tuple(float(x) for x in nums[1:4])
     ok = [b for b in short if b.startswith("gemini") and "flash" in b and not any(x in b for x in _GEMINI_SKIP)]
     full = sorted((b for b in ok if "lite" not in b and "latest" not in b), key=rank, reverse=True)
     lite = sorted((b for b in ok if "lite" in b and "latest" not in b), key=rank, reverse=True)
@@ -2441,7 +2442,17 @@ def gemini_call(path, key, body=None, timeout=90):
     except TimeoutError:
         raise MathError("Gemini לא ענה בזמן. לנסות שוב עוד רגע.", 60, other=True)
     except (urllib.error.URLError, OSError, ValueError) as e:
-        raise MathError("אין חיבור ל-Gemini. ממשיך לבד אחר כך.", 60)
+        raise _net_error(e) or MathError("אין חיבור ל-Gemini. ממשיך לבד אחר כך.", 60)
+
+
+def _net_error(e):
+    """The URLError of a request that never reached Google, in words: a certificate or proxy the network puts in the way (a school or
+    office network that inspects the connection) is not "no internet"."""
+    import ssl
+    reason = getattr(e, "reason", e)
+    if isinstance(reason, ssl.SSLError) or "CERTIFICATE" in str(reason).upper() or "proxy" in str(reason).lower():
+        return MathError("הרשת מתערבת בחיבור המאובטח ל-Google (למשל רשת של מוסד או סינון). אפשר לנסות רשת אחרת, או להעתיק את השאלה לאפליקציית ה-AI שלך.")
+    return None
 
 
 def _google_error(raw):
@@ -2472,6 +2483,8 @@ def _gemini_http_error(e):
         m = re.search(r'"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"', raw)   # (Google says how long to wait)
         wait = min(int(float(m.group(1))) + 1, 300) if m else 65
         return MathError("הגעת למכסה החינמית של Gemini לדקה הזו.", wait, other=True, kind="quota")
+    if e.code == 407:   # a proxy that wants a sign-in, not Google
+        return MathError("הרשת דורשת הזדהות בשרת הביניים (פרוקסי) לפני שאפשר להגיע ל-Google. אפשר לנסות רשת אחרת, או להעתיק את השאלה לאפליקציית ה-AI שלך.")
     if e.code == 404:
         return MathError("המודל הזה של Gemini כבר לא זמין.", other=True)
     key_bad = "API_KEY_INVALID" in reasons or "api key not valid" in low or "api key expired" in low or "api_key_invalid" in raw.lower()
@@ -2495,9 +2508,9 @@ def _gemini_http_error(e):
 def gemini_models(key, timeout=30):
     """The models the key can use. `timeout` is for the whole list (a live question gives it PROBE_LIVE_S: the 25 s promise holds even
     when the network answers slowly - audit #13)."""
-    names, token, end = [], "", time.time() + timeout
+    names, token, end = [], "", time.monotonic() + timeout
     for _ in range(5):
-        left = end - time.time()
+        left = end - time.monotonic()
         if left <= 1:
             raise MathError("Gemini לא ענה בזמן. לנסות שוב עוד רגע.", other=True)
         d = gemini_call("models?pageSize=200" + (f"&pageToken={token}" if token else ""), key, timeout=min(30, left))
@@ -2657,8 +2670,8 @@ class MathReader(threading.Thread):
         w = _OCR if "_OCR" in globals() else None
         if w is None or w.ready is False:
             return True
-        end = time.time() + 90   # (Tesseract reads it in a few seconds, in the order the slides were saved)
-        while time.time() < end and path not in _OCR_STATS:
+        end = time.monotonic() + 90   # (Tesseract reads it in a few seconds, in the order the slides were saved)
+        while time.monotonic() < end and path not in _OCR_STATS:
             if os.path.basename(path) in read_ocr(os.path.dirname(path)):
                 break   # read, but without the numbers (the old way): decide from the text alone
             time.sleep(0.5)
@@ -2679,7 +2692,7 @@ class MathReader(threading.Thread):
             if not os.path.isfile(path) or name in read_math(sd):
                 continue
             if not self.worth_sending(path):   # clean printed text: Tesseract has it already, no need to spend quota
-                log_tokens("", None, 0, True, time.time(), kind="skip")
+                log_tokens("", None, 0, True, time.monotonic(), kind="skip")
                 with self.lock:
                     self.skipped += 1
                 continue
@@ -2687,7 +2700,7 @@ class MathReader(threading.Thread):
                 time.sleep(max(0.0, MATH_GAP_S - (time.time() - last)))
                 last = time.time()
                 try:
-                    text, model, usage, t0 = None, "", {}, time.time()
+                    text, model, usage, t0 = None, "", {}, time.monotonic()
                     for model in self.models_to_try(key, prefer_lite=True):   # a busy / retired model: the next one
                         try:
                             text = gemini_read(path, key, model, usage)
@@ -2958,7 +2971,7 @@ def log_tokens(model, usage, body_chars, ok, started, quota=False, kind="ask"):
     try:
         u = usage or {}
         row = {"t": time.strftime("%Y-%m-%d %H:%M:%S"), "kind": kind, "model": model, "ok": bool(ok), "quota": bool(quota),
-               "sec": round(time.time() - started, 1), "chars": body_chars,
+               "sec": round(time.monotonic() - started, 1), "chars": body_chars,
                "prompt": u.get("promptTokenCount"), "out": u.get("candidatesTokenCount"),
                "thoughts": u.get("thoughtsTokenCount"), "total": u.get("totalTokenCount")}
         TOKENS_FILE = os.path.join(LOCAL_DIR, "tokens.jsonl")
@@ -3035,7 +3048,7 @@ def gemini_stream(key, model, body, usage=None, timeout=None, read_timeout=None,
     except (urllib.error.URLError, OSError) as e:
         if isinstance(getattr(e, "reason", None), TimeoutError):
             raise MathError("Gemini לא ענה בזמן. לנסות שוב עוד רגע.", other=True)
-        raise MathError("אין חיבור ל-Gemini. לבדוק את האינטרנט.")
+        raise _net_error(e) or MathError("אין חיבור ל-Gemini. לבדוק את האינטרנט.")
     text_seen, block, finish = False, "", ""
     with r:
         lines = iter(r)
@@ -3087,6 +3100,18 @@ def tutor_image(d):
     return f
 
 
+CONTEXT_LIMIT = 1_500_000   # characters of lecture text sent in one question (about 500,000 tokens: what Gemini takes)
+
+
+def fit_context(text, whole_lecture):
+    """(the text, True when it was cut). A question keeps the END (the last minutes are what is asked about), a whole-lecture task
+    keeps the beginning. Never cut without saying so: the answer then starts with a line that says it."""
+    text = str(text or "")
+    if len(text) <= CONTEXT_LIMIT:
+        return text, False
+    return (text[:CONTEXT_LIMIT] if whole_lecture else text[-CONTEXT_LIMIT:]), True
+
+
 def tutor_body(d):
     """Earlier turns of this conversation, then this question with what was said (and the slide)."""
     import base64
@@ -3101,7 +3126,9 @@ def tutor_body(d):
         with open(img, "rb") as f:
             parts.append({"inline_data": {"mime_type": "image/png" if img.lower().endswith(".png") else "image/jpeg",
                                           "data": base64.b64encode(f.read()).decode("ascii")}})
-    parts.append({"text": str(d.get("context") or d.get("question") or "")[:1500000]})
+    ctx, cut = fit_context(d.get("context") or d.get("question"), bool(d.get("task")))
+    d["_cut"] = cut   # (the answer says so: see _ask)
+    parts.append({"text": ctx})
     contents.append({"role": "user", "parts": parts})
     ld = tutor_lecture_dir(d)
     course = os.path.basename(os.path.dirname(ld)) if ld else ""
@@ -5513,8 +5540,8 @@ def _place_quick_window(size):
         from ctypes import wintypes
         u = _mini_user32()
         u.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
-        end = time.time() + 20
-        while time.time() < end:
+        end = time.monotonic() + 20
+        while time.monotonic() < end:
             hwnd = _find_quick(u)
             if hwnd:
                 with _real_pixels(u) as rp:
@@ -5966,8 +5993,8 @@ def toggle_mini(hide_only=False, show_only=False):
                     args.append(f"--window-position={int(xy[0] / rp.scale)},{int(xy[1] / rp.scale)}")
             _MINI_PROC["proc"] = subprocess.Popen(args + ["--user-data-dir=" + prof, "--no-first-run",
                                                            "--no-default-browser-check", "--disable-extensions", "--disable-sync"])
-            end = time.time() + 15
-            while time.time() < end:
+            end = time.monotonic() + 15
+            while time.monotonic() < end:
                 time.sleep(0.05)
                 hwnd = _find_mini(u)
                 if hwnd:
@@ -6001,8 +6028,8 @@ def prewarm_mini():
             args = [exe, "--app=" + APP.link("mini"), f"--window-size={MINI_SIZE[0]},{MINI_SIZE[1]}", "--window-position=-32000,-32000"]
             _MINI_PROC["proc"] = subprocess.Popen(args + ["--user-data-dir=" + prof, "--no-first-run",
                                                            "--no-default-browser-check", "--disable-extensions", "--disable-sync"])
-            end = time.time() + 20
-            while time.time() < end:
+            end = time.monotonic() + 20
+            while time.monotonic() < end:
                 time.sleep(0.1)
                 hwnd = _find_mini(u)
                 if hwnd:
@@ -6680,8 +6707,8 @@ def place_window_left_third(match, timeout=10.0):
     area = wintypes.RECT()
     if not user32.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0):   # SPI_GETWORKAREA: without the taskbar
         return False
-    end = time.time() + timeout
-    while time.time() < end:
+    end = time.monotonic() + timeout
+    while time.monotonic() < end:
         found = []
 
         def each(hwnd, _):
@@ -6822,10 +6849,10 @@ def load_settings():
 
 def load_settings_patient(seconds=3.0):
     """Like load_settings, for a choice that is read once and kept: waits up to `seconds` for a file that another program holds."""
-    end = time.time() + seconds
+    end = time.monotonic() + seconds
     while True:
         d = _read_settings()
-        if d is not None or time.time() >= end:
+        if d is not None or time.monotonic() >= end:
             return d if d is not None else {}
         time.sleep(0.2)
 
@@ -9747,7 +9774,11 @@ def _app_handler():
                             APP.lib_rev += 1
                     return self._json(out)
                 if p == "/api/ask":   # the built-in tutor (a whole lecture can be sent with a task: a bigger body)
-                    return self._ask(self._body_json(limit=8 << 20))
+                    d = self._body_json(limit=8 << 20)
+                    if d.get("_too_big"):   # (not an empty question: say it)
+                        self.close_connection = True
+                        return self._json({"ok": False, "error": "הבקשה גדולה מדי (יותר מ-8MB). לשאול על קטע קצר יותר."}, 413)
+                    return self._ask(d)
                 if p == "/api/mini_context":   # the small window: the text to COPY to another AI app - the question with the last minutes. Sends nothing.
                     d = self._body_json()
                     question, minutes = mini_question(d)
@@ -9794,7 +9825,7 @@ def _app_handler():
                         d = dict(d, context=str(d.get("context") or "") + "\n" + note)
                 body = tutor_body(d)
                 pieces, first, last_err, quota_err = None, "", None, None
-                usage, started, chars, used, info = {}, time.time(), len(json.dumps(body, ensure_ascii=False)), "", {}
+                usage, started, chars, used, info = {}, time.monotonic(), len(json.dumps(body, ensure_ascii=False)), "", {}
                 task = bool(d.get("task"))   # (a whole lecture takes longer to start, and may try more models)
                 models = reader.models_to_try(key, quick=not task)   # (a live question does not wait long to find the models)
                 spare = []   # the light model, tried once more only when the quota stopped the others (it has a quota of its own)
@@ -9803,13 +9834,15 @@ def _app_handler():
                     models = models[:GEMINI_LIVE_MODELS]   # a live question: two models at most - each try costs quota and time
                 deadline = started + (GEMINI_TASK_DEADLINE_S if task else GEMINI_LIVE_DEADLINE_S)   # ...and this long all together
                 for model in models:   # busy / retired / slow today: the next model
-                    left = deadline - time.time()
+                    left = deadline - time.monotonic()
                     if last_err is not None and left < 1:
                         break
                     try:
                         pieces = gemini_stream(key, model, body, usage, min(GEMINI_TASK_START_S if task else GEMINI_START_S, max(1.0, left)),
                                                info=info)
                         first = next(pieces, "")
+                        if not first.strip() and not info.get("warn"):   # (an empty answer with no reason given: the next model, not "no answer")
+                            raise MathError("Gemini החזיר תשובה ריקה.", other=True)
                         reader.worked(model)
                         used = model
                         break
@@ -9847,6 +9880,8 @@ def _app_handler():
                 except Exception:
                     save_error("answer sources")
             self.end_headers()
+            if d.get("_cut"):
+                first = ("(ההרצאה ארוכה מאוד, ולכן נשלח רק " + ("הקטע הראשון שלה" if d.get("task") else "הקטע האחרון שלה") + ".)\n\n") + first
             out, ok = [first], True
             try:
                 self.wfile.write(first.encode("utf-8"))
@@ -10065,8 +10100,8 @@ def _front_quick_window():
         return
     try:
         u = _mini_user32()
-        end = time.time() + 10
-        while time.time() < end:
+        end = time.monotonic() + 10
+        while time.monotonic() < end:
             hwnd = _find_quick(u)
             if hwnd:
                 time.sleep(0.4)   # (placed in the middle first)
@@ -10116,8 +10151,8 @@ def _nudge_paint(u, hwnd):
 def _watch_app_window(u, before):
     """The window that just opened for the app: found by its title, remembered (the tool closes it, and closes itself
     when the student closes it)."""
-    end = time.time() + 20
-    while time.time() < end:
+    end = time.monotonic() + 20
+    while time.monotonic() < end:
         time.sleep(0.25)
         for h, title in _chrome_windows(u).items():
             if h not in before and "127.0.0.1" in title:
@@ -10630,8 +10665,8 @@ def suggest_course_from_slide(sess, ldir, timeout_s=15 * 60):
     """A lecture that started with no course: the text of its first slide (read here, with Tesseract) may carry a course name. The
     course is OFFERED (sess.suggest), never applied by itself, once per lecture."""
     slides = os.path.join(ldir, SLIDES_NAME)
-    end = time.time() + timeout_s
-    while time.time() < end and not sess.stop.is_set() and not sess.suggest_off and not sess.pending_course:
+    end = time.monotonic() + timeout_s
+    while time.monotonic() < end and not sess.stop.is_set() and not sess.suggest_off and not sess.pending_course:
         time.sleep(SUGGEST_POLL_S)
         try:
             files = sorted(f for f in os.listdir(slides) if f.lower().endswith((".jpg", ".jpeg", ".png")))
