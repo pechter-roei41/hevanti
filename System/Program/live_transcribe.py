@@ -8420,6 +8420,9 @@ class App:
             import urllib.parse
             ok = open_app_window(self.link("#t=" + urllib.parse.quote(f, safe=""))) if self.url and os.environ.get("BZM_NO_BROWSER") != "1" else False
             return {"ok": True, "opened": ok}
+        if a == "open_settings":   # "paste a key" in the small window (no key): the app opens on the settings, where the key is the first tab
+            ok = open_app_window(self.link("#settings")) if self.url and os.environ.get("BZM_NO_BROWSER") != "1" else False
+            return {"ok": True, "opened": ok}
         if a == "consent_seen":   # the student agreed (the page keeps it in the browser; the server needs to know too, to open the quick-start window)
             if not load_settings().get("consent_ok"):
                 save_settings(consent_ok=True)

@@ -222,6 +222,8 @@ A small always-on-top window with the same tokens: a title bar, the course name 
 
 The course offer (a course read from the first slide) is a quiet strip: Sunk Paper, Ink text, a ghost "להעביר" and a ghost "לא עכשיו" (green text and edge), in the small window under the title and in the live view next to the course field.
 
+The ★ confirms on the button itself: it fills with the Mark Line colour for 1.2 s (with the pop, still when motion is off); the "סומן" card stays for the screen reader. The 3/7/15 pills and the course-offer buttons are 36 px high, 8 px apart. With no key, the window shows one line and one ghost button "הדבקת מפתח" (it opens the app on the settings) instead of a paragraph; the placeholder says to write and choose where to copy. The title row wraps its buttons under the course name instead of squeezing it, and the full name is the tooltip. Esc takes back an open question (stop, "delete?", close) before it hides the window; the hovered "לעצור?" keeps its red on the Sheet, never on Green Soft (4.16:1).
+
 The stop button of the small window is a quiet ghost button in the title row ("עצירה"); the first press turns it to "לעצור?" with a Recording Red edge and text for 3 seconds, the second stops. When the lecture is saved a card replaces the question box: a Green Soft round chip with a green check, "ההרצאה נשמרה בהצלחה" (bold), the course, minutes and slides in Muted, a ghost "פתיחת ההרצאה באפליקציה" and a ghost "סגירה". The same card shape (Sheet, 1px Hairline, a Green Soft chip with a check, never yellow) shows above the place of the round button, drawn as a native window, when the small window is closed.
 
 ### The Floating Button
