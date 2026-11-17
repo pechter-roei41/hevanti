@@ -750,12 +750,17 @@ with sync_playwright() as p:
         lp.wait_for_selector("#pastAsk .ais button", timeout=8000)
         r = lp.evaluate("""() => { const probe = document.createElement('i'); probe.style.background = 'var(--accent-soft)'; document.body.appendChild(probe);
             const soft = getComputedStyle(probe).backgroundColor; probe.style.background = 'var(--accent)'; const green = getComputedStyle(probe).backgroundColor; probe.remove();
-            const st = getComputedStyle(document.querySelector('#pastStudy')), main = getComputedStyle(document.querySelector('.tile.main'));
+            const st = getComputedStyle(document.querySelector('#pastStudy')), main = getComputedStyle(document.querySelector('#pastStudy .tile'));
             return {soft, green, mainBg: main.backgroundColor, studyBorder: st.borderTopWidth, studyBg: st.backgroundColor, studyPad: st.paddingTop,
                     nested: document.querySelectorAll('#vPast .card .card, #vPast .card .tile, #pastStudy.card').length,
                     tiles: [...document.querySelectorAll('#pastStudy .tile')].filter(t => !t.hidden).length, tileBorder: getComputedStyle(document.querySelector('.tile')).borderTopWidth,
                     solid: [...document.querySelectorAll('#vPast button, #vPast a.btn')].filter(x => x.offsetParent !== null && getComputedStyle(x).backgroundColor === green).map(x => x.textContent.trim())}; }""")
-        check(f"lecture page, {theme}: the summary card is soft green, not solid", r["mainBg"] == r["soft"] and r["mainBg"] != r["green"], r)
+        check(f"lecture page, {theme}: the summary card is not soft green (that is the look of a chosen option) and not solid; a 'מומלץ' pill marks it instead",
+              r["mainBg"] != r["soft"] and r["mainBg"] != r["green"] and lp.evaluate("document.querySelector('[data-study=summary] .rectag')?.textContent") == "מומלץ"
+              and lp.evaluate("document.querySelectorAll('#pastStudy .rectag').length") == 1, r)
+        check(f"lecture page, {theme}: the first-time tip is not shown on the lecture page, and is on the home page",
+              lp.evaluate("document.querySelector('#tipSet').hidden") is True and lp.evaluate("show('home'), document.querySelector('#tipSet').hidden") is False)
+        lp.evaluate("openPast('c/t')"); lp.wait_for_timeout(600)
         check(f"lecture page, {theme}: what holds the three study cards is not a card (no border, no fill, no padding), and no card is inside a card",
               r["studyBorder"] == "0px" and r["studyBg"] == "rgba(0, 0, 0, 0)" and r["studyPad"] == "0px" and r["nested"] == 0, r)
         check(f"lecture page, {theme}: the three cards are still cards (a border each)", r["tiles"] == 3 and r["tileBorder"] != "0px", r)
