@@ -1040,6 +1040,24 @@ def gpu_public():
     return {"cards": GPU["cards"], "libs_ok": GPU["libs_ok"], "state": GPU["state"], "msg": GPU["msg"]}
 
 
+def gpu_fail_note(out):
+    """A short line in plain Hebrew for the screen from pip's text (the whole text is in the error log): never a download address or a file name."""
+    t = out or ""
+    low = t.lower()
+    if "require-hashes" in low or "must have their versions pinned" in low or "do not match the hashes" in low or "hash" in low and "expected" in low:
+        return "קובץ ההתקנה של הכרטיס לא תקין. אפשר לדווח על תקלה."
+    if any(w in low for w in ("connection", "timed out", "timeout", "temporary failure", "name resolution", "ssl", "proxy", "max retries")):
+        return "אין חיבור יציב לאינטרנט."
+    if "no space left" in low or "disk full" in low or "errno 28" in low:
+        return "אין מספיק מקום בכונן."
+    if "permission" in low or "access is denied" in low or "errno 13" in low:
+        return "אין הרשאה לכתוב בתיקייה של הבנתי."
+    last = ([l for l in t.splitlines() if l.strip()] or ["pip failed"])[-1]
+    last = re.sub(r"https?://\S+", "", last)
+    last = re.sub(r"\s+", " ", last).strip(" (:,-")
+    return last[:80] + ("..." if len(last) > 80 else "")
+
+
 def gpu_install():
     """One click: NVIDIA's cuBLAS and cuDNN (about 1 GB, from PyPI) into Hevanti's own Python - what install_gpu.bat does."""
     if GPU["state"] == "installing":
@@ -1056,9 +1074,11 @@ def gpu_install():
             if r.returncode == 0:
                 GPU["state"], GPU["msg"] = "done", ""
             else:
-                GPU["state"], GPU["msg"] = "failed", ((r.stderr or r.stdout or "").strip().splitlines() or ["pip failed"])[-1][:200]
+                out = (r.stderr or r.stdout or "").strip()
+                save_error("GPU libraries install failed: " + out[-1500:])   # (the whole pip text goes to the log; the screen gets a short line)
+                GPU["state"], GPU["msg"] = "failed", gpu_fail_note(out)
         except Exception as e:
-            GPU["state"], GPU["msg"] = "failed", f"{e.__class__.__name__}: {str(e)[:160]}"
+            GPU["state"], GPU["msg"] = "failed", gpu_fail_note(f"{e.__class__.__name__}: {e}")
     threading.Thread(target=run, daemon=True).start()
 
 
@@ -8444,12 +8464,14 @@ class App:
                 if os.name == "nt":
                     try:
                         if _find_quick(_mini_user32()):
+                            if d.get("minimize_app"):   # (started from the app: it steps aside here too)
+                                threading.Thread(target=_minimize_app_then_front_quick, daemon=True).start()
                             return {"ok": True, "opened": False, "already": True}
                     except Exception:
                         pass
                 ok = open_app_window(self.link("quick"), size=QUICK_SIZE, center=True, profile=quick_profile_dir(), track=False)
                 if ok:
-                    threading.Thread(target=_front_quick_window, daemon=True).start()
+                    threading.Thread(target=_minimize_app_then_front_quick if d.get("minimize_app") else _front_quick_window, daemon=True).start()
                 return {"ok": True, "opened": ok}
             return {"ok": True, "opened": False}
         if a == "quick_close":   # the quick-start window is done (a lecture started)
@@ -10113,6 +10135,42 @@ def _front_quick_window():
             time.sleep(0.1)
     except Exception:
         save_error("bring the quick window to the front")
+
+
+def minimize_app_window():
+    """Windows: the window of the app goes to the taskbar (the quick-start window stays alone on the screen). It is minimized, not closed: the black window
+    and the floating button keep running, and a click on its taskbar icon brings the app back. False when it is not found (nothing is guessed)."""
+    if os.name != "nt":
+        return False
+    try:
+        u = _mini_user32()
+        h = _APP_WIN.get("hwnd") or 0
+        if not h or not u.IsWindow(h):
+            return False
+        u.ShowWindow(h, 6)   # SW_MINIMIZE
+        return True
+    except Exception:
+        save_error("minimize the app window")
+        return False
+
+
+def _minimize_app_then_front_quick():
+    """After "start a lecture" in the app: when the quick-start window is up, the app steps aside, and the quick window gets the keyboard."""
+    if os.name != "nt":
+        return
+    try:
+        u = _mini_user32()
+        end = time.monotonic() + 10
+        while time.monotonic() < end:
+            if _find_quick(u):
+                break
+            time.sleep(0.1)
+        else:
+            return   # (the quick window did not come up: the app stays where it is)
+        minimize_app_window()
+    except Exception:
+        save_error("minimize the app for the quick window")
+    _front_quick_window()
 
 
 def _bring_front(u, hwnd):

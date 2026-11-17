@@ -78,18 +78,25 @@ with sync_playwright() as p:
     pg.evaluate("openPast('c/t')")
     pg.wait_for_timeout(800)
     check("marks tab: shown when the lecture has marks", not pg.evaluate("document.querySelector('#pastTabs').hidden"))
-    check("after the lecture: the Q&A tab is first when marks wait for an answer", not pg.evaluate("document.querySelector('#pastPanelQa').hidden") and pg.evaluate("document.querySelector('#pastPanelStudy').hidden"))
-    check("...and it lists each mark as a question put off, with a button", pg.evaluate("document.querySelectorAll('#pastPending .pend').length") == 2
-          and "הסבר לי את הרגע הזה" in pg.evaluate("document.querySelector('#pastPending .pend button').textContent"))
+    check("after the lecture: with no questions asked yet, the study tab is first (marks have a tab of their own), and there is no Q&A tab",
+          pg.evaluate("document.querySelector('#pastPanelQa').hidden") and not pg.evaluate("document.querySelector('#pastPanelStudy').hidden")
+          and pg.evaluate("document.querySelector('#pastTabs [data-pt=qa]').hidden"))
+    check("the marks are in one place: no study card for them, and no list of waiting marks in the Q&A tab",
+          pg.evaluate("document.querySelector('#studyMarks')") is None and pg.evaluate("document.querySelector('#pastPending')") is None
+          and pg.evaluate("[...document.querySelectorAll('#pastStudy .tile')].filter(t => !t.hidden).length") == 3)
+    pg.click("[data-pt=marks]")
+    check("...the marks tab lists each mark with 'in the transcript' and 'explain'", pg.evaluate("document.querySelectorAll('#pastMkList .mk').length") == 2
+          and pg.evaluate("[...document.querySelectorAll('#pastMkList .mk')].every(r => r.querySelectorAll('button').length === 2 && r.querySelectorAll('button')[1].textContent === 'הסבר')"))
     asked = []
     pg.route("**/api/ask", lambda r: (asked.append(json.loads(r.request.post_data)), r.fulfill(status=200, content_type="text/plain; charset=utf-8", body="הסבר קצר לרגע")))
     pg.evaluate("BZMAsk.setBuiltin(true)")
-    pg.click("#pastPending .pend button")
+    pg.click("#pastMkList .mk:first-child button:nth-of-type(2)")
     pg.wait_for_timeout(900)
     check("a mark's question goes with the minutes around it only (not the whole lecture), titled with its time",
           len(asked) == 1 and asked[0]["question"].startswith("★ הרגע 00:20") and "שורה מספר 3" in asked[0]["context"] and "שורה מספר 11" not in asked[0]["context"], asked and asked[0]["context"][:300])
-    check("...its answer is kept in the Q&A tab and that mark is no longer waiting", pg.evaluate("document.querySelectorAll('#pastPending .pend').length") == 1
-          and pg.evaluate("document.querySelector('#pastQaList').innerText").count("הסבר קצר לרגע") == 1, pg.evaluate("document.querySelector('#pastQaList').innerText"))
+    check("...its answer is kept in the Q&A tab, and that mark's button now says 'more explanation'", pg.evaluate("document.querySelector('#pastQaList').innerText").count("הסבר קצר לרגע") == 1
+          and pg.evaluate("document.querySelector('#pastMkList .mk:first-child button:nth-of-type(2)').textContent") == "הסבר נוסף"
+          and pg.evaluate("document.querySelector('#pastMkList .mk:nth-child(2) button:nth-of-type(2)').textContent") == "הסבר", pg.evaluate("document.querySelector('#pastQaList').innerText"))
     pg.click("[data-pt=marks]")
     rows = pg.evaluate("[...document.querySelectorAll('#pastMkList .mk')].map(x => x.innerText)")
     check("marks tab: a row per mark, with what was said before", len(rows) == 2 and "לפני הסימון נאמר" in rows[0] and "לא הבנתי" in rows[0] and "חשוב" in rows[1], rows)
@@ -797,6 +804,12 @@ with sync_playwright() as p:
         check(f"lecture page, {theme}, the question box open: 'answer here' is the one solid green control", r["solid"] == ["תשובה כאן"], r["solid"])
         lead = lp.evaluate("document.querySelector('#studyLead').textContent")
         check(f"lecture page, {theme}: with a key, the line over the study cards says where a click goes (Gemini, answer below)", "ל-Gemini" in lead and "למטה" in lead, lead)
+        q = lp.evaluate("""() => { const calls = []; pastText = () => "x".repeat(50000); pastAskBox.askHere = (t, o) => { calls.push(o.title); };
+            const card = document.querySelector('[data-study=exam]');
+            card.click(); const first = {calls: calls.length, hint: document.querySelector('#studyHint').hidden ? "" : document.querySelector('#studyHint').textContent};
+            card.click(); return {first, second: calls.slice()}; }""")
+        check(f"lecture page, {theme}: a long lecture does not spend the free quota on the first press (it asks to press again), and the second press goes",
+              q["first"]["calls"] == 0 and "לוחצים שוב" in q["first"]["hint"] and "אלף תווים" in q["first"]["hint"] and q["second"] == ["מבחן דמה"], q)
         check(f"lecture page, {theme}: no script errors", lp.errs == [], lp.errs)
         lp.context.close()
 
@@ -846,6 +859,22 @@ with sync_playwright() as p:
         gpu_state["gpu"] = {"cards": 1, "libs_ok": False, "state": st, "msg": ""}
         r = gpu_seen("how")
         check(f"capsule, state {st}: its button says '{word}'", r["pill"] and word in r["pillText"] and r["installs"] == 1, r)
+    # a failed install: a long message wraps inside the bar (never beyond the screen), and the student can close it
+    gpu_state["gpu"] = {"cards": 1, "libs_ok": False, "state": "failed", "msg": "x" * 400 + " nvidia-cuda-nvrtc-cu12-12.9.86-py3-none-win_amd64.whl"}
+    gp.set_viewport_size({"width": 700, "height": 800})
+    gp.evaluate("app.gpu = " + json.dumps(gpu_state["gpu"]) + "; location.hash = ''; show('home'); drawGpu(app)")
+    gp.wait_for_timeout(300)
+    wr = gp.evaluate("""() => { const b = document.querySelector('#gpuBar'), r = b.getBoundingClientRect(), x = document.querySelector('#gpuX');
+        return {shown: !b.hidden, right: Math.round(r.right), left: Math.round(r.left), vw: innerWidth, over: document.documentElement.scrollWidth - innerWidth, x: x && !x.hidden}; }""")
+    check("a failed install: the long message stays inside the bar and the page does not scroll sideways, and there is a close button",
+          wr["shown"] and wr["left"] >= 0 and wr["right"] <= wr["vw"] and wr["over"] <= 0 and wr["x"], wr)
+    gp.click("#gpuX")
+    gp.wait_for_timeout(200)
+    check("...closing it hides the message (the capsule on the other pages still offers another try)", gp.evaluate("document.querySelector('#gpuBar').hidden"))
+    gp.evaluate("app.gpu = {cards: 1, libs_ok: false, state: 'installing', msg: ''}; drawGpu(app)")
+    gpu_state["gpu"] = {"cards": 1, "libs_ok": False, "state": "failed", "msg": "קצר"}
+    gp.evaluate("app.gpu = " + json.dumps(gpu_state["gpu"]) + "; drawGpu(app)")
+    check("...and a new failure after a new try shows again", not gp.evaluate("document.querySelector('#gpuBar').hidden"))
     check("graphics-card capsule: no script errors", gp.errs == [], gp.errs)
     gp.context.close()
 
