@@ -44,7 +44,10 @@
 .askp .qa .a .sp{height:.5em}
 .askp .qa.err .a{color:var(--rec)}
 .askp .convbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.askp .convbar button{border:0;background:none;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;font-size:13px;padding:0}
+.askp .convbar button{border:0;background:none;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;font-size:13px;padding:4px 8px;min-height:28px}
+.askp .keyrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.askp .keyrow button{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:12px;padding:4px 14px;min-height:36px;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.askp .keyrow button:hover{background:var(--accent-soft)}
 .askp .followbar{display:flex;gap:6px;flex-wrap:wrap}
 .askp .followbar:not(:has(button:not([hidden]))){display:none}
 .askp .more{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;padding:3px 12px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
@@ -242,6 +245,11 @@
     const row = mk("div", "ais"); row.setAttribute("role", "group"); row.setAttribute("aria-label", "לאן לשלוח");
     const COPY_HINT = "הלחיצה מעתיקה את השאלה עם מה שנאמר ופותחת את האפליקציה (אם היא מותקנת) או את האתר בשליש המסך - שם Ctrl+V ושליחה.";
     const hint = mk("p", "hint", COPY_HINT);
+    // the small window with no key: one line and one button to get it (the way is in the window, not in a paragraph)
+    const keyrow = mk("div", "keyrow"); keyrow.hidden = true;
+    const keyBtn = mk("button", "", "הדבקת מפתח (בערך דקה)"); keyBtn.type = "button";
+    keyBtn.addEventListener("click", () => { if (opts.onKey) opts.onKey(); });
+    keyrow.append(mk("span", "", "אין עדיין מפתח Gemini, אז אי אפשר לענות כאן."), keyBtn);
     const buttons = {};
     // ---- the answer inside Hevanti (built-in, free Gemini key) ----
     const here = mk("button", "here", "תשובה כאן"); here.type = "button";
@@ -367,7 +375,11 @@
       here.hidden = !AI.builtin;
       here.classList.toggle("alt", AI.builtin && !hereDefault());   // a paid plan: the AI apps first, this one second
       planBox.hidden = !(AI.external && AI.planKnown && !AI.plan);
-      hint.textContent = !AI.builtin ? "כדי לקבל תשובה כאן, בתוך הבנתי: בהגדרות ← מפתח (בערך דקה). עד אז אפשר להעתיק את השאלה ל-AI אחר. " + COPY_HINT
+      const lone = !!(opts.compact && opts.onKey && !AI.builtin);   // the small window, no key
+      keyrow.hidden = !lone;
+      ta.placeholder = lone ? "כותבים שאלה ובוחרים לאן להעתיק" : (opts.placeholder || "מה לא ברור?");
+      hint.textContent = lone ? "הלחיצה מעתיקה את השאלה עם מה שנאמר ופותחת את ה-AI. שם Ctrl+V ושליחה."
+        : !AI.builtin ? "כדי לקבל תשובה כאן, בתוך הבנתי: בהגדרות ← מפתח (בערך דקה). עד אז אפשר להעתיק את השאלה ל-AI אחר. " + COPY_HINT
         : hereDefault() ? "\"תשובה כאן\": Gemini עונה בתוך הבנתי, עם מה שנאמר" + (opts.hasImage ? " והשקופית" : "") + (AI.external ? ". הכפתורים האחרים מעתיקים את השאלה ל-AI אחר." : ".")
         : COPY_HINT + ' "תשובה כאן" עונה במכסה החינמית.';
       const names = connectedNames();
@@ -460,7 +472,7 @@
     refresh();
     // like a chat: the conversation first (it grows downward), the box to write in under it
     if (opts.noHead) head.hidden = true;   // (design 3: a box inside a fold whose title already says it does not repeat the title)
-    box.append(head, planBox, conn, conv, ready, follow2, ta, row, convbar, chips, hint);
+    box.append(head, planBox, conn, conv, ready, follow2, ta, keyrow, row, convbar, chips, hint);
     // a question made ready (a button of the page): for the built-in answer straight away, otherwise written in the box
     function ask(q, extra) { if (hereDefault()) askHere(q, extra); else { ta.value = q; ta.focus(); } }
     return {focus: () => ta.focus(), textarea: ta, refresh, askHere, ask, builtin: hereDefault, reset: resetChat};

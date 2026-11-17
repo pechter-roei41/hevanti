@@ -367,6 +367,12 @@ with sync_playwright() as p:
     mini.goto(url + "/mini")
     mini.wait_for_timeout(1200)
     check("floating window: the question box and the ★ mark (no '?')", mini.is_visible("textarea") and mini.is_visible("#markImp") and mini.query_selector("#markLost") is None)
+    check("floating window: the title carries its full text as a tooltip (a long course name is cut by the width)",
+          mini.evaluate("() => { const e = document.querySelector('#lec'); return !!e.textContent && e.title === e.textContent; }"))
+    mini.set_viewport_size({"width": 320, "height": 480})
+    narrow = mini.evaluate("() => ({over: document.documentElement.scrollWidth - innerWidth, lec: document.querySelector('#lec').getBoundingClientRect().width, wraps: document.querySelector('header').getBoundingClientRect().height > 40})")
+    check("floating window at 320 px: no sideways scroll, and the course name keeps at least 100 px (the buttons wrap under it instead of squeezing it)", narrow["over"] <= 0 and narrow["lec"] >= 100, narrow)
+    mini.set_viewport_size({"width": 420, "height": 640})
     run_meta = mini.evaluate("() => document.querySelector('meta[name=bzm-run]').content")
     live_run = json.loads(urllib.request.urlopen(url + "/api/app").read().decode("utf-8")).get("run")
     check("floating window: it knows which run of Hevanti gave it the page (a window left open from an earlier run reloads itself)", run_meta == live_run and live_run, (run_meta, live_run))
@@ -386,7 +392,13 @@ with sync_playwright() as p:
                 want: getComputedStyle(document.documentElement).getPropertyValue('--mark-line').trim(), centred: Math.abs((e.getBoundingClientRect().left + e.getBoundingClientRect().right) / 2 - innerWidth / 2) < 3,
                 narrower: e.getBoundingClientRect().width < innerWidth - 20}; }""")
     check("floating window: the mark message is a card with a yellow ★ (the highlighter colour) and the word, in the middle, not a bar across", toast["on"] and toast["star"] == "★" and "סומן" in toast["text"] and toast["centred"] and toast["narrower"], toast)
-    mini.wait_for_timeout(3300)   # (the message goes away)
+    flash = mini.evaluate("""() => { const b = document.querySelector('#markImp'), c = getComputedStyle(b), want = getComputedStyle(document.documentElement).getPropertyValue('--mark-line').trim();
+        const probe = document.createElement('i'); probe.style.background = want; document.body.appendChild(probe); const w = getComputedStyle(probe).backgroundColor; probe.remove();
+        return {done: b.classList.contains('done'), bg: c.backgroundColor, want: w}; }""")
+    check("floating window: the ★ button itself shows the mark, in the highlighter colour, for a moment", flash["done"] and flash["bg"] == flash["want"], flash)
+    mini.wait_for_timeout(1500)
+    check("floating window: ...and goes back to its own look after 1.2 seconds", not mini.evaluate("document.querySelector('#markImp').classList.contains('done')"))
+    mini.wait_for_timeout(1800)   # (the message goes away)
     mini_state["mark_n"] = 1   # a mark made with Ctrl+Alt+M: Hevanti's count goes up, and the window says it too
     try:   # (the window looks every 4 seconds: wait for the message, not for a fixed time)
         mini.wait_for_function("() => document.querySelector('#toast').classList.contains('on') && document.querySelector('#toast .star') !== null", timeout=7000)
@@ -405,6 +417,13 @@ with sync_playwright() as p:
     mini.click("#stopBtn")
     check("floating window: the first press only asks (a short word, so the course name is not cut), and nothing stops yet",
           mini.inner_text("#stopBtn") == "לעצור?" and not any(m.get("action") == "stop" for m in marked), marked)
+    mini.keyboard.press("Escape")
+    check("floating window: Esc takes back the stop question first, and does not hide the window",
+          mini.inner_text("#stopBtn") == "עצירה" and not any(m.get("action") == "hide_mini" for m in marked), marked)
+    mini.click("#stopBtn"); mini.hover("#stopBtn")
+    st = mini.evaluate("""() => { const b = document.querySelector('#stopBtn'), c = getComputedStyle(b), p = document.createElement('i'); p.style.background = 'var(--accent-soft)'; document.body.appendChild(p);
+        const soft = getComputedStyle(p).backgroundColor; p.remove(); return {bg: c.backgroundColor, soft, text: b.textContent}; }""")
+    check("floating window: the hovered stop question keeps its red readable (not on the soft green: 4.16:1)", st["text"] == "לעצור?" and st["bg"] != st["soft"], st)
     mini.wait_for_timeout(3400)
     check("floating window: not pressed again - it goes back to \"עצירה\" after 3 seconds", mini.inner_text("#stopBtn") == "עצירה" and not any(m.get("action") == "stop" for m in marked))
     mini.click("#stopBtn"); mini.click("#stopBtn")
@@ -548,6 +567,16 @@ with sync_playwright() as p:
     mini_state["ask"] = False
     mini.evaluate("pollApp()")
     mini.wait_for_selector("button[data-ai=gemini]", state="visible", timeout=10000)
+    nk = mini.evaluate("""() => { const r = document.querySelector('.keyrow'), k = r && r.querySelector('button'); return {shown: !!r && !r.hidden, btn: k ? k.textContent : "", ph: document.querySelector('textarea').placeholder,
+        hint: document.querySelector('.askp > .hint').textContent.length, h: k ? Math.round(k.getBoundingClientRect().height) : 0}; }""")
+    check("floating window, no key: one line and one button get the key (not a paragraph), the placeholder is honest, the button is 36 px high",
+          nk["shown"] and "הדבקת מפתח" in nk["btn"] and "Enter לשליחה" not in nk["ph"] and nk["hint"] < 90 and nk["h"] >= 36, nk)
+    marked.clear()
+    mini.click(".keyrow button")
+    mini.wait_for_timeout(500)
+    check("floating window, no key: 'paste a key' opens the app on the settings, and the window steps aside",
+          any(m.get("action") == "open_settings" for m in marked) and any(m.get("action") == "hide_mini" for m in marked), marked)
+    marked.clear()
     mini.fill("textarea", "מה זה?")
     mini.click("button[data-ai=gemini]")
     mini.wait_for_timeout(1500)

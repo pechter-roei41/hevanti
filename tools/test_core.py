@@ -444,6 +444,7 @@ _lec = os.path.join(L.course_dir("אלגוריתמים"), "הרצאה לפתיח
 os.makedirs(_lec, exist_ok=True)
 open(os.path.join(_lec, "הרצאה לפתיחה.txt"), "w", encoding="utf-8").write("# x\n")
 check("open the lecture: a lecture that is there is accepted (the window itself opens only on Windows)", L.APP.command({"action": "open_lecture", "f": "אלגוריתמים/הרצאה לפתיחה"}).get("ok") is True)
+check("open the settings (the key button of the small window): accepted; the window itself opens only on Windows", L.APP.command({"action": "open_settings"}).get("ok") is True)
 _ss = L.Session("live", "he", "", L.NO_COURSE)
 _ss.saved = {"course": "פיזיקה", "minutes": 46, "slides": 9, "f": "פיזיקה/x"}
 check("saved: the session info carries what was saved (course, minutes, slides, the lecture)", _ss.info()["saved"] == {"course": "פיזיקה", "minutes": 46, "slides": 9, "f": "פיזיקה/x"} and L.Session("live", "he").info()["saved"] is None)
