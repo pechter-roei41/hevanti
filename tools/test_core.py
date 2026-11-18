@@ -946,5 +946,23 @@ with open(os.path.join(_md, L.MARKS_NAME), "w", encoding="utf-8") as _f:
 _me = [e for e in L.library() if e["course"] == "קורס סימונים"]
 check("library: the marks kept beside a recording are added (and not cached with the transcript)", _me and _me[0]["marks"] == 3, _me)
 
+# "הדבקת מפתח" with the app already open: the open window is shown and asked for the settings; no second window is opened
+_opened, _env = [], os.environ.pop("BZM_NO_BROWSER", None)
+_s_show, _s_open = L.show_open_app_window, L.open_app_window
+try:
+    L.APP.url = L.APP.url or "http://127.0.0.1:1/"
+    L.show_open_app_window, L.open_app_window = (lambda: True), (lambda *a, **k: _opened.append(a) or True)
+    _n0 = L.APP.go["n"]
+    _r = L.APP.command({"action": "open_settings"})
+    check("open_settings with the app open: the open window is used, nothing new opens, and the page is asked for the settings",
+          _r.get("reused") and not _opened and L.APP.go == {"view": "settings", "n": _n0 + 1} and L.APP.state()["go"]["n"] == _n0 + 1, (_r, _opened, L.APP.go))
+    L.show_open_app_window = lambda: False
+    _r = L.APP.command({"action": "open_settings"})
+    check("open_settings with no app window: one opens, on the settings", _r.get("opened") and len(_opened) == 1 and "settings" in _opened[0][0] and not _r.get("reused"), (_r, _opened))
+finally:
+    L.show_open_app_window, L.open_app_window = _s_show, _s_open
+    if _env is not None:
+        os.environ["BZM_NO_BROWSER"] = _env
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)

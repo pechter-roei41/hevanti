@@ -123,6 +123,8 @@ with sync_playwright() as p:
             d["math"] = dict(d.get("math") or {}, **state["math"])
             d["session"] = state["session"]
             d["update"] = None
+            if "go" in state:
+                d["go"] = state["go"]
             route.fulfill(response=r, body=json.dumps(d), headers=dict(r.headers, **{"content-type": "application/json"}))
 
         def live_route(route):
@@ -216,6 +218,28 @@ with sync_playwright() as p:
     check("day: the recording box opens and the green card steps aside", pg.is_visible("#recBox") and not pg.is_visible("#homeResume"))
     one_green(pg, "day with the recording box")
     ctx.close()
+
+    # --- "הדבקת מפתח" in the floating window while the app is open: the open window goes to the settings (no second window) ---
+    state.update(math=KEY, session=None)
+    state.pop("go", None)
+    ctx, pg = page()
+    wait_mode(pg, "day")
+    pg.wait_for_timeout(1500)
+    check("go: nothing asked, the page stays at home", pg.evaluate("location.hash") in ("", "#"), pg.evaluate("location.hash"))
+    state["go"] = {"view": "settings", "n": 5}
+    pg.wait_for_function("location.hash === '#settings'", timeout=6000)
+    check("go: the server asks for the settings, the open window shows them", pg.is_visible("#vSettings"))
+    pg.evaluate("location.hash = ''")
+    pg.wait_for_timeout(2500)
+    check("go: the same request is not played again", pg.evaluate("location.hash") in ("", "#"), pg.evaluate("location.hash"))
+    ctx.close()
+    state["go"] = {"view": "settings", "n": 5}
+    ctx, pg = page()   # (a page that opens after the request: it only remembers it)
+    wait_mode(pg, "day")
+    pg.wait_for_timeout(2000)
+    check("go: an old request is not replayed by a window that opens later", pg.evaluate("location.hash") in ("", "#"), pg.evaluate("location.hash"))
+    ctx.close()
+    state.pop("go", None)
 
     # --- the side column under the main card below 760 px; no sideways scroll at 320 ---
     for mode, st in (("first", {"math": NOKEY, "session": None}), ("live", {"math": KEY, "session": dict(LIVE)}),
