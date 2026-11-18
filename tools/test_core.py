@@ -895,6 +895,11 @@ _marks = chr(0x202b), chr(0x202c)
 check("the title of Hevanti's window is recognised with Edge's direction marks around it (YouTube slides were never saved without this)",
       L.is_page_title(_marks[0] + L.PAGE_TITLE + _marks[1]) and L.is_page_title(L.PAGE_TITLE) and L.is_page_title(_marks[0] + L.PAGE_TITLE + " - Edge" + _marks[1])
       and not L.is_page_title(_marks[0] + "Claude" + _marks[1]) and not L.is_page_title(""))
+# 18.11.2026, a real run: the page names each screen ("<screen> · הבנתי"), so a YouTube screen ends with the name; it must still be found
+check("the title of every screen of the app is recognised (YouTube, home, a lecture), also with Edge's marks and name; other Hevanti windows are not",
+      all(L.is_page_title(t) for t in ("סרטון יוטיוב: חשבון אינפיניטסימלי · הבנתי", _marks[0] + "בית · הבנתי" + _marks[1],
+                                        "הרצאה 17.11.2026 10:00 · הבנתי - Microsoft​ Edge", "הבנתי · האפליקציה"))
+      and not any(L.is_page_title(t) for t in ("הבנתי", "הבנתי · חלון התחלה מהירה", "הבנתי · הנגן", "Claude", "בית", "שיעור בהבנתי")))
 _qs = {}
 _msgs = [L.quiet_sound_warning(_qs, 0.0006, 10.0, 1000.0 + i) for i in range(6)]
 check("quiet sound (0.0006, the level of speech at 6% volume): no word for 40 s, then one warning that names the volume",

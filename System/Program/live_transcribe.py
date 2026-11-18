@@ -3835,7 +3835,14 @@ _DIR_MARKS = "".join(chr(c) for c in (0x202a, 0x202b, 0x202c, 0x200e, 0x200f)) +
 def is_page_title(title):
     """True for the title of a window that shows Hevanti's page. Edge puts a direction mark (U+202B ... U+202C) around a Hebrew title:
     without stripping it no window was found and a YouTube lecture saved no slide at all (found on a real Windows run, 15.11.2026)."""
-    return str(title or "").strip(_DIR_MARKS).startswith(PAGE_TITLE)
+    # Since the page names each screen ("סרטון יוטיוב: ... · הבנתי", "בית · הבנתי"; 16.11.2026) the title only ENDS with the
+    # name: the YouTube screen was not found and no slide was saved (found on a real Windows run, 18.11.2026)
+    t = str(title or "").strip(_DIR_MARKS)
+    for tail in (" - Microsoft​ Edge",   # (Edge writes its name with a zero-width space)
+                  " - Microsoft Edge", " - Edge", " - Google Chrome"):
+        if t.endswith(tail):
+            t = t[:-len(tail)].strip(_DIR_MARKS)
+    return t.startswith(PAGE_TITLE) or t.endswith("· " + PAGE_TITLE.split(" · ")[0])
 
 
 def _page_windows():
