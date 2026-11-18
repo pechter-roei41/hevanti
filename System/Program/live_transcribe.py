@@ -8254,6 +8254,7 @@ class App:
         self.saved_n = 0
         self.mark_n = 0
         self.first_view = ""
+        self.go = {"view": "", "n": 0}   # a request to the app window that is already open: show this screen (the page reads it once per number)
         self._connect, self._connect_at = {}, 0.0
 
     # --- what the page shows ---
@@ -8286,7 +8287,7 @@ class App:
                     "rec_open": self.rec is not None and s is not None and s.kind == "rec" and not s.done,
                     "progress": progress, "question": self.question, "pending": self.pending,
                     "notes": [n for n in self.notes if n["id"] > notes_since],
-                    "lib_rev": self.lib_rev, "first_view": self.first_view,
+                    "lib_rev": self.lib_rev, "first_view": self.first_view, "go": dict(self.go),
                     "screens": SCREEN_ENABLED, "capture": capture_control().public(), "math": math_reader().status(), "gpu": gpu_public(),
                     "product": PRODUCT, "migrated": self.migrated,
                     "course": load_settings().get("course") or "", "connect": self.connect_info(),
@@ -8448,8 +8449,13 @@ class App:
             ok = open_app_window(self.link("#t=" + urllib.parse.quote(f, safe=""))) if self.url and os.environ.get("BZM_NO_BROWSER") != "1" else False
             return {"ok": True, "opened": ok}
         if a == "open_settings":   # "paste a key" in the small window (no key): the app opens on the settings, where the key is the first tab
-            ok = open_app_window(self.link("#settings")) if self.url and os.environ.get("BZM_NO_BROWSER") != "1" else False
-            return {"ok": True, "opened": ok}
+            if self.url and os.environ.get("BZM_NO_BROWSER") != "1":
+                if show_open_app_window():   # the app is already open: it goes to the settings, no second window (found on a real run, 18.11.2026)
+                    with self.lock:
+                        self.go = {"view": "settings", "n": self.go["n"] + 1}
+                    return {"ok": True, "opened": True, "reused": True}
+                return {"ok": True, "opened": open_app_window(self.link("#settings"))}
+            return {"ok": True, "opened": False}
         if a == "consent_seen":   # the student agreed (the page keeps it in the browser; the server needs to know too, to open the quick-start window)
             if not load_settings().get("consent_ok"):
                 save_settings(consent_ok=True)
@@ -10236,6 +10242,23 @@ def _watch_app_window(u, before):
                     _bring_front(u, h)
                     threading.Thread(target=_nudge_paint, args=(u, h), daemon=True).start()
                 return
+
+
+def show_open_app_window():
+    """Windows: the app window that is already open (found by its title, not guessed) is brought to the front, out of the taskbar if it was
+    minimized. False when there is none: the caller opens one."""
+    if os.name != "nt":
+        return False
+    try:
+        u = _mini_user32()
+        h = _APP_WIN.get("hwnd") or 0
+        if not h or not u.IsWindow(h) or not is_page_title(_chrome_windows(u).get(h, "")):
+            return False
+        _bring_front(u, h)
+        return True
+    except Exception:
+        save_error("show the open app window")
+        return False
 
 
 def open_app_window(url, size=None, center=False, profile=None, track=True):

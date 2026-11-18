@@ -2212,7 +2212,12 @@ $("#gpuGo").addEventListener("click", async () => {
 });
 // the site a recording offer comes from is always shown: a page can choose any name ("ההרצאה של פרופ' כהן"), never the host (audit #28)
 function offerHost(src) { try { const h = new URL(src).hostname; return h ? " (מ-" + h + ")" : ""; } catch (e) { return ""; } }
+let goSeen = null;   // the last "show this screen" request of the server that this page has seen (the first one it sees is only remembered: an old request is not replayed)
 function render(d) {
+  if (d.go && d.go.n !== goSeen) {
+    const first = goSeen === null; goSeen = d.go.n;
+    if (!first && d.go.view === "settings") location.hash = "settings";   // "הדבקת מפתח" in the floating window: this window goes to the settings
+  }
   drawGpu(d);
   $("#ver").textContent = "עודכנה ב-" + d.date;   /* design 3: the version is in the top bar only */  $("#ver").title = "גרסת בטא: עדיין בבדיקה, ועלולות להיות תקלות. אם משהו לא עובד, יש \"דיווח על תקלה\" בתחתית מסך הבית.";
   if (!render.themed) { render.themed = true;   // a browser that has no choice of its own yet takes Hevanti's
