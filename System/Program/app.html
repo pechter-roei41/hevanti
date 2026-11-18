@@ -2216,7 +2216,8 @@ let goSeen = null;   // the last "show this screen" request of the server that t
 function render(d) {
   if (d.go && d.go.n !== goSeen) {
     const first = goSeen === null; goSeen = d.go.n;
-    if (!first && d.go.view === "settings") location.hash = "settings";   // "הדבקת מפתח" in the floating window: this window goes to the settings
+    const to = {settings: "settings", rec: "rec", home: ""}[d.go.view];   // "הדבקת מפתח" in the floating window, "open the app" in the quick-start window: this window goes there
+    if (!first && to !== undefined) { if (location.hash.slice(1) === to) route(); else location.hash = to; }
   }
   drawGpu(d);
   $("#ver").textContent = "עודכנה ב-" + d.date;   /* design 3: the version is in the top bar only */  $("#ver").title = "גרסת בטא: עדיין בבדיקה, ועלולות להיות תקלות. אם משהו לא עובד, יש \"דיווח על תקלה\" בתחתית מסך הבית.";
