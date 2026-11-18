@@ -165,14 +165,14 @@ A cream-and-board-green palette with a highlighter yellow. Neutrals lean warm; t
 
 ## Layout
 
-A single centered column, maximum 1240px wide, with 16px side gutters and about 22px above the first heading. The home page stacks a title, the course picker, three ways to start (the primary one wider: 1.7fr against 1fr and 1fr), the last lecture, a hints row, and a quiet footer. The live-lecture and course pages use two columns (transcript 1.6fr, side panel 1fr) that become one column below 900px; the cards at home become one column below 760px, with the primary one first. Spacing rhythm is 6, 10, 14 and 22px; groups are tight and sections are separated by space rather than boxes. Nothing may scroll sideways at any width from 320px.
+A single centered column, maximum 1240px wide, with 16px side gutters and about 22px above the first heading. The home page shows one of four states (decided 17.11.2026), picked in this order: "בואו נתחיל" (no key and no paid AI: two steps, the second grey until the first is done, beside the half-minute video and a privacy note), "ההרצאה רצה ברקע" (a lecture recorded now: a main card with the recording pill, the last three lines with the newest on the Now Line, "פתיחת החלון הצף", ★ and a red-text ghost stop; a side column with the marks so far on the Mark Line and the last slide), "ההרצאה נשמרה" (the lecture of this run, not opened yet: its marks, each with "לפתוח כאן", and "לעבור על הסימונים"; a side column with the whole lecture and the course), and a regular day ("מה לומדים היום?" with two ghost buttons, the green "continue" card, a grid of course cards, the last three lectures, the shortcut keys). At most one bar shows above the state. Main card 1.6fr, side column 1fr; below 760px the side column goes under the main card. The live-lecture and course pages use two columns (transcript 1.6fr, side panel 1fr) that become one column below 900px. Spacing rhythm is 6, 10, 14 and 22px; groups are tight and sections are separated by space rather than boxes. Nothing may scroll sideways at any width from 320px.
 
 ## Elevation & Depth
 
 Flat by default. Depth comes from tone (paper, sheet, sunk paper) and a 1px hairline, not from shadows. The one exception is the primary action card, which carries a single soft green shadow so it reads as the thing to press. Modals and toasts sit on a scrim with one large soft shadow.
 
 ### Shadow Vocabulary
-- **Primary action** (`box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--accent) 70%, transparent)`): the green start card on the home page.
+- **Primary action** (`box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--accent) 70%, transparent)`): the green "continue" card of a regular day on the home page.
 - **Dialog** (`box-shadow: 0 18px 48px rgba(0,0,0,.25)`): modals only.
 
 ### Named Rules
@@ -191,8 +191,8 @@ Soft, notebook-like corners: 14px on cards and containers, 12px on buttons and i
 - **Quiet:** Sunk Paper fill with ink text, for low-priority actions (report a problem, close the app).
 - **Hover / Focus:** hover raises brightness slightly; focus shows a 2px green outline with a 2px offset.
 
-### Primary Action Card
-The home page's "הרצאה חיה בעברית": solid Board Green, a Secular One 26px title, a translucent icon plate, white text, and the single soft shadow. The other two starts are transparent cards with a hairline.
+### Primary Action Card (home)
+The home page's "להמשיך מאיפה שעצרת" (a regular day): solid Board Green, a small bold label, a Secular One 26px title (the course and the lecture), white text (near black at night), and the single soft shadow. It is the only lifted thing on any home state; in the other states the one green is a button. Nothing on the home page starts a lecture: "התחלת הרצאה" is a ghost button that opens the quick-start window. The ★ on the home page is drawn in Highlighter with a 1.2px Caution Ink outline (the yellow alone is too light on a sheet). The recording pill is Recording Red text and dot on a Sheet with a red 1px edge (red on Sunk Paper is 4.16:1 by day).
 
 ### Cards / Containers
 - **Corner Style:** 14px.

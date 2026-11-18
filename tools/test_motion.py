@@ -35,6 +35,7 @@ def check(name, ok, detail=""):
             print(f"::error title={name}::" + str(detail)[:300].replace("\n", " | "))
 
 
+L.save_settings(math={"key": L.keep_secret("AQ.fake"), "ask": True})   # (with a key: the home page is a regular day, where the recording box is; no key is the first-time state, 17.11.2026)
 srv = L.AppServer()
 assert srv.start()
 url = srv.url.rstrip("/")

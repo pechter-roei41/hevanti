@@ -927,5 +927,19 @@ check("saved Q&A: newest first, with the time of day and the moment, and a multi
       [x["q"] for x in _qa] == ["עוד?", "מה זה?"] and _qa[1]["at"] == "0:41:32" and _qa[1]["a"] == "תשובה א\nשורה 2" and _qa[0]["at"] == "", _qa)
 check("saved Q&A: a name outside the library gives nothing", L.lecture_qa("../x/y") == [])
 
+# the home page counts the marks of every lecture (17.11.2026): in the transcript of a live lecture, and beside a recording
+_md = os.path.join(L.LIB_DIR, "קורס סימונים", "2026-11-17 10-00 הרצאה")
+os.makedirs(_md, exist_ok=True)
+with open(os.path.join(_md, "2026-11-17 10-00 הרצאה.txt"), "w", encoding="utf-8") as _f:
+    _f.write("# תמלול הרצאה (עברית) - התחלה 2026-11-17 10:00\n[10:01:00 | +0:01:00] שלום\n[10:01:30 | +0:01:30] [סימון: חשוב]\n"
+             "[10:02:00 | +0:02:00] עוד\n[10:02:10 | +0:02:10] [סימון: חשוב]\n")
+_me = [e for e in L.library() if e["course"] == "קורס סימונים"]
+check("library: the marks of a live lecture are counted, and the last mark still counts for the length",
+      len(_me) == 1 and _me[0]["marks"] == 2 and _me[0]["length"].endswith("2:10"), _me)
+with open(os.path.join(_md, L.MARKS_NAME), "w", encoding="utf-8") as _f:
+    json.dump({"marks": [{"t": 5, "kind": "חשוב"}]}, _f)
+_me = [e for e in L.library() if e["course"] == "קורס סימונים"]
+check("library: the marks kept beside a recording are added (and not cached with the transcript)", _me and _me[0]["marks"] == 3, _me)
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)

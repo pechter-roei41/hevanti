@@ -1,5 +1,5 @@
 """Found in the deep review of 2.22 (15.11.2026), in a real browser:
- - the course shown at home is the saved one, whichever of /api/app and /api/library answers first (P1), and the same in the quick-start window;
+ - the course shown at home (in the recording box since 17.11.2026) is the saved one, whichever of /api/app and /api/library answers first (P1), and the same in the quick-start window;
  - the top bar keeps one row at 390 px on every tab, the dot of a lecture's details never hangs at the start of a line;
  - the checkbox of the floating button sits on the first line of its text; the accessibility tab has its title;
  - the star in the small window says something when there is no lecture.
@@ -99,15 +99,15 @@ with sync_playwright() as p:
     # ---- P1: the saved course at home, whichever answer comes first ----
     for which in ("/api/app", "/api/library"):
         early, v = late("/", which, "#courseSel", "פיזיקה 1", which)
-        check("home: the saved course is shown when " + which + " answers late", v == "פיזיקה 1", (early, v))
+        check("home, the recording box: the saved course is shown when " + which + " answers late", v == "פיזיקה 1", (early, v))
         if which == "/api/library":   # the course list came before /api/app: no wrong course is chosen for the student in the meantime
             pass
     early, v = late("/", "/api/app", "#courseSel", "", "")
-    check("home: before /api/app answers the page chooses no course by itself", early in ("", None), early)
+    check("home, the recording box: before /api/app answers the page chooses no course by itself", early in ("", None), early)
     # the same when there is no saved course: the first real course, as before
     L.save_settings(course="")
     early, v = late("/", "/api/app", "#courseSel", "", "")
-    check("home: with no saved course, a real course is shown (not 'ללא קורס') once both answers are in", v == "אלגוריתמים", v)
+    check("home, the recording box: with no saved course, a real course is shown (not 'ללא קורס') once both answers are in", v == "אלגוריתמים", v)
     L.save_settings(course="פיזיקה 1")
     # ---- the quick-start window ----
     for which in ("/api/app", "/api/library"):

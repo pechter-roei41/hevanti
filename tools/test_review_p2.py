@@ -138,7 +138,9 @@ check("no gear icon / API key in the texts", "גלגל השיניים" not in re
 check("no 'Setup' folder in the messages", "בתיקייה Setup" not in PY)
 check("the shortcut is 'של הבנתי', not Latin 'Hevanti' alone", "לחיצה כפולה על Hevanti" not in APP and "ב-Hevanti" + chr(92) * 2 + "deleted" not in APP and "את Hevanti" not in PLAYER)
 check("no 'בלי מכסה' for the paid plan", "בלי מכסה" not in APP + ASK)
-check("the small window has one name in the app", "חלון שאלות קטן" not in APP and "החלון הצף" not in APP and "הכפתור הצף" not in APP)
+# (the home page's "lecture running" state keeps the words of its design, decided 17.11.2026: "פתיחת החלון הצף" and "הכפתור הצף נשאר בפינת המסך")
+_APP1 = APP.replace("פתיחת החלון הצף", "").replace("הכפתור הצף נשאר בפינת המסך", "")
+check("the small window has one name in the app", "חלון שאלות קטן" not in _APP1 and "החלון הצף" not in _APP1 and "הכפתור הצף" not in _APP1)
 check("plural: marks and minutes", "1 ★ סימונים" not in APP and "heN(mine.length" in APP and "heN(sv.minutes" in MINI and "function heN" in MINI)
 check("quick start: 'חיה בעברית' / 'חיה באנגלית'", "חיה עברית" not in QUICK and "חיה בעברית" in QUICK)
 check("the opacity slider is labelled by what it is", "אטימות החלון הקטן (שמאלה: יותר שקוף)" in APP)
@@ -146,7 +148,7 @@ check("no internal names in the errors the student sees", "אין חיבור ל-
 check("removed words are gone from messages", "הכנה למבחן" not in PY and "וכרטיסיות" not in PY)
 
 # 30. the first-time dialog: one solid green
-check("first-time dialog: the link to Google is a ghost button", 'class="btn ghost small" id="setupOpen"' in APP)
+check("first time: one solid green ('יצירת מפתח והדבקה'); the link to Google and the save button are not solid", 'id="setupOpen"' in APP and 'class="btn small" id="setupOpen"' not in APP and 'class="btn ghost small" id="setupKeySave"' in APP and 'class="btn" id="setupGo"' in APP)
 
 # 31-35 CSS
 check("narrow marks card: text on the whole width at 480px", "@media (max-width:480px){.mk .ic{grid-row:auto}.mk .sa{grid-column:1/-1}}" in APP)

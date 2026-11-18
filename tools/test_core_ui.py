@@ -189,7 +189,9 @@ with sync_playwright() as p:
     # ---- the course of the lecture about to start: guessed, selected, with the reason; until the student chooses ----
     L.create_course("אלגברה לינארית")
     L.create_course("פיזיקה")
+    L.save_settings(math={"key": L.keep_secret("AQ.fake"), "ask": True})   # (with a key the home page is a regular day; the first time has no course picker)
     pg = page()
+    pg.evaluate("openRec()")   # (the course picker is in the box of a recorded lecture since 17.11.2026: a live lecture picks its course in the quick-start window)
     guess = {"ok": True, "course": "פיזיקה", "why": "title", "detail": "Zoom - פיזיקה 1"}
 
     def cmd(route):
@@ -212,12 +214,14 @@ with sync_playwright() as p:
           and not pg.is_visible("#courseAuto"), pg.evaluate("document.querySelector('#courseSel').value"))
     guess = {"ok": True, "course": "פיזיקה", "why": "schedule", "detail": "2 הרצאות קודמות ביום ראשון בסביבות 11:00"}
     pg = page()
+    pg.evaluate("openRec()")
     pg.route("**/api/cmd", cmd)
     pg.evaluate("autoCourse()")
     pg.wait_for_timeout(600)
     check("course guess: by the weekly schedule it says so", "המערכת השבועית" in pg.evaluate("document.querySelector('#courseAuto').textContent"), pg.evaluate("document.querySelector('#courseAuto').textContent"))
     guess = {"ok": True}
     pg = page()
+    pg.evaluate("openRec()")
     pg.route("**/api/cmd", cmd)
     pg.evaluate("autoCourse()")
     pg.wait_for_timeout(500)
@@ -226,14 +230,14 @@ with sync_playwright() as p:
     # ---- the first-time consent before a lecture starts ----
     pg = page()
     pg.evaluate("localStorage.removeItem('bzm.consent')")
-    pg.click("[data-start=he]")
+    pg.click("#startQuick")
     pg.wait_for_timeout(300)
     check("consent: asked before the first lecture", pg.is_visible("#consent"))
     check("consent: 'continue' is locked until the box is checked", pg.evaluate("document.querySelector('#consOk').disabled"))
     pg.click("#consNo")
     pg.wait_for_timeout(300)
     check("consent: cancel starts nothing", not pg.is_visible("#consent") and pg.evaluate("location.hash") in ("", "#"), pg.evaluate("location.hash"))
-    pg.click("[data-start=he]")
+    pg.click("#startQuick")
     pg.check("#consCheck")
     check("consent: 'continue' opens once the box is checked", not pg.evaluate("document.querySelector('#consOk').disabled"))
     check("consent: nothing is remembered before it is accepted", pg.evaluate("localStorage.getItem('bzm.consent')") is None)
@@ -310,11 +314,12 @@ with sync_playwright() as p:
     check("report a problem: closes, no script errors", not pg.is_visible("#report") and perr == [], perr)
 
     # ---- the top bar (2.14): tabs, the settings page, the guide, light / dark ----
+    L.save_settings(math={"key": L.keep_secret("AQ.fake"), "ask": True})
     pg = page()
     cur = "[...document.querySelectorAll('[data-nav][aria-current=page]')].map(a => a.dataset.nav)"
     check("top bar: four tabs, home is the current one", pg.evaluate("[...document.querySelectorAll('[data-nav]')].map(a => a.textContent.trim())")
           == ["בית", "הקורסים שלי", "איך משתמשים", "הגדרות"] and pg.evaluate(cur) == ["home"], pg.evaluate(cur))
-    check("home: only starting a lecture (the course list is its own tab)", pg.is_visible("[data-start=he]") and not pg.is_visible("#lib"))
+    check("home: a regular day, with 'start a lecture' (the course list is its own tab)", pg.is_visible("#startQuick") and not pg.is_visible("#lib"))
     pg.click("[data-nav=courses]")
     pg.wait_for_timeout(500)
     check("tab 'my courses': the courses and the search", pg.is_visible("#lib") and pg.is_visible("#libFind") and pg.evaluate(cur) == ["courses"], pg.evaluate(cur))
@@ -590,38 +595,33 @@ with sync_playwright() as p:
     check("floating window: choosing Gemini hides the floating window", any(m.get("action") == "hide_mini" for m in marked), marked)
     check("floating window: no script errors", errs == [], errs)
 
-    # ---- 2.18: the missing-key bar, the settings, Hebrew counts, no date and time twice ----
+    # ---- 17.11.2026: no key is the home page's first state (it replaced the missing-key bar and the first-start popup) ----
     L.save_settings(math={})
     pg = b.new_context(viewport={"width": 1100, "height": 900}, locale="he-IL").new_page()
     pg.errs = []
     pg.on("pageerror", lambda e: pg.errs.append(str(e)))
     pg.goto(url + "/")
-    pg.wait_for_function("document.querySelector('#keyBar') && !document.querySelector('#keyBar').hidden", timeout=8000)
-    check("no key: a bar above the cards says so, with a button to paste the key",
-          "חסר מפתח Gemini" in pg.inner_text("#keyBar") and pg.inner_text("#keyBarGo") == "הדבקת מפתח", pg.inner_text("#keyBar"))
-    check("...its button is a ghost button, not a solid green one (the home page already has the one green action: the lecture card)",
-          pg.evaluate("""() => { const b = getComputedStyle(document.querySelector('#keyBarGo')), g = getComputedStyle(document.querySelector('.start[data-start=he]'));
-              return b.backgroundColor === 'rgba(0, 0, 0, 0)' && b.backgroundColor !== g.backgroundColor; }"""))
-    check("...it is above the cards that start a lecture", pg.evaluate("document.querySelector('#keyBar').getBoundingClientRect().bottom <= document.querySelector('.starts').getBoundingClientRect().top"))
-    check("...in the caution colours (the page's own caution paper), over the whole width",
-          pg.evaluate("""() => { const p = document.createElement('div'); p.style.cssText = 'background:var(--warn-bg);color:var(--warn-fg)'; document.body.appendChild(p);
-              const a = getComputedStyle(p), b = getComputedStyle(document.querySelector('#keyBar')), r = document.querySelector('#keyBar').getBoundingClientRect(),
-                    c = document.querySelector('.starts').getBoundingClientRect();
-              const ok = a.backgroundColor === b.backgroundColor && a.color === b.color && Math.abs(r.width - c.width) < 4; p.remove(); return ok; }"""))
-    check("...and the small status line says nothing more about the key", pg.evaluate("document.querySelector('#homeAns').hidden"))
-    pg.click("#setupLater")
-    check("'not now' closes the first-start card", not pg.is_visible("#setupCard"))
-    pg.click("#keyBarGo")
-    check("the button in the bar opens the paste-the-key card again, with the cursor in the box",
-          pg.is_visible("#setupCard") and pg.evaluate("document.activeElement.id") == "setupKey", pg.evaluate("document.activeElement.id"))
+    pg.wait_for_function("document.querySelector('#vHome').dataset.mode === 'first'", timeout=8000)
+    check("no key: the home page is 'בואו נתחיל', two steps, no popup and no bar",
+          pg.is_visible("#hFirst") and pg.locator("#setupCard").count() == 0 and pg.locator("#keyBar").count() == 0 and pg.is_hidden("#homeAns"))
+    check("...the key button is the one solid green, the subscription one is a ghost",
+          pg.evaluate("""() => { const g = getComputedStyle(document.querySelector('#setupGo')), h = getComputedStyle(document.querySelector('#setupPaid'));
+              return g.backgroundColor !== 'rgba(0, 0, 0, 0)' && h.backgroundColor === 'rgba(0, 0, 0, 0)'; }"""))
+    pg.evaluate("window.open = () => null")   # (Google's page is not opened in the test)
+    pg.click("#setupGo")
+    check("'יצירת מפתח והדבקה' shows the box to paste into, with the cursor in it",
+          pg.is_visible("#setupKey") and pg.evaluate("document.activeElement.id") == "setupKey", pg.evaluate("document.activeElement.id"))
+    check("...the second step is grey until the first is done", pg.evaluate("document.querySelector('#stFirst').classList.contains('off')"))
     L.save_settings(math={"key": L.keep_secret("AQ.fake"), "ask": True})
-    pg.wait_for_function("document.querySelector('#keyBar').hidden", timeout=8000)
-    check("with a key: the bar is gone, and the status line stays quiet (design 3: ready is said once, in the top bar)", pg.evaluate("document.querySelector('#homeAns').hidden") and pg.inner_text("#statePill") == "מוכן", (pg.inner_text("#statePill"),))
-    check("the keyboard shortcuts have a row of their own, under the status",
-          pg.evaluate("document.querySelector('.hkeys').getBoundingClientRect().top >= document.querySelector('#homeAns').getBoundingClientRect().bottom - 1"))
+    pg.wait_for_function("document.querySelector('#vHome').dataset.mode === 'day'", timeout=8000)
+    check("with a key: the home page turns into a regular day by itself, and the status line stays quiet (design 3: ready is said once, in the top bar)",
+          pg.evaluate("document.querySelector('#homeAns').hidden") and pg.inner_text("#statePill") == "מוכן", (pg.inner_text("#statePill"),))
+    check("the keyboard shortcuts have a row of their own, at the bottom of the state", pg.is_visible("#hKeys")
+          and pg.evaluate("document.querySelector('#hKeys').getBoundingClientRect().top >= document.querySelector('#hDay').getBoundingClientRect().bottom - 1"))
     L.save_settings(math={"plan": "paid"})
-    pg.wait_for_function("document.querySelector('#keyBar').hidden && document.querySelector('#homeAns').textContent.includes('מנוי')", timeout=8000)
-    check("a paid AI plan and no key: no bar (the questions go to the student's AI app)", "מנוי" in pg.inner_text("#homeAns"), pg.inner_text("#homeAns"))
+    pg.wait_for_function("document.querySelector('#homeAns').textContent.includes('מנוי') && !document.querySelector('#homeAns').hidden", timeout=8000)
+    check("a paid AI plan and no key: a regular day, and the status line says the questions go to the student's AI app",
+          "מנוי" in pg.inner_text("#homeAns") and pg.evaluate("document.querySelector('#vHome').dataset.mode") == "day", pg.inner_text("#homeAns"))
     L.save_settings(math={"key": L.keep_secret("AQ.fake"), "ask": True})
 
     pg.evaluate("openSettings('key')")
