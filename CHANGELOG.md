@@ -10,6 +10,8 @@ version is on [GitHub Releases](https://github.com/pechter-roei41/hevanti/releas
   marks so far, the last slide, floating window, ★, stop), a lecture just saved (its marks, each opening 8 s before), and a regular day
   (continue where you stopped, my courses, the last three lectures). Home never starts a lecture: every "start a lecture" opens the
   quick-start window. At most one bar shows above the state.
+- **YouTube slides:** saved again. Since each screen of the app has its own window title ("<screen> · הבנתי"), the player's window
+  was not found and no slide was saved; found on a real Windows run.
 - **Floating window and quick start:** stopping from the
   floating window (two presses) with a "saved" card; the round button stays while Hevanti runs; opens smoothly the first time and
   follows light/dark at once; the opacity slider is the right way round.
