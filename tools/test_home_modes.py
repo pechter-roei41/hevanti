@@ -239,6 +239,24 @@ with sync_playwright() as p:
     pg.wait_for_timeout(2000)
     check("go: an old request is not replayed by a window that opens later", pg.evaluate("location.hash") in ("", "#"), pg.evaluate("location.hash"))
     ctx.close()
+    state["go"] = {"view": "rec", "n": 7}
+    ctx, pg = page()
+    wait_mode(pg, "day")
+    pg.wait_for_timeout(1500)
+    state["go"] = {"view": "rec", "n": 8}
+    pg.wait_for_function("location.hash === '#rec'", timeout=6000)
+    pg.wait_for_function("!document.querySelector('#recBox').hidden", timeout=4000)
+    check("go: 'open the app' from the quick-start window (a recording): the open window shows the recording box", pg.is_visible("#recBox"))
+    pg.click("#recClose")
+    state["go"] = {"view": "rec", "n": 9}
+    pg.wait_for_function("!document.querySelector('#recBox').hidden", timeout=6000)
+    check("go: ...also when the page is already at #rec with the box closed", pg.is_visible("#recBox"))
+    pg.evaluate("location.hash = 'settings'")
+    pg.wait_for_function("document.querySelector('#vSettings') && !document.querySelector('#vSettings').hidden", timeout=4000)
+    state["go"] = {"view": "home", "n": 10}
+    pg.wait_for_function("location.hash === '' || location.hash === '#'", timeout=6000)
+    check("go: 'open the app' without a view: the open window goes home", pg.is_visible("#vHome") and not pg.is_visible("#vSettings"))
+    ctx.close()
     state.pop("go", None)
 
     # --- the side column under the main card below 760 px; no sideways scroll at 320 ---

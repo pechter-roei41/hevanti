@@ -8490,8 +8490,14 @@ class App:
         if a == "quick_close":   # the quick-start window is done (a lecture started)
             return {"ok": True, "closed": close_quick_window()}
         if a == "quick_open_app":   # "open the app": the home screen in its own window, and the small one goes away; nothing starts
+            view = "rec" if d.get("view") == "rec" else "home"
+            if self.url and os.environ.get("BZM_NO_BROWSER") != "1" and show_open_app_window():
+                with self.lock:   # the app is already open (minimized, or behind): it is shown, and no second window opens (found on a real run, 18.11.2026)
+                    self.go = {"view": view, "n": self.go["n"] + 1}
+                close_quick_window()
+                return {"ok": True, "opened": True, "reused": True}
             _APP_WIN["hwnd"] = 0   # (the app's window is found again by the watcher: until then nothing is "closed")
-            ok = open_app_window(self.link("#rec" if d.get("view") == "rec" else "")) if self.url and os.environ.get("BZM_NO_BROWSER") != "1" else False
+            ok = open_app_window(self.link("#rec" if view == "rec" else "")) if self.url and os.environ.get("BZM_NO_BROWSER") != "1" else False
             close_quick_window()
             return {"ok": True, "opened": ok}
         if a == "mini_button":   # the floating "?" button while the small window is closed

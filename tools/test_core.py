@@ -956,7 +956,19 @@ try:
     _r = L.APP.command({"action": "open_settings"})
     check("open_settings with the app open: the open window is used, nothing new opens, and the page is asked for the settings",
           _r.get("reused") and not _opened and L.APP.go == {"view": "settings", "n": _n0 + 1} and L.APP.state()["go"]["n"] == _n0 + 1, (_r, _opened, L.APP.go))
+    # "open the app" in the quick-start window: the same (it opened another app window every time)
+    L.show_open_app_window = lambda: True
+    _opened.clear()
+    _n1 = L.APP.go["n"]
+    _r = L.APP.command({"action": "quick_open_app", "view": "rec"})
+    check("quick_open_app with the app open: the open window is used, it is asked for the recording box, and nothing new opens",
+          _r.get("reused") and not _opened and L.APP.go == {"view": "rec", "n": _n1 + 1}, (_r, _opened, L.APP.go))
+    _r = L.APP.command({"action": "quick_open_app"})
+    check("...and without a view: the home screen", _r.get("reused") and L.APP.go["view"] == "home" and L.APP.go["n"] == _n1 + 2, (_r, L.APP.go))
     L.show_open_app_window = lambda: False
+    _r = L.APP.command({"action": "quick_open_app", "view": "rec"})
+    check("quick_open_app with no app window: one opens, at the recording box", _r.get("opened") and not _r.get("reused") and len(_opened) == 1 and _opened[0][0].endswith("#rec"), (_r, _opened))
+    _opened.clear()
     _r = L.APP.command({"action": "open_settings"})
     check("open_settings with no app window: one opens, on the settings", _r.get("opened") and len(_opened) == 1 and "settings" in _opened[0][0] and not _r.get("reused"), (_r, _opened))
 finally:
