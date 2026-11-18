@@ -70,7 +70,7 @@ PAIRS = [
     ("a time that can be opened (green link) on paper, where answers are", "board-green", "paper", "night-green", "night-paper", TEXT),
     ("a time that can be opened (green link), hovered, on the soft green", "board-green", "board-green-soft", "night-green", "night-green-soft", TEXT),
     ("the text of the solid green button (white by day, near black at night) on the green", "#FFFFFF", "board-green", "#0E1A14", "night-green", TEXT),
-    ("the small text of the green start card ('זום או שידור...', white by day, near black at night) on the green", "#FFFFFF", "board-green", "#0E1A14", "night-green", TEXT),
+    ("the text of the green 'continue' card at home (white by day, near black at night) on the green", "#FFFFFF", "board-green", "#0E1A14", "night-green", TEXT),
     ("the delete-course button (recording red, danger outline) on a sheet", "recording-red", "sheet", "night-recording", "night-sheet", TEXT),
     ("hovered delete button and the blur-box close X: the ink of --accent-ink (white by day, near black at night) on recording red", "#FFFFFF", "recording-red", "#0E1A14", "night-recording", TEXT),
     ("large captions window: the draft line (night-muted) on black", "night-muted", "#000000", "night-muted", "#000000", TEXT),
@@ -78,6 +78,15 @@ PAIRS = [
     ("a ghost button (green text) on sunk paper: the course offer in the small window and in the live view", "board-green", "sunk-paper", "night-green", "night-sunk", TEXT),
     ("text (ink) on sunk paper: the course offer", "ink", "sunk-paper", "night-ink", "night-sunk", TEXT),
     ("caution text on the caution bar", "css:--warn-fg", "css:--warn-bg", "cssdark:--warn-fg", "cssdark:--warn-bg", TEXT),
+    # the home page by state (17.11.2026)
+    ("home: the ★ drawn in yellow keeps its caution-ink outline against the sheet (the yellow alone is too light)", "css:--warn-fg", "sheet", "cssdark:--warn-fg", "night-sheet", GRAPHIC),
+    ("home: the ★ outline (caution-ink) on the mark-line of a mark row", "css:--warn-fg", "mark-line", "cssdark:--warn-fg", "night-mark-line", GRAPHIC),
+    ("home: the time and the words of a mark (ink) on the mark-line", "ink", "mark-line", "night-ink", "night-mark-line", TEXT),
+    ("home: the red 'מקליט' label (recording red) on its pill: a sheet with a red edge (on sunk paper it was 4.16:1 by day)", "recording-red", "sheet", "night-recording", "night-sheet", TEXT),
+    ("home: the red dot and edge of the 'מקליט' pill against the sheet", "recording-red", "sheet", "night-recording", "night-sheet", GRAPHIC),
+    ("home: the line said now (now-ink) on the now-line, in the 'מה נאמר עכשיו' box", "css:--now-ink", "css:--now", "cssdark:--now-ink", "cssdark:--now", TEXT),
+    ("home: the earlier lines (ink) and the box title (ink-muted) on sunk paper", "ink-muted", "sunk-paper", "night-muted", "night-sunk", TEXT),
+    ("home: 'עצירת התמלול' (recording red text, ghost) on a sheet", "recording-red", "sheet", "night-recording", "night-sheet", TEXT),
 ]
 for what, lf, lb, df, db, need in PAIRS:
     r_light, r_dark = C.ratio(col(lf), col(lb)), C.ratio(col(df), col(db))
@@ -95,8 +104,9 @@ for theme, vs_paper, vs_now in bands:
 
 # ---- the green start card text is the plain ink-on-green colour (it was a 88% mix: 3.36:1 by day), and the slider is green like the boxes ----
 _app = open(os.path.join(C.PROG, "app.html"), encoding="utf-8").read()
-check("the small text of the green start card uses var(--accent-ink), not a mix with the green",
-      '.start[data-start="he"] span:not(.ic){color:var(--accent-ink);' in _app)
+check("the text of the green 'continue' card at home uses var(--accent-ink), not a mix with the green (and nothing inside sets another colour)",
+      '.hresume{all:unset;box-sizing:border-box;cursor:pointer;display:grid;gap:4px;background:var(--accent);color:var(--accent-ink);' in _app
+      and not any(f".{c}{{" in _app and "color:" in _app.split(f".{c}{{", 1)[1].split("}", 1)[0] for c in ("hrlab", "hrtitle", "hrsub")))
 check("the delete-course button is the danger outline (red text on the sheet), not red on a sunk fill", 'id="cDelete" type="button">' in _app and 'class="btn danger small" id="cDelete"' in _app)
 check("the hovered delete button and the blur-box X use var(--accent-ink) on recording red, not a fixed white",
       ".btn.danger:hover{background:var(--rec);color:var(--accent-ink)}" in _app and "background:var(--rec);color:var(--accent-ink);cursor:pointer" in _app)

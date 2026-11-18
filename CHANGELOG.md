@@ -5,7 +5,12 @@ version is on [GitHub Releases](https://github.com/pechter-roei41/hevanti/releas
 
 ## 2.22 (beta, not released yet)
 
-- **Floating window and quick start:** a single "start a lecture" button at home that opens the quick-start window; stopping from the
+- **Home by state:** the home page shows what matters now, in one of four states with one solid-green action each: the first time
+  (connect the answers, then a first lecture; replaces the "let's start" popup), a lecture running (time, the last three lines, the
+  marks so far, the last slide, floating window, ★, stop), a lecture just saved (its marks, each opening 8 s before), and a regular day
+  (continue where you stopped, my courses, the last three lectures). Home never starts a lecture: every "start a lecture" opens the
+  quick-start window. At most one bar shows above the state.
+- **Floating window and quick start:** stopping from the
   floating window (two presses) with a "saved" card; the round button stays while Hevanti runs; opens smoothly the first time and
   follows light/dark at once; the opacity slider is the right way round.
 - **After the lecture:** a "questions and answers" tab per lecture; every ★ is a question that was put off, with one button to explain

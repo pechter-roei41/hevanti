@@ -9079,7 +9079,7 @@ def library_entry(d, course):
     name = os.path.basename(d)
     e = {"f": f"{course}/{name}", "course": course, "name": name, "kind": "other", "title": name, "lang": "he",
          "when": datetime.datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M"), "lines": 0, "shots": 0,
-         "length": "", "complete": False, "mtime": st.st_mtime, "has_media": False, "progress": None}
+         "length": "", "complete": False, "mtime": st.st_mtime, "has_media": False, "progress": None, "marks": 0}
     last_elapsed = None
     try:
         with open(path, encoding="utf-8", errors="replace") as f:
@@ -9121,6 +9121,8 @@ def library_entry(d, course):
                 if "[צילום מסך:" in line:
                     e["shots"] += 1
                     continue
+                if "] [סימון: " in line:   # a mark (★) made in a live lecture or a video: the home page counts them
+                    e["marks"] += 1   # (no continue: its time still counts for the length)
                 m = LIVE_LINE.match(line)
                 if m:
                     last_elapsed = int(m.group(2)) * 3600 + int(m.group(3)) * 60 + int(m.group(4))
@@ -9147,7 +9149,10 @@ def library():
     out = []
     for c, n, d in lecture_dirs():
         try:
-            out.append(library_entry(d, c))
+            e = library_entry(d, c)
+            if os.path.isfile(os.path.join(d, MARKS_NAME)):   # the marks of a recording live beside it (not in the cached transcript)
+                e["marks"] += len(read_marks(d))
+            out.append(e)
         except OSError:
             pass
     out.sort(key=lambda e: e["mtime"], reverse=True)
