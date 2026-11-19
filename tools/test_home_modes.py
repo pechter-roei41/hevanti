@@ -118,17 +118,14 @@ with sync_playwright() as p:
         pg.add_init_script("localStorage.setItem('bzm.consent','1');localStorage.setItem('bzm.tipSet','1');localStorage.setItem('bzm.noLiveTip','1')")
 
         def app_route(route):
-            try:
+            try:   # (the whole answer: the page may be closed, or its poll thrown away, at any step - a closing page has nothing to be answered)
                 r = route.fetch()
-            except Exception:   # (the page was closed while its poll was on the way: nothing to answer)
-                return
-            d = r.json()
-            d["math"] = dict(d.get("math") or {}, **state["math"])
-            d["session"] = state["session"]
-            d["update"] = None
-            if "go" in state:
-                d["go"] = state["go"]
-            try:
+                d = r.json()
+                d["math"] = dict(d.get("math") or {}, **state["math"])
+                d["session"] = state["session"]
+                d["update"] = None
+                if "go" in state:
+                    d["go"] = state["go"]
                 route.fulfill(response=r, body=json.dumps(d), headers=dict(r.headers, **{"content-type": "application/json"}))
             except Exception:
                 pass
