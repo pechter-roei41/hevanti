@@ -142,7 +142,7 @@ h2{font-size:21px;margin:0;text-wrap:balance}
 .hbul{margin:0;padding-inline-start:20px;color:var(--muted);display:grid;gap:4px}
 .hresume{grid-template-columns:minmax(0,1fr) auto;column-gap:18px}
 .hresume > :not(.hrgo){grid-column:1}
-.hrgo{grid-column:2;grid-row:1 / span 3;align-self:center;background:var(--surface);color:var(--accent);border-radius:12px;padding:9px 18px;font-weight:700}
+.hrgo{grid-column:2;grid-row:1 / span 3;align-self:center;justify-self:end;white-space:nowrap;background:var(--surface);color:var(--accent);border-radius:12px;padding:9px 18px;font-weight:700}
 .hchip{display:inline-flex;align-items:center;gap:5px;background:var(--sunk);color:var(--fg);border-radius:999px;padding:2px 10px;font-size:14px;font-weight:700;justify-self:start}
 .hrecentcard{display:grid;gap:4px}
 .hrecentcard h2{margin:0 0 4px;font-size:18px;font-weight:800}
@@ -786,7 +786,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <span class="hrlab">להמשיך מאיפה שעצרת</span>
         <b class="hrtitle" id="resTitle"></b>
         <span class="hrsub" id="resSub"></span>
-        <span class="hrgo" id="resGo" aria-hidden="true">פתיחת ההרצאה ←</span>
+        <span class="hrgo" id="resGo" aria-hidden="true" hidden>לעבור על הסימונים ←</span>
       </button>
 
       <section class="hsec" id="hCoursesSec" aria-labelledby="hCoursesT" hidden>
@@ -2053,7 +2053,7 @@ function drawHomeDay() {
     $("#resSub").textContent = [whenWords(e.when), e.marks ? nMarks(e.marks) : ""].filter(Boolean).join(" · ");
     box.setAttribute("aria-label", "להמשיך מאיפה שעצרת: " + $("#resTitle").textContent + ". " + $("#resSub").textContent + (e.marks ? ". נפתח בסימון הראשון" : ""));
     box.onclick = () => openFirstMark(e);
-    $("#resGo").textContent = e.marks ? "לעבור על הסימונים ←" : "פתיחת ההרצאה ←";
+    $("#resGo").hidden = !e.marks;   // the white button only when there are marks to go through; with none, the card itself opens the lecture
   }
   // the courses: name, how many lectures, the last one, and the marks
   const cs = (courses || []).filter(c => c.lectures > 0).slice().sort((a, b) => b.last - a.last);

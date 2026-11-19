@@ -962,6 +962,9 @@ with sync_playwright() as p:
           lagp.evaluate("document.querySelector('#lag').closest('header')") is None
           and lagp.evaluate("""() => { const l = document.querySelector('#lag').getBoundingClientRect(), b = document.querySelector('#box .ais button.here').getBoundingClientRect();
               return Math.abs((l.top + l.bottom) / 2 - (b.top + b.bottom) / 2) < 12 && l.right <= innerWidth && l.left >= 0 && l.right < b.left || l.left > b.right; }"""))
+    lag_side = lagp.evaluate("""() => { const l = document.querySelector('#lag').getBoundingClientRect(), b = document.querySelector('#box .ais button.here').getBoundingClientRect();
+        return {left: Math.round(l.left), right: Math.round(l.right), bLeft: Math.round(b.left), bRight: Math.round(b.right), mid: Math.round((l.top + l.bottom) / 2 - (b.top + b.bottom) / 2)}; }""")
+    check("...right beside \"תשובה כאן\", on its right (19.11.2026)", lag_side["left"] >= lag_side["bRight"] and lag_side["left"] - lag_side["bRight"] <= 16 and abs(lag_side["mid"]) < 12, lag_side)
     check("...and the title row is whole: the course name is not cut by it", lagp.evaluate("""() => { const t = document.querySelector('#lec'); return t.scrollWidth <= t.clientWidth + 1; }"""))
     check("...with the whole sentence for the screen reader and the pointer",
           "התמלול מאחר ב-25 שניות" in lagp.evaluate("document.querySelector('#lag').getAttribute('aria-label')"))
