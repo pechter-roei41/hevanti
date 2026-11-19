@@ -3,7 +3,7 @@
 Short, in English. The full notes, in Hebrew, newest first, are in `System/VERSION.txt` (the app shows them too). The released
 version is on [GitHub Releases](https://github.com/pechter-roei41/hevanti/releases); 2.20 and 2.21 were never released apart.
 
-## 2.22 (beta, not released yet)
+## 2.22 (beta, 19.11.2026)
 
 - **Home by state:** the home page shows what matters now, in one of four states with one solid-green action each: the first time
   (connect the answers, then a first lecture; replaces the "let's start" popup), a lecture running (time, the last three lines, the
