@@ -26,15 +26,15 @@ try { bzmTheme(localStorage.getItem("bzm.theme") || ""); } catch (e) {}</script>
 <style>
 :root{
   --bg:#F6F3E9; --surface:#FFFFFF; --sunk:#ECE7D8; --fg:#17261F; --muted:#56625B; --line:#DDD7C4;
-  --accent:#1B6E4B; --accent-ink:#FFFFFF; --accent-soft:#DCEBDF; --rec:#C2412D; --warn-bg:#FBF0DA; --warn-fg:#6B5020; --mark-line:#F7DD7B;
+  --accent:#1B6E4B; --accent-ink:#FFFFFF; --accent-soft:#DCEBDF; --mark:#F7D44C; --rec:#C2412D; --warn-bg:#FBF0DA; --warn-fg:#6B5020; --mark-line:#F7DD7B;
   --f-body:"Assistant","Segoe UI","Arial Hebrew",Arial,system-ui,sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#1C1B16; --surface:#26241D; --sunk:#2F2C23; --fg:#F1ECDF; --muted:#B5AFA0; --line:#3E3A2E;
-  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; --mark-line:#594E25; color-scheme:dark}}
+  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --mark:#E8C547; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; --mark-line:#594E25; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#1C1B16; --surface:#26241D; --sunk:#2F2C23; --fg:#F1ECDF; --muted:#B5AFA0; --line:#3E3A2E;
-  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; --mark-line:#594E25; color-scheme:dark}
+  --accent:#5BC79A; --accent-ink:#0E1A14; --accent-soft:#25382B; --mark:#E8C547; --rec:#FF7A63; --warn-bg:#3A3122; --warn-fg:#EBD08E; --mark-line:#594E25; color-scheme:dark}
 :root[data-theme="light"]{color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -45,7 +45,7 @@ textarea:placeholder-shown,input:not([dir="ltr"]):not([type=password]):not([type
 ::placeholder{color:var(--muted);opacity:1}
 
 [hidden]{display:none!important}
-header{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 8px 6px 10px;border-bottom:1px solid var(--line);background:var(--surface)}
+header{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 8px 6px 10px;border-bottom:1px solid var(--line);background:var(--surface)}
 header b{font-size:15px}
 #lec{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:8px}
 #lec::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--line)}
@@ -59,18 +59,29 @@ body.on #lec::before{background:var(--rec)}
 #markImp.done{background:var(--mark-line);color:var(--fg);border-color:var(--mark-line)}
 .hb:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}   /* DESIGN.md: focus is a 2px green outline with a 2px offset; the answer button had only the browser's thin default */
-#markImp{color:var(--accent);border-color:var(--accent)}
+/* the ★ is drawn in the highlighter (the only yellow), with a caution-ink outline: the yellow alone is too light on a sheet by day */
+#markImp svg{width:19px;height:19px;fill:var(--mark);stroke:var(--warn-fg);stroke-width:1.3;stroke-linejoin:round}
+#markImp.done svg{fill:var(--warn-fg)}
+/* "⋯": the menu of the less-used things (to the app, stop, close Hevanti); open, it has the green edge */
+#menuBtn svg{width:18px;height:18px;fill:currentColor}
+#menuBtn[aria-expanded="true"]{border-color:var(--accent);background:var(--accent-soft)}
+#menu{position:absolute;top:calc(100% + 4px);left:8px;z-index:6;min-width:min(250px,calc(100% - 16px));max-width:calc(100% - 16px);padding:6px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 28px rgba(0,0,0,.28);display:flex;flex-direction:column;gap:2px}
+#menu .mi{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;border:1.5px solid transparent;background:none;border-radius:10px;padding:8px 12px;min-height:40px;font:inherit;font-size:15px;font-weight:700;color:var(--fg);text-align:start;cursor:pointer}
+#menu .mi svg{flex:none;width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+#menu .mi svg.solid{fill:currentColor;stroke:none}
+#menu .mi:hover,#menu .mi:focus{background:var(--accent-soft);border-color:var(--accent)}   /* the item with the focus is lit, as the one under the pointer (it is the first one when the menu opens) */
+#menu .sep{height:1px;margin:4px 6px;background:var(--line)}
+/* the red items keep their red on the sheet, never on the soft green (red on it was 4.16:1) */
+#menu .mi.danger,#stopBtn.confirm{color:var(--rec)}
+#menu .mi.danger:hover,#menu .mi.danger:focus,#stopBtn.confirm,#stopBtn.confirm:hover{background:var(--surface);border-color:var(--rec)}
+#stopBtn.confirm{font-weight:800}
+#quitBtn.confirm{font-weight:800}
 .miss{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 10px 0;font-size:14px;color:var(--muted)}
 .miss button{border:1px solid var(--accent);background:none;color:var(--accent);border-radius:999px;padding:1px 11px;cursor:pointer;font-size:14px;font-weight:600}
 .miss button:hover{background:var(--accent-soft)}
-#lag{flex:none;margin-inline-start:auto;padding:2px 10px;border-radius:999px;background:var(--warn-bg);color:var(--warn-fg);font-size:14px;line-height:1.5;font-weight:700;white-space:nowrap;align-self:center}   /* in the row of "תשובה כאן", a caution pill: never green */
-#stopBtn{padding:0 12px;width:auto;font-size:14px;font-weight:600}
-/* "לאפליקציה" (mid-lecture, to the lecture screen of the app): a ghost button like the star, with its icon; the last one of the row, so at the left corner */
-#appBtn{margin-inline-start:auto;padding:0 12px;width:auto;display:inline-flex;gap:6px;font-size:14px;font-weight:600;color:var(--accent);border-color:var(--accent);white-space:nowrap}
-#stopBtn.confirm,#stopBtn.confirm:hover{border-color:var(--rec);color:var(--rec);font-weight:800;background:var(--surface)}   /* the hover fill is not the soft green: red on it was 4.16:1 */
-footer{flex:none;display:flex;justify-content:flex-start;padding:2px 10px 8px}
-#quitBtn{border:0;background:none;color:var(--muted);font:inherit;font-size:14px;min-height:32px;padding:2px 6px;border-radius:8px;cursor:pointer;text-decoration:underline}
-#quitBtn.confirm{color:var(--rec);font-weight:800;text-decoration:none}
+#lag{flex:none;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:var(--warn-bg);color:var(--warn-fg);font-size:14px;line-height:1.4;font-weight:700;white-space:nowrap;align-self:center}   /* in the row of "תשובה כאן", to its left, a caution pill: never green */
+#lag svg{flex:none;width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#lagHint{flex:1 1 100%;margin:0;color:var(--muted);font-size:14px;line-height:1.45}
 #short{margin:14px 10px;padding:18px 16px;border:1px solid var(--line);border-radius:14px;background:var(--surface);display:flex;flex-wrap:wrap;gap:10px}
 #short b,#short p{flex:1 1 100%}
 #short b{font-size:18px}
@@ -94,8 +105,7 @@ footer{flex:none;display:flex;justify-content:flex-start;padding:2px 10px 8px}
 #box.askp .conv{flex:1;min-height:0;max-height:none}
 #box.askp .head{display:none}
 #box.askp textarea{font-size:17px;padding:10px 12px;min-height:3.6em;border-radius:12px}
-#box.askp .ais button.here{padding:8px 18px;font-size:15px;border-radius:12px;margin-inline-start:auto}
-#box.askp .ais #lag:not([hidden]) + button.here{margin-inline-start:0}   /* the warning takes the empty space, and sits right beside the button (on its right) */
+#box.askp .ais button.here{flex:1 1 55%;min-width:0;padding:11px 18px;font-size:16px;border-radius:12px;text-align:center}   /* the answer button takes the width of the row; the lag warning, when there is one, takes its own at the left */
 #toast{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);max-width:calc(100% - 20px);width:max-content;box-sizing:border-box;background:var(--surface);color:var(--fg);border:1px solid var(--line);box-shadow:0 2px 10px rgba(0,0,0,.18);padding:9px 16px;border-radius:12px;font-size:15px;line-height:1.4;font-weight:600;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s}
 #toast .star{display:inline-block;background:var(--mark-line);color:var(--fg);border-radius:6px;padding:0 7px;margin-inline-end:8px}   /* the ★ is the only yellow: the highlighter of a mark */
 #toast.on{opacity:1}
@@ -119,9 +129,14 @@ html.a-still *,html.a-still *::before,html.a-still *::after{animation:none!impor
 <body>
 <header>
   <span id="lec">אין עכשיו הרצאה פעילה</span>
- <button class="hb" id="stopBtn" type="button" hidden title="עצירת ההקלטה: ההרצאה נשמרת">עצירה</button>
- <button class="hb" id="markImp" type="button" title="סימון ★ של הרגע הזה (Ctrl+Alt+M)" aria-label="סימון ★ של הרגע הזה">★</button>
- <button class="hb" id="appBtn" type="button" hidden title="עוברים לאפליקציה, למסך ההרצאה. החלון הקטן נסגר וההרצאה ממשיכה" aria-label="מעבר לאפליקציה, למסך ההרצאה"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>לאפליקציה</button>
+  <button class="hb" id="markImp" type="button" title="סימון ★ של הרגע הזה (Ctrl+Alt+M)" aria-label="סימון ★ של הרגע הזה"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2 6.3 20.3l1.2-6.4L2.8 9.5l6.4-.8z"/></svg></button>
+  <button class="hb" id="menuBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu" aria-label="עוד פעולות" title="עוד פעולות"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+  <div id="menu" role="menu" aria-label="עוד פעולות" hidden>
+    <button class="mi" id="miApp" role="menuitem" type="button" title="עוברים לאפליקציה, למסך ההרצאה. החלון הקטן נסגר וההרצאה ממשיכה">מעבר לאפליקציה<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg></button>
+    <button class="mi" id="stopBtn" role="menuitem" type="button" hidden title="עצירת ההקלטה: ההרצאה נשמרת">עצירת הקלטה<svg class="solid" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/></svg></button>
+    <div class="sep" role="separator"></div>
+    <button class="mi danger" id="quitBtn" role="menuitem" type="button" title="סוגר את הבנתי לגמרי: הכפתור הצף, החלון הזה והאפליקציה. הרצאה שרצה נשמרת.">סגירת הבנתי<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9M6.3 6.8a8 8 0 1 0 11.4 0"/></svg></button>
+  </div>
 </header>
 <div id="short" role="alertdialog" aria-labelledby="shortT" hidden>
   <b id="shortT">עצרת מיד אחרי שהתחלת</b><p id="shortInfo"></p>
@@ -135,12 +150,11 @@ html.a-still *,html.a-still *::before,html.a-still *::after{animation:none!impor
 <div id="note" hidden>אין עכשיו הרצאה פעילה. מתחילים הרצאה או פותחים הקלטה באפליקציה, ואז אפשר לשאול כאן.</div>
 <div class="miss" id="miss" role="group" aria-label="מה פספסתי" hidden>
   <span>מה פספסתי:</span>
-  <button type="button" data-m="3" title="סיכום של 3 הדקות האחרונות">3 דק'</button>
-  <button type="button" data-m="7" title="סיכום של 7 הדקות האחרונות">7 דק'</button>
-  <button type="button" data-m="15" title="סיכום של 15 הדקות האחרונות">15 דק'</button>
+  <button type="button" data-m="3" title="סיכום של 3 הדקות האחרונות">3 דק׳</button>
+  <button type="button" data-m="7" title="סיכום של 7 הדקות האחרונות">7 דק׳</button>
+  <button type="button" data-m="15" title="סיכום של 15 הדקות האחרונות">15 דק׳</button>
 </div>
 <div id="box"></div>
-<footer><button type="button" id="quitBtn" title="סוגר את הבנתי לגמרי: הכפתור הצף, החלון הזה והאפליקציה. הרצאה שרצה נשמרת.">סגירת הבנתי</button></footer>
 <div id="toast" role="status"></div>
 <script src="/ask.js"></script>
 <script>
@@ -174,25 +188,47 @@ async function mark() {
   toast(r.ok ? MARKED : (r.error || "לא הצלחתי לסמן."));
 }
 $("#markImp").addEventListener("click", () => mark());
-// "לאפליקציה": the app (the window that is open, or a new one) goes to the screen of the lecture that runs, and this window closes. The lecture goes on.
-$("#appBtn").addEventListener("click", async () => {
+// the "⋯" menu: to the app, stop, close Hevanti. Enter / Space / click open it (the first item has the focus), the arrows move, Esc closes it and the focus goes back to the button
+const menuBtn = $("#menuBtn"), menu = $("#menu");
+const menuItems = () => [...menu.querySelectorAll(".mi")].filter(b => !b.hidden && !b.disabled);
+function openMenu() { menu.hidden = false; menuBtn.setAttribute("aria-expanded", "true"); const it = menuItems()[0]; if (it) it.focus(); }
+function closeMenu(back) {
+  if (menu.hidden) return;
+  menu.hidden = true; menuBtn.setAttribute("aria-expanded", "false"); stopReset(); quitReset();
+  if (back) menuBtn.focus();
+}
+menuBtn.addEventListener("click", () => { if (menu.hidden) openMenu(); else closeMenu(true); });
+menu.addEventListener("keydown", e => {
+  const its = menuItems(), i = its.indexOf(document.activeElement);
+  if (e.key === "ArrowDown") { e.preventDefault(); its[(i + 1) % its.length].focus(); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); its[(i - 1 + its.length) % its.length].focus(); }
+  else if (e.key === "Home") { e.preventDefault(); its[0].focus(); }
+  else if (e.key === "End") { e.preventDefault(); its[its.length - 1].focus(); }
+  else if (e.key === "Tab") closeMenu(false);   // (the focus goes on where Tab takes it)
+});
+document.addEventListener("pointerdown", e => { if (!menu.hidden && !menu.contains(e.target) && !menuBtn.contains(e.target)) closeMenu(false); });
+// "מעבר לאפליקציה": the app (the window that is open, or a new one) goes to the screen of the lecture that runs, and this window closes. The lecture goes on.
+$("#miApp").addEventListener("click", async () => {
   let r; try { r = await (await fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify({action: "show_app"})})).json(); } catch (e) { r = {ok: false}; }
+  closeMenu(false);
   if (r && r.ok && r.opened !== false) hide(); else toast("לא הצלחתי לפתוח את האפליקציה.");
 });
 // stop from here: the first press asks (3 seconds), the second stops; the lecture is saved, and a card says so
 const stopBtn = $("#stopBtn");
-function stopReset() { clearTimeout(stopTimer); stopBtn.classList.remove("confirm"); stopBtn.textContent = "עצירה"; }
+function stopReset() { clearTimeout(stopTimer); stopBtn.classList.remove("confirm"); setItemText(stopBtn, stopBtn.dataset.mode === "start" ? "התחלת הרצאה חדשה" : "עצירת הקלטה"); }
+function setItemText(b, t) { b.firstChild.nodeValue = t; }   // (the text node before the icon)
 stopBtn.addEventListener("click", async () => {
   if (stopBtn.dataset.mode === "start") {   // no lecture: the same place starts a new one (the quick-start window; closing it closes only itself)
+    closeMenu(false);
     try { await fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify({action: "quick_new"})}); } catch (e) {}
     return;
   }
   if (!stopBtn.classList.contains("confirm")) {
-    stopBtn.classList.add("confirm"); stopBtn.textContent = "לעצור?";
+    stopBtn.classList.add("confirm"); setItemText(stopBtn, "לעצור?");
     stopTimer = setTimeout(stopReset, 3000);
     return;
   }
-  stopReset();
+  stopReset(); closeMenu(false);
   const sk = BZMAsk.stopKind(curS);   // (the same rule as in the app: ask.js)
   if (sk.kind === "cancel") { await doStop(true); toast("בוטל. לא נשמר כלום."); return; }
   if (sk.kind === "short") {   // almost empty: the same question as in the app
@@ -214,14 +250,14 @@ $("#shortDel").addEventListener("click", async () => { await doStop(true); toast
 $("#shortSave").addEventListener("click", () => doStop(false));
 // close Hevanti for good, from here: the first press asks (3 seconds), the second closes (a running lecture is stopped and saved first)
 const quitBtn = $("#quitBtn"); let quitTimer = 0;
-function quitReset() { clearTimeout(quitTimer); quitBtn.classList.remove("confirm"); quitBtn.textContent = "סגירת הבנתי"; }
+function quitReset() { clearTimeout(quitTimer); quitBtn.classList.remove("confirm"); setItemText(quitBtn, "סגירת הבנתי"); }
 quitBtn.addEventListener("click", async () => {
   if (!quitBtn.classList.contains("confirm")) {
-    quitBtn.classList.add("confirm"); quitBtn.textContent = live ? "לסגור? ההרצאה תישמר" : "לסגור את הבנתי?";
+    quitBtn.classList.add("confirm"); setItemText(quitBtn, live ? "לסגור? ההרצאה תישמר" : "לסגור את הבנתי?");
     quitTimer = setTimeout(quitReset, 3000);
     return;
   }
-  clearTimeout(quitTimer); quitBtn.disabled = true; quitBtn.textContent = live ? "שומר וסוגר..." : "סוגר...";
+  clearTimeout(quitTimer); quitBtn.disabled = true; setItemText(quitBtn, live ? "שומר וסוגר..." : "סוגר...");
   try { await fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify({action: "quit"})}); } catch (e) {}
 });
 $("#savedClose").addEventListener("click", () => { savedGone = $("#saved").dataset.f || ""; drawSaved(null); hide(); });
@@ -277,9 +313,10 @@ document.addEventListener("keydown", e => {
   if (stopBtn.classList.contains("confirm")) { stopReset(); return; }
   if (!$("#short").hidden) { $("#short").hidden = true; pollApp(); return; }
   if (quitBtn.classList.contains("confirm")) { quitReset(); return; }
+  if (!menu.hidden) { closeMenu(true); return; }   // (the menu goes first, the window only when nothing is open)
   hide();
 });
-window.addEventListener("focus", () => { if (box) box.focus(); });
+window.addEventListener("focus", () => { if (box && menu.hidden) box.focus(); });
 async function getJson(u) { return (await fetch(u, {cache: "no-store"})).json(); }
 async function pollApp() {
   try {
@@ -315,15 +352,14 @@ async function pollApp() {
     // with no lecture the same button starts a new one; while a lecture stops, a recording is watched, or the question "delete?" is open, it is hidden
     const startNew = !live && !(s && !s.done);
     stopBtn.dataset.mode = startNew ? "start" : "stop";
-    if (startNew) { stopBtn.textContent = "התחלת הרצאה חדשה"; stopBtn.title = "פותח את חלון ההתחלה המהירה"; stopBtn.classList.remove("confirm"); }
-    else if (!stopBtn.classList.contains("confirm")) { stopBtn.textContent = "עצירה"; stopBtn.title = "עצירת ההקלטה: ההרצאה נשמרת"; }
+    if (startNew) { setItemText(stopBtn, "התחלת הרצאה חדשה"); stopBtn.title = "פותח את חלון ההתחלה המהירה"; stopBtn.classList.remove("confirm"); }
+    else if (!stopBtn.classList.contains("confirm")) { setItemText(stopBtn, "עצירת הקלטה"); stopBtn.title = "עצירת ההקלטה: ההרצאה נשמרת"; }
     stopBtn.hidden = !(canStop || startNew) || !$("#short").hidden;
     if (live && s && s.stopping) setLec((s.discard ? "עוצר ומוחק..." : "עוצר ושומר...") + (s.stopping_for > 5 ? " " + s.stopping_for + " שנ'" : ""));
     const sg = live && s && s.suggest;   // a course read from the first slide: offered, one press to take it
     $("#sug").hidden = !sg;
     if (sg) { $("#sugText").textContent = "נראה שזה הקורס \"" + sg.course + "\" (לפי השקף הראשון). להעביר?"; $("#sug").dataset.course = sg.course; }
     $("#miss").hidden = !live;
-    $("#appBtn").hidden = !live;   // (only while a lecture runs: the saved card has "פתיחת ההרצאה באפליקציה", and with no lecture the same place starts one)
     drawSaved(s);
     if (window.BZMAsk) {
       BZMAsk.setConnected(d.connect); BZMAsk.setApps(d.ai_apps);
@@ -337,11 +373,20 @@ function lagChip() {
   let c = document.getElementById("lag");
   if (!c) { c = document.createElement("span"); c.id = "lag"; c.setAttribute("role", "status"); c.hidden = true; }
   const row = document.querySelector("#box .ais"), here = row && row.querySelector("button.here");
-  if (row && (c.parentElement !== row || (here && c.nextElementSibling !== here))) row.insertBefore(c, here || row.firstChild);   // (just before the button: on its right in Hebrew)
+  if (row && (c.parentElement !== row || (here && c.previousElementSibling !== here))) row.insertBefore(c, here ? here.nextSibling : row.firstChild);   // (just after the button: at its left in Hebrew)
+  let h = document.getElementById("lagHint");
+  if (!h) {
+    h = document.createElement("p"); h.id = "lagHint"; h.hidden = true; h.textContent = "התשובה עוד לא כוללת את השניות האחרונות";
+    c.tabIndex = 0;   // (reachable with the keyboard: pointing at it or focusing it says what it means)
+    for (const ev of ["mouseenter", "focus"]) c.addEventListener(ev, () => { h.hidden = false; });
+    for (const ev of ["mouseleave", "blur"]) c.addEventListener(ev, () => { h.hidden = true; });
+  }
+  if (row && h.parentElement !== row) row.appendChild(h);
+  if (row && h.previousElementSibling !== c) c.after(h);
   return c;
 }
 async function pollLive() {
-  if (!live || kind0 === "rec") { shot = null; total = 0; lagChip().hidden = true; return; }   // (a recording: the server finds the slide)
+  if (!live || kind0 === "rec") { shot = null; total = 0; lagChip().hidden = true; $("#lagHint") && ($("#lagHint").hidden = true); return; }   // (a recording: the server finds the slide)
   try {
     const d = await getJson("/api/live?since=" + total);
     if (d.none) { shot = null; total = 0; lagChip().hidden = true; return; }
@@ -349,8 +394,11 @@ async function pollLive() {
     const lag = Math.round(d.lag || 0), lagBox = lagChip();
     lagBox.hidden = !(lag > LAG_SHOW_S);
     if (!lagBox.hidden) {
-      lagBox.textContent = "מאחר ב-" + lag + " שניות";
-      lagBox.title = lagBox.dataset.full = "התמלול מאחר ב-" + lag + " שניות. התשובות מבוססות על מה שכבר נכתב.";
+      lagBox.replaceChildren();
+      const clock = document.createElementNS("http://www.w3.org/2000/svg", "svg"); clock.setAttribute("viewBox", "0 0 24 24"); clock.setAttribute("aria-hidden", "true");
+      clock.innerHTML = '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>';
+      lagBox.append(clock, "מאחר ב־" + lag + " שניות");
+      lagBox.title = lagBox.dataset.full = "התמלול מאחר ב־" + lag + " שניות. התשובה עוד לא כוללת את השניות האחרונות.";
       lagBox.setAttribute("aria-label", lagBox.title);
     }
     if (d.yt) { const im = (d.items || []).filter(x => x.img).pop(); if (im) shot = im.img; }

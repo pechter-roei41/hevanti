@@ -10,6 +10,10 @@ version is on [GitHub Releases](https://github.com/pechter-roei41/hevanti/releas
   marks so far, the last slide, floating window, ★, stop), a lecture just saved (its marks, each opening 8 s before), and a regular day
   (continue where you stopped, my courses, the last three lectures). Home never starts a lecture: every "start a lecture" opens the
   quick-start window. At most one bar shows above the state.
+- **Floating window redesign:** the title row is the course (with the recording dot), a yellow ★ and a "⋯" button at the left corner that opens a
+  menu: to the app, stop recording (with no lecture: start a new lecture) and close Hevanti (stop and close still ask twice). "Answer here" takes
+  the full width of its row; the "behind by N seconds" pill (with a clock) sits at its left and explains itself when pointed at. The menu
+  works with the keyboard (Enter/Space, arrows, Esc).
 - **Small fixes:** the "behind by N seconds" warning sits right beside "answer here", on its right; the white "go through the marks"
   button on the home page's green card shows only when the lecture has marks, at its own width; "start a lecture" at home minimizes the
   app only after the quick-start window has drawn its page, so there is no blank moment between them.

@@ -421,37 +421,71 @@ with sync_playwright() as p:
     mini.wait_for_function("() => !document.querySelector('#toast').classList.contains('on')", timeout=8000)
     mini.wait_for_timeout(4600)   # (a whole look later)
     check("floating window: ...and only once for one mark", not mini.evaluate("() => document.querySelector('#toast').classList.contains('on')"))
+    # ---- the "⋯" menu (19.11.2026): to the app, stop, close Hevanti ----
+    def mclick(sel):   # (a menu item is pressed as a student does it: the menu is opened first, unless it is open)
+        if mini.is_hidden("#menu"):
+            mini.click("#menuBtn")
+            mini.wait_for_selector("#menu", state="visible", timeout=3000)
+        mini.click(sel)
+    marked.clear()
+    mini.evaluate("pollApp()")
+    mini.wait_for_function("() => !document.querySelector('#menuBtn').hidden", timeout=5000)
+    mb = mini.evaluate("""() => { const h = document.querySelector('header'), b = document.querySelector('#menuBtn'), m = document.querySelector('#markImp'), l = document.querySelector('#lec');
+        const rb = b.getBoundingClientRect(), rm = m.getBoundingClientRect(), rl = l.getBoundingClientRect();
+        return {last: h.querySelector('button:last-of-type') === b, leftOfStar: rb.right <= rm.left + 1 || rb.top > rm.bottom, starLeftOfTitle: rm.right <= rl.left + 1 || rm.top > rl.bottom, h: Math.round(rb.height), w: Math.round(rb.width),
+                popup: b.getAttribute('aria-haspopup'), exp: b.getAttribute('aria-expanded'), label: b.getAttribute('aria-label'), menuHidden: document.querySelector('#menu').hidden,
+                starYellow: getComputedStyle(m.querySelector('svg')).fill}; }""")
+    check("floating window: the title row is the course (with the recording dot), the ★ and the '⋯' at the left corner, each 36 px, with names for the screen reader",
+          mb["last"] and mb["leftOfStar"] and mb["starLeftOfTitle"] and mb["h"] >= 36 and mb["w"] >= 36 and mb["popup"] == "menu" and mb["exp"] == "false" and mb["label"] and mb["menuHidden"], mb)
+    check("floating window: the ★ is yellow (the highlighter)", mb["starYellow"] not in ("none", "rgba(0, 0, 0, 0)") and "247, 212, 76" in mb["starYellow"] or "232, 197, 71" in mb["starYellow"], mb["starYellow"])
+    check("floating window: the stop and close buttons and the footer are gone from the window itself (they are in the menu)",
+          mini.evaluate("() => !document.querySelector('footer') && document.querySelector('#menu').contains(document.querySelector('#stopBtn')) && document.querySelector('#menu').contains(document.querySelector('#quitBtn'))"))
+    mini.click("#menuBtn")
+    mini.wait_for_selector("#menu", state="visible", timeout=3000)
+    mo = mini.evaluate("""() => ({exp: document.querySelector('#menuBtn').getAttribute('aria-expanded'), focus: document.activeElement.id, role: document.querySelector('#menu').getAttribute('role'),
+        items: [...document.querySelectorAll('#menu [role=menuitem]')].filter(b => !b.hidden).map(b => b.id + ':' + b.textContent.trim()), sep: !!document.querySelector('#menu [role=separator]'),
+        inside: (() => { const m = document.querySelector('#menu').getBoundingClientRect(); return m.left >= 0 && m.right <= innerWidth && m.bottom <= innerHeight; })()})""")
+    check("floating window: '⋯' opens the menu: 'מעבר לאפליקציה', 'עצירת הקלטה', a line, 'סגירת הבנתי'; the first item has the focus; it fits in the window",
+          mo["exp"] == "true" and mo["focus"] == "miApp" and mo["role"] == "menu" and mo["items"] == ["miApp:מעבר לאפליקציה", "stopBtn:עצירת הקלטה", "quitBtn:סגירת הבנתי"] and mo["sep"] and mo["inside"], mo)
+    mini.keyboard.press("ArrowDown")
+    check("floating window: the arrow keys move between the items", mini.evaluate("document.activeElement.id") == "stopBtn")
+    mini.keyboard.press("End")
+    check("floating window: End goes to the last item (close Hevanti)", mini.evaluate("document.activeElement.id") == "quitBtn")
+    marked.clear()
+    mini.keyboard.press("Escape")
+    check("floating window: Esc closes the menu and the focus goes back to '⋯' (the window stays)",
+          mini.is_hidden("#menu") and mini.evaluate("document.activeElement.id") == "menuBtn" and mini.evaluate("document.querySelector('#menuBtn').getAttribute('aria-expanded')") == "false" and not any(m.get("action") == "hide_mini" for m in marked), marked)
+    mini.click("#menuBtn")
+    mini.wait_for_selector("#menu", state="visible", timeout=3000)
+    mini.mouse.click(200, 400)   # (outside)
+    check("floating window: a click outside closes the menu", mini.is_hidden("#menu"))
+    marked.clear()
+    mclick("#miApp")
+    mini.wait_for_timeout(500)
+    acts = [m.get("action") for m in marked]
+    check("floating window: 'מעבר לאפליקציה' asks Hevanti to show the app on the lecture, closes the menu, and hides this window", acts[:2] == ["show_app", "hide_mini"] and mini.is_hidden("#menu"), acts)
     # ---- stop from the small window: two presses, then a card says the lecture was saved ----
     marked.clear()
     mini.evaluate("pollApp()")
+    mini.click("#menuBtn")
     mini.wait_for_selector("#stopBtn", state="visible", timeout=5000)
-    check("floating window: a live lecture has a stop button in the title row", mini.inner_text("#stopBtn") == "עצירה")
-    # ---- "לאפליקציה": mid-lecture, from here to the lecture screen of the app (18.11.2026) ----
-    app_geo = mini.evaluate("""() => { const h = document.querySelector('header'), b = document.querySelector('#appBtn'), m = document.querySelector('#markImp');
-        const rb = b.getBoundingClientRect(), rm = m.getBoundingClientRect();
-        return {shown: !b.hidden && rb.width > 0, last: h.lastElementChild === b, leftOfStar: rb.left < rm.left || rb.top > rm.top, h: Math.round(rb.height), text: b.textContent.trim(),
-                label: b.getAttribute('aria-label'), svg: !!b.querySelector('svg[aria-hidden=true]')}; }""")
-    check("floating window: a lecture runs - 'לאפליקציה' is the last button of the title row (the left corner), 36 px high, with its icon and a name for the screen reader",
-          app_geo["shown"] and app_geo["last"] and app_geo["leftOfStar"] and app_geo["h"] >= 36 and app_geo["text"] == "לאפליקציה" and app_geo["svg"] and "אפליקציה" in (app_geo["label"] or ""), app_geo)
+    check("floating window: a live lecture has 'עצירת הקלטה' in the menu", mini.inner_text("#stopBtn") == "עצירת הקלטה")
+    mini.keyboard.press("Escape")
+    # ---- (the "to the app" part is in the menu check above) ----
     marked.clear()
-    mini.click("#appBtn")
-    mini.wait_for_timeout(500)
-    acts = [m.get("action") for m in marked]
-    check("floating window: 'לאפליקציה' asks Hevanti to show the app on the lecture, and then hides this window", acts[:2] == ["show_app", "hide_mini"], acts)
-    marked.clear()
-    mini.click("#stopBtn")
+    mclick("#stopBtn")
     check("floating window: the first press only asks (a short word, so the course name is not cut), and nothing stops yet",
           mini.inner_text("#stopBtn") == "לעצור?" and not any(m.get("action") == "stop" for m in marked), marked)
     mini.keyboard.press("Escape")
     check("floating window: Esc takes back the stop question first, and does not hide the window",
-          mini.inner_text("#stopBtn") == "עצירה" and not any(m.get("action") == "hide_mini" for m in marked), marked)
-    mini.click("#stopBtn"); mini.hover("#stopBtn")
+          mini.inner_text("#stopBtn") == "עצירת הקלטה" and not any(m.get("action") == "hide_mini" for m in marked), marked)
+    mclick("#stopBtn"); mini.hover("#stopBtn")
     st = mini.evaluate("""() => { const b = document.querySelector('#stopBtn'), c = getComputedStyle(b), p = document.createElement('i'); p.style.background = 'var(--accent-soft)'; document.body.appendChild(p);
         const soft = getComputedStyle(p).backgroundColor; p.remove(); return {bg: c.backgroundColor, soft, text: b.textContent}; }""")
     check("floating window: the hovered stop question keeps its red readable (not on the soft green: 4.16:1)", st["text"] == "לעצור?" and st["bg"] != st["soft"], st)
     mini.wait_for_timeout(3400)
-    check("floating window: not pressed again - it goes back to \"עצירה\" after 3 seconds", mini.inner_text("#stopBtn") == "עצירה" and not any(m.get("action") == "stop" for m in marked))
-    mini.click("#stopBtn"); mini.click("#stopBtn")
+    check("floating window: not pressed again - it goes back to \"עצירת הקלטה\" after 3 seconds", mini.inner_text("#stopBtn") == "עצירת הקלטה" and not any(m.get("action") == "stop" for m in marked))
+    mclick("#stopBtn"); mclick("#stopBtn")
     mini.wait_for_timeout(500)
     check("floating window: the second press stops", any(m.get("action") == "stop" for m in marked), marked)
     mini_state["stopping"] = True
@@ -478,45 +512,48 @@ with sync_playwright() as p:
     # ---- close Hevanti from the small window: two presses ----
     marked.clear()
     check("floating window: it has \"סגירת הבנתי\"", mini.inner_text("#quitBtn") == "סגירת הבנתי")
-    mini.click("#quitBtn")
+    mclick("#quitBtn")
     check("floating window: the first press only asks (and says the lecture is saved), nothing is sent", "תישמר" in mini.inner_text("#quitBtn") and not any(m.get("action") == "quit" for m in marked), (mini.inner_text("#quitBtn"), marked))
     mini.wait_for_timeout(3400)
     check("floating window: not pressed again - it goes back", mini.inner_text("#quitBtn") == "סגירת הבנתי")
-    mini.click("#quitBtn"); mini.click("#quitBtn"); mini.wait_for_timeout(400)
+    mclick("#quitBtn"); mclick("#quitBtn"); mini.wait_for_timeout(400)
     check("floating window: the second press sends quit", any(m.get("action") == "quit" for m in marked), marked)
-    mini.evaluate("() => { const b = document.querySelector('#quitBtn'); b.disabled = false; b.className = ''; b.textContent = 'סגירת הבנתי'; }")
+    mini.evaluate("() => { const b = document.querySelector('#quitBtn'); b.disabled = false; b.className = 'mi danger'; b.firstChild.nodeValue = 'סגירת הבנתי'; }")
     marked.clear()
     # ---- no lecture: the same button starts a new one (the quick-start window) ----
     mini_state["live"] = False
     marked.clear()
     mini.evaluate("pollApp()")
     mini.wait_for_timeout(300)
-    check("floating window: with no lecture there is no 'לאפליקציה' button (the same place starts a lecture)", mini.is_hidden("#appBtn"))
-    check("floating window: with no lecture the button reads \"התחלת הרצאה חדשה\" (not \"עצירה\")", mini.is_visible("#stopBtn") and mini.inner_text("#stopBtn") == "התחלת הרצאה חדשה", mini.inner_text("#stopBtn"))
-    mini.click("#stopBtn")
+    if mini.is_hidden("#menu"):   # (it stays open after the first press of "close Hevanti")
+        mini.click("#menuBtn")
+    mini.wait_for_selector("#menu", state="visible", timeout=3000)
+    check("floating window: with no lecture the menu still has 'מעבר לאפליקציה' (to the home screen)", mini.is_visible("#miApp"))
+    check("floating window: with no lecture the item reads \"התחלת הרצאה חדשה\" (not \"עצירת הקלטה\")", mini.is_visible("#stopBtn") and mini.inner_text("#stopBtn") == "התחלת הרצאה חדשה", mini.inner_text("#stopBtn"))
+    mclick("#stopBtn")
     mini.wait_for_timeout(300)
     check("floating window: one press asks Hevanti for the quick-start window, and nothing else (no stop, no second press)",
           [m.get("action") for m in marked] == ["quick_new"], marked)
     mini_state["live"] = True
     mini.evaluate("pollApp()")
     mini.wait_for_timeout(300)
-    check("floating window: a lecture starts - the button goes back to \"עצירה\"", mini.inner_text("#stopBtn") == "עצירה")
+    check("floating window: a lecture starts - the item goes back to \"עצירת הקלטה\"", mini.inner_text("#stopBtn") == "עצירת הקלטה")
     # ---- a lecture stopped right after it started: the same question as in the app (QUICK_STOP_S) ----
     mini_state["loading"] = True; marked.clear()
     mini.evaluate("pollApp()"); mini.wait_for_timeout(300)
-    mini.click("#stopBtn"); mini.click("#stopBtn"); mini.wait_for_timeout(400)
+    mclick("#stopBtn"); mclick("#stopBtn"); mini.wait_for_timeout(400)
     check("floating window: stopped while the model still loads - cancelled at once, without saving (and no question)",
           any(m.get("action") == "stop" and m.get("discard") is True for m in marked) and mini.is_hidden("#short"), marked)
     mini_state["loading"] = False; mini_state["fresh"] = True; marked.clear()
     mini.evaluate("pollApp()"); mini.wait_for_timeout(300)
-    mini.click("#stopBtn"); mini.click("#stopBtn"); mini.wait_for_timeout(400)
+    mclick("#stopBtn"); mclick("#stopBtn"); mini.wait_for_timeout(400)
     check("floating window: stopped 4 seconds after the start - it asks whether to delete, and nothing is sent yet",
           mini.is_visible("#short") and "שניות" in mini.inner_text("#shortInfo") and not any(m.get("action") == "stop" for m in marked), (mini.inner_text("#short"), marked))
     mini.click("#shortSave"); mini.wait_for_timeout(400)
     check("floating window: \"לעצור ולשמור\" stops and keeps it", any(m.get("action") == "stop" and m.get("discard") is False for m in marked), marked)
     marked.clear()
     mini.evaluate("pollApp()"); mini.wait_for_timeout(300)
-    mini.click("#stopBtn"); mini.click("#stopBtn"); mini.wait_for_timeout(300)
+    mclick("#stopBtn"); mclick("#stopBtn"); mini.wait_for_timeout(300)
     mini.click("#shortDel"); mini.wait_for_timeout(400)
     check("floating window: \"עצירה ומחיקה\" stops and deletes it", any(m.get("action") == "stop" and m.get("discard") is True for m in marked), marked)
     sk = mini.evaluate("""() => { const f = (t) => BZMAsk.stopKind({kind: "live", ready: true, ready_at: 1000, quick_stop_s: 10}, 1000 + t).kind;
@@ -527,7 +564,7 @@ with sync_playwright() as p:
     mini_state["live"] = False; mini.evaluate("pollApp()"); mini.wait_for_timeout(300)
     mini_state["live"] = True; mini.evaluate("pollApp()"); mini.wait_for_timeout(300)
     marked.clear()
-    mini.click("#stopBtn"); mini.click("#stopBtn"); mini.wait_for_timeout(400)
+    mclick("#stopBtn"); mclick("#stopBtn"); mini.wait_for_timeout(400)
     check("floating window: a lecture of 2 minutes stops and is saved, with no question", mini.is_hidden("#short") and any(m.get("action") == "stop" and m.get("discard") is False for m in marked), marked)
     mini_state["live"] = True
     mini.evaluate("pollApp()"); mini.wait_for_timeout(300)
@@ -957,17 +994,21 @@ with sync_playwright() as p:
         lagp.evaluate("async () => { await pollApp(); await pollLive(); }")
         return lagp.evaluate("[!document.querySelector('#lag').hidden, document.querySelector('#lag').textContent]")
     shown, txt = poll()
-    check("floating window: the transcript is 25 seconds behind - it says so, in seconds", shown and "מאחר ב-25 שניות" in txt, (shown, txt))
-    check("...in the row of \"תשובה כאן\" (where one decides to ask), not in the title row that a long course name needs",
-          lagp.evaluate("document.querySelector('#lag').closest('header')") is None
-          and lagp.evaluate("""() => { const l = document.querySelector('#lag').getBoundingClientRect(), b = document.querySelector('#box .ais button.here').getBoundingClientRect();
-              return Math.abs((l.top + l.bottom) / 2 - (b.top + b.bottom) / 2) < 12 && l.right <= innerWidth && l.left >= 0 && l.right < b.left || l.left > b.right; }"""))
+    check("floating window: the transcript is 25 seconds behind - it says so, in seconds", shown and "מאחר ב־25 שניות" in txt, (shown, txt))
     lag_side = lagp.evaluate("""() => { const l = document.querySelector('#lag').getBoundingClientRect(), b = document.querySelector('#box .ais button.here').getBoundingClientRect();
-        return {left: Math.round(l.left), right: Math.round(l.right), bLeft: Math.round(b.left), bRight: Math.round(b.right), mid: Math.round((l.top + l.bottom) / 2 - (b.top + b.bottom) / 2)}; }""")
-    check("...right beside \"תשובה כאן\", on its right (19.11.2026)", lag_side["left"] >= lag_side["bRight"] and lag_side["left"] - lag_side["bRight"] <= 16 and abs(lag_side["mid"]) < 12, lag_side)
+        return {left: Math.round(l.left), right: Math.round(l.right), bLeft: Math.round(b.left), bRight: Math.round(b.right), mid: Math.round((l.top + l.bottom) / 2 - (b.top + b.bottom) / 2), bW: Math.round(b.width), vw: innerWidth,
+                inHeader: !!document.querySelector('#lag').closest('header'), clock: !!document.querySelector('#lag svg[aria-hidden=true]')}; }""")
+    check("...in the row of \"תשובה כאן\" (not in the title row that a long course name needs), at its LEFT, on the same line, with a clock (19.11.2026)",
+          not lag_side["inHeader"] and lag_side["right"] <= lag_side["bLeft"] + 1 and lag_side["bLeft"] - lag_side["right"] <= 16 and abs(lag_side["mid"]) < 12 and lag_side["left"] >= 0 and lag_side["clock"], lag_side)
+    check("...and the answer button still takes most of the row (the full width when there is no warning)", lag_side["bW"] > lag_side["vw"] * 0.4, lag_side)
+    lagp.hover("#lag")
+    check("...pointing at it says what it means: the answer does not include the last seconds yet",
+          lagp.evaluate("!document.getElementById('lagHint').hidden") and "השניות האחרונות" in lagp.evaluate("document.getElementById('lagHint').textContent"))
+    lagp.mouse.move(5, 300)
+    check("...and the explanation goes away when the pointer leaves", lagp.evaluate("document.getElementById('lagHint').hidden"))
     check("...and the title row is whole: the course name is not cut by it", lagp.evaluate("""() => { const t = document.querySelector('#lec'); return t.scrollWidth <= t.clientWidth + 1; }"""))
     check("...with the whole sentence for the screen reader and the pointer",
-          "התמלול מאחר ב-25 שניות" in lagp.evaluate("document.querySelector('#lag').getAttribute('aria-label')"))
+          "התמלול מאחר ב־25 שניות" in lagp.evaluate("document.querySelector('#lag').getAttribute('aria-label')"))
     check("...a caution pill: not green", lagp.evaluate("""() => { const p = document.createElement('div'); p.style.cssText = 'background:var(--warn-bg);color:var(--warn-fg)'; document.body.appendChild(p);
           const a = getComputedStyle(p), b = getComputedStyle(document.querySelector('#lag')); const ok = a.backgroundColor === b.backgroundColor && a.color === b.color; p.remove(); return ok; }"""))
     state["lag"] = 10
