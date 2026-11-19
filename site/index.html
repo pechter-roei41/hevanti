@@ -18,7 +18,7 @@
 <meta name="twitter:image" content="https://hevanti-app.netlify.app/assets/og.png">
 <meta property="og:title" content="הבנתי - חלון קטן מעל הזום שעונה על מה שפספסת">
 <meta property="og:description" content="תמלול הרצאות זום והקלטות, חלון צף לשאלות, וסימון רגעים עם ★. קוד פתוח, ל-Windows.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Cpath d='M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z' fill='%233DDC97'/%3E%3Cpath d='M33 52L52 71L87 33' fill='none' stroke='%230D1B16' stroke-width='17' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Cpath d='M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z' fill='%233DDC97'/%3E%3Cpath d='M41.5 26H78.5A7.5 7.5 0 0 1 86 33.5V66.5A7.5 7.5 0 0 1 71 66.5V41H41.5A7.5 7.5 0 0 1 41.5 26Z' fill='%230D1B16'/%3E%3Crect x='34' y='50' width='15' height='24' rx='7.5' fill='%230D1B16'/%3E%3C/svg%3E">
 <style>
 @font-face{font-family:"Secular One";src:url(assets/SecularOne-Regular.ttf) format("truetype");font-weight:400;font-display:swap}
 @font-face{font-family:"Assistant";src:url(assets/Assistant-Variable.ttf) format("truetype");font-weight:200 800;font-display:swap}
@@ -46,7 +46,7 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 
 <header style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:22px 24px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px">
 <div style="display:flex;align-items:center;gap:10px">
-<svg width="40" height="40" viewBox="0 0 120 120" role="img" aria-label="הלוגו של הבנתי"><path d="M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z" fill="#3DDC97"/><path d="M33 52L52 71L87 33" fill="none" stroke="#0D1B16" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg width="40" height="40" viewBox="0 0 120 120" role="img" aria-label="הלוגו של הבנתי"><path d="M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z" fill="#3DDC97"/><path d="M41.5 26H78.5A7.5 7.5 0 0 1 86 33.5V66.5A7.5 7.5 0 0 1 71 66.5V41H41.5A7.5 7.5 0 0 1 41.5 26Z" fill="#0D1B16"/><rect x="34" y="50" width="15" height="24" rx="7.5" fill="#0D1B16"/></svg>
 <span style="font-family:'Secular One',Assistant,sans-serif;font-size:28px;line-height:1">הבנתי</span>
 </div>
 <nav class="topnav" aria-label="ניווט בדף" style="display:flex;flex-wrap:wrap;gap:4px">
@@ -99,26 +99,36 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 <span aria-hidden="true" style="width:10px;height:10px;border-radius:50%;background:#FF7A5C;display:block"></span>
 <div style="font-weight:800;font-size:15px;line-height:1.4">חשבון אינפיניטסימלי 2</div>
 </div>
-<div style="display:flex;align-items:center;gap:6px">
-<span id="nowChip" hidden style="background:#FFD93D;color:#0D1B16;font-weight:800;font-size:14px;line-height:1.4;padding:3px 12px;border-radius:999px">★ סומן</span>
+<div style="display:flex;align-items:center;gap:6px;position:relative">
 <button type="button" id="markBtn" aria-pressed="false" aria-label="סמן את הרגע הזה" style="width:44px;height:44px;border:1.5px solid #33503F;background:transparent;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0">
 <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.1l-5.7 3.2 1.2-6.4-4.7-4.4 6.4-.8z" fill="#FFD93D" stroke="#FFD93D" stroke-width="1.6" stroke-linejoin="round"/></svg>
 </button>
+<button type="button" id="menuBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="winMenu" aria-label="עוד פעולות" style="width:44px;height:44px;border:1.5px solid #33503F;background:transparent;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0">
+<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="#F5F0E3"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+</button>
+<div id="winMenu" role="menu" aria-label="עוד פעולות" hidden style="position:absolute;top:50px;inset-inline-end:0;z-index:3;min-width:190px;background:#16291F;border:1px solid #33503F;border-radius:12px;padding:6px;display:flex;flex-direction:column;box-shadow:0 18px 40px -12px rgba(0,0,0,0.7)">
+<button type="button" role="menuitem" id="miNew" hidden style="min-height:44px;text-align:start;background:transparent;border:0;color:#F5F0E3;font-family:inherit;font-size:15px;font-weight:700;padding:0 12px;border-radius:8px;cursor:pointer">שיחה חדשה</button>
+<div id="sepNew" role="separator" hidden style="height:1px;background:#33503F;margin:4px 6px"></div>
+<button type="button" role="menuitem" style="min-height:44px;text-align:start;background:transparent;border:0;color:#F5F0E3;font-family:inherit;font-size:15px;font-weight:700;padding:0 12px;border-radius:8px;cursor:pointer">מעבר לאפליקציה</button>
+<button type="button" role="menuitem" style="min-height:44px;text-align:start;background:transparent;border:0;color:#F5F0E3;font-family:inherit;font-size:15px;font-weight:700;padding:0 12px;border-radius:8px;cursor:pointer">עצירת הקלטה</button>
+<div role="separator" style="height:1px;background:#33503F;margin:4px 6px"></div>
+<button type="button" role="menuitem" style="min-height:44px;text-align:start;background:transparent;border:0;color:#FF9B85;font-family:inherit;font-size:15px;font-weight:700;padding:0 12px;border-radius:8px;cursor:pointer">סגירת הבנתי</button>
+</div>
 </div>
 </div>
 <div role="group" aria-label="מה פספסתי" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
 <span style="font-size:14px;font-weight:700;color:#9DB3A6">מה פספסתי?</span>
 <span id="pillsMount" style="display:contents"></span>
 </div>
-<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:stretch">
-<div style="flex:1 1 180px;min-width:0;background:#16291F;border:1px solid #2C4337;border-radius:12px;padding:10px 14px;font-size:16px;line-height:1.5;min-height:44px;box-sizing:border-box;display:flex;align-items:center;color:#E4EDE7">מה זה דלתא ואפסילון?</div>
-<button type="button" id="askBtn" style="min-height:44px;padding:0 18px;border-radius:12px;background:#3DDC97;color:#06140E;border:0;font-family:inherit;font-weight:800;font-size:16px;cursor:pointer">תשובה כאן</button>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="background:#16291F;border:1px solid #2C4337;border-radius:12px;padding:10px 14px;font-size:16px;line-height:1.5;min-height:44px;box-sizing:border-box;display:flex;align-items:center;color:#E4EDE7">מה זה דלתא ואפסילון?</div>
+<button type="button" id="askBtn" style="min-height:44px;width:100%;padding:0 18px;border-radius:12px;background:#3DDC97;color:#06140E;border:0;font-family:inherit;font-weight:800;font-size:16px;cursor:pointer">תשובה כאן</button>
 </div>
 <div id="ansBox" hidden role="status" style="background:#1B3B2D;border:1px solid #2F6B50;border-radius:12px;padding:12px 14px;font-size:16px;line-height:1.55;color:#F5F0E3">
 <div id="ansText"></div>
 <div id="ansSrc" style="margin-top:6px;font-size:14px;color:#8EF0C3;font-weight:700"></div>
 </div>
-<div id="hintBox" style="background:#16291F;border-radius:12px;padding:12px 14px;font-size:15px;line-height:1.55;color:#A9BDB2">לחצו על &quot;תשובה כאן&quot;, על אחד מכפתורי הדקות, או על ★ כדי לסמן רגע.</div>
+<div id="hintBox" style="background:#16291F;border-radius:12px;padding:12px 14px;font-size:15px;line-height:1.55;color:#A9BDB2">לחצו על &quot;תשובה כאן&quot;, על אחד מכפתורי הדקות, על ★ כדי לסמן רגע, או על ⋯ לתפריט.</div>
 </div>
 <p style="margin:16px 4px 0;font-size:14px;line-height:1.5;color:#93AB9E">דוגמה להמחשה: החלון מעל הרצאה במסך מלא. בהרצאה אמיתית התשובה נשענת על התמלול ועל השקף שלכם.</p>
 </div>
@@ -180,7 +190,7 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 <p style="margin:0;color:#33433B;font-size:17px;line-height:1.6">התשובה מבוססת על הדקות האחרונות ועל השקף שעל המסך. שלושה כפתורים מוכנים: 3, 7 או 15 דקות אחורה.</p>
 </div>
 <div class="lift" style="background:#FFFFFF;border:1px solid #D8D0B8;border-radius:20px;padding:26px;display:flex;flex-direction:column;gap:12px">
-<svg width="48" height="48" viewBox="0 0 56 56" role="img" aria-label="העיגול הירוק בקצה המסך"><circle cx="28" cy="28" r="28" fill="#0F7A52"/><g transform="translate(14 14) scale(0.233)"><path d="M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z" fill="none" stroke="#F5F0E3" stroke-width="9"/><path d="M33 52L52 71L87 33" fill="none" stroke="#FFD93D" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/></g><circle cx="47" cy="9" r="6" fill="#E5533A" stroke="#F5F0E3" stroke-width="2"/></svg>
+<svg width="48" height="48" viewBox="0 0 56 56" role="img" aria-label="העיגול הירוק בקצה המסך"><circle cx="28" cy="28" r="28" fill="#0F7A52"/><g transform="translate(14 14) scale(0.233)"><path d="M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z" fill="none" stroke="#F5F0E3" stroke-width="9"/><path d="M41.5 26H78.5A7.5 7.5 0 0 1 86 33.5V66.5A7.5 7.5 0 0 1 71 66.5V41H41.5A7.5 7.5 0 0 1 41.5 26Z" fill="#F5F0E3"/><rect x="34" y="50" width="15" height="24" rx="7.5" fill="#DCEBDF"/></g><circle cx="47" cy="9" r="6" fill="#E5533A" stroke="#F5F0E3" stroke-width="2"/></svg>
 <h3 style="margin:0;font-size:21px;font-weight:800;line-height:1.3">עיגול בקצה המסך</h3>
 <p style="margin:0;color:#33433B;font-size:17px;line-height:1.6">לחיצה עליו פותחת את החלון, ועוד לחיצה סוגרת. הנקודה האדומה מראה שהרצאה מוקלטת.</p>
 </div>
@@ -389,7 +399,7 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 <!-- ================= FINAL CTA ================= -->
 <section aria-labelledby="h-cta" style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:0 24px 96px">
 <div style="background:#3DDC97;color:#06140E;border-radius:32px;padding:72px 28px;display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center;position:relative;overflow:hidden">
-<svg width="64" height="64" viewBox="0 0 120 120" aria-hidden="true"><path d="M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z" fill="#0D1B16"/><path d="M33 52L52 71L87 33" fill="none" stroke="#FFD93D" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg width="64" height="64" viewBox="0 0 120 120" aria-hidden="true"><path d="M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z" fill="#0D1B16"/><path d="M41.5 26H78.5A7.5 7.5 0 0 1 86 33.5V66.5A7.5 7.5 0 0 1 71 66.5V41H41.5A7.5 7.5 0 0 1 41.5 26Z" fill="#FFD93D"/><rect x="34" y="50" width="15" height="24" rx="7.5" fill="#FFD93D"/></svg>
 <h2 id="h-cta" style="margin:0;font-family:'Secular One',Assistant,sans-serif;font-weight:400;font-size:clamp(34px,5.6vw,64px);line-height:1.08;text-wrap:balance">ההרצאה הבאה שלך כבר מתחילה</h2>
 <p style="margin:0;max-width:540px;font-size:19px;color:#0F3326;text-wrap:pretty">מתקינים, בוחרים קורס, ולוחצים &quot;התחל תמלול&quot;. כשתאבד את החוט, הבנתי כבר תהיה שם.</p>
 <a href="https://github.com/pechter-roei41/hevanti/releases/latest/download/Hevanti-Setup.exe" style="background:#0D1B16;color:#F5F0E3;text-decoration:none;font-weight:800;font-size:20px;padding:16px 32px;border-radius:14px;min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center;gap:10px">
@@ -463,9 +473,33 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
     if(cur){document.getElementById('ansText').textContent=cur.t;document.getElementById('ansSrc').textContent=cur.s;}
   }
   function renderNow(){
-    document.getElementById('nowChip').hidden=!now;
-    document.getElementById('markBtn').setAttribute('aria-pressed',String(now));
+    var mb=document.getElementById('markBtn');
+    mb.setAttribute('aria-pressed',String(now));
+    mb.style.background=now?'#4A4220':'transparent';
+    mb.style.borderColor=now?'#FFD93D':'#33503F';
   }
+  var menu=document.getElementById('winMenu'), menuBtn=document.getElementById('menuBtn');
+  function menuItems(){return Array.prototype.filter.call(menu.querySelectorAll('[role=menuitem]'),function(i){return !i.hidden;});}
+  function closeMenu(back){menu.hidden=true;menuBtn.setAttribute('aria-expanded','false');if(back)menuBtn.focus();}
+  function openMenu(){
+    var has=!!answers[ans];
+    document.getElementById('miNew').hidden=document.getElementById('sepNew').hidden=!has;
+    menu.hidden=false;menuBtn.setAttribute('aria-expanded','true');menuItems()[0].focus();
+  }
+  menuBtn.addEventListener('click',function(){menu.hidden?openMenu():closeMenu(true);});
+  menu.addEventListener('click',function(e){
+    var b=e.target.closest('[role=menuitem]'); if(!b) return;
+    if(b.id==='miNew'){ans=null;renderPills();renderAns();}
+    closeMenu(true);
+  });
+  menu.addEventListener('keydown',function(e){
+    var it=menuItems(), i=it.indexOf(document.activeElement);
+    if(e.key==='Escape'){e.preventDefault();closeMenu(true);}
+    else if(e.key==='ArrowDown'){e.preventDefault();it[(i+1)%it.length].focus();}
+    else if(e.key==='ArrowUp'){e.preventDefault();it[(i-1+it.length)%it.length].focus();}
+    else if(e.key==='Tab'){closeMenu(false);}
+  });
+  document.addEventListener('click',function(e){if(!menu.hidden&&!menu.contains(e.target)&&!menuBtn.contains(e.target))closeMenu(false);});
   document.getElementById('linesMount').addEventListener('click',function(e){
     var b=e.target.closest('button[data-id]'); if(!b) return;
     marks[b.dataset.id]=!marks[b.dataset.id]; renderLines();
