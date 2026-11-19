@@ -22,8 +22,8 @@ Hevanti (הבנתי) is a lecture companion. It transcribes lectures on the stud
 Around them:
 
 - The floating button: a green circle with the logo as a thin line and a red recording dot; a click opens the small window, which grows out of it while the logo turns into an X that closes it; no motion when the student asks for none.
-- The floating window can stop the recording (two presses) and then says the lecture was saved, with a link to open it; when the window is closed the same message shows above the round button. While a lecture runs, a "to the app" button in the small window shows the app on the lecture screen.
-- A quick-start window in the middle of the screen when Hevanti opens: the course (guessed from a window title or the weekly schedule, never silently) and the kind of lecture, then "start" runs the transcript in the background; the home screen stays one click away and is what a first start, a missing key or a GPU problem shows.
+- The floating window's "⋯" menu holds "to the app" (shows the app on the lecture's screen, in the window that is already open if there is one), "stop recording" (two presses; with no lecture it starts a new one) and "close Hevanti" (two presses). A stopped lecture says it was saved, with a link to open it; when the window is closed the same message shows above the round button.
+- A quick-start window in the middle of the screen when Hevanti opens: the course (guessed from a window title or the weekly schedule, never silently) and the kind of lecture, then "start" runs the transcript in the background; the home screen stays one click away and is what a first start (its "let's start" state), a missing key or a GPU problem shows.
 - A home screen by state, one solid-green action in each: the first time (connect the answers, then a first lecture), a lecture running (what was said now, the marks so far, the last slide, the floating window), a lecture just saved (its marks), and a regular day (continue where you stopped, my courses, recent lectures). The quick-start window is the only way to start a lecture; home never starts one.
 - A lecture that started with no course offers the course named on its first slide (local OCR; offered, never applied by itself), and the course of a recording lecture can be changed at any moment: the lecture moves there when it is saved.
 
@@ -45,6 +45,7 @@ During a live lecture the student is listening, so interactions must be quick an
 - Settings and the key are saved whole or not at all; a damaged settings file is kept and the last good copy is used, never read as "no settings" quietly.
 - A live question tries at most two Gemini models (and the light one once more when the quota stopped them, with at most 8 seconds spent finding which models answer) and gives up within about 25 seconds; an answer that Gemini blocks or cuts shows why.
 - Transcription that falls far behind is protected: the floating window shows the delay in seconds over 10, and sound that waited more than about five minutes is skipped and said so. No automatic catch-up yet (to be decided after measuring on a real student laptop).
+- One app window: "paste a key" and "to the app" in the floating window and "open the app" in the quick-start window show the window that is already open (restored from the taskbar if minimized) instead of opening another one.
 - Nothing leaves the computer without a student action; cloud sync is off until turned on; the app listens only on 127.0.0.1.
 - Only computer audio is captured, not the microphone.
 - YouTube plays in YouTube's own player, never downloaded.
