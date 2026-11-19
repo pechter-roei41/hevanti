@@ -132,6 +132,8 @@ html.a-still *,html.a-still *::before,html.a-still *::after{animation:none!impor
   <button class="hb" id="markImp" type="button" title="סימון ★ של הרגע הזה (Ctrl+Alt+M)" aria-label="סימון ★ של הרגע הזה"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2 6.3 20.3l1.2-6.4L2.8 9.5l6.4-.8z"/></svg></button>
   <button class="hb" id="menuBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu" aria-label="עוד פעולות" title="עוד פעולות"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
   <div id="menu" role="menu" aria-label="עוד פעולות" hidden>
+    <button class="mi" id="miNew" role="menuitem" type="button" hidden title="Gemini שוכח את השאלות הקודמות בתיבה הזו (התשובות נשמרות בתיקיית ההרצאה)">שיחה חדשה<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M12 8.5v5M9.5 11h5"/></svg></button>
+    <div class="sep" id="sepNew" role="separator" hidden></div>
     <button class="mi" id="miApp" role="menuitem" type="button" title="עוברים לאפליקציה, למסך ההרצאה. החלון הקטן נסגר וההרצאה ממשיכה">מעבר לאפליקציה<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg></button>
     <button class="mi" id="stopBtn" role="menuitem" type="button" hidden title="עצירת ההקלטה: ההרצאה נשמרת">עצירת הקלטה<svg class="solid" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/></svg></button>
     <div class="sep" role="separator"></div>
@@ -191,7 +193,8 @@ $("#markImp").addEventListener("click", () => mark());
 // the "⋯" menu: to the app, stop, close Hevanti. Enter / Space / click open it (the first item has the focus), the arrows move, Esc closes it and the focus goes back to the button
 const menuBtn = $("#menuBtn"), menu = $("#menu");
 const menuItems = () => [...menu.querySelectorAll(".mi")].filter(b => !b.hidden && !b.disabled);
-function openMenu() { menu.hidden = false; menuBtn.setAttribute("aria-expanded", "true"); const it = menuItems()[0]; if (it) it.focus(); }
+function updNewChat() { const has = !!(box && box.hasChat && box.hasChat()); $("#miNew").hidden = $("#sepNew").hidden = !has; }   // "שיחה חדשה" only while there is a conversation to start over
+function openMenu() { updNewChat(); menu.hidden = false; menuBtn.setAttribute("aria-expanded", "true"); const it = menuItems()[0]; if (it) it.focus(); }
 function closeMenu(back) {
   if (menu.hidden) return;
   menu.hidden = true; menuBtn.setAttribute("aria-expanded", "false"); stopReset(); quitReset();
@@ -207,6 +210,8 @@ menu.addEventListener("keydown", e => {
   else if (e.key === "Tab") closeMenu(false);   // (the focus goes on where Tab takes it)
 });
 document.addEventListener("pointerdown", e => { if (!menu.hidden && !menu.contains(e.target) && !menuBtn.contains(e.target)) closeMenu(false); });
+// "שיחה חדשה": the questions and answers of this box are cleared (what "more details" and the next question carry is cleared too); the answers stay in the lecture's folder
+$("#miNew").addEventListener("click", () => { if (box && box.reset) box.reset(); closeMenu(false); if (box) box.focus(); toast("שיחה חדשה: אפשר לשאול מחדש."); });
 // "מעבר לאפליקציה": the app (the window that is open, or a new one) goes to the screen of the lecture that runs, and this window closes. The lecture goes on.
 $("#miApp").addEventListener("click", async () => {
   let r; try { r = await (await fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify({action: "show_app"})})).json(); } catch (e) { r = {ok: false}; }

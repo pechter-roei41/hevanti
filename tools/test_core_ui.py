@@ -447,6 +447,7 @@ with sync_playwright() as p:
         inside: (() => { const m = document.querySelector('#menu').getBoundingClientRect(); return m.left >= 0 && m.right <= innerWidth && m.bottom <= innerHeight; })()})""")
     check("floating window: '⋯' opens the menu: 'מעבר לאפליקציה', 'עצירת הקלטה', a line, 'סגירת הבנתי'; the first item has the focus; it fits in the window",
           mo["exp"] == "true" and mo["focus"] == "miApp" and mo["role"] == "menu" and mo["items"] == ["miApp:מעבר לאפליקציה", "stopBtn:עצירת הקלטה", "quitBtn:סגירת הבנתי"] and mo["sep"] and mo["inside"], mo)
+    check("floating window: with no conversation the menu has no 'שיחה חדשה' (and no line above the rest)", mini.is_hidden("#miNew") and mini.is_hidden("#sepNew"))
     mini.keyboard.press("ArrowDown")
     check("floating window: the arrow keys move between the items", mini.evaluate("document.activeElement.id") == "stopBtn")
     mini.keyboard.press("End")
@@ -455,6 +456,22 @@ with sync_playwright() as p:
     mini.keyboard.press("Escape")
     check("floating window: Esc closes the menu and the focus goes back to '⋯' (the window stays)",
           mini.is_hidden("#menu") and mini.evaluate("document.activeElement.id") == "menuBtn" and mini.evaluate("document.querySelector('#menuBtn').getAttribute('aria-expanded')") == "false" and not any(m.get("action") == "hide_mini" for m in marked), marked)
+    # ---- "שיחה חדשה" (19.11.2026): there once is a conversation in the box ----
+    mini.evaluate("() => { const c = document.querySelector('#box .conv'); const q = document.createElement('div'); q.className = 'qa'; q.textContent = 'מה זה מומנט התמד?'; c.appendChild(q); }")
+    mini.click("#menuBtn")
+    mini.wait_for_selector("#menu", state="visible", timeout=3000)
+    nc = mini.evaluate("""() => ({shown: !document.querySelector('#miNew').hidden, sep: !document.querySelector('#sepNew').hidden, focus: document.activeElement.id, text: document.querySelector('#miNew').textContent.trim(),
+        order: [...document.querySelectorAll('#menu > :not([hidden])')].map(e => e.id || e.getAttribute('role')), svg: !!document.querySelector('#miNew svg[aria-hidden=true]')})""")
+    check("floating window: with a conversation the menu starts with 'שיחה חדשה' (it has the focus), a line, then the rest",
+          nc["shown"] and nc["sep"] and nc["focus"] == "miNew" and nc["text"] == "שיחה חדשה" and nc["svg"] and nc["order"] == ["miNew", "sepNew", "miApp", "stopBtn", "separator", "quitBtn"], nc)
+    mini.click("#miNew")
+    mini.wait_for_timeout(300)
+    check("floating window: 'שיחה חדשה' clears the conversation, closes the menu and puts the cursor in the question box",
+          mini.evaluate("document.querySelector('#box .conv').children.length") == 0 and mini.is_hidden("#menu") and mini.evaluate("document.activeElement.tagName") == "TEXTAREA")
+    mini.click("#menuBtn")
+    mini.wait_for_selector("#menu", state="visible", timeout=3000)
+    check("floating window: ...and with the conversation gone the item is gone again", mini.is_hidden("#miNew") and mini.is_hidden("#sepNew"))
+    mini.keyboard.press("Escape")
     mini.click("#menuBtn")
     mini.wait_for_selector("#menu", state="visible", timeout=3000)
     mini.mouse.click(200, 400)   # (outside)
