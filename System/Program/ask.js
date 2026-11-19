@@ -475,7 +475,7 @@
     box.append(head, planBox, conn, conv, ready, follow2, ta, keyrow, row, convbar, chips, hint);
     // a question made ready (a button of the page): for the built-in answer straight away, otherwise written in the box
     function ask(q, extra) { if (hereDefault()) askHere(q, extra); else { ta.value = q; ta.focus(); } }
-    return {focus: () => ta.focus(), textarea: ta, refresh, askHere, ask, builtin: hereDefault, reset: resetChat};
+    return {focus: () => ta.focus(), textarea: ta, refresh, askHere, ask, builtin: hereDefault, reset: resetChat, hasChat: () => conv.children.length > 0};   // (hasChat: a question was asked in this box and the conversation was not reset: the small window's menu offers "שיחה חדשה" then)
   }
   // open an AI for the course page's "פתיחה בשליש": the course's project link, the connected app, or the site
   async function openFor(id, link) {

@@ -11,7 +11,7 @@ version is on [GitHub Releases](https://github.com/pechter-roei41/hevanti/releas
   (continue where you stopped, my courses, the last three lectures). Home never starts a lecture: every "start a lecture" opens the
   quick-start window. At most one bar shows above the state.
 - **Floating window redesign:** the title row is the course (with the recording dot), a yellow ★ and a "⋯" button at the left corner that opens a
-  menu: to the app, stop recording (with no lecture: start a new lecture) and close Hevanti (stop and close still ask twice). "Answer here" takes
+  menu: new conversation (only while the box holds one; it clears it), to the app, stop recording (with no lecture: start a new lecture) and close Hevanti (stop and close still ask twice). "Answer here" takes
   the full width of its row; the "behind by N seconds" pill (with a clock) sits at its left and explains itself when pointed at. The menu
   works with the keyboard (Enter/Space, arrows, Esc). "To the app" shows the app on the lecture screen (live, YouTube, or the recording's
   player), using the open app window if there is one.
