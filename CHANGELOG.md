@@ -13,12 +13,11 @@ version is on [GitHub Releases](https://github.com/pechter-roei41/hevanti/releas
 - **Floating window redesign:** the title row is the course (with the recording dot), a yellow ★ and a "⋯" button at the left corner that opens a
   menu: to the app, stop recording (with no lecture: start a new lecture) and close Hevanti (stop and close still ask twice). "Answer here" takes
   the full width of its row; the "behind by N seconds" pill (with a clock) sits at its left and explains itself when pointed at. The menu
-  works with the keyboard (Enter/Space, arrows, Esc).
-- **Small fixes:** the "behind by N seconds" warning sits right beside "answer here", on its right; the white "go through the marks"
-  button on the home page's green card shows only when the lecture has marks, at its own width; "start a lecture" at home minimizes the
-  app only after the quick-start window has drawn its page, so there is no blank moment between them.
-- **Floating window, "to the app":** a ghost button at the left corner of the title row while a lecture runs. It hides the floating
-  window and shows the app on the lecture screen (live, YouTube, or the recording's player), using the open app window if there is one.
+  works with the keyboard (Enter/Space, arrows, Esc). "To the app" shows the app on the lecture screen (live, YouTube, or the recording's
+  player), using the open app window if there is one.
+- **Small fixes:** the white "go through the marks" button on the home page's green card shows only when the lecture has marks, at its
+  own width; "start a lecture" at home minimizes the app only after the quick-start window has drawn its page, so there is no blank
+  moment between them.
 - **"Open the app" in the quick-start window:** with the app already open (for example minimized after "start a lecture" at home) it
   brings that window back instead of opening another one each time.
 - **"Paste a key" in the floating window:** with the app already open, the open window goes to the settings (and comes back from the

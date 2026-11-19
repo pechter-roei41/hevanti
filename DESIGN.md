@@ -134,7 +134,7 @@ A cream-and-board-green palette with a highlighter yellow. Neutrals lean warm; t
 - **Sunk Paper** (#ECE7D8, night #2F2C23): inset fills, pills, empty-state bars.
 - **Ink** (#17261F, night #F1ECDF) and **Ink Muted** (#56625B, night #B5AFA0): text. Muted text keeps at least 4.5:1 on paper, sheet and sunk paper.
 - **Hairline** (#DDD7C4, night #3E3A2E): every card edge and divider.
-- **Caution Paper / Ink** (#FBF0DA / #6B5020): a missing key or a warning, as a pill with a text link.
+- **Caution Paper / Ink** (#FBF0DA / #6B5020): a warning, as a pill ("חסר מפתח" in the top bar when there is no key, the transcript-lag pill in the small window) or a bar with a ghost button.
 - **Now Line** (#FBEFB5): the line currently spoken in a transcript.
 
 ### Named Rules
@@ -201,7 +201,7 @@ The home page's "להמשיך מאיפה שעצרת" (a regular day): solid Boar
 - **Internal Padding:** 16px 18px. Cards are never nested: a section inside a card is separated by a hairline.
 
 ### Pills and Status
-Sunk Paper pills with muted text. The recording pill is tinted red with a pulsing dot (static when motion is reduced). A status line shows a green dot when answers are ready; a missing key turns into a Caution pill with a text link.
+Sunk Paper pills with muted text. The recording pill is tinted red with a pulsing dot (static when motion is reduced). A status line shows a green dot when answers are ready; with no key the home page is its "let's start" state and the top bar says "חסר מפתח" in a Caution pill.
 
 ### Inputs / Fields
 - **Style:** Paper fill (inside a sheet), 1px Hairline, 12px radius; search boxes are pills.
@@ -253,7 +253,7 @@ One mark, everywhere: a green bubble with a short tail at its lower right and th
 - **Do** use Hairline `#DDD7C4` (night `#3E3A2E`) for every card edge and divider.
 - **Do** keep muted text at 4.5:1 or better on every surface, in both themes.
 - **Do** draw icons as 2px-stroke line icons and keep the logo identical at every size.
-- **Do** show a missing state with its fix: "חסר מפתח Gemini" with a link to the setting, "יש כרטיס NVIDIA" with an install button.
+- **Do** show a missing state with its fix: no key is the home page's "בואו נתחיל" state with "יצירת מפתח והדבקה" (and "חסר מפתח" in the top bar), "יש כרטיס NVIDIA" is a bar with an install button.
 
 ### Don't:
 - **Don't** use yellow for anything but the ★ mark (the star, and the highlighter band behind a marked transcript line) .
