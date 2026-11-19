@@ -426,6 +426,19 @@ with sync_playwright() as p:
     mini.evaluate("pollApp()")
     mini.wait_for_selector("#stopBtn", state="visible", timeout=5000)
     check("floating window: a live lecture has a stop button in the title row", mini.inner_text("#stopBtn") == "עצירה")
+    # ---- "לאפליקציה": mid-lecture, from here to the lecture screen of the app (18.11.2026) ----
+    app_geo = mini.evaluate("""() => { const h = document.querySelector('header'), b = document.querySelector('#appBtn'), m = document.querySelector('#markImp');
+        const rb = b.getBoundingClientRect(), rm = m.getBoundingClientRect();
+        return {shown: !b.hidden && rb.width > 0, last: h.lastElementChild === b, leftOfStar: rb.left < rm.left || rb.top > rm.top, h: Math.round(rb.height), text: b.textContent.trim(),
+                label: b.getAttribute('aria-label'), svg: !!b.querySelector('svg[aria-hidden=true]')}; }""")
+    check("floating window: a lecture runs - 'לאפליקציה' is the last button of the title row (the left corner), 36 px high, with its icon and a name for the screen reader",
+          app_geo["shown"] and app_geo["last"] and app_geo["leftOfStar"] and app_geo["h"] >= 36 and app_geo["text"] == "לאפליקציה" and app_geo["svg"] and "אפליקציה" in (app_geo["label"] or ""), app_geo)
+    marked.clear()
+    mini.click("#appBtn")
+    mini.wait_for_timeout(500)
+    acts = [m.get("action") for m in marked]
+    check("floating window: 'לאפליקציה' asks Hevanti to show the app on the lecture, and then hides this window", acts[:2] == ["show_app", "hide_mini"], acts)
+    marked.clear()
     mini.click("#stopBtn")
     check("floating window: the first press only asks (a short word, so the course name is not cut), and nothing stops yet",
           mini.inner_text("#stopBtn") == "לעצור?" and not any(m.get("action") == "stop" for m in marked), marked)
@@ -478,6 +491,7 @@ with sync_playwright() as p:
     marked.clear()
     mini.evaluate("pollApp()")
     mini.wait_for_timeout(300)
+    check("floating window: with no lecture there is no 'לאפליקציה' button (the same place starts a lecture)", mini.is_hidden("#appBtn"))
     check("floating window: with no lecture the button reads \"התחלת הרצאה חדשה\" (not \"עצירה\")", mini.is_visible("#stopBtn") and mini.inner_text("#stopBtn") == "התחלת הרצאה חדשה", mini.inner_text("#stopBtn"))
     mini.click("#stopBtn")
     mini.wait_for_timeout(300)

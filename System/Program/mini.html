@@ -47,7 +47,7 @@ textarea:placeholder-shown,input:not([dir="ltr"]):not([type=password]):not([type
 [hidden]{display:none!important}
 header{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 8px 6px 10px;border-bottom:1px solid var(--line);background:var(--surface)}
 header b{font-size:15px}
-#lec{flex:1 1 130px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:8px}
+#lec{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:8px}
 #lec::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--line)}
 body.on #lec{color:var(--fg)}
 body.on #lec::before{background:var(--rec)}
@@ -65,6 +65,8 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 .miss button:hover{background:var(--accent-soft)}
 #lag{flex:none;padding:2px 10px;border-radius:999px;background:var(--warn-bg);color:var(--warn-fg);font-size:14px;line-height:1.5;font-weight:700;white-space:nowrap;align-self:center}   /* in the row of "תשובה כאן", a caution pill: never green */
 #stopBtn{padding:0 12px;width:auto;font-size:14px;font-weight:600}
+/* "לאפליקציה" (mid-lecture, to the lecture screen of the app): a ghost button like the star, with its icon; the last one of the row, so at the left corner */
+#appBtn{margin-inline-start:auto;padding:0 12px;width:auto;display:inline-flex;gap:6px;font-size:14px;font-weight:600;color:var(--accent);border-color:var(--accent);white-space:nowrap}
 #stopBtn.confirm,#stopBtn.confirm:hover{border-color:var(--rec);color:var(--rec);font-weight:800;background:var(--surface)}   /* the hover fill is not the soft green: red on it was 4.16:1 */
 footer{flex:none;display:flex;justify-content:flex-start;padding:2px 10px 8px}
 #quitBtn{border:0;background:none;color:var(--muted);font:inherit;font-size:14px;min-height:32px;padding:2px 6px;border-radius:8px;cursor:pointer;text-decoration:underline}
@@ -118,6 +120,7 @@ html.a-still *,html.a-still *::before,html.a-still *::after{animation:none!impor
   <span id="lec">אין עכשיו הרצאה פעילה</span>
  <button class="hb" id="stopBtn" type="button" hidden title="עצירת ההקלטה: ההרצאה נשמרת">עצירה</button>
  <button class="hb" id="markImp" type="button" title="סימון ★ של הרגע הזה (Ctrl+Alt+M)" aria-label="סימון ★ של הרגע הזה">★</button>
+ <button class="hb" id="appBtn" type="button" hidden title="עוברים לאפליקציה, למסך ההרצאה. החלון הקטן נסגר וההרצאה ממשיכה" aria-label="מעבר לאפליקציה, למסך ההרצאה"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>לאפליקציה</button>
 </header>
 <div id="short" role="alertdialog" aria-labelledby="shortT" hidden>
   <b id="shortT">עצרת מיד אחרי שהתחלת</b><p id="shortInfo"></p>
@@ -170,6 +173,11 @@ async function mark() {
   toast(r.ok ? MARKED : (r.error || "לא הצלחתי לסמן."));
 }
 $("#markImp").addEventListener("click", () => mark());
+// "לאפליקציה": the app (the window that is open, or a new one) goes to the screen of the lecture that runs, and this window closes. The lecture goes on.
+$("#appBtn").addEventListener("click", async () => {
+  let r; try { r = await (await fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify({action: "show_app"})})).json(); } catch (e) { r = {ok: false}; }
+  if (r && r.ok && r.opened !== false) hide(); else toast("לא הצלחתי לפתוח את האפליקציה.");
+});
 // stop from here: the first press asks (3 seconds), the second stops; the lecture is saved, and a card says so
 const stopBtn = $("#stopBtn");
 function stopReset() { clearTimeout(stopTimer); stopBtn.classList.remove("confirm"); stopBtn.textContent = "עצירה"; }
@@ -314,6 +322,7 @@ async function pollApp() {
     $("#sug").hidden = !sg;
     if (sg) { $("#sugText").textContent = "נראה שזה הקורס \"" + sg.course + "\" (לפי השקף הראשון). להעביר?"; $("#sug").dataset.course = sg.course; }
     $("#miss").hidden = !live;
+    $("#appBtn").hidden = !live;   // (only while a lecture runs: the saved card has "פתיחת ההרצאה באפליקציה", and with no lecture the same place starts one)
     drawSaved(s);
     if (window.BZMAsk) {
       BZMAsk.setConnected(d.connect); BZMAsk.setApps(d.ai_apps);

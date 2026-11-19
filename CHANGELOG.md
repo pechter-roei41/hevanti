@@ -10,6 +10,8 @@ version is on [GitHub Releases](https://github.com/pechter-roei41/hevanti/releas
   marks so far, the last slide, floating window, ★, stop), a lecture just saved (its marks, each opening 8 s before), and a regular day
   (continue where you stopped, my courses, the last three lectures). Home never starts a lecture: every "start a lecture" opens the
   quick-start window. At most one bar shows above the state.
+- **Floating window, "to the app":** a ghost button at the left corner of the title row while a lecture runs. It hides the floating
+  window and shows the app on the lecture screen (live, YouTube, or the recording's player), using the open app window if there is one.
 - **"Open the app" in the quick-start window:** with the app already open (for example minimized after "start a lecture" at home) it
   brings that window back instead of opening another one each time.
 - **"Paste a key" in the floating window:** with the app already open, the open window goes to the settings (and comes back from the

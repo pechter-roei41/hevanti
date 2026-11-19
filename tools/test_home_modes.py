@@ -239,6 +239,19 @@ with sync_playwright() as p:
     pg.wait_for_timeout(2000)
     check("go: an old request is not replayed by a window that opens later", pg.evaluate("location.hash") in ("", "#"), pg.evaluate("location.hash"))
     ctx.close()
+    state["go"] = {"view": "live", "n": 3}
+    ctx, pg = page()
+    wait_mode(pg, "day")
+    pg.wait_for_timeout(1500)
+    state["go"] = {"view": "live", "n": 4}
+    pg.wait_for_function("location.hash === '#live'", timeout=6000)
+    check("go: 'לאפליקציה' from the floating window (a live lecture): the open window shows the lecture screen", pg.is_visible("#vLive"))
+    pg.evaluate("location.hash = ''")
+    pg.wait_for_timeout(500)
+    state["go"] = {"view": "yt", "n": 5}
+    pg.wait_for_function("location.hash === '#yt'", timeout=6000)
+    check("go: ...and the YouTube screen for a video", pg.is_visible("#vYt"))
+    ctx.close()
     state["go"] = {"view": "rec", "n": 7}
     ctx, pg = page()
     wait_mode(pg, "day")

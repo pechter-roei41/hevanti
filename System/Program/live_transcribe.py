@@ -8362,6 +8362,16 @@ class App:
         """The address a window of Hevanti is opened with: the page, and the secret of this run (see AppServer._gate). rel: "mini", "#t=...", ..."""
         return make_link(self.url, self.token)(rel)
 
+    def go_app(self, view, rel):
+        """Show the app on a screen: the window that is already open is brought to the front and asked (`go`), else one opens at `rel`."""
+        if not self.url or os.environ.get("BZM_NO_BROWSER") == "1":
+            return {"ok": True, "opened": False}
+        if show_open_app_window():
+            with self.lock:
+                self.go = {"view": view, "n": self.go["n"] + 1}
+            return {"ok": True, "opened": True, "reused": True}
+        return {"ok": True, "opened": open_app_window(self.link(rel))}
+
     def command(self, d):
         a = d.get("action")
         course = clean_name(d.get("course"), NO_COURSE)
@@ -8448,6 +8458,12 @@ class App:
             import urllib.parse
             ok = open_app_window(self.link("#t=" + urllib.parse.quote(f, safe=""))) if self.url and os.environ.get("BZM_NO_BROWSER") != "1" else False
             return {"ok": True, "opened": ok}
+        if a == "show_app":   # "לאפליקציה" in the small window, mid-lecture: the app goes to the screen of the lecture that runs (the server knows which; the small window closes itself)
+            with self.lock:
+                s = self.session
+            running = s is not None and not s.done
+            view = "home" if not running else "yt" if s.yt else "live" if s.kind == "live" else "player"
+            return self.go_app(view, {"home": "", "yt": "#yt", "live": "#live", "player": "player"}[view])
         if a == "open_settings":   # "paste a key" in the small window (no key): the app opens on the settings, where the key is the first tab
             if self.url and os.environ.get("BZM_NO_BROWSER") != "1":
                 if show_open_app_window():   # the app is already open: it goes to the settings, no second window (found on a real run, 18.11.2026)
