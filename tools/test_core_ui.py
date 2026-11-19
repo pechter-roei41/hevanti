@@ -426,6 +426,19 @@ with sync_playwright() as p:
     mini.evaluate("pollApp()")
     mini.wait_for_selector("#stopBtn", state="visible", timeout=5000)
     check("floating window: a live lecture has a stop button in the title row", mini.inner_text("#stopBtn") == "עצירה")
+    # ---- "לאפליקציה": mid-lecture, from here to the lecture screen of the app (18.11.2026) ----
+    app_geo = mini.evaluate("""() => { const h = document.querySelector('header'), b = document.querySelector('#appBtn'), m = document.querySelector('#markImp');
+        const rb = b.getBoundingClientRect(), rm = m.getBoundingClientRect();
+        return {shown: !b.hidden && rb.width > 0, last: h.lastElementChild === b, leftOfStar: rb.left < rm.left || rb.top > rm.top, h: Math.round(rb.height), text: b.textContent.trim(),
+                label: b.getAttribute('aria-label'), svg: !!b.querySelector('svg[aria-hidden=true]')}; }""")
+    check("floating window: a lecture runs - 'לאפליקציה' is the last button of the title row (the left corner), 36 px high, with its icon and a name for the screen reader",
+          app_geo["shown"] and app_geo["last"] and app_geo["leftOfStar"] and app_geo["h"] >= 36 and app_geo["text"] == "לאפליקציה" and app_geo["svg"] and "אפליקציה" in (app_geo["label"] or ""), app_geo)
+    marked.clear()
+    mini.click("#appBtn")
+    mini.wait_for_timeout(500)
+    acts = [m.get("action") for m in marked]
+    check("floating window: 'לאפליקציה' asks Hevanti to show the app on the lecture, and then hides this window", acts[:2] == ["show_app", "hide_mini"], acts)
+    marked.clear()
     mini.click("#stopBtn")
     check("floating window: the first press only asks (a short word, so the course name is not cut), and nothing stops yet",
           mini.inner_text("#stopBtn") == "לעצור?" and not any(m.get("action") == "stop" for m in marked), marked)
@@ -478,6 +491,7 @@ with sync_playwright() as p:
     marked.clear()
     mini.evaluate("pollApp()")
     mini.wait_for_timeout(300)
+    check("floating window: with no lecture there is no 'לאפליקציה' button (the same place starts a lecture)", mini.is_hidden("#appBtn"))
     check("floating window: with no lecture the button reads \"התחלת הרצאה חדשה\" (not \"עצירה\")", mini.is_visible("#stopBtn") and mini.inner_text("#stopBtn") == "התחלת הרצאה חדשה", mini.inner_text("#stopBtn"))
     mini.click("#stopBtn")
     mini.wait_for_timeout(300)
@@ -948,6 +962,9 @@ with sync_playwright() as p:
           lagp.evaluate("document.querySelector('#lag').closest('header')") is None
           and lagp.evaluate("""() => { const l = document.querySelector('#lag').getBoundingClientRect(), b = document.querySelector('#box .ais button.here').getBoundingClientRect();
               return Math.abs((l.top + l.bottom) / 2 - (b.top + b.bottom) / 2) < 12 && l.right <= innerWidth && l.left >= 0 && l.right < b.left || l.left > b.right; }"""))
+    lag_side = lagp.evaluate("""() => { const l = document.querySelector('#lag').getBoundingClientRect(), b = document.querySelector('#box .ais button.here').getBoundingClientRect();
+        return {left: Math.round(l.left), right: Math.round(l.right), bLeft: Math.round(b.left), bRight: Math.round(b.right), mid: Math.round((l.top + l.bottom) / 2 - (b.top + b.bottom) / 2)}; }""")
+    check("...right beside \"תשובה כאן\", on its right (19.11.2026)", lag_side["left"] >= lag_side["bRight"] and lag_side["left"] - lag_side["bRight"] <= 16 and abs(lag_side["mid"]) < 12, lag_side)
     check("...and the title row is whole: the course name is not cut by it", lagp.evaluate("""() => { const t = document.querySelector('#lec'); return t.scrollWidth <= t.clientWidth + 1; }"""))
     check("...with the whole sentence for the screen reader and the pointer",
           "התמלול מאחר ב-25 שניות" in lagp.evaluate("document.querySelector('#lag').getAttribute('aria-label')"))

@@ -8362,6 +8362,16 @@ class App:
         """The address a window of Hevanti is opened with: the page, and the secret of this run (see AppServer._gate). rel: "mini", "#t=...", ..."""
         return make_link(self.url, self.token)(rel)
 
+    def go_app(self, view, rel):
+        """Show the app on a screen: the window that is already open is brought to the front and asked (`go`), else one opens at `rel`."""
+        if not self.url or os.environ.get("BZM_NO_BROWSER") == "1":
+            return {"ok": True, "opened": False}
+        if show_open_app_window():
+            with self.lock:
+                self.go = {"view": view, "n": self.go["n"] + 1}
+            return {"ok": True, "opened": True, "reused": True}
+        return {"ok": True, "opened": open_app_window(self.link(rel))}
+
     def command(self, d):
         a = d.get("action")
         course = clean_name(d.get("course"), NO_COURSE)
@@ -8448,6 +8458,12 @@ class App:
             import urllib.parse
             ok = open_app_window(self.link("#t=" + urllib.parse.quote(f, safe=""))) if self.url and os.environ.get("BZM_NO_BROWSER") != "1" else False
             return {"ok": True, "opened": ok}
+        if a == "show_app":   # "לאפליקציה" in the small window, mid-lecture: the app goes to the screen of the lecture that runs (the server knows which; the small window closes itself)
+            with self.lock:
+                s = self.session
+            running = s is not None and not s.done
+            view = "home" if not running else "yt" if s.yt else "live" if s.kind == "live" else "player"
+            return self.go_app(view, {"home": "", "yt": "#yt", "live": "#live", "player": "player"}[view])
         if a == "open_settings":   # "paste a key" in the small window (no key): the app opens on the settings, where the key is the first tab
             if self.url and os.environ.get("BZM_NO_BROWSER") != "1":
                 if show_open_app_window():   # the app is already open: it goes to the settings, no second window (found on a real run, 18.11.2026)
@@ -8477,16 +8493,21 @@ class App:
                 if os.name == "nt":
                     try:
                         if _find_quick(_mini_user32()):
+                            QUICK_READY.set()   # (the window is already up and drawn)
                             if d.get("minimize_app"):   # (started from the app: it steps aside here too)
                                 threading.Thread(target=_minimize_app_then_front_quick, daemon=True).start()
                             return {"ok": True, "opened": False, "already": True}
                     except Exception:
                         pass
+                QUICK_READY.clear()
                 ok = open_app_window(self.link("quick"), size=QUICK_SIZE, center=True, profile=quick_profile_dir(), track=False)
                 if ok:
                     threading.Thread(target=_minimize_app_then_front_quick if d.get("minimize_app") else _front_quick_window, daemon=True).start()
                 return {"ok": True, "opened": ok}
             return {"ok": True, "opened": False}
+        if a == "quick_ready":   # the quick-start window has drawn its page (the app that opened it can step aside now)
+            QUICK_READY.set()
+            return {"ok": True}
         if a == "quick_close":   # the quick-start window is done (a lecture started)
             return {"ok": True, "closed": close_quick_window()}
         if a == "quick_open_app":   # "open the app": the home screen in its own window, and the small one goes away; nothing starts
@@ -10178,8 +10199,14 @@ def minimize_app_window():
         return False
 
 
+QUICK_READY = threading.Event()   # the quick-start window has drawn its page (quick.html says so): set by "quick_ready", cleared when one is asked for
+QUICK_READY_WAIT_S = 4   # at most this long after its window appears: the app steps aside anyway (a page that never says it is ready must not keep the app up)
+
+
 def _minimize_app_then_front_quick():
-    """After "start a lecture" in the app: when the quick-start window is up, the app steps aside, and the quick window gets the keyboard."""
+    """After "start a lecture" in the app: when the quick-start window is up AND has drawn its page, the app steps aside, and the quick window gets
+    the keyboard. (It used to step aside as soon as the window existed: a new browser window is blank for a moment, and the student saw the app go
+    and nothing in its place - found on a real run, 19.11.2026.)"""
     if os.name != "nt":
         return
     try:
@@ -10191,6 +10218,7 @@ def _minimize_app_then_front_quick():
             time.sleep(0.1)
         else:
             return   # (the quick window did not come up: the app stays where it is)
+        QUICK_READY.wait(QUICK_READY_WAIT_S)
         minimize_app_window()
     except Exception:
         save_error("minimize the app for the quick window")

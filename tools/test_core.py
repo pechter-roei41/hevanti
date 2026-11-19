@@ -946,6 +946,57 @@ with open(os.path.join(_md, L.MARKS_NAME), "w", encoding="utf-8") as _f:
 _me = [e for e in L.library() if e["course"] == "קורס סימונים"]
 check("library: the marks kept beside a recording are added (and not cached with the transcript)", _me and _me[0]["marks"] == 3, _me)
 
+# "התחלת הרצאה" at home: the app steps aside only once the quick-start window has drawn its page (19.11.2026, a real run: a blank window)
+L.QUICK_READY.set()
+_q_env = os.environ.pop("BZM_NO_BROWSER", None)
+_q_open, _q_min = L.open_app_window, L._minimize_app_then_front_quick
+try:
+    L.APP.url = L.APP.url or "http://127.0.0.1:1/"
+    L.open_app_window = lambda *a, **k: True
+    L._minimize_app_then_front_quick = lambda: None
+    L.APP.command({"action": "quick_new", "minimize_app": True})
+    check("quick_new: a new quick-start window is asked for, so 'it has drawn its page' starts again from no", not L.QUICK_READY.is_set())
+    check("quick_ready: the quick-start window says it has drawn its page", L.APP.command({"action": "quick_ready"}).get("ok") and L.QUICK_READY.is_set())
+finally:
+    L.open_app_window, L._minimize_app_then_front_quick = _q_open, _q_min
+    if _q_env is not None:
+        os.environ["BZM_NO_BROWSER"] = _q_env
+_qsrc = open(os.path.join(L.SCRIPT_DIR, "live_transcribe.py"), encoding="utf-8").read()
+_qfn = _qsrc[_qsrc.index("def _minimize_app_then_front_quick"):]
+_qfn = _qfn[:_qfn.index("\ndef ")]
+check("the app steps aside after the quick-start window is ready (with a limit), not as soon as the window exists",
+      "QUICK_READY.wait(QUICK_READY_WAIT_S)" in _qfn and _qfn.index("QUICK_READY.wait") < _qfn.index("minimize_app_window()") and 2 <= L.QUICK_READY_WAIT_S <= 6)
+_quick = open(os.path.join(L.SCRIPT_DIR, "quick.html"), encoding="utf-8").read()
+check("quick.html says it is ready after it has drawn its page (two animation frames)", 'requestAnimationFrame(() => requestAnimationFrame(() => { post({action: "quick_ready"})' in _quick)
+
+# "לאפליקציה" in the small window, mid-lecture: the app goes to the screen of the lecture that runs (the server knows which)
+_o2, _env2 = [], os.environ.pop("BZM_NO_BROWSER", None)
+_s_show2, _s_open2, _s_sess = L.show_open_app_window, L.open_app_window, L.APP.session
+try:
+    L.APP.url = L.APP.url or "http://127.0.0.1:1/"
+    L.show_open_app_window, L.open_app_window = (lambda: True), (lambda *a, **k: _o2.append(a) or True)
+    _live, _yt, _rec = L.Session("live", "he"), L.Session("live", "he"), L.Session("rec", "he")
+    _yt.yt = {"id": "x", "url": "u", "start": 0}
+    _done = L.Session("live", "he")
+    _done.done = True
+    for _sess, _view in ((_live, "live"), (_yt, "yt"), (_rec, "player"), (_done, "home"), (None, "home")):
+        L.APP.session = _sess
+        _n = L.APP.go["n"]
+        _r = L.APP.command({"action": "show_app"})
+        check(f"show_app with the app open and {_view!r} running: the open window is used and asked for that screen",
+              _r.get("reused") and L.APP.go == {"view": _view, "n": _n + 1} and not _o2, (_view, _r, L.APP.go))
+    L.show_open_app_window = lambda: False
+    for _sess, _tail in ((_live, "#live"), (_yt, "#yt"), (_rec, "/player"), (None, "")):
+        L.APP.session = _sess
+        _o2.clear()
+        _r = L.APP.command({"action": "show_app"})
+        check(f"show_app with no app window: one opens, at {_tail or 'home'!r}", _r.get("opened") and not _r.get("reused") and len(_o2) == 1 and
+              ((_tail and _o2[0][0].endswith(_tail)) or (_tail == "" and "#" not in _o2[0][0] and "/player" not in _o2[0][0])), (_r, _o2))
+finally:
+    L.show_open_app_window, L.open_app_window, L.APP.session = _s_show2, _s_open2, _s_sess
+    if _env2 is not None:
+        os.environ["BZM_NO_BROWSER"] = _env2
+
 # "הדבקת מפתח" with the app already open: the open window is shown and asked for the settings; no second window is opened
 _opened, _env = [], os.environ.pop("BZM_NO_BROWSER", None)
 _s_show, _s_open = L.show_open_app_window, L.open_app_window

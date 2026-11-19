@@ -212,6 +212,8 @@ $("#app").addEventListener("click", async () => {
 document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#newc").hidden) window.close(); });
 $("#go").focus();
 load();
+// it has drawn its page: the app (when it opened this window) steps aside now, not before - a new window is blank for a moment
+requestAnimationFrame(() => requestAnimationFrame(() => { post({action: "quick_ready"}).catch(() => {}); }));
 </script>
 </body>
 </html>

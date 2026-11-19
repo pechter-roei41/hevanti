@@ -118,28 +118,37 @@ with sync_playwright() as p:
         pg.add_init_script("localStorage.setItem('bzm.consent','1');localStorage.setItem('bzm.tipSet','1');localStorage.setItem('bzm.noLiveTip','1')")
 
         def app_route(route):
-            r = route.fetch()
-            d = r.json()
-            d["math"] = dict(d.get("math") or {}, **state["math"])
-            d["session"] = state["session"]
-            d["update"] = None
-            if "go" in state:
-                d["go"] = state["go"]
-            route.fulfill(response=r, body=json.dumps(d), headers=dict(r.headers, **{"content-type": "application/json"}))
+            try:   # (the whole answer: the page may be closed, or its poll thrown away, at any step - a closing page has nothing to be answered)
+                r = route.fetch()
+                d = r.json()
+                d["math"] = dict(d.get("math") or {}, **state["math"])
+                d["session"] = state["session"]
+                d["update"] = None
+                if "go" in state:
+                    d["go"] = state["go"]
+                route.fulfill(response=r, body=json.dumps(d), headers=dict(r.headers, **{"content-type": "application/json"}))
+            except Exception:
+                pass
 
         def live_route(route):
-            route.fulfill(status=200, body=json.dumps(LIVE_FEED), headers={"content-type": "application/json"})
+            try:
+                route.fulfill(status=200, body=json.dumps(LIVE_FEED), headers={"content-type": "application/json"})
+            except Exception:
+                pass
 
         def cmd_route(route):
             try:
                 body = json.loads(route.request.post_data or "{}")
             except ValueError:
                 body = {}
-            if body.get("action") in ("quick_new", "toggle_mini"):
-                cmds.append(body.get("action"))
-                route.fulfill(status=200, body=json.dumps({"ok": True, "opened": True}), headers={"content-type": "application/json"})
-            else:
-                route.continue_()
+            try:
+                if body.get("action") in ("quick_new", "toggle_mini"):
+                    cmds.append(body.get("action"))
+                    route.fulfill(status=200, body=json.dumps({"ok": True, "opened": True}), headers={"content-type": "application/json"})
+                else:
+                    route.continue_()
+            except Exception:   # (the page was closed while the request was on the way)
+                pass
         pg.route("**/api/app*", app_route)
         pg.route("**/api/live*", live_route)
         pg.route("**/api/cmd", cmd_route)
@@ -201,6 +210,12 @@ with sync_playwright() as p:
     pg.evaluate("location.hash = ''")
     check("an ended lecture that was opened: back to a regular day", wait_mode(pg, "day"))
     one_green(pg, "day")
+    check("day: the lecture has marks - the white button 'לעבור על הסימונים' is on the green card",
+          pg.is_visible("#resGo") and pg.inner_text("#resGo").startswith("לעבור על הסימונים"), pg.evaluate("document.querySelector('#resGo').outerHTML"))
+    pg.evaluate("libItems.forEach(x => { x.marks = 0; }); drawHomeDay()")
+    check("day: a lecture with no marks - no white button (the card itself opens the lecture)", pg.is_hidden("#resGo") and pg.is_visible("#homeResume"))
+    pg.evaluate("loadLib(true)")
+    pg.wait_for_function("document.querySelector('#resGo') && !document.querySelector('#resGo').hidden", timeout=6000)
     check("day: the green card is the newest lecture with its marks",
           "חדוא 1" in pg.inner_text("#resTitle") and "2 סימונים" in pg.inner_text("#resSub"), pg.inner_text("#homeResume"))
     check("day: lecture number counted in the course", "הרצאה 2" in pg.inner_text("#resTitle"), pg.inner_text("#resTitle"))
@@ -238,6 +253,21 @@ with sync_playwright() as p:
     wait_mode(pg, "day")
     pg.wait_for_timeout(2000)
     check("go: an old request is not replayed by a window that opens later", pg.evaluate("location.hash") in ("", "#"), pg.evaluate("location.hash"))
+    ctx.close()
+    state["go"] = {"view": "live", "n": 3}
+    ctx, pg = page()
+    wait_mode(pg, "day")
+    pg.wait_for_timeout(1500)
+    state["go"] = {"view": "live", "n": 4}
+    pg.wait_for_function("location.hash === '#live'", timeout=6000)
+    check("go: 'לאפליקציה' from the floating window (a live lecture): the open window shows the lecture screen", pg.is_visible("#vLive"))
+    pg.evaluate("location.hash = ''")
+    pg.wait_for_timeout(500)
+    state["go"] = {"view": "yt", "n": 5}
+    pg.wait_for_function("location.hash === '#yt'", timeout=6000)
+    check("go: ...and the YouTube screen for a video", pg.is_visible("#vYt"))
+    pg.evaluate("location.hash = ''")   # (leave the YouTube screen before closing: its player keeps asking things)
+    pg.wait_for_timeout(800)
     ctx.close()
     state["go"] = {"view": "rec", "n": 7}
     ctx, pg = page()
