@@ -28,7 +28,7 @@ version is on [GitHub Releases](https://github.com/pechter-roei41/hevanti/releas
   floating window (two presses) with a "saved" card; the round button stays while Hevanti runs; opens smoothly the first time and
   follows light/dark at once; the opacity slider is the right way round.
 - **After the lecture:** a "questions and answers" tab per lecture; every ★ is a question that was put off, with one button to explain
-  the moment; under each answer, "what is this based on" (the slide that was sent and the transcript lines).
+  the moment; under each answer, a closed "what is this based on" row that opens and closes on a click (the slide that was sent and the transcript lines).
 - **Answers:** a very short answer first, "more detail" or "give an example" to widen it; the whole lecture text is cut with a notice
   when it is too long for one question (the last part for a question, the first for a whole-lecture task); an empty answer goes on
   to the next model; a network that interferes with the secure connection is named instead of "no internet".

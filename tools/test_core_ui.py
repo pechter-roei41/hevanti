@@ -644,6 +644,21 @@ with sync_playwright() as p:
     check("floating window: a ready question does not ask for a picture of its own", [m.get("action") for m in marked].count("snap_question") == 1, marked)
     check("floating window: after answers, no 'שיחה חדשה' link under the box (it is in the ⋯ menu only)",
           mini.evaluate("document.querySelectorAll('#box .conv > *').length") > 0 and mini.evaluate("[...document.querySelectorAll('#box .convbar')].every(e => e.offsetParent === null)"))
+    # "על מה זה מבוסס": a closed row under the answer, a click opens it, another closes it
+    import urllib.parse
+    hdr = urllib.parse.quote(json.dumps([{"t": "12:41", "x": "כשמתקרבים ל-a"}], ensure_ascii=False))
+    mini.route("**/api/ask", lambda r: r.fulfill(status=200, content_type="text/plain", body="סיכום נוסף", headers={"X-BZM-Src": hdr}))
+    mini.click("#miss button[data-m='3']")
+    mini.wait_for_selector(".basis .btog", state="visible", timeout=5000)
+    bs = lambda: mini.evaluate("""() => { const t = document.querySelector('.basis .btog'), b = document.querySelector('.basis .bbody');
+        return {exp: t.getAttribute('aria-expanded'), hidden: b.hidden, shown: b.offsetParent !== null, ctl: t.getAttribute('aria-controls') === b.id, text: t.textContent.trim()}; }""")
+    st0 = bs()
+    check("floating window: 'על מה זה מבוסס' is closed at first (a button with the title only)", st0["exp"] == "false" and st0["hidden"] and not st0["shown"] and st0["ctl"] and st0["text"] == "על מה זה מבוסס", st0)
+    mini.click(".basis .btog")
+    st1 = bs()
+    check("floating window: a click opens it and shows the time and the line", st1["exp"] == "true" and st1["shown"] and "12:41" in mini.evaluate("document.querySelector('.basis .bbody').textContent"), st1)
+    mini.click(".basis .btog")
+    check("floating window: another click closes it", bs()["exp"] == "false" and not bs()["shown"])
     # an AI chosen in the floating window: the window goes away (it stays on top, the AI would open behind it)
     marked.clear()
     mini_state["ask"] = False
