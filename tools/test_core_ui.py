@@ -642,6 +642,8 @@ with sync_playwright() as p:
     check("floating window: each sends its minutes, from the small window, with a ready question",
           [a.get("minutes") for a in asked] == [3, 7, 15] and all(a.get("where") == "mini" and "פספסתי" in a.get("question", "") for a in asked), asked)
     check("floating window: a ready question does not ask for a picture of its own", [m.get("action") for m in marked].count("snap_question") == 1, marked)
+    check("floating window: after answers, no 'שיחה חדשה' link under the box (it is in the ⋯ menu only)",
+          mini.evaluate("document.querySelectorAll('#box .conv > *').length") > 0 and mini.evaluate("[...document.querySelectorAll('#box .convbar')].every(e => e.offsetParent === null)"))
     # an AI chosen in the floating window: the window goes away (it stays on top, the AI would open behind it)
     marked.clear()
     mini_state["ask"] = False
