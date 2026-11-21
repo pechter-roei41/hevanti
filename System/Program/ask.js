@@ -327,7 +327,7 @@
       // the sources in the answer: clickable only where the page can open the transcript, and only for times that were sent
       const known = timesIn(context), src = {go: opts.onSource || null, known: known.size ? known : null};
       const qa = mk("div", "qa"), ae = mk("div", "a", "חושב..."); qa.append(mk("p", "q", shown), ae);
-      conv.appendChild(qa); convbar.hidden = false;
+      conv.appendChild(qa); convbar.hidden = !!opts.compact;   // (the small window: "שיחה חדשה" is in its ⋯ menu, not under the box)
       // the small window shows the newest question at the top (read the answer from its start; scroll for the rest)
       const follow = () => { if (opts.compact) conv.scrollTop = qa.offsetTop - conv.offsetTop - 4; else conv.scrollTop = conv.scrollHeight; };
       follow();
