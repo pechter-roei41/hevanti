@@ -57,10 +57,16 @@
 .askp .plan button{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;padding:4px 12px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .askp .plan button:hover{background:var(--accent);color:var(--accent-ink)}
 .askp .ais button.here.alt{background:transparent;color:var(--accent);font-weight:600}
-.askp .basis{justify-self:end;max-width:96%;display:flex;gap:10px;align-items:flex-start;font-size:calc(13px * var(--tx, 1));line-height:1.5;color:var(--muted)}
+.askp .basis{justify-self:end;max-width:96%;font-size:calc(13px * var(--tx, 1));line-height:1.5;color:var(--muted)}
+.askp .basis .btog{display:inline-flex;align-items:center;gap:4px;border:0;background:none;color:var(--muted);font:inherit;font-weight:600;cursor:pointer;padding:2px 6px;min-height:28px;border-radius:6px}
+.askp .basis .btog:hover{color:var(--fg)}
+.askp .basis .btog:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.askp .basis .btog svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+.askp .basis .btog[aria-expanded=true] svg{transform:rotate(-90deg)}
+.askp .basis .bbody{display:flex;gap:10px;align-items:flex-start;padding:4px 6px 0}
+.askp .basis .bbody[hidden]{display:none}
 .askp .basis img{width:56px;height:38px;object-fit:cover;border-radius:4px;border:1px solid var(--line);flex:none;background:var(--bg)}
 .askp .basis .bl{display:grid;gap:2px;min-width:0}
-.askp .basis .bl b{font-weight:600;color:var(--fg)}
 .askp .basis .bl span{overflow-wrap:anywhere}
 .askp .alt-box{margin-top:6px;display:grid;gap:6px;font-size:14px;line-height:1.5;color:var(--fg)}
 .askp .conv{gap:12px;padding-block:4px}
@@ -302,17 +308,22 @@
     }
     // "What it is based on": under the answer, a small picture of the slide that was sent and one or two transcript lines with their times
     // (the server picks the lines from what was really sent; the header is missing when there is nothing to show)
+    let basisN = 0;
     function addBasis(qa, body, hdr) {
       let lines = [];
       try { lines = hdr ? JSON.parse(decodeURIComponent(hdr)) : []; } catch (e) { lines = []; }
       const url = body.img ? "/shot?p=" + encodeURIComponent(body.img) : (body.n && body.where === "rec" ? "/shots/" + encodeURIComponent(body.n) : "");
       if (!url && !lines.length) return;
-      const bx = mk("div", "basis"), bl = mk("div", "bl");
-      if (url) { const im = doc.createElement("img"); im.src = url; im.alt = "השקופית שהתשובה מתבססת עליה"; im.loading = "lazy"; im.addEventListener("error", () => im.remove()); bx.appendChild(im); }
-      bl.appendChild(mk("b", "", "על מה זה מבוסס"));
+      // hidden until the student opens it: a button with a small arrow ("על מה זה מבוסס ›"), a click opens it and another closes it
+      const bx = mk("div", "basis"), bl = mk("div", "bl"), body2 = mk("div", "bbody"), tog = mk("button", "btog", "על מה זה מבוסס");
+      tog.type = "button"; tog.setAttribute("aria-expanded", "false"); body2.hidden = true;
+      body2.id = "basis" + (++basisN); tog.setAttribute("aria-controls", body2.id);
+      tog.insertAdjacentHTML("beforeend", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>');
+      tog.addEventListener("click", () => { const open = body2.hidden; body2.hidden = !open; tog.setAttribute("aria-expanded", String(open)); });
+      if (url) { const im = doc.createElement("img"); im.src = url; im.alt = "השקופית שהתשובה מתבססת עליה"; im.loading = "lazy"; im.addEventListener("error", () => im.remove()); body2.appendChild(im); }
       for (const l of lines.slice(0, 2)) bl.appendChild(mk("span", "", "⏱ " + String(l.t) + "  " + String(l.x)));
       if (!lines.length) bl.appendChild(mk("span", "", "השקופית שעל המסך"));
-      bx.appendChild(bl); qa.appendChild(bx);
+      body2.appendChild(bl); bx.append(tog, body2); qa.appendChild(bx);
     }
     // ask Gemini through Hevanti; the answer appears here as it is written
     async function askHere(q, extra) {
