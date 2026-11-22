@@ -35,7 +35,7 @@ Everything else supports these two.
 **Windows:** download `Hevanti-Setup.exe` from the [latest release](https://github.com/pechter-roei41/hevanti/releases/latest) and run it. It installs for your user only (no administrator), with its own Python and every package inside; your lectures are kept in `Documents\הבנתי`. The same app as a folder: `Hevanti.zip` - extract it, double-click `Install`, then `Hevanti`.
 
 
-**Virus scan:** [`Hevanti-Setup.exe` 2.19 on VirusTotal](https://www.virustotal.com/gui/file/60b54391dbad6269d08d412452b1b0433dfaa5d9747b02071c09000f16621bec/detection): none of the 67 engines that scanned it flagged it as malicious (6 could not process the file type and 2 timed out). SHA-256: `60b54391dbad6269d08d412452b1b0433dfaa5d9747b02071c09000f16621bec`. The installer is not signed yet, so Windows may still show "Windows protected your PC" once. A scan describes one exact file; later releases are scanned again.
+**Virus scan:** [`Hevanti-Setup.exe` 2.22 on VirusTotal](https://www.virustotal.com/gui/file/55cec4ea0ce10c60ad30ec0da1f9294b0cdc098382c39c067ebe74e957faebe6/detection): none of the 66 engines that scanned it flagged it as malicious (scanned 22.11.2026). SHA-256: `55cec4ea0ce10c60ad30ec0da1f9294b0cdc098382c39c067ebe74e957faebe6`. The installer is not signed yet, so Windows may still show "Windows protected your PC" once. A scan describes one exact file; later releases are scanned again.
 
 ## Privacy
 
