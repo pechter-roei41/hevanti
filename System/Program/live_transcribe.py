@@ -1361,7 +1361,7 @@ def load_model(stub_av=True):
                 else:
                     log("טיפ: יש במחשב כרטיס מסך של NVIDIA. כדי שהתמלול יהיה מהיר יותר, להריץ פעם אחת את install_gpu (בתיקייה System של הבנתי; אם התקנת עם Hevanti-Setup.exe: להתקין אותו מחדש).")
             m = WhisperModel(path, device="cpu", compute_type="int8",
-                             download_root=MODEL_DIR, cpu_threads=os.cpu_count() or 4)
+                             download_root=MODEL_DIR, cpu_threads=int(os.environ.get("LT_CPU_THREADS") or 0) or os.cpu_count() or 4)   # (LT_CPU_THREADS: for trying fewer threads on a laptop with fast and slow cores)
             list(m.transcribe(test, language=LANG)[0])
             return m, 1, f"{name} / CPU"
         except Exception as e:
