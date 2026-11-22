@@ -1032,5 +1032,36 @@ finally:
     if _env is not None:
         os.environ["BZM_NO_BROWSER"] = _env
 
+# --- no lecture starts before its transcription model is on the computer (Hebrew needs the Hebrew one, English the English one)
+_disk, _dl, _started = {"he": False, "en": False}, [], []
+_o_disk, _o_dl, _o_start = L.model_on_disk, L.model_download, L.APP.start
+L.model_on_disk = lambda lang: _disk[L.model_lang(lang)]
+L.model_download = lambda lang: (_dl.append(L.model_lang(lang)), L.model_set(lang, "downloading"))
+L.APP.start = lambda *a, **k: _started.append(a)
+try:
+    for _l in ("he", "en"):
+        L.model_set(_l, "unknown")
+    _r = L.APP.command({"action": "start_live", "lang": "he", "course": ""})
+    check("no Hebrew model: a Hebrew lecture does not start, and the download begins", _r.get("ok") is False and _r.get("model_missing") == "he" and not _started and _dl == ["he"], (_r, _started, _dl))
+    _r = L.APP.command({"action": "start_live", "lang": "he", "course": ""})
+    check("...a second press while it downloads starts nothing and does not start a second download", _r.get("model_missing") == "he" and not _started and _dl == ["he"], (_r, _dl))
+    _disk["he"] = True
+    L.model_set("he", "ready")
+    _r = L.APP.command({"action": "start_live", "lang": "en", "course": ""})
+    check("the Hebrew model is here, the English one is not: English does not start", _r.get("model_missing") == "en" and not _started, (_r, _started))
+    _r = L.APP.command({"action": "start_live", "lang": "he", "course": ""})
+    check("the Hebrew model is here: a Hebrew lecture starts", _r.get("ok") is True and len(_started) == 1, (_r, _started))
+    _r = L.APP.command({"action": "start_recording", "source": "x.mp4", "lang": "en"})
+    check("a recording in English needs the English model too", _r.get("model_missing") == "en" and len(_started) == 1, (_r, _started))
+    _r = L.APP.command({"action": "start_youtube", "url": "https://youtu.be/F1_uOZeYLVE", "lang": "en"})
+    check("...and so does a YouTube lecture", _r.get("model_missing") == "en" and len(_started) == 1, (_r, _started))
+    _pub = L.model_public("37%")
+    check("the pages are told each language's state and the progress", _pub["he"]["state"] == "ready" and _pub["en"]["state"] == "downloading" and _pub["en"]["msg"] == "37%", _pub)
+    check("/api/app carries the models", set(L.APP.state().get("models", {})) == {"he", "en"})
+finally:
+    L.model_on_disk, L.model_download, L.APP.start = _o_disk, _o_dl, _o_start
+    for _l in ("he", "en"):
+        L.model_set(_l, "unknown")
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)

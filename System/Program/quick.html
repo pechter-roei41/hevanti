@@ -111,7 +111,27 @@ let touched = false, kind = "he";
 const post = body => fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify(body)}).then(r => r.json());
 function note(text) { $("#note").hidden = !text; $("#noteText").textContent = text || ""; }
 function say(text) { const m = $("#msg"); m.textContent = text || ""; m.hidden = !text; }
-function drawGo() { $("#go").textContent = kind === "rec" ? "המשך באפליקציה" : "התחל תמלול"; }   // a recording is not started here: it needs a file, in the app
+// the transcription model of the chosen language must be on the computer: until then the button downloads it, and nothing starts
+let models = {}, starting = false, modelSaid = false;
+const WHO = {he: "עברית", en: "אנגלית"};
+function drawGo() {
+  const g = $("#go"), m = kind === "rec" ? null : models[kind];
+  g.dataset.dl = "";
+  const said = t => { modelSaid = !!t; say(t); };
+  if (kind === "rec") { g.textContent = "המשך באפליקציה"; if (!starting) g.disabled = false; if (modelSaid) said(""); return; }   // a recording is not started here: it needs a file, in the app
+  if (m && m.state === "downloading") { g.textContent = "מוריד את מודל ה" + WHO[kind] + "..."; g.disabled = true; said(m.msg || "מוריד..."); return; }
+  if (m && (m.state === "missing" || m.state === "failed")) {
+    g.textContent = "הורדת מודל התמלול ל" + WHO[kind] + " (כ-1.6GB)"; g.dataset.dl = "1"; if (!starting) g.disabled = false;
+    said(m.state === "failed" && m.error ? "ההורדה לא הצליחה: " + m.error : "כדי להתחיל הרצאה ב" + WHO[kind] + " צריך קודם להוריד את מודל התמלול (פעם אחת).");
+    return;
+  }
+  g.textContent = "התחל תמלול"; if (!starting) g.disabled = false;
+  if (modelSaid) said("");   // (the model came: its message goes)
+}
+async function pollModels() {
+  try { const st = await (await fetch("/api/app", {cache: "no-store"})).json(); if (st.models) { models = st.models; drawGo(); } } catch (e) {}
+}
+setInterval(pollModels, 1500);
 function setKind(k, focus) {
   kind = k;
   for (const b of document.querySelectorAll("#kinds button")) {
@@ -168,7 +188,7 @@ async function load() {
     const lib = await (await fetch("/api/library", {cache: "no-store"})).json();
     names = (lib.courses || []).map(c => c.name);
     const st = await (await fetch("/api/app", {cache: "no-store"})).json();
-    last = st.course || "";
+    last = st.course || ""; if (st.models) models = st.models;
     if (st.a11y) a11yView(st.a11y);
     if ("theme" in st) { try { localStorage.setItem("bzm.theme", st.theme || ""); } catch (e) {} bzmTheme(st.theme || ""); }
   } catch (e) {}
@@ -199,9 +219,16 @@ $("#go").addEventListener("click", async () => {
     try { await post({action: "quick_open_app", view: "rec"}); } catch (e) { say("לא הצלחתי לפתוח את האפליקציה."); $("#go").disabled = false; }
     return;
   }
-  $("#go").disabled = true;
+  if ($("#go").dataset.dl) {   // the model is not here: this button downloads it
+    $("#go").disabled = true;
+    try { const r = await post({action: "download_model", lang: kind}); if (r && r.models) models = r.models; } catch (e) {}
+    drawGo(); return;
+  }
+  starting = true; $("#go").disabled = true;
   let r;
   try { r = await post({action: "start_live", lang: kind, course}); } catch (e) { r = {ok: false, error: "לא הצלחתי להתחיל. אפשר לנסות שוב."}; }
+  starting = false;
+  if (r && r.model_missing) { await pollModels(); return; }   // (the server did not start: it began the download)
   if (!r || !r.ok) { say((r && r.error) || "לא הצלחתי להתחיל. אפשר לנסות שוב."); $("#go").disabled = false; return; }
   try { await post({action: "quick_close"}); } catch (e) {}   // the lecture runs in the background; the floating button stays
 });

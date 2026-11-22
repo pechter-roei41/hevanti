@@ -784,6 +784,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <div class="seg" role="group" aria-label="שפת ההרצאה"><button type="button" data-lang="he" aria-pressed="true">עברית</button><button type="button" data-lang="en" aria-pressed="false">אנגלית</button></div>
         <button class="btn" id="recGo" type="button" disabled>פתיחה בנגן</button>
       </div>
+      <p class="progress" id="recModel" role="status" hidden></p>
       <details class="pano">
         <summary><b>הקלטה מפנופטו (Panopto)</b> <span class="sub">· הקלטות של הקורס במודל</span></summary>
         <p class="sub">הקלטות בפנופטו דורשות התחברות, אז הבנתי לוקחת אותן דרך הדפדפן שבו כבר התחברת. מכינים פעם אחת סימנייה:</p>
@@ -1861,7 +1862,7 @@ drawThemeBtn();
 let drawTip = () => {};
 (() => {
   const t = $("#tipSet"); if (!t) return; let seen = ""; try { seen = localStorage.getItem("bzm.tipSet") || ""; } catch (e) {}
-  const done = () => { seen = "1"; t.hidden = true; try { localStorage.setItem("bzm.tipSet", "1"); } catch (e) {} };
+  const done = () => { seen = "1"; tipWants = false; t.hidden = true; try { localStorage.setItem("bzm.tipSet", "1"); } catch (e) {} };
   drawTip = () => { tipWants = !seen && view === "home"; if (app && homeNow) drawHomeBars(app); else t.hidden = !tipWants; };   // (at home it is one of the bars: drawHomeBars shows one at a time)
   drawTip();
   $("#tipSetX").addEventListener("click", done);
@@ -2202,6 +2203,15 @@ async function drawHomeEnded(s) {
   $("#heAllCard").hidden = false; $("#heAll").onclick = () => open(null);
   $("#heAllList").replaceChildren(el("li", "", "התמלול המלא, עם חיפוש"), ...(sv.slides ? [el("li", "", nSlide(sv.slides))] : []));
 }
+// the transcription model of the chosen language: a recording or a video starts only when it is on the computer (the server downloads it when "start" is pressed)
+function drawModels(d) {
+  const e = $("#recModel"); if (!e) return;
+  const m = d && d.models && d.models[recLang];
+  const who = recLang === "en" ? "אנגלית" : "עברית";
+  const t = !m ? "" : m.state === "downloading" ? "מוריד את מודל התמלול ל" + who + " (פעם אחת): " + (m.msg || "") + " ההרצאה תתחיל אחרי שההורדה נגמרת, אפשר ללחוץ שוב."
+    : m.state === "failed" ? "ההורדה של מודל התמלול ל" + who + " לא הצליחה" + (m.error ? ": " + m.error : "") + " אפשר ללחוץ שוב כדי לנסות." : "";
+  e.hidden = !t; e.textContent = t;
+}
 // an NVIDIA card that Hevanti cannot use yet: say it plainly, and install what is missing with one click
 function drawGpu(d) {
   const g = d && d.gpu, bar = $("#gpuBar"); if (!bar) return;
@@ -2240,7 +2250,7 @@ function render(d) {
     if (!first && d.go.view === "player") location.href = "/player";   // (a recording being watched: its player)
     else if (!first && to !== undefined) { if (location.hash.slice(1) === to) route(); else location.hash = to; }
   }
-  drawGpu(d);
+  drawGpu(d); drawModels(d);
   $("#ver").textContent = "עודכנה ב-" + d.date;   /* design 3: the version is in the top bar only */  $("#ver").title = "גרסת בטא: עדיין בבדיקה, ועלולות להיות תקלות. אם משהו לא עובד, יש \"דיווח על תקלה\" בתחתית מסך הבית.";
   if (!render.themed) { render.themed = true;   // a browser that has no choice of its own yet takes Hevanti's
     let mine = ""; try { mine = localStorage.getItem("bzm.theme") || ""; } catch (e) {}
@@ -2389,7 +2399,7 @@ $("#linkIn").addEventListener("input", () => {
   $("#recGo").textContent = isYoutube(v) ? "פתיחה בנגן של יוטיוב" : "פתיחה בנגן";
 });
 document.querySelectorAll(".seg [data-lang]").forEach(b => b.addEventListener("click", () => {
-  recLang = b.dataset.lang; document.querySelectorAll(".seg [data-lang]").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+  recLang = b.dataset.lang; document.querySelectorAll(".seg [data-lang]").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false")); drawModels(app);
 }));
 $("#pickBtn").addEventListener("click", async () => {
   toast("נפתח חלון בחירת קובץ...");
@@ -2424,7 +2434,8 @@ async function startRecording(src, lang, title) {
   if (isYoutube(src)) return startYoutube(src, lang);
   if (!(await consentOk()) || !(await okToReplace())) return;
   wantPlayer = Date.now() / 1000 - 2; shownErr = "";
-  await api("/api/cmd", {action: "start_recording", source: src, lang, title: title || "", course: curCourse || NO_COURSE});
+  const r = await api("/api/cmd", {action: "start_recording", source: src, lang, title: title || "", course: curCourse || NO_COURSE});
+  if (r && r.model_missing) { wantPlayer = null; toast(r.error); if (app) { const st = await api("/api/app"); drawModels(app = st); } return; }   // (nothing started: the model is downloading)
   recShow(false); $("#linkIn").value = ""; choose("", "");
 }
 $("#recGo").addEventListener("click", () => { if (recSource) startRecording(recSource, recLang); });

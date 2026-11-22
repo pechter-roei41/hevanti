@@ -1202,6 +1202,121 @@ def _cuda_libs_ok():
     return True
 
 
+# ---------- is the transcription model on this computer? (a lecture starts only when it is) ----------
+MODEL_DL = {"lock": threading.Lock(), "checking": False,
+            "he": {"state": "unknown", "error": ""}, "en": {"state": "unknown", "error": ""}}
+MODEL_WHO = {"he": "עברית", "en": "אנגלית"}
+
+
+def model_lang(lang):
+    return "en" if str(lang or "").strip().lower() == "en" else "he"
+
+
+def model_name(lang):
+    """The model a lecture in this language needs (the Hebrew one is the ivrit.ai model; the fall-back is not enough)."""
+    return os.environ.get("LT_MODEL") or ("large-v3-turbo" if model_lang(lang) == "en" else "ivrit-ai/whisper-large-v3-turbo-ct2")
+
+
+def model_on_disk(lang):
+    """True when the model of this language is whole on this computer (checked against its pin). Downloads nothing."""
+    name = model_name(lang)
+    repo = _repo_of(name)
+    pin = MODEL_PINS.get(repo or "")
+    try:
+        from faster_whisper.utils import download_model
+        p = download_model(repo if pin else name, local_files_only=True, cache_dir=MODEL_DIR, revision=pin[0] if pin else None)
+        if p and os.path.exists(os.path.join(p, "model.bin")) and verify_model(p, repo):
+            return True
+    except Exception:
+        pass
+    if repo:
+        d = os.path.join(MODEL_DIR, "fast", repo.replace("/", "__"))
+        try:
+            if os.path.exists(os.path.join(d, ".complete")) and verify_model(d, repo):
+                return True
+        except Exception:
+            pass
+    return False
+
+
+def model_set(lang, state, error=""):
+    with MODEL_DL["lock"]:
+        MODEL_DL[model_lang(lang)].update(state=state, error=error)
+
+
+def model_download(lang):
+    """Download the model of this language in the background (once at a time per language). The student asked for it
+    (pressed "start" or "download"); progress is in /api/app (models)."""
+    lang = model_lang(lang)
+    with MODEL_DL["lock"]:
+        if MODEL_DL[lang]["state"] == "downloading":
+            return
+        MODEL_DL[lang].update(state="downloading", error="")
+
+    def work():
+        ok, err = False, ""
+        try:
+            model_path(model_name(lang))
+            ok = model_on_disk(lang)
+            if not ok:
+                err = "ההורדה לא הסתיימה כראוי."
+        except Exception as e:
+            save_error("model download")
+            err = gpu_fail_note(str(e)) or "ההורדה נכשלה."
+        model_set(lang, "ready" if ok else "failed", err)
+    threading.Thread(target=work, daemon=True).start()
+
+
+def model_check_async():
+    """The first look at what is on the disk, off the request thread (checking a model's file for the first time reads all of it)."""
+    with MODEL_DL["lock"]:
+        if MODEL_DL["checking"] or all(MODEL_DL[l]["state"] != "unknown" for l in ("he", "en")):
+            return
+        MODEL_DL["checking"] = True
+
+    def work():
+        for l in ("he", "en"):
+            with MODEL_DL["lock"]:
+                if MODEL_DL[l]["state"] != "unknown":
+                    continue
+            ok = model_on_disk(l)
+            with MODEL_DL["lock"]:
+                if MODEL_DL[l]["state"] == "unknown":
+                    MODEL_DL[l].update(state="ready" if ok else "missing")
+        with MODEL_DL["lock"]:
+            MODEL_DL["checking"] = False
+    threading.Thread(target=work, daemon=True).start()
+
+
+def model_public(progress=""):
+    """For the pages: per language, state = checking | ready | missing | downloading | failed (+ the progress line, or the reason)."""
+    out = {}
+    with MODEL_DL["lock"]:
+        for l in ("he", "en"):
+            st = MODEL_DL[l]["state"]
+            out[l] = {"state": "checking" if st == "unknown" else st,
+                      "msg": (progress or "מוריד...") if st == "downloading" else "", "error": MODEL_DL[l]["error"] if st == "failed" else ""}
+    return out
+
+
+def model_gate(lang):
+    """None when a lecture in this language may start (its model is on the computer). Otherwise the answer for the page: nothing
+    starts, and the download of that model begins (the student pressed "start": that is the ask)."""
+    lang = model_lang(lang)
+    with MODEL_DL["lock"]:
+        st = MODEL_DL[lang]["state"]
+    if st == "ready":
+        return None
+    if st != "downloading":
+        if model_on_disk(lang):
+            model_set(lang, "ready")
+            return None
+        model_download(lang)
+    who = MODEL_WHO[lang]
+    return {"ok": False, "model_missing": lang,
+            "error": f"כדי להתחיל הרצאה ב{who} צריך קודם להוריד את מודל התמלול של ה{who} (כ-1.6GB, פעם אחת). ההורדה התחילה: אפשר לראות את ההתקדמות כאן, ולהתחיל אחרי שהיא נגמרת."}
+
+
 def load_model(stub_av=True):
     if stub_av:
         _stub_av()
@@ -8279,6 +8394,7 @@ class App:
         self.last_seen = time.time()
 
     def state(self, notes_since=0):
+        model_check_async()
         with self.lock:
             s = self.session
             progress = self.progress if time.time() - self.progress_at < 8 else ""
@@ -8288,7 +8404,7 @@ class App:
                     "progress": progress, "question": self.question, "pending": self.pending,
                     "notes": [n for n in self.notes if n["id"] > notes_since],
                     "lib_rev": self.lib_rev, "first_view": self.first_view, "go": dict(self.go),
-                    "screens": SCREEN_ENABLED, "capture": capture_control().public(), "math": math_reader().status(), "gpu": gpu_public(),
+                    "screens": SCREEN_ENABLED, "capture": capture_control().public(), "math": math_reader().status(), "gpu": gpu_public(), "models": model_public(progress),
                     "product": PRODUCT, "migrated": self.migrated,
                     "course": load_settings().get("course") or "", "connect": self.connect_info(),
                     "ai_apps": ai_apps_status(), "update": self.update, "theme": ui_theme(), "still": bool(load_settings().get("a11y_still")), "a11y": a11y_view(), "save_failed": save_failed_public(), "settings_damaged": settings_damage_public(), "mark_n": self.mark_n, "saved_n": self.saved_n, "run": RUN_ID}
@@ -8381,6 +8497,10 @@ class App:
             if old is not None and old.stop.is_set() and not old.done:   # still writing the last seconds of the one that was stopped
                 return {"ok": False, "stopping": True,
                         "error": "הבנתי עוד מסיימת לתמלל את ההרצאה הקודמת. אפשר להתחיל חדשה ברגע שהיא מסיימת (כמה שניות)."}
+        if a in ("start_live", "start_youtube", "start_recording"):   # no transcription model on the computer: nothing starts (it downloads first)
+            blocked = model_gate(d.get("lang"))
+            if blocked:
+                return blocked
         if a == "start_live":
             save_settings(course=course)
             self.start("live", d.get("lang"), run_live, d.get("lang"), course, course=course)
@@ -8413,6 +8533,13 @@ class App:
                 return {"ok": False, "view": d.get("f")}
             self.start("rec", lang, run_recording, media, lang, rcourse, title=media.title, course=rcourse)
             return {"ok": True}
+        if a == "download_model":   # the student asked to download the model of a language (the button next to "start")
+            lang = model_lang(d.get("lang"))
+            if not model_on_disk(lang):
+                model_download(lang)
+            else:
+                model_set(lang, "ready")
+            return {"ok": True, "models": model_public(self.progress)}
         if a == "set_course":
             save_settings(course=course)
             return {"ok": True}

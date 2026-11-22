@@ -882,6 +882,9 @@ with sync_playwright() as p:
               and lp.evaluate("document.querySelectorAll('#pastStudy .rectag').length") == 1, r)
         check(f"lecture page, {theme}: the first-time tip is not shown on the lecture page, and is on the home page",
               lp.evaluate("document.querySelector('#tipSet').hidden") is True and lp.evaluate("show('home'), document.querySelector('#tipSet').hidden") is False)
+        lp.evaluate("show('home'), document.querySelector('#tipSetX').click()")
+        check(f"lecture page, {theme}: closing the first-time tip keeps it closed (the next redraw of the home bars does not bring it back)",
+              lp.evaluate("drawTip(), document.querySelector('#tipSet').hidden") is True and lp.evaluate("tipWants") is False)
         lp.evaluate("openPast('c/t')"); lp.wait_for_timeout(600)
         check(f"lecture page, {theme}: what holds the three study cards is not a card (no border, no fill, no padding), and no card is inside a card",
               r["studyBorder"] == "0px" and r["studyBg"] == "rgba(0, 0, 0, 0)" and r["studyPad"] == "0px" and r["nested"] == 0, r)
@@ -1112,7 +1115,7 @@ with sync_playwright() as p:
     lc.context.close()
 
     # ---- the quick-start window (F1): course, kind, start in the background, open the app ----
-    def quick_page(theme="light", guess=None, last="פיזיקה", start_ok=True, delay_guess=0):
+    def quick_page(theme="light", guess=None, last="פיזיקה", start_ok=True, delay_guess=0, models=None):
         qp = b.new_context(viewport={"width": 380, "height": 364}, locale="he-IL").new_page()
         qp.errs, qp.posts = [], []
         qp.on("pageerror", lambda e: qp.errs.append(str(e)))
@@ -1121,6 +1124,7 @@ with sync_playwright() as p:
 
         def app_route(r):
             resp = r.fetch(); d = resp.json(); d["course"] = last; d["theme"] = theme
+            d["models"] = models or {"he": {"state": "ready", "msg": "", "error": ""}, "en": {"state": "ready", "msg": "", "error": ""}}
             r.fulfill(response=resp, body=json.dumps(d))
         qp.route("**/api/app*", app_route)
 
@@ -1132,6 +1136,8 @@ with sync_playwright() as p:
                 if delay_guess:
                     time.sleep(delay_guess)
                 out = {"ok": True, **(guess or {})}
+            elif a == "download_model":
+                out = {"ok": True, "models": {"he": {"state": "downloading", "msg": "מוריד: 3%", "error": ""}, "en": {"state": "missing", "msg": "", "error": ""}}}
             elif a == "start_live":
                 out = {"ok": bool(start_ok)} if start_ok else {"ok": False, "error": "הבנתי עוד מסיימת לתמלל את ההרצאה הקודמת."}
             else:
@@ -1159,6 +1165,21 @@ with sync_playwright() as p:
     starts = [p_ for p_ in q.posts if p_.get("action") == "start_live"]
     check("quick start: \"start\" starts a live lecture in the chosen language and course", starts == [{"action": "start_live", "lang": "en", "course": "פיזיקה"}], starts)
     check("quick start: ...and then the small window is closed (the lecture runs in the background)", [p_.get("action") for p_ in q.posts][-1] == "quick_close", q.posts)
+    q.context.close()
+
+    # no transcription model yet: the button downloads it, and nothing starts (Hebrew needs the Hebrew model, English the English one)
+    q = quick_page(models={"he": {"state": "missing", "msg": "", "error": ""}, "en": {"state": "ready", "msg": "", "error": ""}})
+    check("quick start: no Hebrew model - the button says it downloads the model, and says why", "הורדת מודל התמלול לעברית" in q.inner_text("#go") and "להוריד את מודל התמלול" in q.inner_text("#msg"), (q.inner_text("#go"), q.inner_text("#msg")))
+    q.click("#go")
+    q.wait_for_timeout(500)
+    check("quick start: ...pressing it downloads, and starts no lecture", any(p_.get("action") == "download_model" and p_.get("lang") == "he" for p_ in q.posts) and not any(p_.get("action") == "start_live" for p_ in q.posts), q.posts)
+    q.focus("[data-kind=he]")
+    q.keyboard.press("ArrowLeft")
+    q.wait_for_timeout(300)
+    check("quick start: the English model is here - English starts as usual", q.inner_text("#go") == "התחל תמלול" and q.is_hidden("#msg"), (q.inner_text("#go"), q.is_hidden("#msg")))
+    q.context.close()
+    q = quick_page(models={"he": {"state": "downloading", "msg": "מוריד את מודל העברית: 40%", "error": ""}, "en": {"state": "ready", "msg": "", "error": ""}})
+    check("quick start: while it downloads the button is off and the progress shows", q.evaluate("document.querySelector('#go').disabled") is True and "40%" in q.inner_text("#msg"), (q.inner_text("#go"), q.inner_text("#msg")))
     q.context.close()
 
     q = quick_page(guess={})
