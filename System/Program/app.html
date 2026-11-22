@@ -102,6 +102,13 @@ h2{font-size:21px;margin:0;text-wrap:balance}
 .hhead .hero{margin:0;margin-inline-end:auto}
 .hhacts{display:flex;gap:10px;flex-wrap:wrap}
 .hhacts .btn{white-space:normal}
+/* the two outline buttons at home: a soft-green fill on hover, a thicker ring and the same fill on keyboard focus, a deeper fill while pressed */
+.hhacts .btn.ghost{transition:none}
+@media (prefers-reduced-motion:no-preference){html:not(.a-still) .hhacts .btn.ghost{transition:background-color .15s ease,box-shadow .15s ease}}
+.hhacts .btn.ghost:hover{background:var(--accent-soft);filter:none}
+.hhacts .btn.ghost:active{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.hhacts .btn.ghost:focus-visible{background:var(--accent-soft);outline:3px solid var(--accent);outline-offset:3px}
+html.a-contrast .hhacts .btn.ghost:focus-visible{outline:3px solid var(--fg)!important}
 .hlead{margin:-8px 0 0;color:var(--muted);font-size:17px;overflow-wrap:anywhere}
 .hgrid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;align-items:start}
 @media (max-width:760px){.hgrid{grid-template-columns:minmax(0,1fr)}}
