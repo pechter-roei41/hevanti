@@ -640,7 +640,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 </header>
 
 <main>
-  <div class="tip" id="tipSet" role="note" hidden><span>כדי שהבנתי תתאים לך בדיוק, כדאי להגדיר בעצמך בהגדרות כמה דברים: גודל כתב, אטימות החלון הקטן, מקום העיגול הירוק ומה לצלם. זה לוקח דקה.</span><button class="btn ghost small" id="tipSetGo" type="button">לפתוח את ההגדרות</button><button class="iconbtn" id="tipSetX" type="button" aria-label="סגירת ההערה" title="סגירה">✕</button></div>
+  <div class="tip" id="tipSet" role="note" hidden><span>כדי שהבנתי תתאים לך בדיוק, כדאי להגדיר בעצמך בהגדרות כמה דברים: גודל כתב, אטימות החלון הצף, מקום העיגול הירוק ומה לצלם. זה לוקח דקה.</span><button class="btn ghost small" id="tipSetGo" type="button">לפתוח את ההגדרות</button><button class="iconbtn" id="tipSetX" type="button" aria-label="סגירת ההערה" title="סגירה">✕</button></div>
   <!-- HOME -->
   <section id="vHome" aria-label="מסך הבית">
     <!-- The home page shows what matters now, in one of four states (decided 17.11.2026); it never starts a lecture itself:
@@ -672,7 +672,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
             </li>
             <li class="off" id="stFirst" aria-disabled="true">
               <h2 class="hstep"><span class="hnum" aria-hidden="true">2</span>הרצאה ראשונה</h2>
-              <p class="sub">בוחרים קורס בחלון הקטן ולוחצים "התחל תמלול". החלון נסגר ונשאר רק כפתור עגול בפינת המסך: שואלים בו ומסמנים בו רגעים.</p>
+              <p class="sub">בוחרים קורס בחלון ההתחלה המהירה ולוחצים "התחל תמלול". החלון נסגר ונשאר רק כפתור עגול בפינת המסך: שואלים בו ומסמנים בו רגעים.</p>
             </li>
           </ol>
         </div>
@@ -807,7 +807,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
         <h2 id="hRecentT">הרצאות אחרונות</h2>
         <ul class="hrecent" id="hRecent"></ul>
       </section>
-      <p class="sub hempty" id="hEmpty" hidden>עוד אין הרצאות. "התחלת הרצאה" פותח חלון קטן: בוחרים קורס וסוג הרצאה, ומתחילים.</p>
+      <p class="sub hempty" id="hEmpty" hidden>עוד אין הרצאות. "התחלת הרצאה" פותח את חלון ההתחלה המהירה: בוחרים קורס וסוג הרצאה, ומתחילים.</p>
     </div>
 
     <p class="hkeys" id="hKeys"><span><span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span> שאלה מכל מסך</span><span><span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>M</kbd></span> סימון רגע ★</span><span><span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd></span> עצירת צילום השקופיות</span></p>
@@ -899,7 +899,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <div class="what"><h1 id="liveWhat">הרצאה חיה</h1><small id="liveSub">טוען...</small></div>
       <div class="acts">
         <button class="btn ghost" id="markImp" type="button" title="מסמן את הרגע הזה בתמלול. אחרי ההרצאה ה-AI יסביר את כל הרגעים שסימנת. גם Ctrl+Alt+M מכל תוכנה."><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align:-2px;margin-inline-end:6px"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2 6.3 20.3l1.2-6.4L2.8 9.5l6.4-.8z"/></svg>סימון</button>
-        <button class="btn ghost" type="button" data-float title="חלון קטן לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">החלון הקטן</button>
+        <button class="btn ghost" type="button" data-float title="חלון צף לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">החלון הצף</button>
         <button class="btn ghost" id="liveStop" type="button">עצירה</button>
       </div>
     </div>
@@ -939,7 +939,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <button class="btn ghost back" type="button" data-home>→ למסך הבית</button>
       <div class="what"><h1 id="ytWhat">סרטון יוטיוב</h1><small id="ytSub">טוען...</small></div>
       <div class="acts">
-        <button class="btn ghost" type="button" data-float title="חלון קטן לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">החלון הקטן</button>
+        <button class="btn ghost" type="button" data-float title="חלון צף לשאלות שנשאר מעל הכל, גם בהרצאה במסך מלא (Ctrl+Alt+Q)">החלון הצף</button>
         <button class="btn ghost" id="ytStop" type="button">עצירה</button>
       </div>
     </div>
@@ -1059,7 +1059,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
     </div>
     <div class="cpanel card" data-cp="marks" hidden>
       <h2>הרגעים שסימנתי</h2>
-      <p class="sub">בחלון השאלות הקטן, ★ מסמן את הרגע (גם Ctrl+Alt+M מכל תוכנה). כאן יש את כל הסימונים מכל ההרצאות של הקורס. לחיצה על "פתיחה" מפתחת את ההרצאה בדיוק ברגע הזה.</p>
+      <p class="sub">בחלון הצף, ★ מסמן את הרגע (גם Ctrl+Alt+M מכל תוכנה). כאן יש את כל הסימונים מכל ההרצאות של הקורס. לחיצה על "פתיחה" מפתחת את ההרצאה בדיוק ברגע הזה.</p>
       <div class="row"><button class="btn small" id="marksAsk" type="button" hidden>הסבר לכל הרגעים (AI)</button></div>
       <div class="mklist" id="mkList"></div>
       <div id="cAsk"></div>
@@ -1112,22 +1112,22 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <section id="g-live" aria-labelledby="g-liveT">
         <h2 id="g-liveT">בהרצאה</h2>
         <ol class="gsteps">
-          <li><b>פתיחה מהירה:</b> כשפותחים את הבנתי (אחרי שהסכמתם פעם אחת ויש מפתח) נפתח חלון קטן באמצע המסך: בוחרים קורס (או <b>+ קורס חדש</b>) וסוג ולוחצים <b>התחל תמלול</b>, והתמלול רץ ברקע. <b>פתח את האפליקציה</b> פותח את מסך הבית בלי להתחיל כלום. אפשר לכבות את החלון הקטן ב<b>הגדרות</b>.</li>
+          <li><b>פתיחה מהירה:</b> כשפותחים את הבנתי (אחרי שהסכמתם פעם אחת ויש מפתח) נפתח חלון ההתחלה המהירה באמצע המסך: בוחרים קורס (או <b>+ קורס חדש</b>) וסוג ולוחצים <b>התחל תמלול</b>, והתמלול רץ ברקע. <b>פתח את האפליקציה</b> פותח את מסך הבית בלי להתחיל כלום. אפשר לכבות את החלון הצף ב<b>הגדרות</b>.</li>
           <li>או ב<b>בית</b>: לוחצים <b>התחלת הרצאה</b>. זה פותח את אותו חלון התחלה מהירה (קורס, סוג: חיה בעברית, חיה באנגלית או מוקלטת, והתחלה). זו הדרך היחידה להתחיל הרצאה.</li>
-          <li>בזמן שההרצאה רצה, מסך הבית מראה אותה: כמה זמן עבר, שלוש השורות האחרונות, הסימונים עד עכשיו והשקופית האחרונה, עם <b>פתיחת החלון הצף</b> (החלון הקטן), <b>★ סימון הרגע</b> ו<b>עצירת התמלול</b>. אפשר גם לסגור אותו: התמלול ממשיך.</li>
+          <li>בזמן שההרצאה רצה, מסך הבית מראה אותה: כמה זמן עבר, שלוש השורות האחרונות, הסימונים עד עכשיו והשקופית האחרונה, עם <b>פתיחת החלון הצף</b> (החלון הצף), <b>★ סימון הרגע</b> ו<b>עצירת התמלול</b>. אפשר גם לסגור אותו: התמלול ממשיך.</li>
           <li>מפעילים את ההרצאה, גם במסך מלא. בקצה המסך מופיע כפתור עגול ירוק עם הלוגו, ונקודה אדומה קטנה שמראה שההרצאה מוקלטת. הכפתור נשאר כל עוד הבנתי פועלת, וסגירת חלון האפליקציה לא סוגרת אותה. כדי לסגור את הבנתי לגמרי סוגרים את החלון השחור.</li>
-          <li>אין עדיין מפתח? בחלון הקטן יש כפתור <b>הדבקת מפתח</b>: הוא פותח את האפליקציה בהגדרות, והחלון הקטן זז הצידה. עד אז אפשר לכתוב שאלה ולהעתיק אותה ל-ChatGPT, Gemini או Claude.</li>
-          <li>התחלתם בלי קורס? אם על השקף הראשון כתוב שם של קורס שלכם, מופיעה הצעה (בחלון הקטן ובמסך ההרצאה): <b>להעביר</b> או <b>לא עכשיו</b>. אפשר גם לבחור קורס אחר במסך ההרצאה. ההרצאה עוברת לקורס כשעוצרים ושומרים אותה. שום דבר לא משתנה לבד.</li>
-          <li>לוחצים עליו (או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>): החלון הקטן גדל מהכפתור, והלוגו הופך ל-X. כותבים שאלה ו-<kbd>Enter</kbd>. התשובה מופיעה מתחת, ומתחתיה "על מה זה מבוסס": תמונה קטנה של השקופית ושורה או שתיים מהתמלול, עם הזמן שלהן.</li>
-          <li>בסוף: <b>עצירה</b> (במסך ההרצאה או בבית), או בחלון הקטן: <b>⋯</b> ← <b>עצירת הקלטה</b> (לוחצים פעמיים). הכל נשמר בקורס, וכרטיס "ההרצאה נשמרה בהצלחה" מופיע בחלון הקטן, או מעל הכפתור העגול אם החלון הקטן סגור. מסך הבית מראה <b>ההרצאה נשמרה</b> עם הרגעים שסימנתם, עד שפותחים אותה.</li>
+          <li>אין עדיין מפתח? בחלון הצף יש כפתור <b>הדבקת מפתח</b>: הוא פותח את האפליקציה בהגדרות, והחלון הצף זז הצידה. עד אז אפשר לכתוב שאלה ולהעתיק אותה ל-ChatGPT, Gemini או Claude.</li>
+          <li>התחלתם בלי קורס? אם על השקף הראשון כתוב שם של קורס שלכם, מופיעה הצעה (בחלון הצף ובמסך ההרצאה): <b>להעביר</b> או <b>לא עכשיו</b>. אפשר גם לבחור קורס אחר במסך ההרצאה. ההרצאה עוברת לקורס כשעוצרים ושומרים אותה. שום דבר לא משתנה לבד.</li>
+          <li>לוחצים עליו (או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>): החלון הצף גדל מהכפתור, והלוגו הופך ל-X. כותבים שאלה ו-<kbd>Enter</kbd>. התשובה מופיעה מתחת, ומתחתיה "על מה זה מבוסס": תמונה קטנה של השקופית ושורה או שתיים מהתמלול, עם הזמן שלהן.</li>
+          <li>בסוף: <b>עצירה</b> (במסך ההרצאה או בבית), או בחלון הצף: <b>⋯</b> ← <b>עצירת הקלטה</b> (לוחצים פעמיים). הכל נשמר בקורס, וכרטיס "ההרצאה נשמרה בהצלחה" מופיע בחלון הצף, או מעל הכפתור העגול אם החלון הצף סגור. מסך הבית מראה <b>ההרצאה נשמרה</b> עם הרגעים שסימנתם, עד שפותחים אותה.</li>
         </ol>
         <ul class="glist">
-          <li><b>★ רגע חשוב:</b> כפתור ★ בחלון הקטן (או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>M</kbd></span>). הכפתור מתמלא בצהוב לרגע, ככה שרואים שהסימון נקלט בלי להסיר את העיניים מהשקף. אחר כך חוזרים לרגע הזה מדף הקורס. בתמלול, השורה שנאמרה רגע לפני הסימון מודגשת בצהוב ועליה ★.</li>
-          <li><b>מה פספסתי:</b> שלושה כפתורים בחלון הקטן (3, 7, 15 דקות) מסכמים את הדקות האחרונות.</li>
-          <li><b>⋯ בפינה השמאלית של החלון הקטן:</b> תפריט עם <b>שיחה חדשה</b> (רק כשכבר יש שיחה בתיבה: מנקה את השאלות והתשובות שבחלון, ו-Gemini שוכח את הקודמות; התשובות נשמרות בתיקיית ההרצאה), <b>מעבר לאפליקציה</b> (סוגר את החלון הקטן ופותח את האפליקציה במסך ההרצאה, או בנגן בהקלטה; ההרצאה ממשיכה והכפתור העגול נשאר), <b>עצירת הקלטה</b> ו<b>סגירת הבנתי</b> (גם הן בשתי לחיצות). בלי הרצאה במקום העצירה יש <b>התחלת הרצאה חדשה</b>. ב-<kbd>Esc</kbd> סוגרים את התפריט.</li>
+          <li><b>★ רגע חשוב:</b> כפתור ★ בחלון הצף (או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>M</kbd></span>). הכפתור מתמלא בצהוב לרגע, ככה שרואים שהסימון נקלט בלי להסיר את העיניים מהשקף. אחר כך חוזרים לרגע הזה מדף הקורס. בתמלול, השורה שנאמרה רגע לפני הסימון מודגשת בצהוב ועליה ★.</li>
+          <li><b>מה פספסתי:</b> שלושה כפתורים בחלון הצף (3, 7, 15 דקות) מסכמים את הדקות האחרונות.</li>
+          <li><b>⋯ בפינה השמאלית של החלון הצף:</b> תפריט עם <b>שיחה חדשה</b> (רק כשכבר יש שיחה בתיבה: מנקה את השאלות והתשובות שבחלון, ו-Gemini שוכח את הקודמות; התשובות נשמרות בתיקיית ההרצאה), <b>מעבר לאפליקציה</b> (סוגר את החלון הצף ופותח את האפליקציה במסך ההרצאה, או בנגן בהקלטה; ההרצאה ממשיכה והכפתור העגול נשאר), <b>עצירת הקלטה</b> ו<b>סגירת הבנתי</b> (גם הן בשתי לחיצות). בלי הרצאה במקום העצירה יש <b>התחלת הרצאה חדשה</b>. ב-<kbd>Esc</kbd> סוגרים את התפריט.</li>
           <li><b>להסתיר את החלון:</b> <kbd>Esc</kbd> (אם פתוחה שאלה כמו "לעצור?" או "לסגור את הבנתי?", הוא קודם מבטל אותה, ולחיצה נוספת מסתירה), או ה-X בכפתור העגול. החלון מתכווץ חזרה לכפתור, והלוגו חוזר. "בלי אנימציות ותנועה" בהגדרות הנגישות מבטל את הגדילה והסיבוב.</li>
           <li><b>מקורות:</b> ליד משפט בתשובה מופיעה השעה שבה זה נאמר. בהרצאה שמורה ובנגן, לחיצה עליה קופצת לשם.</li>
-          <li><b>התמלול מאחר?</b> בחלון הקטן, משמאל ל"תשובה כאן", מופיע "מאחר ב־N שניות" (עם שעון) כשהאיחור מעל 10 שניות. מצביעים עליו ורואים שהתשובה עוד לא כוללת את השניות האחרונות. אם המחשב איטי מדי להרצאה, הבנתי מדלגת על קול שחיכה יותר מדי (בערך 5 דקות) ואומרת על כמה שניות דילגה.</li>
+          <li><b>התמלול מאחר?</b> בחלון הצף, משמאל ל"תשובה כאן", מופיע "מאחר ב־N שניות" (עם שעון) כשהאיחור מעל 10 שניות. מצביעים עליו ורואים שהתשובה עוד לא כוללת את השניות האחרונות. אם המחשב איטי מדי להרצאה, הבנתי מדלגת על קול שחיכה יותר מדי (בערך 5 דקות) ואומרת על כמה שניות דילגה.</li>
           <li><b>משהו פרטי על המסך?</b> <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd></span> עוצר את הצילום. התמלול ממשיך.</li>
           <li><b>הקלטה או יוטיוב:</b> ב<b>בית</b> ← <b>הרצאה מוקלטת או ביוטיוב</b>, בוחרים קורס, גוררים קובץ או מדביקים קישור. שואלים באותה דרך.</li>
         </ul>
@@ -1149,7 +1149,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       <section id="g-look" aria-labelledby="g-lookT">
         <h2 id="g-lookT">מראה ונגישות</h2>
         <ul class="glist">
-          <li><b>בהיר או כהה:</b> הכפתור בצד שמאל של הסרגל העליון. הבחירה נשמרת, והחלון הקטן עוקב אחריה.</li>
+          <li><b>בהיר או כהה:</b> הכפתור בצד שמאל של הסרגל העליון. הבחירה נשמרת, והחלון הצף עוקב אחריה.</li>
           <li><b>גודל טקסט, ניגודיות גבוהה, בלי תנועה</b> ועוד: <b>הגדרות ← נגישות</b>. בפעם הראשונה מופיעה בבית הערה שמזכירה את ההגדרות. סוגרים אותה ב-✕ והיא לא חוזרת.</li>
           <li><b>הקלדה:</b> בכל תיבה הכתיבה מתחילה מימין, ועוברת לשמאל לבד כשכותבים באנגלית.</li>
         </ul>
@@ -1172,7 +1172,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           <dt>התמלול איטי, ויש כרטיס מסך של NVIDIA</dt><dd>בסרגל העליון (ובדף הבית) מופיעה הצעה: לחיצה על <b>התקנה</b> מתקינה את מה שהכרטיס צריך (כ-1GB, פעם אחת), ואז סוגרים את הבנתי ופותחים אותה שוב.</dd>
           <dt>שורת ⚠ במקום תשובה</dt><dd>Gemini חסם את השאלה או קטע את התשובה. הסיבה כתובה בשורה: אפשר לנסח את השאלה אחרת או לקצר אותה.</dd>
           <dt>"לא הצלחתי להצפין את המפתח"</dt><dd>המפתח לא נשמר (הבנתי לא שומרת מפתח בלי הצפנה). מנסים שוב, ואם זה חוזר: "דיווח על תקלה" בתחתית מסך הבית.</dd>
-          <dt>החלון הקטן לא נפתח</dt><dd>מנסים את הכפתור "החלון הקטן" במסך ההרצאה החיה, או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>.</dd>
+          <dt>החלון הצף לא נפתח</dt><dd>מנסים את הכפתור "החלון הצף" במסך ההרצאה החיה, או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>.</dd>
           <dt>האפליקציה לא נפתחת</dt><dd>לוחצים שוב על "הבנתי" (בתפריט התחל או על הכפתור העגול). כתובת שהועתקה ידנית לא תיפתח</dd>
           <dt>משהו אחר</dt><dd>ב<b>בית</b>, למטה: <b>דיווח על תקלה</b>. אפשר לשלוח את הפרטים ב-GitHub או במייל.</dd>
         </dl>
@@ -1199,7 +1199,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 <div class="modal" id="liveTip" hidden role="dialog" aria-modal="true" aria-labelledby="liveTipT"><div class="card">
   <h3 id="liveTipT">ההרצאה פועלת, והבנתי כותבת אותה ברקע</h3>
   <p style="margin:0">אפשר לעבור עכשיו לחלון ההרצאה (זום, דפדפן או נגן) ולהגדיל אותו <b>למסך מלא</b>. הבנתי ממשיכה לעבוד גם אז.</p>
-  <ul style="margin:6px 0;padding-inline-start:20px;line-height:1.6"><li><b>לשאול:</b> הכפתור עם הלוגו בקצה המסך, או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>. חלון קטן נפתח מעל ההרצאה, גם במסך מלא.</li><li><b>לסמן:</b> משהו חשוב או לא ברור? לוחצים על <b>★</b> בחלון הקטן (או Ctrl+Alt+M) וחוזרים אליו אחרי ההרצאה, ב"הסימונים שלי".</li></ul>
+  <ul style="margin:6px 0;padding-inline-start:20px;line-height:1.6"><li><b>לשאול:</b> הכפתור עם הלוגו בקצה המסך, או <span class="kk" dir="ltr"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd></span>. החלון הצף נפתח מעל ההרצאה, גם במסך מלא.</li><li><b>לסמן:</b> משהו חשוב או לא ברור? לוחצים על <b>★</b> בחלון הצף (או Ctrl+Alt+M) וחוזרים אליו אחרי ההרצאה, ב"הסימונים שלי".</li></ul>
   <label class="row" style="cursor:pointer"><input type="checkbox" id="liveTipNo"><b>אל תציג שוב</b></label>
   <div class="row"><button class="btn" id="liveTipOk" type="button">הבנתי</button></div>
 </div></div>
@@ -1268,7 +1268,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 </div></div>
 <div class="modal" id="a11y" hidden role="dialog" aria-modal="true" aria-labelledby="a11yT"><div class="card">
   <h3 id="a11yT">תצוגה ונגישות</h3>
-  <p class="sub" style="margin:0">נשמר בדפדפן הזה, וחל גם על החלון הקטן ועל חלון ההתחלה המהירה.</p>
+  <p class="sub" style="margin:0">נשמר בדפדפן הזה, וחל גם על החלון הצף ועל חלון ההתחלה המהירה.</p>
   <div class="a11y-row"><b>גודל הכל:</b><div class="seg" role="group" aria-label="גודל הכל" id="a11yZoom"><button type="button" data-v="1">100%</button><button type="button" data-v="1.15">115%</button><button type="button" data-v="1.3">130%</button><button type="button" data-v="1.5">150%</button></div></div>
   <div class="a11y-row"><b>גודל התמלול:</b><div class="seg" role="group" aria-label="גודל התמלול" id="a11yTx"><button type="button" data-v="1">רגיל</button><button type="button" data-v="1.25">גדול</button><button type="button" data-v="1.5">גדול מאוד</button><button type="button" data-v="1.9">ענק</button></div></div>
   <label><input type="checkbox" id="a11yRead"><span><b>ריווח לקריאה נוחה.</b> שורות, אותיות ומילים מרווחות יותר ושורות קצרות יותר. עוזר בדיסלקציה ובקשב.</span></label>
@@ -1764,7 +1764,7 @@ const setPanels = {};
   logo.setAttribute("viewBox", "0 0 120 120"); logo.setAttribute("width", "26"); logo.setAttribute("height", "26"); logo.setAttribute("aria-hidden", "true");
   logo.style.cssText = "vertical-align:middle;margin:-2px 2px";
   logo.innerHTML = '<circle cx="60" cy="60" r="58" fill="#1b6e4b"/><g transform="translate(60 60) scale(.6) translate(-60 -61)"><path d="M30 8H90A24 24 0 0 1 114 32V70A24 24 0 0 1 90 94H92L100 114L68 94H30A24 24 0 0 1 6 70V32A24 24 0 0 1 30 8Z" fill="none" stroke="#f6f3e9" stroke-width="9" stroke-linejoin="round"/><path d="M41.5 26H78.5A7.5 7.5 0 0 1 86 33.5V66.5A7.5 7.5 0 0 1 71 66.5V41H41.5A7.5 7.5 0 0 1 41.5 26Z" fill="#f6f3e9"/><rect x="34" y="50" width="15" height="24" rx="7.5" fill="#dcebdf"/></g>';
-  bt.append(logo, " צף על המסך כל עוד הבנתי פועלת, גם בלי הרצאה (נקודה אדומה מראה שהרצאה מוקלטת; לחיצה עליו פותחת את החלון הקטן, והוא הופך ל-X שסוגר אותו). כשהוא כבוי, סגירת האפליקציה סוגרת את הבנתי");
+  bt.append(logo, " צף על המסך כל עוד הבנתי פועלת, גם בלי הרצאה (נקודה אדומה מראה שהרצאה מוקלטת; לחיצה עליו פותחת את החלון הצף, והוא הופך ל-X שסוגר אותו). כשהוא כבוי, סגירת האפליקציה סוגרת את הבנתי");
   bl.append(bc, bt);
   setPanels.cap.appendChild(bl);
   // which corner of the screen the floating button sits in
@@ -1784,7 +1784,7 @@ const setPanels = {};
   glideGroup(cs);
   // how see-through the small window is (the lecture behind it stays visible)
   const ol = el("label", "row miniopt"), oc = el("input"), ov = el("span", "", "60%"); oc.type = "range"; oc.id = "miniOp";
-  oc.min = 30; oc.max = 100; oc.step = 5; oc.value = 60; oc.style.width = "160px"; oc.dir = "ltr"; oc.setAttribute("aria-label", "אטימות החלון הקטן");   // dir=ltr: the slider of an RTL page runs backwards (the smallest value at the right), so "left = more see-through" was not true
+  oc.min = 30; oc.max = 100; oc.step = 5; oc.value = 60; oc.style.width = "160px"; oc.dir = "ltr"; oc.setAttribute("aria-label", "אטימות החלון הצף");   // dir=ltr: the slider of an RTL page runs backwards (the smallest value at the right), so "left = more see-through" was not true
   let opT = 0;
   oc.addEventListener("input", () => {
     ov.textContent = oc.value + "%"; clearTimeout(opT);
@@ -1793,7 +1793,7 @@ const setPanels = {};
       if (!r.ok) toast("כדי שהשקיפות תעבוד צריך לסגור ולפתוח מחדש את הבנתי.");
     }, 150);
   });
-  ol.append(el("b", "", "אטימות החלון הקטן (שמאלה: יותר שקוף)"), oc, ov);
+  ol.append(el("b", "", "אטימות החלון הצף (שמאלה: יותר שקוף)"), oc, ov);
   setPanels.cap.appendChild(ol);
   const pb = $("#privBox"); pb.open = true; setPanels.priv.appendChild(pb);
   setPanels.priv.insertBefore($("#checkUpd").closest("label"), pb);   // the update check: here (first), not in "AI connection"
@@ -2777,7 +2777,7 @@ async function drawMarks(name) {
   $("#ctMarks").textContent = courseMarks.length ? (lost ? lost + " ? " : "") + (imp ? imp + " ★" : "") : "עוד אין";
   $("#marksAsk").hidden = !courseMarks.length;
   const box = $("#mkList");
-  if (!courseMarks.length) { box.replaceChildren(el("p", "sub", "עוד לא סימנת רגעים. בהרצאה חיה, ★ בחלון השאלות הקטן מסמן את הרגע (גם Ctrl+Alt+M).")); return; }
+  if (!courseMarks.length) { box.replaceChildren(el("p", "sub", "עוד לא סימנת רגעים. בהרצאה חיה, ★ בחלון הצף מסמן את הרגע (גם Ctrl+Alt+M).")); return; }
   box.replaceChildren(...courseMarks.map(m => {
     const lostM = m.kind !== "חשוב", row = el("div", "mk");
     const ic = el("span", "ic " + (lostM ? "lost" : "imp"), lostM ? "?" : "★");
@@ -3555,8 +3555,8 @@ async function openFloat() {
 // the small question window: a window of its own, always on top (Ctrl+Alt+Q shows / hides it from anywhere)
 document.querySelectorAll("[data-float]").forEach(b => b.addEventListener("click", async () => {
   const r = await api("/api/cmd", {action: "toggle_mini"});
-  if (!r.ok) toast(r.error || "לא הצלחתי לפתוח את החלון הקטן.");
-  else if (r.shown) toast("החלון הקטן נפתח. Ctrl+Alt+Q מסתיר ומחזיר אותו, גם כשההרצאה במסך מלא.");
+  if (!r.ok) toast(r.error || "לא הצלחתי לפתוח את החלון הצף.");
+  else if (r.shown) toast("החלון הצף נפתח. Ctrl+Alt+Q מסתיר ומחזיר אותו, גם כשההרצאה במסך מלא.");
 }));
 function pipToast(t) {
   if (!pipToastEl) return;

@@ -21,7 +21,7 @@ Hevanti (הבנתי) is a lecture companion. It transcribes lectures on the stud
 
 Around them:
 
-- The floating button: a green circle with the logo as a thin line and a red recording dot; a click opens the small window, which grows out of it while the logo turns into an X that closes it; no motion when the student asks for none.
+- The floating button: a green circle with the logo as a thin line and a red recording dot; a click opens the floating window, which grows out of it while the logo turns into an X that closes it; no motion when the student asks for none.
 - The floating window's "⋯" menu holds "new conversation" (only while the box has one), "to the app" (shows the app on the lecture's screen, in the window that is already open if there is one), "stop recording" (two presses; with no lecture it starts a new one) and "close Hevanti" (two presses). A stopped lecture says it was saved, with a link to open it; when the window is closed the same message shows above the round button.
 - A quick-start window in the middle of the screen when Hevanti opens: the course (guessed from a window title or the weekly schedule, never silently) and the kind of lecture, then "start" runs the transcript in the background; the home screen stays one click away and is what a first start (its "let's start" state), a missing key or a GPU problem shows.
 - A home screen by state, one solid-green action in each: the first time (connect the answers, then a first lecture), a lecture running (what was said now, the marks so far, the last slide, the floating window), a lecture just saved (its marks), and a regular day (continue where you stopped, my courses, recent lectures). The quick-start window is the only way to start a lecture; home never starts one.

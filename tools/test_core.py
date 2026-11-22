@@ -856,7 +856,7 @@ check("the live screen buttons (mark, small window, stop) stay at the left end e
       ".livebar .acts{display:flex;align-items:center;gap:10px;flex:none;margin-inline-start:auto}" in _app_src)
 
 check("the opacity slider runs left = more see-through (dir=ltr), and it is called opacity, not transparency",
-      'oc.dir = "ltr"' in _app_src and "אטימות החלון הקטן (שמאלה: יותר שקוף)" in _app_src)
+      'oc.dir = "ltr"' in _app_src and "אטימות החלון הצף (שמאלה: יותר שקוף)" in _app_src)
 check("a first-time tip about the settings: closable, shown once (remembered), opens the settings",
       'id="tipSet"' in _app_src and 'id="tipSetX"' in _app_src and '"bzm.tipSet"' in _app_src and '$("#setBtn").click()' in _app_src)
 check("the app window opened from the quick-start window is drawn again by a one-pixel size change (it stayed black until minimized)",

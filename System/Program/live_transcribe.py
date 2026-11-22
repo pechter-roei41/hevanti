@@ -1930,7 +1930,7 @@ class MiniHotkey(threading.Thread):
             user32.PeekMessageW.argtypes = [ctypes.POINTER(wintypes.MSG), wintypes.HWND, wintypes.UINT,
                                             wintypes.UINT, wintypes.UINT]
             if not user32.RegisterHotKey(None, 0x4858, 0x0001 | 0x0002 | 0x4000, 0x51):   # Alt+Ctrl+Q
-                log("הקיצור " + MINI_HOTKEY + " לחלון השאלות הקטן תפוס בתוכנה אחרת. אפשר לפתוח אותו בכפתור בדף.")
+                log("הקיצור " + MINI_HOTKEY + " לחלון הצף תפוס בתוכנה אחרת. אפשר לפתוח אותו בכפתור בדף.")
                 return
             msg = wintypes.MSG()
             while True:
@@ -5981,7 +5981,7 @@ def toggle_mini(hide_only=False, show_only=False):
     """Show the small question window (starting it if needed) or hide it. show_only: never hides (the lecture
     just started: bring it forward, whether it is open or not)."""
     if os.name != "nt":
-        return {"ok": False, "error": "החלון הקטן עובד רק ב-Windows."}
+        return {"ok": False, "error": "החלון הצף עובד רק ב-Windows."}
     import subprocess
     try:
         u = _mini_user32()
@@ -6006,7 +6006,7 @@ def toggle_mini(hide_only=False, show_only=False):
             MINI_UI["opening_until"] = time.time() + 20   # (the first time Edge has to start: the button turns to an X at once, the window grows when it is ready)
             exe = _browser_exe()
             if not exe or not APP.url:
-                return {"ok": False, "error": "החלון הקטן צריך את Microsoft Edge או את Chrome."}
+                return {"ok": False, "error": "החלון הצף צריך את Microsoft Edge או את Chrome."}
             prof = mini_profile_dir()
             os.makedirs(prof, exist_ok=True)
             args = [exe, "--app=" + APP.link("mini"), f"--window-size={MINI_SIZE[0]},{MINI_SIZE[1]}"]
@@ -6028,11 +6028,11 @@ def toggle_mini(hide_only=False, show_only=False):
                     _show_mini(u, hwnd, place=True, fresh=grow_first)
                     return {"ok": True, "shown": True}
         MINI_UI["opening_until"] = 0.0   # (it did not open: the button is the logo again)
-        return {"ok": False, "error": "החלון הקטן לא נפתח. אפשר לנסות שוב."}
+        return {"ok": False, "error": "החלון הצף לא נפתח. אפשר לנסות שוב."}
     except Exception:
         MINI_UI["opening_until"] = 0.0
         save_error("mini window")
-        return {"ok": False, "error": "לא הצלחתי לפתוח את החלון הקטן."}
+        return {"ok": False, "error": "לא הצלחתי לפתוח את החלון הצף."}
 
 
 def prewarm_mini():
