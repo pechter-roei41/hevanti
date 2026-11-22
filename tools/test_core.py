@@ -613,6 +613,11 @@ check("the sound watchdog's clocks are monotonic (a clock change does not blind 
 _src = open(os.path.join(L.SCRIPT_DIR, "live_transcribe.py"), encoding="utf-8").read()
 _cw = _src[_src.index("def close_our_windows"):_src.index("def open_start_window")]
 check("closing Hevanti closes the quick-start window and every other Hevanti window too", "_find_quick(u)" in _cw and "QUICK_TITLE" in _cw and "PAGE_TITLE" in _cw)
+_ks = L._profile_kill_script([os.path.join("C:/x", "quick-profile"), os.path.join("C:/x", "it's-profile")])
+check("closing Hevanti also force-stops the browsers of the quick-start and floating windows by their profile folder",
+      "_kill_profile_browsers()" in _cw and "quick-profile" in _ks and "it''s-profile" in _ks and "Stop-Process" in _ks and "msedge.exe" in _ks and "Start-Sleep" in _ks
+      and "quick_profile_dir()" in _src[_src.index("def _kill_profile_browsers"):_src.index("def open_start_window")]
+      and "mini_profile_dir()" in _src[_src.index("def _kill_profile_browsers"):_src.index("def open_start_window")])
 _q = open(os.path.join(L.SCRIPT_DIR, "quick.html"), encoding="utf-8").read()
 check("quick window: a new course's name box takes the place of the list (no growing, no scroll bar)",
       '$("#course").hidden = true; $("#newc").hidden = false' in _q and '$("#newc").hidden = true; $("#course").hidden = false' in _q)
