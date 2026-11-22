@@ -98,7 +98,7 @@ COUNT_JS = """() => {
   const green = getComputedStyle(probe).color; probe.remove();
   const home = document.querySelector("#vHome");
   const all = [...home.querySelectorAll("*")].filter(vis);
-  const greens = all.filter(e => getComputedStyle(e).backgroundColor === green && (e.matches("button,a,[role=button]")));
+  const greens = all.filter(e => getComputedStyle(e).backgroundColor === green && (e.matches("button,a,[role=button],.hresume")));
   const shadows = all.filter(e => getComputedStyle(e).boxShadow !== "none");
   return {mode: home.dataset.mode, greens: greens.map(e => e.id || e.textContent.trim().slice(0, 30)), shadows: shadows.map(e => e.id || e.className),
           wide: document.documentElement.scrollWidth - document.documentElement.clientWidth};
@@ -224,10 +224,22 @@ with sync_playwright() as p:
     pg.click("#startQuick")
     pg.wait_for_timeout(400)
     check("day: 'התחלת הרצאה' only asks for the quick-start window", "quick_new" in cmds, cmds)
-    pg.click("#homeResume")
+    pg.click("#resMain")
     pg.wait_for_function("location.hash.startsWith('#t=')", timeout=4000)
     at = pg.evaluate("decodeURIComponent(location.hash)")
     check("day: the green card opens the lecture at its first mark", at.endswith(NEWEST + "&at=142"), at)
+    pg.evaluate("location.hash = ''")
+    pg.wait_for_function("!location.hash", timeout=4000)
+    pg.click("#resGo")
+    pg.wait_for_function("location.hash.startsWith('#t=')", timeout=4000)
+    at = pg.evaluate("decodeURIComponent(location.hash)")
+    check("day: the white button is its own button: it opens the lecture's marks tab, not the first mark", at.endswith(NEWEST) and "&at=" not in at
+          , at)
+    try:
+        pg.wait_for_function("document.querySelector('#pastTabs [data-pt=marks][aria-selected=true]')", timeout=5000); tab_ok = True
+    except Exception:
+        tab_ok = False
+    check("day: ...and the marks tab is the one that shows", tab_ok)
     pg.evaluate("location.hash = ''")
     pg.click("#recTile")
     check("day: the recording box opens and the green card steps aside", pg.is_visible("#recBox") and not pg.is_visible("#homeResume"))
