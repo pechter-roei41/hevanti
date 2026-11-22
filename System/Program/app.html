@@ -141,13 +141,18 @@ h2{font-size:21px;margin:0;text-wrap:balance}
 .hor{color:var(--muted);font-size:14px}
 .hbul{margin:0;padding-inline-start:20px;color:var(--muted);display:grid;gap:4px}
 .hresume{grid-template-columns:minmax(0,1fr) auto;column-gap:18px}
-.hresume > :not(.hrgo){grid-column:1}
-.hrgo{grid-column:2;grid-row:1 / span 3;align-self:center;justify-self:end;white-space:nowrap;background:var(--surface);color:var(--accent);border-radius:12px;padding:9px 18px;font-weight:700}
+.hresume > .hrmain{grid-column:1}
+.hrgo{grid-column:2;grid-row:1;align-self:center;justify-self:end;white-space:nowrap;background:var(--surface);color:var(--accent);border:0;font:inherit;cursor:pointer;border-radius:12px;padding:9px 18px;font-weight:700;position:relative;z-index:1}
+.hrgo:hover{background:var(--accent-soft)}
+.hrgo:focus-visible{outline:3px solid var(--accent-ink);outline-offset:2px}
 .hchip{display:inline-flex;align-items:center;gap:5px;background:var(--sunk);color:var(--fg);border-radius:999px;padding:2px 10px;font-size:14px;font-weight:700;justify-self:start}
 .hrecentcard{display:grid;gap:4px}
 .hrecentcard h2{margin:0 0 4px;font-size:18px;font-weight:800}
 .hkeys{border-top:1px solid var(--line);padding-top:14px}
 @media (max-width:520px){.hresume{grid-template-columns:minmax(0,1fr)}.hrgo{grid-column:1;grid-row:auto;justify-self:start;margin-top:8px}}
+.hsechead a{display:inline-flex;align-items:center;gap:6px;background:var(--surface);color:var(--accent);border:1px solid var(--line);border-radius:999px;padding:6px 16px;min-height:36px;box-sizing:border-box;font-weight:700;font-size:15px;text-decoration:none}
+.hsechead a:hover{background:var(--accent-soft)}
+.hsechead a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .hslide{width:100%;box-sizing:border-box;border-radius:10px;border:1px solid var(--line);background:var(--sunk);aspect-ratio:16/9;object-fit:contain}
 .hvideo{width:100%;border-radius:10px;background:var(--sunk);aspect-ratio:16/9}
 .hvideo:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -163,8 +168,11 @@ h2{font-size:21px;margin:0;text-wrap:balance}
 .hpaste{display:grid;gap:8px}
 .hpaste .capstat{margin:0;color:var(--muted)}
 .hresume{all:unset;box-sizing:border-box;cursor:pointer;display:grid;gap:4px;background:var(--accent);color:var(--accent-ink);border-radius:var(--r);padding:22px;box-shadow:0 6px 18px -8px color-mix(in srgb,var(--accent) 70%,transparent);min-width:0}
+.hresume{position:relative}
 .hresume:hover{filter:brightness(1.06)}
-.hresume:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
+.hresume:has(.hrmain:focus-visible){outline:2px solid var(--fg);outline-offset:3px}
+.hrmain{all:unset;box-sizing:border-box;display:grid;gap:4px;min-width:0;cursor:pointer}
+.hrmain::after{content:"";position:absolute;inset:0;border-radius:var(--r)}   /* the whole card opens the lecture; the marks button sits above it */
 .hrlab{font-size:14px;font-weight:700}
 .hrtitle{font-family:var(--f-display);font-weight:400;font-size:26px;line-height:1.2;overflow-wrap:anywhere}
 .hrsub{font-size:16px;overflow-wrap:anywhere}
@@ -782,12 +790,14 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
       </details>
     </div>
 
-      <button class="hresume" id="homeResume" type="button" hidden>
-        <span class="hrlab">להמשיך מאיפה שעצרת</span>
-        <b class="hrtitle" id="resTitle"></b>
-        <span class="hrsub" id="resSub"></span>
-        <span class="hrgo" id="resGo" aria-hidden="true" hidden>לעבור על הסימונים ←</span>
-      </button>
+      <div class="hresume" id="homeResume" hidden>
+        <button class="hrmain" id="resMain" type="button">
+          <span class="hrlab">להמשיך מאיפה שעצרת</span>
+          <b class="hrtitle" id="resTitle"></b>
+          <span class="hrsub" id="resSub"></span>
+        </button>
+        <button class="hrgo" id="resGo" type="button" hidden>לעבור על הסימונים ←</button>
+      </div>
 
       <section class="hsec" id="hCoursesSec" aria-labelledby="hCoursesT" hidden>
         <div class="hsechead"><h2 id="hCoursesT">הקורסים שלי</h2><a href="#courses">כל הקורסים ←</a></div>
@@ -2051,9 +2061,11 @@ function drawHomeDay() {
     const course = e.course && e.course !== NO_COURSE ? e.course : "";
     $("#resTitle").textContent = [course, lecName(e)].filter(Boolean).join(" · ");
     $("#resSub").textContent = [whenWords(e.when), e.marks ? nMarks(e.marks) : ""].filter(Boolean).join(" · ");
-    box.setAttribute("aria-label", "להמשיך מאיפה שעצרת: " + $("#resTitle").textContent + ". " + $("#resSub").textContent + (e.marks ? ". נפתח בסימון הראשון" : ""));
-    box.onclick = () => openFirstMark(e);
-    $("#resGo").hidden = !e.marks;   // the white button only when there are marks to go through; with none, the card itself opens the lecture
+    $("#resMain").setAttribute("aria-label", "להמשיך מאיפה שעצרת: " + $("#resTitle").textContent + ". " + $("#resSub").textContent + (e.marks ? ". נפתח בסימון הראשון" : ""));
+    $("#resMain").onclick = () => openFirstMark(e);
+    // the white button: the lecture's marks list (the same tab as "לעבור על הסימונים" when a lecture has just ended); only when there are marks
+    $("#resGo").hidden = !e.marks;
+    $("#resGo").onclick = () => { pendingTab = "marks"; location.hash = "t=" + encodeURIComponent(e.f); };
   }
   // the courses: name, how many lectures, the last one, and the marks
   const cs = (courses || []).filter(c => c.lectures > 0).slice().sort((a, b) => b.last - a.last);

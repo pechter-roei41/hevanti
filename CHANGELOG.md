@@ -15,7 +15,7 @@ version is on [GitHub Releases](https://github.com/pechter-roei41/hevanti/releas
   the full width of its row; the "behind by N seconds" pill (with a clock) sits at its left and explains itself when pointed at. The menu
   works with the keyboard (Enter/Space, arrows, Esc). "To the app" shows the app on the lecture screen (live, YouTube, or the recording's
   player), using the open app window if there is one.
-- **Small fixes:** the white "go through the marks" button on the home page's green card shows only when the lecture has marks, at its
+- **Small fixes:** the white "go through the marks" button (now a button of its own: it opens the lecture's marks list, the card opens the first mark) on the home page's green card shows only when the lecture has marks, at its
   own width; "start a lecture" at home minimizes the app only after the quick-start window has drawn its page, so there is no blank
   moment between them.
 - **"Open the app" in the quick-start window:** with the app already open (for example minimized after "start a lecture" at home) it

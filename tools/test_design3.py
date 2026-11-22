@@ -65,7 +65,7 @@ with sync_playwright() as p:
 
         pg = page()
         solid = pg.evaluate("""() => { const p = document.createElement('button'); p.className = 'btn'; document.body.appendChild(p); const g = getComputedStyle(p).backgroundColor; p.remove();
-            return [...document.querySelectorAll('#vHome button, #vHome a')].filter(x => x.offsetParent !== null && getComputedStyle(x).backgroundColor === g).map(x => x.textContent.trim().slice(0, 20)); }""")
+            return [...document.querySelectorAll('#vHome button, #vHome a, #vHome .hresume')].filter(x => x.offsetParent !== null && getComputedStyle(x).backgroundColor === g).map(x => x.textContent.trim().slice(0, 20)); }""")
         check(f"home, {theme}: one solid green control (since 17.11.2026 the home page has four states, one green each: all four are checked in test_home_modes)", len(solid) == 1, solid)
         ver = pg.evaluate("document.querySelector('#ver').textContent")
         check(f"home, {theme}: the foot has the date and not a second version number, no message log, and the app closes from it",
