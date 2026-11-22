@@ -93,6 +93,10 @@ with sync_playwright() as p:
                 got = r
                 break
         check(f"floating window, {theme}: the answer button shows a 2px solid focus ring", got and got[1] == "solid" and got[2] == "2px", got)
+        # a long course name is cut with an ellipsis: the star and the menu stay in the same row as the name
+        mn.evaluate("setLec('הרצאה חיה - דינמיקה של גוף קשיח - מתחילה... ועוד שם ארוך מאוד של קורס')")
+        rows = mn.evaluate("() => [...document.querySelectorAll('#lec, #markImp, #menuBtn')].map(e => Math.round(e.getBoundingClientRect().top))")
+        check(f"floating window, {theme}: a long course name keeps the title row in one line", max(rows) - min(rows) <= 12, rows)
         mn.unroute_all(behavior="ignoreErrors")
         mn.context.close()
     # the text size, reading spacing and contrast chosen in the app reach the small windows (audit 16.11.2026, P1 #6): they change the look and nothing runs off the side

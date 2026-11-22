@@ -45,10 +45,11 @@ textarea:placeholder-shown,input:not([dir="ltr"]):not([type=password]):not([type
 ::placeholder{color:var(--muted);opacity:1}
 
 [hidden]{display:none!important}
-header{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 8px 6px 10px;border-bottom:1px solid var(--line);background:var(--surface)}
+header{position:relative;display:flex;flex-wrap:nowrap;align-items:center;gap:8px;padding:6px 8px 6px 10px;border-bottom:1px solid var(--line);background:var(--surface)}
 header b{font-size:15px}
-#lec{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:8px}
-#lec::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--line)}
+/* one fixed row: a long course name is cut with an ellipsis, the star and the menu never move down */
+#lec{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:700;color:var(--muted);display:block}
+#lec::before{content:"";display:inline-block;vertical-align:middle;margin-inline-end:8px;width:8px;height:8px;border-radius:50%;background:var(--line)}
 body.on #lec{color:var(--fg)}
 body.on #lec::before{background:var(--rec)}
 @media (prefers-reduced-motion:no-preference){body.on #lec::before{animation:pulse 1.6s ease-in-out infinite}}
