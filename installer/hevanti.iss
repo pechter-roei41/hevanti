@@ -43,6 +43,9 @@ ArchitecturesInstallIn64BitMode=x64compatible
 LicenseFile={#Src}\System\LICENSE.txt
 InfoBeforeFile={#Src}\PRIVACY.txt
 CloseApplications=yes
+; Hebrew is the default: do not pick the language from the Windows UI language (an English Windows would get English)
+LanguageDetectionMethod=none
+UsePreviousLanguage=no
 
 [Languages]
 Name: "he"; MessagesFile: "compiler:Languages\Hebrew.isl"
