@@ -10395,11 +10395,37 @@ def close_our_windows(wait=True):
             _APP_WIN["hwnd"] = 0
         except Exception:
             pass
+    _kill_profile_browsers()   # (whatever a WM_CLOSE did not close: the windows that have a profile of their own)
     for k in kills if wait else ():
         try:
             k.wait(3)
         except Exception:
             pass
+
+
+def _profile_kill_script(dirs):
+    """PowerShell text that, after a pause (so the polite WM_CLOSE comes first), force-stops every Edge/Chrome process whose command line
+    holds one of these profile folders. Only Hevanti's own windows have such a profile (the quick-start window, the floating window)."""
+    quoted = ",".join("'" + os.path.abspath(d).replace("'", "''") + "'" for d in dirs)
+    return ("Start-Sleep -Seconds 2; $d = @(" + quoted + "); "
+            "Get-CimInstance Win32_Process -Filter \"Name='msedge.exe' OR Name='chrome.exe'\" | "
+            "Where-Object { $c = $_.CommandLine; $c -and ($d | Where-Object { $c.Contains($_) }) } | "
+            "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }")
+
+
+def _kill_profile_browsers():
+    """Closing Hevanti closes the quick-start window and the floating window for sure, even when their WM_CLOSE does not arrive in time
+    (closing the black window gives the program only a few seconds). A detached helper goes on after this program is gone."""
+    if os.name != "nt" or os.environ.get("BZM_NO_BROWSER") == "1":
+        return
+    try:
+        import subprocess
+        subprocess.Popen(["powershell", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-Command",
+                          _profile_kill_script([quick_profile_dir(), mini_profile_dir()])],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
+                         creationflags=0x08000000 | 0x00000008 | 0x00000200)   # no window, detached, its own process group
+    except Exception:
+        save_error("kill profile browsers")
 
 
 def open_start_window(link, act=None):
