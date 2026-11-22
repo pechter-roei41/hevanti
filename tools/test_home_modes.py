@@ -327,6 +327,33 @@ with sync_playwright() as p:
                     shot(pg, f"{mode}-{scheme}-{w}")
                     ctx.close()
 
+    # --- the two outline buttons at home ("התחלת הרצאה", "הרצאה מוקלטת או ביוטיוב"): hover fills soft green, keyboard focus shows a thick ring ---
+    state.update(math=KEY, session=None)
+    for scheme in ("light", "dark"):
+        ctx, pg = page(1280, scheme)
+        wait_mode(pg, "day")
+        pg.wait_for_timeout(500)
+        soft = pg.evaluate("(() => { const d = document.createElement('i'); d.style.background = 'var(--accent-soft)'; document.body.appendChild(d); const c = getComputedStyle(d).backgroundColor; d.remove(); return c; })()")
+        for sel, nm in (("#startQuick", "start"), ("#recTile", "recorded")):
+            idle = pg.evaluate(f"getComputedStyle(document.querySelector('{sel}')).backgroundColor")
+            check(f"home {nm} button, {scheme}: idle fill is transparent", idle in ("rgba(0, 0, 0, 0)", "transparent"), idle)
+            pg.hover(sel)
+            pg.wait_for_timeout(350)
+            hov = pg.evaluate(f"getComputedStyle(document.querySelector('{sel}')).backgroundColor")
+            check(f"home {nm} button, {scheme}: hover fills soft green", hov == soft, (hov, soft))
+            pg.mouse.move(5, 5)
+            pg.focus("body")
+            pg.evaluate(f"document.querySelector('{sel}').focus()")
+            pg.keyboard.press("Shift+Tab")
+            pg.keyboard.press("Tab")
+            pg.wait_for_timeout(350)
+            f = pg.evaluate(f"(() => {{ const e = document.querySelector('{sel}'), c = getComputedStyle(e); return {{on: document.activeElement === e, w: c.outlineWidth, st: c.outlineStyle, bg: c.backgroundColor}}; }})()")
+            check(f"home {nm} button, {scheme}: keyboard focus shows a 3 px ring and the fill", f["on"] and f["w"] == "3px" and f["st"] == "solid" and f["bg"] == soft, f)
+        if SHOTS:
+            pg.hover("#startQuick")
+            shot(pg, f"day-hover-{scheme}")
+        ctx.close()
+
     # --- accessibility settings: large text, high contrast, no motion: still one green, no sideways scroll ---
     state.update(math=KEY, session=dict(LIVE))
     ctx, pg = page(390)

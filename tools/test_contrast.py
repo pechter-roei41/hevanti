@@ -75,6 +75,8 @@ PAIRS = [
     ("hovered delete button and the blur-box close X: the ink of --accent-ink (white by day, near black at night) on recording red", "#FFFFFF", "recording-red", "#0E1A14", "night-recording", TEXT),
     ("large captions window: the draft line (night-muted) on black", "night-muted", "#000000", "night-muted", "#000000", TEXT),
     ("large captions window: the button (night-green) on black", "night-green", "#000000", "night-green", "#000000", TEXT),
+    ("the outline buttons at home (green text), hovered or focused, on the soft green fill", "board-green", "board-green-soft", "night-green", "night-green-soft", TEXT),
+    ("the focus ring of the outline buttons at home (green, 3 px) against the paper", "board-green", "paper", "night-green", "night-paper", GRAPHIC),
     ("a ghost button (green text) on sunk paper: the course offer in the small window and in the live view", "board-green", "sunk-paper", "night-green", "night-sunk", TEXT),
     ("text (ink) on sunk paper: the course offer", "ink", "sunk-paper", "night-ink", "night-sunk", TEXT),
     ("caution text on the caution bar", "css:--warn-fg", "css:--warn-bg", "cssdark:--warn-fg", "cssdark:--warn-bg", TEXT),
