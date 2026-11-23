@@ -36,8 +36,8 @@ try:
 except Exception:  # lets "uninstall" run even if the install never finished
     np = None
 
-VERSION = "2.22"
-VERSION_DATE = "19.11.2026"
+VERSION = "2.23"
+VERSION_DATE = "23.11.2026"
 PRODUCT = "הבנתי"
 RELEASES_URL = "https://github.com/pechter-roei41/hevanti/releases/latest"
 
