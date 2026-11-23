@@ -213,7 +213,15 @@ finally:
 check("settings: a lock of a moment is waited out (the good file is returned, no .corrupt copy)", got == {"course": "x"} and not os.path.exists(sf + ".corrupt"), (got, calls))
 
 # model check: an unexpected failure is logged once; "not on disk" is not
-import faster_whisper.utils as fwu  # noqa: E402
+try:
+    import faster_whisper.utils as fwu  # noqa: E402
+except ImportError:   # (not installed in this CI step: a stand-in with the one function model_on_disk imports)
+    import types
+    fwu = types.ModuleType("faster_whisper.utils")
+    fwu.download_model = lambda *a, **k: None
+    _fw = types.ModuleType("faster_whisper")
+    _fw.utils = fwu
+    sys.modules["faster_whisper"], sys.modules["faster_whisper.utils"] = _fw, fwu
 logged = []
 real_dm, real_se = fwu.download_model, L.save_error
 L.save_error = lambda ctx: logged.append(ctx)
