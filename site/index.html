@@ -20,6 +20,20 @@
 <meta property="og:description" content="תמלול הרצאות זום והקלטות, חלון צף לשאלות, וסימון רגעים עם ★. קוד פתוח, ל-Windows.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20viewBox='0%200%20120%20120'%20xmlns='http://www.w3.org/2000/svg'%3E%3Cpath%20d='M30%208H90A24%2024%200%200%201%20114%2032V70A24%2024%200%200%201%2090%2094H92L100%20114L68%2094H30A24%2024%200%200%201%206%2070V32A24%2024%200%200%201%2030%208Z'%20fill='%23F6F3E9'%20stroke='%23F6F3E9'%20stroke-width='6'%20stroke-linejoin='round'/%3E%3Cpath%20d='M30%208H90A24%2024%200%200%201%20114%2032V70A24%2024%200%200%201%2090%2094H92L100%20114L68%2094H30A24%2024%200%200%201%206%2070V32A24%2024%200%200%201%2030%208Z'%20fill='%231B6E4B'/%3E%3Cpath%20d='M41.5%2026H78.5A7.5%207.5%200%200%201%2086%2033.5V66.5A7.5%207.5%200%200%201%2071%2066.5V41H41.5A7.5%207.5%200%200%201%2041.5%2026Z'%20fill='%23FFFFFF'/%3E%3Crect%20x='34'%20y='50'%20width='15'%20height='24'%20rx='7.5'%20fill='%23DCEBDF'/%3E%3C/svg%3E">
 <style>
+.step{display:inline-flex;align-items:center;gap:8px;border:1px solid #2F4A3C;border-radius:999px;padding:6px 14px 6px 10px;font-size:15px;line-height:1.4;color:#CFE0D6}
+.step b{width:24px;height:24px;border-radius:50%;background:#3DDC97;color:#06140E;display:inline-flex;align-items:center;justify-content:center;font-size:14px}
+.try{position:absolute;top:-18px;inset-inline-start:18px;z-index:3;background:#FFD93D;color:#0D1B16;font-family:'Secular One',Assistant,sans-serif;font-size:18px;line-height:1.2;padding:7px 14px;border-radius:8px;transform:rotate(-2deg)}
+@keyframes nudge{0%,100%{box-shadow:0 0 0 0 rgba(255,217,61,0)}50%{box-shadow:0 0 0 7px rgba(255,217,61,.28)}}
+#markBtn[aria-pressed=false]{animation:nudge 2.4s ease-in-out 1.2s 4}
+.sticky{display:none}
+@media (max-width:640px){
+ .sticky{display:flex;position:fixed;inset-inline:0;bottom:0;z-index:20;gap:10px;align-items:center;justify-content:space-between;box-sizing:border-box;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:#0D1B16;border-top:1px solid #2F4A3C}
+ .sticky a,.sticky button{min-height:44px;border-radius:12px;font-family:inherit;font-weight:800;font-size:16px;padding:0 16px;display:inline-flex;align-items:center;text-decoration:none;cursor:pointer}
+ .stk-dl{background:#3DDC97;color:#06140E;border:0;flex:1;justify-content:center}
+ .stk-cp{background:transparent;color:#F5F0E3;border:1.5px solid #4C6B5B}
+ body{padding-bottom:72px}
+}
+@media (prefers-reduced-motion: reduce){#markBtn{animation:none!important}}
 [hidden]{display:none!important}
 @font-face{font-family:"Secular One";src:url(assets/SecularOne-Regular.ttf) format("truetype");font-weight:400;font-display:swap}
 @font-face{font-family:"Assistant";src:url(assets/Assistant-Variable.ttf) format("truetype");font-weight:200 800;font-display:swap}
@@ -75,7 +89,13 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F5F0E3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg>
 צפו בסרטון</a>
 </div>
-<div style="color:#93AB9E;font-size:15px;line-height:1.6">Hevanti-Setup.exe · גרסת בטא · רישיון MIT</div>
+<div style="color:#93AB9E;font-size:15px;line-height:1.6">Hevanti-Setup.exe · גרסת בטא · קוד פתוח, רישיון MIT</div>
+<ol style="margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:8px 10px;counter-reset:st">
+<li class="step"><b>1</b> מתקינים</li>
+<li class="step"><b>2</b> מדביקים מפתח Gemini אישי של גוגל (2 דקות)</li>
+<li class="step"><b>3</b> לוחצים &quot;התחל תמלול&quot;</li>
+</ol>
+<p style="margin:0;color:#93AB9E;font-size:14px;line-height:1.55;max-width:540px">Windows עשוי להציג פעם אחת &quot;Windows protected your PC&quot;, כי הקובץ עוד לא חתום. בוחרים &quot;מידע נוסף&quot; ואז &quot;הפעל בכל זאת&quot;.</p>
 </div>
 
 <div style="flex:1.2 1 520px;min-width:0;position:relative;display:flex;flex-direction:column">
@@ -97,6 +117,7 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 </div>
 
 <div class="hwin" role="region" aria-label="החלון הצף של הבנתי" style="width:min(450px,94%);margin-top:-196px;margin-inline-start:auto;margin-inline-end:18px;box-sizing:border-box;background:#0D1B16;color:#F5F0E3;border:1px solid #33503F;border-radius:18px;padding:16px 18px 18px;display:flex;flex-direction:column;gap:13px;box-shadow:0 34px 70px -18px rgba(0,0,0,0.75);transform:rotate(-0.8deg)">
+<div class="try" aria-hidden="true">נסו אותו: הוא באמת עובד</div>
 <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
 <div style="display:flex;align-items:center;gap:9px">
 <span aria-hidden="true" style="width:10px;height:10px;border-radius:50%;background:#FF7A5C;display:block"></span>
@@ -146,6 +167,26 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 </div>
 
 <main>
+
+<!-- ================= VIDEO ================= -->
+<section id="video" aria-labelledby="h-video" style="background-color:#F5F0E3;background-image:radial-gradient(#D9D1B8 1.2px,transparent 1.2px);background-size:24px 24px">
+<div style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:96px 24px 72px;display:flex;flex-direction:column;gap:36px">
+<div style="display:flex;flex-direction:column;gap:12px;max-width:680px">
+<h2 id="h-video" style="margin:0;font-family:'Secular One',Assistant,sans-serif;font-weight:400;font-size:clamp(32px,4.8vw,52px);line-height:1.1;text-wrap:balance">רואים את זה <span style="background:linear-gradient(transparent 56%,#FFD93D 56%,#FFD93D 92%,transparent 92%)">בפעולה</span></h2>
+<p style="margin:0;font-size:19px;color:#33433B;text-wrap:pretty">חצי דקה, בלי קול, עם כתוביות על המסך: הרצאה במסך מלא, שאלה, ו"מה פספסתי".</p>
+</div>
+<div style="display:grid;grid-template-columns:minmax(0,880px);gap:36px">
+<div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+<div style="background:#0D1B16;border-radius:24px;padding:14px;box-shadow:0 40px 70px -30px rgba(13,27,22,0.75)">
+<video controls preload="none" poster="assets/teaser-poster.jpg" src="assets/teaser.mp4" aria-label="סרטון קצר של הבנתי, חצי דקה, בלי קול" style="display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:12px;background:#000000"></video>
+</div>
+<h3 style="margin:0;font-size:22px;font-weight:800;line-height:1.3">חצי דקה: הסחת דעת בהרצאה, ומה הבנתי עושה</h3>
+<p style="margin:0;font-size:17px;color:#33433B;text-wrap:pretty">הרצאה במסך מלא, העיגול הירוק בקצה המסך, שאלה, "מה פספסתי" של 7 דקות וסימון ★.</p>
+<p style="margin:0;font-size:14px;line-height:1.5;color:#55635A">ההרצאה בסרטון: דביר רוס, רישיון CC BY.</p>
+</div>
+</div>
+</div>
+</section>
 
 <!-- ================= FLOATING WINDOW ================= -->
 <section id="window" aria-labelledby="h-win" style="background-color:#F5F0E3;background-image:radial-gradient(#D9D1B8 1.2px,transparent 1.2px);background-size:24px 24px">
@@ -200,7 +241,7 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 <section id="sources" aria-labelledby="h-src" style="background:#EBE4D2;border-top:1px solid #D8D0B8;border-bottom:1px solid #D8D0B8">
 <div style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:96px 24px;display:flex;flex-direction:column;gap:36px">
 <div style="display:flex;flex-direction:column;gap:12px;max-width:700px">
-<h2 id="h-src" style="margin:0;font-family:'Secular One',Assistant,sans-serif;font-weight:400;font-size:clamp(32px,4.8vw,52px);line-height:1.1;text-wrap:balance">בנוי להרצאות זום ולהקלטות</h2>
+<h2 id="h-src" style="margin:0;font-family:'Secular One',Assistant,sans-serif;font-weight:400;font-size:clamp(32px,4.8vw,52px);line-height:1.1;text-wrap:balance">עובד עם כל הרצאה שמתנגנת אצלך</h2>
 <p style="margin:0;font-size:19px;color:#33433B;text-wrap:pretty">הבנתי שומעת את מה שהמחשב משמיע, ולכן היא עובדת עם כל הרצאה שרצה אצלך על המסך.</p>
 </div>
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));gap:0 56px">
@@ -252,26 +293,6 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 <p style="margin:0;color:#C9D8CF">לחיצה אחת, או <span dir="ltr" style="unicode-bidi:isolate;font-family:Consolas,'Cascadia Mono',ui-monospace,monospace;font-size:15px;background:#0D1B16;color:#8EF0C3;padding:1px 8px;border-radius:5px">Ctrl+Alt+M</span>, ועוברים הלאה. אחרי ההרצאה מחכה רשימת סימונים עם מה שנאמר רגע לפני, וההקלטה נפתחת 8 שניות מוקדם יותר.</p>
 </div>
 
-</div>
-</div>
-</section>
-
-<!-- ================= VIDEO ================= -->
-<section id="video" aria-labelledby="h-video" style="background-color:#F5F0E3;background-image:radial-gradient(#D9D1B8 1.2px,transparent 1.2px);background-size:24px 24px">
-<div style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:104px 24px 96px;display:flex;flex-direction:column;gap:36px">
-<div style="display:flex;flex-direction:column;gap:12px;max-width:680px">
-<h2 id="h-video" style="margin:0;font-family:'Secular One',Assistant,sans-serif;font-weight:400;font-size:clamp(32px,4.8vw,52px);line-height:1.1;text-wrap:balance">רואים את זה <span style="background:linear-gradient(transparent 56%,#FFD93D 56%,#FFD93D 92%,transparent 92%)">בפעולה</span></h2>
-<p style="margin:0;font-size:19px;color:#33433B;text-wrap:pretty">חצי דקה, בלי קול, עם כתוביות על המסך: הרצאה במסך מלא, שאלה, ו"מה פספסתי".</p>
-</div>
-<div style="display:grid;grid-template-columns:minmax(0,880px);gap:36px">
-<div style="display:flex;flex-direction:column;gap:14px;min-width:0">
-<div style="background:#0D1B16;border-radius:24px;padding:14px;box-shadow:0 40px 70px -30px rgba(13,27,22,0.75)">
-<video controls preload="none" poster="assets/teaser-poster.jpg" src="assets/teaser.mp4" aria-label="סרטון קצר של הבנתי, חצי דקה, בלי קול" style="display:block;width:100%;height:auto;aspect-ratio:16/9;border-radius:12px;background:#000000"></video>
-</div>
-<h3 style="margin:0;font-size:22px;font-weight:800;line-height:1.3">חצי דקה: הסחת דעת בהרצאה, ומה הבנתי עושה</h3>
-<p style="margin:0;font-size:17px;color:#33433B;text-wrap:pretty">הרצאה במסך מלא, העיגול הירוק בקצה המסך, שאלה, "מה פספסתי" של 7 דקות וסימון ★.</p>
-<p style="margin:0;font-size:14px;line-height:1.5;color:#55635A">ההרצאה בסרטון: דביר רוס, רישיון CC BY.</p>
-</div>
 </div>
 </div>
 </section>
@@ -506,6 +527,13 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
   document.getElementById('markBtn').addEventListener('click',function(){now=!now;renderNow();});
   renderLines();renderPills();renderAns();renderNow();
 })();
+</script>
+<div class="sticky" role="region" aria-label="הורדה">
+<a class="stk-dl" href="https://github.com/pechter-roei41/hevanti/releases/latest/download/Hevanti-Setup.exe">הורדה ל-Windows</a>
+<button type="button" class="stk-cp" id="cpLink">העתקת קישור למחשב</button>
+</div>
+<script>
+(function(){var b=document.getElementById('cpLink');if(!b)return;b.addEventListener('click',function(){var u='https://hevanti-app.netlify.app/';var done=function(){b.textContent='הקישור הועתק';setTimeout(function(){b.textContent='העתקת קישור למחשב';},2200);};try{navigator.clipboard.writeText(u).then(done,done);}catch(e){done();}});})();
 </script>
 </body>
 </html>
