@@ -3,6 +3,15 @@
 Short, in English. The full notes, in Hebrew, newest first, are in `System/VERSION.txt` (the app shows them too). The released
 version is on [GitHub Releases](https://github.com/pechter-roei41/hevanti/releases); 2.20 and 2.21 were never released apart.
 
+## Unreleased
+
+- **Longer pieces on the CPU:** with no graphics card, a Hebrew live lecture with the quick draft is written in 20-28 s pieces instead of
+  10-18 s (`CPU_MIN_CHUNK_S` / `CPU_MAX_CHUNK_S`, `LT_CPU_MIN_CHUNK_S` / `LT_CPU_MAX_CHUNK_S` for tests; never over Whisper's 30 s window).
+  Measured on an i5-1235U with `tools/bench_chunks.py`: 0.82 vs 0.50 seconds of work per second of lecture, the same words. Without the
+  quick draft (still loading, or it failed), English and YouTube, the short pieces stay; a graphics card is untouched.
+- **"Running late" on the CPU** shows only when the lag passes the longest piece plus 5 s (`/api/live` carries `lag_show`); a graphics card
+  keeps 10 s. The note to the AI about seconds not yet transcribed now counts the sound still waiting in the queue.
+
 ## 2.22 (beta, 19.11.2026)
 
 - **Home by state:** the home page shows what matters now, in one of four states with one solid-green action each: the first time

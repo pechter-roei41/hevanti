@@ -361,6 +361,48 @@ check("stopped with a backlog on a slow computer: the last seconds are skipped p
 check("...so the lecture is saved within seconds (not after the whole backlog)", took < 15 and tr and tr[-1].startswith("# סוף"), (took, tr[-2:]))
 L.TAIL_BUDGET_S = 20
 
+
+# ------------------------------------------- J: on the CPU, with the quick draft, the pieces are the long ones (and never over the cap)
+class FakeDraft:
+    """The Zipformer as far as the loop uses it."""
+
+    def __init__(self):
+        self.fed_s, self.restarts = 0.0, 0
+
+    def restart(self, a16=None):
+        self.restarts += 1
+        self.fed_s += 0 if a16 is None else len(a16) / SR
+
+    def feed(self, a16):
+        self.fed_s += len(a16) / SR
+
+    def text(self):
+        return "טיוטה"
+
+
+drafts = []
+L.CPU_MIN_CHUNK_S, L.CPU_MAX_CHUNK_S = 6, 10
+L.start_quick_draft = lambda slot: (drafts.append(FakeDraft()), slot.__setitem__(0, drafts[-1]))
+clipJ = np.concatenate([speech(7.5), silence(0.6)] * 6)
+wJ = FakeWhisper()
+live, audio, tr = run("קטעים ארוכים", [clipJ], wJ)
+body = wJ.calls[:-1]
+check("CPU, quick draft: the pieces are the long ones (6-10 s here), not the short ones (2-4 s)", body and all(5.9 <= c["sec"] <= 10.05 for c in body), [round(c["sec"], 1) for c in wJ.calls])
+check("...and a piece is cut in a pause, not in the middle of a word", all(c["tail"] < 0.002 for c in body), [round(c["tail"], 4) for c in body])
+check("...and the quick draft was fed all the sound, and started again after each piece", drafts and drafts[0].fed_s > 40 and drafts[0].restarts >= len(body), (drafts[0].fed_s, drafts[0].restarts, len(body)))
+check("...and every word of the lecture is in the transcript (no hole between the pieces)", len(spoken(tr)) == len(wJ.calls) and abs(sum(c["sec"] for c in wJ.calls) - len(clipJ) / SR) < 5, (len(spoken(tr)), len(wJ.calls), sum(c["sec"] for c in wJ.calls)))
+
+L.CPU_MIN_CHUNK_S, L.CPU_MAX_CHUNK_S = 20, 100   # (a value over the cap: it is cut to what Whisper's window holds)
+check("no piece is ever longer than Whisper's 30-second window", L.chunk_limits(False, "he", False, True, {})[1] == 30.0, L.chunk_limits(False, "he", False, True, {}))
+
+# the quick draft is not there (failed, or no package): the short pieces, so a question is not left with 40 seconds missing
+L.CPU_MIN_CHUNK_S, L.CPU_MAX_CHUNK_S = 6, 10
+L.start_quick_draft = lambda slot: None
+wJ2 = FakeWhisper()
+live, audio, tr = run("בלי טיוטה", [clipJ], wJ2)
+check("CPU, no quick draft: the short pieces (2-4 s here)", wJ2.calls and all(c["sec"] <= 4.05 for c in wJ2.calls[:-1]), [round(c["sec"], 1) for c in wJ2.calls])
+L.CPU_MIN_CHUNK_S, L.CPU_MAX_CHUNK_S = 20, 28
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.stdout.flush()
 os._exit(1 if fails else 0)
