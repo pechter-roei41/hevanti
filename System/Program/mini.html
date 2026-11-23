@@ -396,9 +396,9 @@ async function pollLive() {
   try {
     const d = await getJson("/api/live?since=" + total);
     if (d.none) { shot = null; total = 0; lagChip().hidden = true; return; }
-    // the transcript is behind what is being said: always shown over 10 seconds (the answers rest on what was already written)
+    // the transcript is behind what is being said: shown over the limit the tool gives (10 seconds on a graphics card; on a CPU, more than a whole piece and a little, so the normal wait for a piece does not show it)
     const lag = Math.round(d.lag || 0), lagBox = lagChip();
-    lagBox.hidden = !(lag > LAG_SHOW_S);
+    lagBox.hidden = !(lag > (d.lag_show || LAG_SHOW_S));
     if (!lagBox.hidden) {
       lagBox.replaceChildren();
       const clock = document.createElementNS("http://www.w3.org/2000/svg", "svg"); clock.setAttribute("viewBox", "0 0 24 24"); clock.setAttribute("aria-hidden", "true");

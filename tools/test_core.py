@@ -1063,5 +1063,37 @@ finally:
     for _l in ("he", "en"):
         L.model_set(_l, "unknown")
 
+# ---- the length of the pieces on the CPU, the "running late" limit, and the seconds a question is told are missing ----
+_lim = lambda *a, **k: L.chunk_limits(*a, **dict(k, env=k.get("env", {})))
+check("pieces: a GPU keeps its own limits", _lim(True, "he") == (L.GPU_MIN_CHUNK_S, L.GPU_MAX_CHUNK_S) and _lim(True, "en") == (L.GPU_MIN_CHUNK_S, L.GPU_MAX_CHUNK_S))
+check("pieces: CPU, Hebrew, with the quick draft: the long ones, under Whisper's 30 s", _lim(False, "he") == (L.CPU_MIN_CHUNK_S, L.CPU_MAX_CHUNK_S) and L.CPU_MAX_CHUNK_S <= L.WHISPER_WINDOW_S)
+check("pieces: CPU, English (no quick draft): the short ones, as before", _lim(False, "en") == (L.MIN_CHUNK_S, L.MAX_CHUNK_S))
+check("pieces: CPU, a YouTube video, or no quick draft on this computer: the short ones", _lim(False, "he", yt=True) == (L.MIN_CHUNK_S, L.MAX_CHUNK_S) and _lim(False, "he", quick_draft=False) == (L.MIN_CHUNK_S, L.MAX_CHUNK_S))
+check("pieces: the test variables change the CPU limits", _lim(False, "he", env={"LT_CPU_MIN_CHUNK_S": "5", "LT_CPU_MAX_CHUNK_S": "12"}) == (5.0, 12.0))
+check("pieces: never over 30 s, the shortest always shorter than the longest, a bad value ignored",
+      _lim(False, "he", env={"LT_CPU_MAX_CHUNK_S": "90"})[1] == 30.0 and _lim(False, "he", env={"LT_CPU_MIN_CHUNK_S": "40"})[0] < _lim(False, "he", env={"LT_CPU_MIN_CHUNK_S": "40"})[1]
+      and _lim(False, "he", env={"LT_CPU_MAX_CHUNK_S": "x"}) == (L.CPU_MIN_CHUNK_S, L.CPU_MAX_CHUNK_S))
+check("running late: a GPU says it over 10 s as before", L.lag_show_s(True, 26) == 10)
+check("running late: on the CPU only over the longest piece and a little, so the normal wait for a piece does not show it",
+      L.lag_show_s(False, L.CPU_MAX_CHUNK_S) == L.CPU_MAX_CHUNK_S + L.LAG_SHOW_MARGIN_S and L.lag_show_s(False, L.CPU_MAX_CHUNK_S) > 28)
+_n = L.LiveNow("תמלול.txt", datetime.datetime.now())
+_n.pending_s, _n.block_s, _n.queue_len = 20.0, 0.1, (lambda: 150)
+check("waiting seconds: the piece being collected or transcribed and what still waits in the queue", abs(_n.waiting_s() - 35.0) < 1e-6, _n.waiting_s())
+check("no quick draft: the note tells Gemini all of the seconds that are missing, with the queue", "35 השניות האחרונות" in _n.missing_note(), _n.missing_note())
+_n.quick_on = True
+check("the quick draft is running: it holds the piece, so only the sound still in the queue (15 s) is missing", "15 השניות האחרונות" in _n.missing_note(), _n.missing_note())
+_n.queue_len = lambda: 0
+check("the quick draft is running and the queue is empty: nothing is missing, no note", _n.missing_note() == "")
+_n.queue_len = lambda: 150
+_n.quick_on, _n.draft = False, "טיוטה"
+check("a draft is there: only the queue is missing", "15 השניות האחרונות" in _n.missing_note(), _n.missing_note())
+_n.draft, _n.queue_len, _n.pending_s = "", None, 2.0
+check("under 3 seconds: no note; a queue that cannot be counted does not break it", _n.missing_note() == "" and _n.waiting_s() == 2.0)
+_n.lag_show = 33
+_p = L.APP.live
+L.APP.live = _n
+check("/api/live carries the limit for the \"running late\" message", L.live_state(0).get("lag_show") == 33, L.live_state(0).get("lag_show"))
+L.APP.live = _p
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)
