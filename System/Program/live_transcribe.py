@@ -438,9 +438,10 @@ def show_status(text):
 
 # A copy of what the black window prints, for the developer only: it exists only when the environment variable HEVANTI_RUN_LOG=1 is set
 # on that computer (a student never has it, so nothing is written for a student). In %LOCALAPPDATA%\Hevanti\run_log.txt, not in the
-# library and not in any package; a new run starts a new file (the last one is kept as run_log.old.txt), scrubbed like error_log.txt.
+# library and not in any package; a new run starts a new file (the last one is kept as run_log.old.txt), scrubbed like error_log.txt, and without the user's own folder name and e-mail addresses; capped by RUN_LOG_MAX.
 RUN_LOG_ON = os.environ.get("HEVANTI_RUN_LOG") == "1"
 _RUN_LOG = {"path": None, "failed": False}
+RUN_LOG_MAX = 5_000_000   # bytes
 
 
 def _run_log(text):
@@ -455,8 +456,13 @@ def _run_log(text):
                 os.replace(path, os.path.join(d, "run_log.old.txt"))
             _RUN_LOG["path"] = path
         stamp = datetime.datetime.now().strftime("%H:%M:%S")
+        try:
+            if os.path.getsize(_RUN_LOG["path"]) > RUN_LOG_MAX:   # (one long run must not fill the disk: the old copy is replaced)
+                os.replace(_RUN_LOG["path"], os.path.splitext(_RUN_LOG["path"])[0] + ".old.txt")
+        except OSError:
+            pass
         with open(_RUN_LOG["path"], "a", encoding="utf-8") as f:
-            f.write(scrub_log(f"{stamp} {text}") + "\n")
+            f.write(scrub_user(scrub_log(f"{stamp} {text}")) + "\n")
     except Exception:
         _RUN_LOG["failed"] = True   # (a log must never stop the program)
 
@@ -1277,6 +1283,21 @@ def model_name(lang):
     return os.environ.get("LT_MODEL") or ("large-v3-turbo" if model_lang(lang) == "en" else "ivrit-ai/whisper-large-v3-turbo-ct2")
 
 
+_MODEL_CHECK_LOGGED = set()
+
+
+def _model_check_failed(lang, e):
+    """"The model is not on disk" is the normal reason for an exception here; anything else is written to the error log once per language."""
+    if type(e).__name__ in ("LocalEntryNotFoundError", "FileNotFoundError", "EntryNotFoundError", "RepositoryNotFoundError", "ImportError", "ModuleNotFoundError"):
+        return
+    if lang not in _MODEL_CHECK_LOGGED:
+        _MODEL_CHECK_LOGGED.add(lang)
+        try:
+            save_error("model check " + str(lang))
+        except Exception:
+            pass
+
+
 def model_on_disk(lang):
     """True when the model of this language is whole on this computer (checked against its pin). Downloads nothing."""
     name = model_name(lang)
@@ -1287,8 +1308,8 @@ def model_on_disk(lang):
         p = download_model(repo if pin else name, local_files_only=True, cache_dir=MODEL_DIR, revision=pin[0] if pin else None)
         if p and os.path.exists(os.path.join(p, "model.bin")) and verify_model(p, repo):
             return True
-    except Exception:
-        pass
+    except Exception as e:
+        _model_check_failed(lang, e)
     if repo:
         d = os.path.join(MODEL_DIR, "fast", repo.replace("/", "__"))
         try:
@@ -7103,12 +7124,17 @@ def settings_damage_public():
 def _settings_damaged():
     import shutil
     with _SETTINGS_LOCK:
-        try:   # (another thread may have put a good file back meanwhile)
-            with open(SETTINGS_FILE, encoding="utf-8-sig") as f:
-                d = json.load(f)
-            return d if isinstance(d, dict) else {}
-        except (OSError, ValueError):
-            pass
+        for attempt in range(5):   # (another thread may have put a good file back meanwhile; a lock of a moment, as an antivirus takes, is waited out)
+            try:
+                with open(SETTINGS_FILE, encoding="utf-8-sig") as f:
+                    d = json.load(f)
+                return d if isinstance(d, dict) else {}
+            except ValueError:
+                break
+            except FileNotFoundError:
+                break
+            except OSError:
+                time.sleep(0.2)
         kept = False
         try:
             shutil.copy2(SETTINGS_FILE, SETTINGS_FILE + ".corrupt")
@@ -7298,6 +7324,17 @@ def scrub_secrets(text):
     return text
 
 
+def scrub_user(text):
+    """The user's own folder, user name and e-mail addresses out of a text (the report to copy, the developer run log)."""
+    home, user = os.path.expanduser("~"), os.environ.get("USERNAME") or ""
+    for a in (home, home.replace("\\", "/")):
+        if a and len(a) > 3:
+            text = re.sub(re.escape(a), lambda m: "%USERPROFILE%", text, flags=re.I)
+    if user:
+        text = re.sub(r"(?<![\w])" + re.escape(user) + r"(?![\w])", "<user>", text, flags=re.I)
+    return re.sub(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", "<email>", text)
+
+
 def diag_text():
     """"Report a problem": what the student copies into a report themselves - the version, the computer, what is
     turned on, and the newest errors. Never the key, a transcript or a question; the user's own folder name is hidden."""
@@ -7326,14 +7363,7 @@ def diag_text():
         pass
     text = "\n".join(lines) + "\n\nשגיאות אחרונות:\n" + (tail.strip() or "(אין)")
     text = scrub_log(scrub_secrets(text))   # (links lose their query string: it can carry a token)
-    home, user = os.path.expanduser("~"), os.environ.get("USERNAME") or ""
-    for a in (home, home.replace("\\", "/")):
-        if a and len(a) > 3:
-            text = re.sub(re.escape(a), lambda m: "%USERPROFILE%", text, flags=re.I)
-    if user:
-        text = re.sub(r"(?<![\w])" + re.escape(user) + r"(?![\w])", "<user>", text, flags=re.I)
-    text = re.sub(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", "<email>", text)
-    return text
+    return scrub_user(text)
 
 
 class Media:
@@ -11728,6 +11758,24 @@ def _hevanti_model_subdirs():
     return ["models--" + r.replace("/", "--") for r in MODEL_PINS] + ["fast", "zipformer-he"]
 
 
+def _remove_hevanti_models(md):
+    """Out of a folder that other programs may share (Public/whisper_models): only Hevanti's own model folders. "fast" is a generic
+    name, so there only the folders Hevanti marked .complete go, and the folder itself if that leaves it empty."""
+    import shutil
+    for sub in _hevanti_model_subdirs():
+        if sub == "fast":
+            fast = os.path.join(md, sub)
+            for child in (os.listdir(fast) if os.path.isdir(fast) else []):
+                if os.path.exists(os.path.join(fast, child, ".complete")):
+                    shutil.rmtree(os.path.join(fast, child), ignore_errors=True)
+            try:
+                os.rmdir(fast)
+            except OSError:
+                pass
+            continue
+        shutil.rmtree(os.path.join(md, sub), ignore_errors=True)
+
+
 def uninstall():
     import shutil
     import subprocess
@@ -11745,8 +11793,7 @@ def uninstall():
             gb = _size_gb(md)
             if os.path.normcase(os.path.abspath(md)) == os.path.normcase(os.path.abspath(OLD_MODEL_DIR)):
                 # the shared Public folder may hold other programs' models: only Hevanti's own go
-                for sub in _hevanti_model_subdirs():
-                    shutil.rmtree(os.path.join(md, sub), ignore_errors=True)
+                _remove_hevanti_models(md)
                 show(f"נמחקו מודלי התמלול של הבנתי מ- {md} (מה שאינו שלנו נשאר)")
             else:
                 shutil.rmtree(md, ignore_errors=True)

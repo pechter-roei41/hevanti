@@ -162,8 +162,8 @@ html.a-still *,html.a-still *::before,html.a-still *::after{animation:none!impor
 <script src="/ask.js"></script>
 <script>
 // counts in Hebrew: "דקה אחת", "שתי דקות", "5 דקות" - never "1 דקות"
-function heN(n, one, two, many, zero) { n = +n || 0; return n === 0 ? (zero || "אין " + many) : n === 1 ? one : n === 2 ? two : n + " " + many; }
 "use strict";
+function heN(n, one, two, many, zero) { n = +n || 0; return n === 0 ? (zero || "אין " + many) : n === 1 ? one : n === 2 ? two : n + " " + many; }
 const $ = s => document.querySelector(s);
 let shot = null, total = 0, live = false, kind0 = "", lastMark = null, sawLive = false, savedFor = null, savedGone = "", stopTimer = 0, curS = null;
 const MARKED = "★ סומן";
@@ -214,9 +214,12 @@ document.addEventListener("pointerdown", e => { if (!menu.hidden && !menu.contai
 // "שיחה חדשה": the questions and answers of this box are cleared (what "more details" and the next question carry is cleared too); the answers stay in the lecture's folder
 $("#miNew").addEventListener("click", () => { if (box && box.reset) box.reset(); closeMenu(false); if (box) box.focus(); toast("שיחה חדשה: אפשר לשאול מחדש."); });
 // "מעבר לאפליקציה": the app (the window that is open, or a new one) goes to the screen of the lecture that runs, and this window closes. The lecture goes on.
+let appOpening = false;   // (a double click must not send "show_app" and close the window twice)
 $("#miApp").addEventListener("click", async () => {
+  if (appOpening) return; appOpening = true;
   let r; try { r = await (await fetch("/api/cmd", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"}, body: JSON.stringify({action: "show_app"})})).json(); } catch (e) { r = {ok: false}; }
   closeMenu(false);
+  appOpening = false;
   if (r && r.ok && r.opened !== false) hide(); else toast("לא הצלחתי לפתוח את האפליקציה.");
 });
 // stop from here: the first press asks (3 seconds), the second stops; the lecture is saved, and a card says so

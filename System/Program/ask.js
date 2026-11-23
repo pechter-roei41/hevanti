@@ -321,7 +321,10 @@
       tog.insertAdjacentHTML("beforeend", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>');
       tog.addEventListener("click", () => { const open = body2.hidden; body2.hidden = !open; tog.setAttribute("aria-expanded", String(open)); });
       if (url) { const im = doc.createElement("img"); im.src = url; im.alt = "השקופית שהתשובה מתבססת עליה"; im.loading = "lazy"; im.addEventListener("error", () => im.remove()); body2.appendChild(im); }
-      for (const l of lines.slice(0, 2)) bl.appendChild(mk("span", "", "⏱ " + String(l.t) + "  " + String(l.x)));
+      for (const l of lines.slice(0, 2)) {   // the time stays left-to-right and the words take their own direction (a Hebrew line with English in it keeps its order)
+        const row = mk("span", ""), tm = mk("span", "", "⏱ " + String(l.t)), tx = mk("span", "", "  " + String(l.x));
+        tm.dir = "ltr"; tx.dir = "auto"; row.append(tm, tx); bl.appendChild(row);
+      }
       if (!lines.length) bl.appendChild(mk("span", "", "השקופית שעל המסך"));
       body2.appendChild(bl); bx.append(tog, body2); qa.appendChild(bx);
     }

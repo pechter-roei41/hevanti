@@ -364,7 +364,7 @@ select.small{padding:6px 10px;border-radius:10px;border:1.5px solid var(--line);
 .tag{display:inline-block;max-width:100%;white-space:normal}
 .log summary,.shotdelbox summary{padding-block:3px}   /* click target: these two summaries were 22px high (WCAG 2.2, 2.5.8: 24px) */
 .study .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}
-.linkish{border:0;background:none;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit;padding:0}
+.linkish{border:0;background:none;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit;padding:1px 0;min-height:24px}
 .linkish.muted{color:var(--muted)}   /* a quiet link: not a button, not green (deleting the key is rare) */
 .keystat{display:flex;align-items:baseline;gap:4px 16px;flex-wrap:wrap}
 .keystat .capstat{flex:1 1 auto}
@@ -1760,7 +1760,7 @@ const setPanels = {};
   setPanels.cap.appendChild($("#capHome"));
   const ml = el("label", "row miniopt"), mc = el("input"); mc.type = "checkbox"; mc.id = "miniAuto";
   mc.addEventListener("change", () => api("/api/cmd", {action: "mini_auto", on: mc.checked}));
-  ml.append(mc, el("b", "", "לפתוח את חלון השאלות עצמו (ולא רק את העיגול הירוק) כשהרצאה מתחילה"));
+  ml.append(mc, el("b", "", "לפתוח את החלון הצף עצמו (ולא רק את העיגול הירוק) כשהרצאה מתחילה"));
   setPanels.cap.appendChild(ml);
   const ql = el("label", "row miniopt"), qc = el("input"); qc.type = "checkbox"; qc.id = "quickStart";
   qc.addEventListener("change", () => api("/api/cmd", {action: "quick_start", on: qc.checked}));
@@ -2488,6 +2488,7 @@ async function loadLib(force) {
   try {
     const d = await api("/api/library"); libItems = d.items || []; courses = d.courses || []; libSeen = true;
     libRev = app ? app.lib_rev : -1;
+    heFor = "";   // (the lecture that just ended is drawn again: its name may have been the raw folder name before the library came)
     if (libCourse && !courses.some(c => c.name === libCourse)) libCourse = "";
     drawCourseSel(); drawTabs(); drawLib(); if (view === "home") drawHome();
     if (view === "course" && courseName) drawCourseLib();
@@ -3104,7 +3105,7 @@ let pastData = null;
 async function openPast(f, at) {
   show("past"); if (pastAskBox && pastFile !== f) pastAskBox.reset(); pastFile = f; $("#pastTitle").textContent = "טוען..."; $("#pastLines").replaceChildren();
   let d; try { d = await api("/api/transcript?f=" + encodeURIComponent(f)); } catch (e) { d = {none: true}; }
-  if (d.none) { $("#pastTitle").textContent = "התמלול לא נמצא"; return; }
+  if (d.none) { $("#pastTitle").textContent = "התמלול לא נמצא"; pendingTab = ""; if (pendingAsk === f) pendingAsk = ""; return; }
   pastData = d; const e = d.entry; pastSummary = d.summary || ""; drawSummary();
   $("#pastDelShots").hidden = !d.lines.some(x => x.img);
   pastHasImgs = d.lines.some(x => x.img); drawMath();

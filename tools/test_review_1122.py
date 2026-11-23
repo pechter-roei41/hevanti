@@ -143,6 +143,92 @@ check("rename: a failed folder move reports the failure", r.get("ok") is False, 
 check("rename: after a failed folder move the transcript is back under its old name", os.path.isfile(os.path.join(lec, "הרצאה.txt")) and not os.path.isfile(os.path.join(lec, "שם חדש.txt")), os.listdir(lec))
 check("rename: the lecture is still in the library", len(L.lecture_dirs()) == 1, L.lecture_dirs())
 
+# ---- 4. P3 of the same review
+mini_html = open(os.path.join(HERE, "System", "Program", "mini.html"), encoding="utf-8").read()
+check("mini: 'use strict' comes before the first function (it is a directive again)", mini_html.index('"use strict";') < mini_html.index("function heN("))
+check("mini: a double click on 'to the app' sends the command once", "if (appOpening) return; appOpening = true;" in mini_html)
+check("app: the ended lecture is drawn again when the library arrives", 'heFor = "";' in app_html[app_html.index("async function loadLib"):app_html.index("function courseList")])
+check("app: a missing lecture drops the pending question box / tab", 'pendingTab = ""; if (pendingAsk === f) pendingAsk = ""; return; }' in app_html)
+ask_js = open(os.path.join(HERE, "System", "Program", "ask.js"), encoding="utf-8").read()
+check("ask.js: the basis line keeps the time left-to-right and the words in their own direction", 'tm.dir = "ltr"; tx.dir = "auto"' in ask_js)
+check("app: the guide says 'the floating window', not 'the questions window'", "חלון השאלות" not in app_html)
+
+# the developer run log: capped, and without the user's folder, name and e-mail
+os.environ["USERNAME"] = "dana"
+home = os.path.expanduser("~")
+t = L.scrub_user("path " + home + "\\x by dana mail dana@example.com")
+check("run log scrub: the home folder, the user name and e-mail addresses go", home not in t and "dana" not in t and "<user>" not in t.replace("<user>", "") , t)
+rl_dir = os.path.join(TMP, "rl")
+os.makedirs(os.path.join(rl_dir, "Hevanti"), exist_ok=True)
+old_env = (L.RUN_LOG_ON, dict(L._RUN_LOG), L.RUN_LOG_MAX, os.environ.get("LOCALAPPDATA"))
+os.environ["LOCALAPPDATA"] = rl_dir
+L.RUN_LOG_ON, L._RUN_LOG["path"], L._RUN_LOG["failed"], L.RUN_LOG_MAX = True, None, False, 300
+for i in range(30):
+    L._run_log("line %d from dana at dana@example.com" % i)
+size = os.path.getsize(os.path.join(rl_dir, "Hevanti", "run_log.txt"))
+body = open(os.path.join(rl_dir, "Hevanti", "run_log.txt"), encoding="utf-8").read()
+check("run log: capped (the file rolled over to run_log.old.txt)", size < 600 and os.path.exists(os.path.join(rl_dir, "Hevanti", "run_log.old.txt")), size)
+check("run log: no user name or e-mail in it", "dana@" not in body and "from dana" not in body, body[:200])
+L.RUN_LOG_ON, L.RUN_LOG_MAX = old_env[0], old_env[2]
+L._RUN_LOG.update(old_env[1])
+os.environ["LOCALAPPDATA"] = old_env[3]
+
+# uninstall: in the shared Public folder only Hevanti's own "fast" model folders go
+md = os.path.join(TMP, "shared")
+os.makedirs(os.path.join(md, "fast", "ours__model"))
+open(os.path.join(md, "fast", "ours__model", ".complete"), "w").close()
+os.makedirs(os.path.join(md, "fast", "someone-elses"))
+open(os.path.join(md, "fast", "someone-elses", "weights.bin"), "w").close()
+L._remove_hevanti_models(md)
+check("uninstall: another program's folder inside 'fast' stays", os.path.exists(os.path.join(md, "fast", "someone-elses", "weights.bin")))
+check("uninstall: Hevanti's own model folder inside 'fast' goes", not os.path.exists(os.path.join(md, "fast", "ours__model")))
+md2 = os.path.join(TMP, "shared2")
+os.makedirs(os.path.join(md2, "fast", "ours__model"))
+open(os.path.join(md2, "fast", "ours__model", ".complete"), "w").close()
+L._remove_hevanti_models(md2)
+check("uninstall: 'fast' itself goes when nothing else is in it", not os.path.exists(os.path.join(md2, "fast")))
+
+# settings: a read that fails for a moment (a lock) is not called damage
+import builtins  # noqa: E402
+sf = os.path.join(TMP, "settings_lock.json")
+with open(sf, "w", encoding="utf-8") as f:
+    f.write('{"course": "x"}')
+real_open, calls, old_sf = builtins.open, [0], L.SETTINGS_FILE
+L.SETTINGS_FILE = sf
+
+
+def flaky_open(file, *a, **k):
+    if str(file) == sf and calls[0] < 2:
+        calls[0] += 1
+        raise PermissionError("locked for a moment")
+    return real_open(file, *a, **k)
+
+
+builtins.open = flaky_open
+try:
+    got = L._settings_damaged()
+finally:
+    builtins.open = real_open
+    L.SETTINGS_FILE = old_sf
+check("settings: a lock of a moment is waited out (the good file is returned, no .corrupt copy)", got == {"course": "x"} and not os.path.exists(sf + ".corrupt"), (got, calls))
+
+# model check: an unexpected failure is logged once; "not on disk" is not
+import faster_whisper.utils as fwu  # noqa: E402
+logged = []
+real_dm, real_se = fwu.download_model, L.save_error
+L.save_error = lambda ctx: logged.append(ctx)
+L._MODEL_CHECK_LOGGED.clear()
+try:
+    fwu.download_model = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))
+    L.model_on_disk("he"); L.model_on_disk("he")
+    n1 = len(logged)
+    fwu.download_model = lambda *a, **k: (_ for _ in ()).throw(FileNotFoundError("not there"))
+    L.model_on_disk("en")
+    n2 = len(logged)
+finally:
+    fwu.download_model, L.save_error = real_dm, real_se
+check("model check: an unexpected failure is logged once, a missing model is not", n1 == 1 and n2 == 1, (n1, n2))
+
 shutil.rmtree(TMP, ignore_errors=True)
 if fails:
     print("FAILED:", "; ".join(fails))
