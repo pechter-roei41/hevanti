@@ -205,11 +205,14 @@ if sync_playwright:
             pg3.evaluate("localStorage.setItem('bzm.a11y', JSON.stringify({zoom: 1.5, tx: 1.3}))")
             pg3.reload()
             pg3.wait_for_timeout(900)
+            if not pg3.evaluate("!!document.querySelector('.modal:not([hidden]) .card')"):   # (no dialog opens by itself: open the display settings one, so the check always runs)
+                pg3.evaluate("document.getElementById('a11y').hidden = false")
+                pg3.wait_for_timeout(300)
             rect = pg3.evaluate("(() => { const c = document.querySelector('.modal:not([hidden]) .card'); if (!c) return null; const r = c.getBoundingClientRect(); return [r.left, r.right, innerWidth]; })()")
             if rect:
                 check("browser: a dialog at zoom 150% in 320px is not cut at the side", rect[0] >= -1 and rect[1] <= rect[2] + 1, rect)
             else:
-                print("SKIP no dialog open at first start")
+                check("browser: a dialog opens for the zoom check", False, "no dialog could be opened")
             br.close()
 
 print()

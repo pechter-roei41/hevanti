@@ -107,6 +107,42 @@ if os.name == "nt":
     else:
         print("SKIP kill helper run: could not copy the interpreter")
 
+
+# ---- 3. P2 of the same review
+app_html = open(os.path.join(HERE, "System", "Program", "app.html"), encoding="utf-8").read()
+check("home: a long course name wraps in the live card (no sideways scroll at 320 px)",
+      "#hlCourse{white-space:normal;overflow-wrap:anywhere" in app_html)
+readme_txt = open(os.path.join(HERE, "README.txt"), encoding="utf-8").read()
+check("README.txt: the 'running late' threshold names both the graphics card and the CPU case", "בלי כרטיס מסך" in readme_txt and "מאחר ביותר מ-10 שניות" not in readme_txt)
+check("first-run privacy summary names the text of earlier slides", "והטקסט של השקופיות הקודמות), ושקופיות של נוסחאות" in app_html)
+check("display settings: the sentence says which settings reach the small windows (zoom does not)",
+      'חל רק על האפליקציה' in app_html and "וחל גם על החלון הצף ועל חלון ההתחלה המהירה" not in app_html)
+
+# a rename whose folder move fails puts the transcript back under its old name (the rollback itself, review 22.11.2026)
+import live_transcribe as L2  # noqa: E402
+L.create_course("קורס החזרה")
+lec = os.path.join(L.course_dir("קורס החזרה"), "הרצאה")
+os.makedirs(lec, exist_ok=True)
+with open(L.lecture_txt(lec), "w", encoding="utf-8") as f:
+    f.write("[09:01:00 | +0:01:00] שלום" + chr(10))
+app = L.APP if getattr(L, "APP", None) is not None else L.App()
+L.APP = app
+real_move = shutil.move
+
+
+def failing_move(*a, **k):
+    raise OSError("locked")
+
+
+shutil.move = failing_move
+try:
+    r = app.change_lecture("rename_lecture", {"f": "קורס החזרה/הרצאה", "name": "שם חדש"})
+finally:
+    shutil.move = real_move
+check("rename: a failed folder move reports the failure", r.get("ok") is False, r)
+check("rename: after a failed folder move the transcript is back under its old name", os.path.isfile(os.path.join(lec, "הרצאה.txt")) and not os.path.isfile(os.path.join(lec, "שם חדש.txt")), os.listdir(lec))
+check("rename: the lecture is still in the library", len(L.lecture_dirs()) == 1, L.lecture_dirs())
+
 shutil.rmtree(TMP, ignore_errors=True)
 if fails:
     print("FAILED:", "; ".join(fails))
