@@ -89,12 +89,20 @@ if os.name == "nt":
             if old.poll() is not None:
                 print("SKIP kill helper run: the stand-in process does not start")
             else:
-                helper = subprocess.Popen(["powershell", "-NoProfile", "-NonInteractive", "-Command", L._profile_kill_script([prof])],
+                # the helper writes a marker file once it has listed the processes (right before its pause), so the test does not guess
+                # how long PowerShell takes to start (slow on a CI runner); the pause is made longer so the new window is surely inside it
+                marker = os.path.join(TMP, "listed.flag")
+                script = L._profile_kill_script([prof])
+                assert "Start-Sleep -Seconds 2" in script
+                script = script.replace("Start-Sleep -Seconds 2", "Set-Content -Path '" + marker + "' -Value 1; Start-Sleep -Seconds 8")
+                helper = subprocess.Popen(["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
-                time.sleep(0.6)
+                t0 = time.time()
+                while not os.path.exists(marker) and time.time() - t0 < 90 and helper.poll() is None:
+                    time.sleep(0.2)
                 new = decoy()       # opened while the helper pauses (the prewarmed floating window)
                 procs.append(new)
-                helper.wait(60)
+                helper.wait(90)
                 time.sleep(0.5)
                 check("kill helper (run): the old window is stopped", old.poll() is not None)
                 check("kill helper (run): a window opened during the pause survives", new.poll() is None)
