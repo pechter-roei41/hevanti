@@ -10620,12 +10620,17 @@ def close_our_windows(wait=True):
 
 def _profile_kill_script(dirs):
     """PowerShell text that, after a pause (so the polite WM_CLOSE comes first), force-stops every Edge/Chrome process whose command line
-    holds one of these profile folders. Only Hevanti's own windows have such a profile (the quick-start window, the floating window)."""
+    holds one of these profile folders. Only Hevanti's own windows have such a profile (the quick-start window, the floating window).
+    The processes are listed BEFORE the pause, with their creation time, and only those are stopped afterwards: a window this run opens
+    during the pause (the prewarmed floating window) is never in the list (review 22.11.2026)."""
     quoted = ",".join("'" + os.path.abspath(d).replace("'", "''") + "'" for d in dirs)
-    return ("Start-Sleep -Seconds 2; $d = @(" + quoted + "); "
+    return ("$d = @(" + quoted + "); $old = @{}; "
             "Get-CimInstance Win32_Process -Filter \"Name='msedge.exe' OR Name='chrome.exe'\" | "
             "Where-Object { $c = $_.CommandLine; $c -and ($d | Where-Object { $c.Contains($_) }) } | "
-            "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }")
+            "ForEach-Object { $old[[int]$_.ProcessId] = $_.CreationDate }; "
+            "Start-Sleep -Seconds 2; "
+            "foreach ($id in @($old.Keys)) { $p = Get-CimInstance Win32_Process -Filter \"ProcessId=$id\"; "
+            "if ($p -and $p.CreationDate -eq $old[$id]) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue } }")
 
 
 def _kill_profile_browsers():
