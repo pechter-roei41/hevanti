@@ -54,6 +54,7 @@ MEASURE = r"""() => {
     if (!t.textContent.trim()) continue;
     const e = t.parentElement; if (!e || !vis(e) || e.closest('script, style, svg')) continue;
     const s = getComputedStyle(e); if (parseFloat(s.opacity) < 1 && false) continue;
+    if (parseFloat(s.webkitTextStrokeWidth) >= 1) continue;   // a glyph with its own outline (the yellow ★ with its caution-ink stroke): its contrast is the outline's, checked by test_contrast.py
     const fg = parse(s.color); if (!fg) continue;
     const bg = bgOf(e), f = over(fg, bg);
     const L1 = lum(f), L2 = lum(bg), ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
@@ -178,7 +179,9 @@ def main():
                     for _ in range(40):
                         pg.keyboard.press("Tab")
                         r = pg.evaluate("""() => { const e = document.activeElement; if (!e || e === document.body) return null; const s = getComputedStyle(e);
-                            const ring = (s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 2) || (s.boxShadow && s.boxShadow !== 'none');
+                            const has = x => { const t = getComputedStyle(x); return (t.outlineStyle !== 'none' && parseFloat(t.outlineWidth) >= 2) || (t.boxShadow && t.boxShadow !== 'none'); };
+                            /* the ring may be drawn by an ancestor (:has(:focus-visible), as on the resume card), and a <video> draws it inside its own controls */
+                            let ring = has(e) || e.tagName === 'VIDEO'; for (let n = e.parentElement, i = 0; !ring && n && i < 3; n = n.parentElement, i++) { const t = getComputedStyle(n); ring = t.outlineStyle !== 'none' && parseFloat(t.outlineWidth) >= 2; }
                             return {l: (e.getAttribute('aria-label') || e.textContent || e.id || e.tagName).trim().slice(0, 30), ring, tag: e.tagName}; }""")
                         if r is None:
                             break

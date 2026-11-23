@@ -327,6 +327,16 @@ with sync_playwright() as p:
                     shot(pg, f"{mode}-{scheme}-{w}")
                     ctx.close()
 
+    # --- a very long course name in the live card wraps (review 22.11.2026: it pushed the page 198 px sideways at 320) ---
+    state.update(math=KEY, session=dict(LIVE, course="קורס עם שם ארוך מאוד מאוד מאוד מאוד מאוד מאוד מאוד Introduction to Algorithms", course_now="x"))
+    for scheme in ("light", "dark"):
+        ctx, pg = page(320, scheme)
+        wait_mode(pg, "live")
+        pg.wait_for_timeout(600)
+        c = pg.evaluate(COUNT_JS)
+        check(f"live, a very long course name at 320px ({scheme}): no sideways scroll", c["wide"] <= 0, c["wide"])
+        ctx.close()
+
     # --- the two outline buttons at home ("התחלת הרצאה", "הרצאה מוקלטת או ביוטיוב"): hover fills soft green, keyboard focus shows a thick ring ---
     state.update(math=KEY, session=None)
     for scheme in ("light", "dark"):

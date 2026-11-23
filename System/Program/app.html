@@ -70,6 +70,7 @@ header{position:sticky;top:0;z-index:5;padding:10px 16px 0;background:linear-gra
 .brand small{font-family:var(--f-body);font-weight:600;font-size:14px;color:var(--muted);background:var(--sunk);border-radius:999px;padding:1px 9px}
 .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--accent)}
 .pill{font-size:14px;padding:3px 12px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+#hlCourse{white-space:normal;overflow-wrap:anywhere;max-width:100%;min-width:0;border-radius:16px}   /* a long course name wraps inside the card (320 px) instead of pushing the page sideways */
 .pill.warn{background:var(--warn-bg);color:var(--warn-fg);font-weight:700}
 .pill.gpu{background:var(--warn-bg);color:var(--warn-fg);display:inline-flex;align-items:center;gap:10px}   /* a caution capsule with a text link: only while there is a card that is not used, and something to press */
 .pill.gpu .linkish{color:var(--warn-fg);font-weight:700}
@@ -692,7 +693,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
           </div>
           <div class="card">
             <h2 class="hsmall">מה נשאר אצלך</h2>
-            <p class="sub">התמלולים והשקופיות נשמרים רק במחשב הזה. אין חשבון ואין שרת של הבנתי. ל-Gemini נשלחים השאלות (עם הדקות האחרונות והשקופית), ושקופיות של נוסחאות וכתב יד (אפשר לכבות). <a href="#settings" id="hPrivGo">פרטיות בהגדרות</a></p>
+            <p class="sub">התמלולים והשקופיות נשמרים רק במחשב הזה. אין חשבון ואין שרת של הבנתי. ל-Gemini נשלחים השאלות (עם הדקות האחרונות, השקופית והטקסט של השקופיות הקודמות), ושקופיות של נוסחאות וכתב יד (אפשר לכבות). <a href="#settings" id="hPrivGo">פרטיות בהגדרות</a></p>
           </div>
         </aside>
       </div>
@@ -1276,7 +1277,7 @@ body.pipbody.caps{background:#000;color:#fff;grid-template-rows:auto minmax(0,1f
 </div></div>
 <div class="modal" id="a11y" hidden role="dialog" aria-modal="true" aria-labelledby="a11yT"><div class="card">
   <h3 id="a11yT">תצוגה ונגישות</h3>
-  <p class="sub" style="margin:0">נשמר בדפדפן הזה, וחל גם על החלון הצף ועל חלון ההתחלה המהירה.</p>
+  <p class="sub" style="margin:0">נשמר בדפדפן הזה. גודל התמלול, ריווח וניגודיות חלים גם על החלון הצף ועל חלון ההתחלה המהירה; "גודל הכל" חל רק על האפליקציה (החלון הצף קטן, וגודל התמלול מספיק בו).</p>
   <div class="a11y-row"><b>גודל הכל:</b><div class="seg" role="group" aria-label="גודל הכל" id="a11yZoom"><button type="button" data-v="1">100%</button><button type="button" data-v="1.15">115%</button><button type="button" data-v="1.3">130%</button><button type="button" data-v="1.5">150%</button></div></div>
   <div class="a11y-row"><b>גודל התמלול:</b><div class="seg" role="group" aria-label="גודל התמלול" id="a11yTx"><button type="button" data-v="1">רגיל</button><button type="button" data-v="1.25">גדול</button><button type="button" data-v="1.5">גדול מאוד</button><button type="button" data-v="1.9">ענק</button></div></div>
   <label><input type="checkbox" id="a11yRead"><span><b>ריווח לקריאה נוחה.</b> שורות, אותיות ומילים מרווחות יותר ושורות קצרות יותר. עוזר בדיסלקציה ובקשב.</span></label>
