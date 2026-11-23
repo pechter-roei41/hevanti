@@ -5,6 +5,7 @@ version is on [GitHub Releases](https://github.com/pechter-roei41/hevanti/releas
 
 ## Unreleased
 
+- **Share image (WhatsApp, link previews):** `site/assets/og-share.png` (1200x630, 122 KB) says "a floating window over the lecture" like the page title, with the floating window and an answer. It has a new file name so apps that cached the old picture fetch the new one; the old `og.png` is gone.
 - **Floating window answers:** a question typed in English keeps its question mark at the end (`dir="auto"` on the question bubble); the
   times in an answer are small pills with a drawn clock instead of an emoji and a monospace run (soft green and clickable when the page can
   open the transcript there, an outlined grey chip when it cannot); the conversation sits just above the question box (`align-content: safe end`).
