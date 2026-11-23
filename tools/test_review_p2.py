@@ -73,7 +73,7 @@ check("report: a short user name is hidden too, but not inside other words", "AB
 
 # 4. uninstall: the shared model folder loses only Hevanti's own folders
 src = PY[PY.index("def uninstall():"):]
-check("uninstall: the shared folder is not removed whole", "_hevanti_model_subdirs()" in src and "zipformer-he" in PY[PY.index("def _hevanti_model_subdirs"):][:300])
+check("uninstall: the shared folder is not removed whole", "_remove_hevanti_models(md)" in src and "_hevanti_model_subdirs()" in PY[PY.index("def _remove_hevanti_models"):PY.index("def uninstall():")] and "zipformer-he" in PY[PY.index("def _hevanti_model_subdirs"):][:300])
 check("uninstall: the question about the recordings mentions the deleted folder", "deleted" in src[:src.index("ההקלטות שהורדו נמחקו")])
 
 # 5. a recording offered through a link is marked as such, with its whole address
