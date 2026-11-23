@@ -130,7 +130,18 @@ def one_run(label, title, extra_env, video, minutes, out_dir, player_ps1):
             time.sleep(1)
         time.sleep(45)   # the quick draft takes a short while to get ready: the lecture starts when it is
         length = minutes * 60
-        for attempt in (1, 2):
+        if os.environ.get("LAGTEST_EXTERNAL"):   # the lecture plays somewhere else (a browser): say when to start it, and wait until its sound arrives
+            with open(os.path.join(out_dir, "ready-" + label), "w") as f:
+                f.write("ready")
+            say("מוכן לקול: להתחיל את ההרצאה עכשיו.")
+            for _ in range(180):
+                if (live().get("pending") or 0) > 0 or live().get("total"):
+                    break
+                time.sleep(1)
+            else:
+                say("לא הגיע קול להבנתי. לבדוק שההרצאה מתנגנת ושהרמקולים לא מושתקים.")
+                return None
+        for attempt in (1, 2) if not os.environ.get("LAGTEST_EXTERNAL") else ():
             player = subprocess.Popen(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", player_ps1, video, str(length + 30), "60"])
             for _ in range(40):
                 if (live().get("pending") or 0) > 0 or live().get("total"):
@@ -141,7 +152,7 @@ def one_run(label, title, extra_env, video, minutes, out_dir, player_ps1):
                 player = None
                 continue
             break
-        if player is None:
+        if player is None and not os.environ.get("LAGTEST_EXTERNAL"):
             say("לא הגיע קול להבנתי. לבדוק שהרמקולים לא מושתקים ושההרצאה מתנגנת, ולנסות שוב.")
             return None
         say(f"ההרצאה מתנגנת. הבדיקה נמשכת {minutes} דקות. אפשר להמשיך לעבוד, אבל עדיף לא להכביד על המחשב.")
@@ -191,7 +202,7 @@ def main():
     video = sys.argv[1].strip('"') if len(sys.argv) > 1 else input("לגרור לכאן קובץ הרצאה בעברית (וידאו או שמע, לפחות 25 דקות) ולהקיש Enter: ").strip().strip('"')
     minutes = int(sys.argv[2]) if len(sys.argv) > 2 else 20
     cool = int(os.environ.get("LAGTEST_COOL_S") or 300)
-    if not os.path.isfile(video):
+    if not os.path.isfile(video) and not os.environ.get("LAGTEST_EXTERNAL"):
         sys.exit("הקובץ לא נמצא: " + video)
     try:
         get("/api/app")
@@ -200,10 +211,10 @@ def main():
         raise
     except Exception:
         pass
-    dur = video_seconds(video)
+    dur = 0 if os.environ.get("LAGTEST_EXTERNAL") else video_seconds(video)
     if dur and dur < minutes * 60 + 90:
         say(f"שימו לב: ההקלטה קצרה ({dur / 60:.0f} דקות), ובדיקה של {minutes} דקות צריכה יותר. הבדיקה תתנגן מהסוף ותיעצר כשההקלטה נגמרת.")
-    stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
+    stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M") + (("_" + os.environ["LAGTEST_ONLY"]) if os.environ.get("LAGTEST_ONLY") else "")
     out_dir = os.path.join(HERE, "results", stamp)
     os.makedirs(out_dir, exist_ok=True)
     ps1 = os.path.join(out_dir, "play.ps1")
@@ -211,7 +222,8 @@ def main():
         f.write(PLAY_PS1)
     say("מוודא שאין עוד משהו כבד פתוח... לסגור דפדפנים ותוכנות אחרות ככל האפשר. המחשב צריך להיות מחובר לחשמל.")
     results, summary = {}, [f"בדיקת איחור בתמלול חי, {stamp}", f"קובץ: {os.path.basename(video)}, {minutes} דקות לכל ריצה", ""]
-    for n, (label, title, extra) in enumerate(RUNS):
+    only = os.environ.get("LAGTEST_ONLY")   # "old" or "new": a single run (when the lecture can be wound back by hand between them)
+    for n, (label, title, extra) in enumerate(r for r in RUNS if only in (None, "", r[0])):
         rows = one_run(label, title, extra, video, minutes, out_dir, ps1)
         if not rows:
             summary.append(f"{title}: הריצה לא הושלמה")
