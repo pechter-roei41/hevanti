@@ -103,7 +103,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 .miss button{padding:4px 14px;min-height:36px}   /* a trackpad in a dark lecture hall: 36 px high, 8 px apart, so 7 is not pressed for 3 */
 #box{flex:1;min-height:0;padding:8px 10px 10px}
 #box.askp{display:flex;flex-direction:column;height:100%;gap:8px}
-#box.askp .conv{flex:1;min-height:0;max-height:none}
+#box.askp .conv{flex:1;min-height:0;max-height:none;align-content:safe end}   /* the conversation sits just above the question box, not hanging from the title */
 #box.askp .head{display:none}
 #box.askp textarea{font-size:17px;padding:10px 12px;min-height:3.6em;border-radius:12px}
 #box.askp .ais button.here{flex:1 1 55%;min-width:0;padding:11px 18px;font-size:16px;border-radius:12px;text-align:center}   /* the answer button takes the width of the row; the lag warning, when there is one, takes its own at the left */

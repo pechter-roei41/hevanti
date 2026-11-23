@@ -164,14 +164,18 @@ with sync_playwright() as p:
       BZMAsk.render(document, u, "ללא עמוד תמלול [00:20:44].");
       out.noGo = [u.querySelectorAll('button.src').length, u.querySelectorAll('span.src').length, u.textContent];
       return out; }""")
-    check("sources: a time that was sent is a button, a made-up time is only text", r["buttons"] == ["⏱ 00:20:44", "⏱ 01:05"] and r["plain"] == ["⏱ 00:99:99"], r)
+    check("sources: a time that was sent is a button, a made-up time is only text", r["buttons"] == ["00:20:44", "01:05"] and r["plain"] == ["00:99:99"], r)
     r2 = pg.evaluate("""() => { const t = document.createElement('div'); document.body.appendChild(t);
       BZMAsk.render(document, t, "הנקודה קבועה [12:36:33, 12:40:58] והשני [12:36:54-12:40:11] ועוד [12:36:33; 99:99:99] וסתם [ממש].", {go: () => {}, known: new Set(["12:36:33", "12:40:58", "12:36:54", "12:40:11"])});
       return {buttons: [...t.querySelectorAll('button.src')].map(b => b.textContent), plain: [...t.querySelectorAll('span.src')].map(b => b.textContent), text: t.textContent}; }""")
     check("sources: several times in one pair of brackets are separate chips, and no square bracket is left around a time",
-          r2["buttons"] == ["⏱ 12:36:33", "⏱ 12:40:58", "⏱ 12:36:54", "⏱ 12:40:11", "⏱ 12:36:33"] and r2["plain"] == ["⏱ 99:99:99"]
+          r2["buttons"] == ["12:36:33", "12:40:58", "12:36:54", "12:40:11", "12:36:33"] and r2["plain"] == ["99:99:99"]
           and "[12" not in r2["text"] and "[ממש]" in r2["text"], r2)
     check("sources: a click goes to that line of the transcript", r["went"] == ["00:20:44"], r)
+    ask_src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "System", "Program", "ask.js"), encoding="utf-8").read()
+    check("question bubble: dir=auto (an English question keeps its question mark at the end)", 'qe.dir = "auto"' in ask_src and 'mk("p", "q", shown)' in ask_src)
+    mini_src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "System", "Program", "mini.html"), encoding="utf-8").read()
+    check("floating window: the conversation sits just above the question box (safe end)", "align-content:safe end" in mini_src)
     for theme in ("light", "dark"):
         pg.evaluate(f"document.documentElement.dataset.theme = '{theme}'")
         st = pg.evaluate("""() => { const t = document.querySelector('.askp, body'); const css = n => { const e = document.createElement('div'); e.className = 'askp'; document.body.appendChild(e);
@@ -180,9 +184,10 @@ with sync_playwright() as p:
               const out = {b: f(b), x: f(x), muted: getComputedStyle(document.documentElement).getPropertyValue('--muted').trim(), accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()};
               const probe = c => { const i = document.createElement('i'); i.style.color = c; document.body.appendChild(i); const v = getComputedStyle(i).color; i.remove(); return v; };
               out.mutedRgb = probe(out.muted); out.accentRgb = probe(out.accent); e.remove(); return out; }; return css(); }""")
-        check(f"sources, {theme}: a time that can be opened looks like a link (underlined, green), and one that cannot is plain muted text",
-              "underline" in st["b"]["u"] and st["b"]["color"] == st["accentRgb"] and st["x"]["u"] == "none" and st["x"]["color"] == st["mutedRgb"]
-              and st["x"]["bg"] == "rgba(0, 0, 0, 0)" and st["x"]["border"] == "0px" and "underline" not in st["x"]["u"], st)
+        check(f"sources, {theme}: a time that can be opened is a green chip (soft fill), and one that cannot is a plain muted outlined chip with no fill",
+              st["b"]["color"] == st["accentRgb"] and st["b"]["bg"] != "rgba(0, 0, 0, 0)" and st["b"]["border"] == "1px"
+              and st["x"]["color"] == st["mutedRgb"] and st["x"]["bg"] == "rgba(0, 0, 0, 0)" and st["x"]["border"] == "1px"
+              and "underline" not in st["x"]["u"] and "underline" not in st["b"]["u"], st)
     pg.evaluate("document.documentElement.dataset.theme = ''")
     check("sources: a page that cannot open the transcript (the floating window): chips, not buttons", r["noGo"][0] == 0 and r["noGo"][1] == 1, r)
 

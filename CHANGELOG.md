@@ -5,6 +5,13 @@ version is on [GitHub Releases](https://github.com/pechter-roei41/hevanti/releas
 
 ## Unreleased
 
+- **Floating window answers:** a question typed in English keeps its question mark at the end (`dir="auto"` on the question bubble); the
+  times in an answer are small pills with a drawn clock instead of an emoji and a monospace run (soft green and clickable when the page can
+  open the transcript there, an outlined grey chip when it cannot); the conversation sits just above the question box (`align-content: safe end`).
+- **Landing page (`site/index.html`):** the title is "a floating window over the lecture"; the video comes first; three setup steps and the
+  "Windows protected your PC" note sit under the download button; the demo window invites a click; a download bar for phones with "copy
+  the link for my computer"; repeated icon cards became ruled rows; no eyebrow labels; neutral shadows; selection and scrollbar colours.
+  It goes to Netlify by hand, separately.
 - **Longer pieces on the CPU:** with no graphics card, a Hebrew live lecture with the quick draft is written in 20-28 s pieces instead of
   10-18 s (`CPU_MIN_CHUNK_S` / `CPU_MAX_CHUNK_S`, `LT_CPU_MIN_CHUNK_S` / `LT_CPU_MAX_CHUNK_S` for tests; never over Whisper's 30 s window).
   Measured on an i5-1235U with `tools/bench_chunks.py`: 0.82 vs 0.50 seconds of work per second of lecture, the same words. Without the

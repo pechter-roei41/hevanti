@@ -74,9 +74,10 @@
 .askp .qa .q{justify-self:start;max-width:88%;margin:0;padding:7px 13px;border-radius:16px;background:var(--accent-soft);color:var(--fg);font-weight:600;font-size:calc(14.5px * var(--tx, 1));line-height:1.5}
 .askp .qa .a{justify-self:end;max-width:96%;padding:8px 13px;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
 .askp .qa.err .a{border-color:var(--rec)}
-.askp .src{display:inline;border:0;background:none;padding:0;margin-inline:2px;font-family:var(--f-mono,Consolas,"Cascadia Mono",ui-monospace,monospace);font-size:.85em;color:var(--muted);direction:ltr;unicode-bidi:isolate;white-space:nowrap}
-.askp button.src{cursor:pointer;color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:3px;border-radius:4px}   /* a time that can be opened looks like a link; one that cannot is only text */
-.askp button.src:hover{background:var(--accent-soft)}
+.askp .src{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:none;padding:0 7px;margin-inline:2px;border-radius:999px;font-family:var(--f-mono,Consolas,"Cascadia Mono",ui-monospace,monospace);font-size:.78em;line-height:1.6;color:var(--muted);direction:ltr;unicode-bidi:isolate;white-space:nowrap;vertical-align:baseline}
+.askp .src::before{content:"";width:.95em;height:.95em;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center/contain no-repeat;flex:none}   /* a drawn clock, not an emoji */
+.askp button.src{cursor:pointer;color:var(--accent);border-color:var(--accent);background:var(--accent-soft);font-weight:700}   /* a time that can be opened looks like a link; one that cannot is only text */
+.askp button.src:hover{background:var(--accent);color:var(--accent-ink)}
 .askp button.src:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .askp .mx{display:inline-block;direction:ltr;unicode-bidi:isolate;vertical-align:middle}
 .askp .mx.d{display:block;text-align:center;margin:4px 0;overflow-x:auto}
@@ -121,7 +122,7 @@
         if (i) p.appendChild(doc.createTextNode(" "));
         const label = normT(time), ok = !!(src && src.go && (!src.known || src.known.has(label)));
         const b = doc.createElement(ok ? "button" : "span");
-        b.className = "src"; b.textContent = "⏱ " + label;
+        b.className = "src"; b.textContent = label;
         if (ok) { b.type = "button"; b.title = "לפתוח בתמלול ברגע הזה"; b.addEventListener("click", () => src.go(label)); }
         else b.title = "הזמן בתמלול";
         p.appendChild(b);
@@ -322,7 +323,7 @@
       tog.addEventListener("click", () => { const open = body2.hidden; body2.hidden = !open; tog.setAttribute("aria-expanded", String(open)); });
       if (url) { const im = doc.createElement("img"); im.src = url; im.alt = "השקופית שהתשובה מתבססת עליה"; im.loading = "lazy"; im.addEventListener("error", () => im.remove()); body2.appendChild(im); }
       for (const l of lines.slice(0, 2)) {   // the time stays left-to-right and the words take their own direction (a Hebrew line with English in it keeps its order)
-        const row = mk("span", ""), tm = mk("span", "", "⏱ " + String(l.t)), tx = mk("span", "", "  " + String(l.x));
+        const row = mk("span", ""), tm = mk("span", "", String(l.t)), tx = mk("span", "", "  " + String(l.x));
         tm.dir = "ltr"; tx.dir = "auto"; row.append(tm, tx); bl.appendChild(row);
       }
       if (!lines.length) bl.appendChild(mk("span", "", "השקופית שעל המסך"));
@@ -340,7 +341,7 @@
       catch (e) { context = q; }
       // the sources in the answer: clickable only where the page can open the transcript, and only for times that were sent
       const known = timesIn(context), src = {go: opts.onSource || null, known: known.size ? known : null};
-      const qa = mk("div", "qa"), ae = mk("div", "a", "חושב..."); qa.append(mk("p", "q", shown), ae);
+      const qa = mk("div", "qa"), ae = mk("div", "a", "חושב..."), qe = mk("p", "q", shown); qe.dir = "auto"; qa.append(qe, ae);   // dir=auto: a question in English keeps its "?" at the end
       conv.appendChild(qa); convbar.hidden = !!opts.compact;   // (the small window: "שיחה חדשה" is in its ⋯ menu, not under the box)
       // the small window shows the newest question at the top (read the answer from its start; scroll for the rest)
       const follow = () => { if (opts.compact) conv.scrollTop = qa.offsetTop - conv.offsetTop - 4; else conv.scrollTop = conv.scrollHeight; };
