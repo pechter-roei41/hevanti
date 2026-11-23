@@ -1063,5 +1063,24 @@ finally:
     for _l in ("he", "en"):
         L.model_set(_l, "unknown")
 
+# the run log (developer only): nothing is written unless HEVANTI_RUN_LOG=1; with it, the printed lines go to run_log.txt, scrubbed
+import tempfile as _tf
+_d = _tf.mkdtemp()
+_old_env = os.environ.get("LOCALAPPDATA")
+os.environ["LOCALAPPDATA"] = _d
+_rl = os.path.join(_d, "Hevanti", "run_log.txt")
+L.RUN_LOG_ON, L._RUN_LOG["path"], L._RUN_LOG["failed"] = False, None, False
+L._run_log("שורה ראשונה")
+check("run log: off by default, nothing is written for a student", not os.path.exists(_rl))
+L.RUN_LOG_ON = True
+L._run_log("עצירה: בדיקה AIza" + "A" * 30)
+_t = open(_rl, encoding="utf-8").read() if os.path.exists(_rl) else ""
+check("run log: on, the line is written, with no key in it", "עצירה: בדיקה" in _t and "AIza" not in _t, _t)
+L.RUN_LOG_ON, L._RUN_LOG["path"] = False, None
+if _old_env is None:
+    os.environ.pop("LOCALAPPDATA", None)
+else:
+    os.environ["LOCALAPPDATA"] = _old_env
+
 print("\nall passed" if not fails else f"\n{len(fails)} failed: {fails}")
 sys.exit(1 if fails else 0)

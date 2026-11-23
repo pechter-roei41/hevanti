@@ -61,6 +61,7 @@ Read before larger changes:
 - Data: installed with `Hevanti-Setup.exe` → `Documents\הבנתי` (an earlier ZIP library is kept if found); ZIP → next to `Hevanti.bat`. `BZM_DATA_DIR` overrides. Local state (browser profile of the floating window, usage counts, `data_dir.txt`) → `%LOCALAPPDATA%\Hevanti`.
 - Library: `הקורסים שלי/<course>/<lecture>/` with `<lecture>.txt`, `שקופיות/`, and `שאלות ותשובות.md`. Per course: syllabus, glossary, and hidden `AGENTS.md`, `GEMINI.md`, `CLAUDE.md` for AI apps. `now_watching.txt` says what is happening right now. (Older name: `ההרצאות שלי`, renamed on first start.)
 - Errors: `System/error_log.txt`; `System/loading_stuck.txt` only if loading the model hangs.
+- Developer-only run log: with the environment variable `HEVANTI_RUN_LOG=1` (set on Roei's computer only; a student never has it) everything the black window prints is also written, scrubbed, to `%LOCALAPPDATA%\Hevanti\run_log.txt` (the previous run is `run_log.old.txt`). Read it after a report of something odd; it is never packaged or pushed.
 
 ## Layout
 

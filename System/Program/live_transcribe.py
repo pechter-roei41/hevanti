@@ -423,7 +423,33 @@ def show_status(text):
         _DRAFT_ON = True
 
 
+# A copy of what the black window prints, for the developer only: it exists only when the environment variable HEVANTI_RUN_LOG=1 is set
+# on that computer (a student never has it, so nothing is written for a student). In %LOCALAPPDATA%\Hevanti\run_log.txt, not in the
+# library and not in any package; a new run starts a new file (the last one is kept as run_log.old.txt), scrubbed like error_log.txt.
+RUN_LOG_ON = os.environ.get("HEVANTI_RUN_LOG") == "1"
+_RUN_LOG = {"path": None, "failed": False}
+
+
+def _run_log(text):
+    if not RUN_LOG_ON or _RUN_LOG["failed"]:
+        return
+    try:
+        if _RUN_LOG["path"] is None:
+            d = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.dirname(os.path.abspath(__file__)), "Hevanti")
+            os.makedirs(d, exist_ok=True)
+            path = os.path.join(d, "run_log.txt")
+            if os.path.exists(path):
+                os.replace(path, os.path.join(d, "run_log.old.txt"))
+            _RUN_LOG["path"] = path
+        stamp = datetime.datetime.now().strftime("%H:%M:%S")
+        with open(_RUN_LOG["path"], "a", encoding="utf-8") as f:
+            f.write(scrub_log(f"{stamp} {text}") + "\n")
+    except Exception:
+        _RUN_LOG["failed"] = True   # (a log must never stop the program)
+
+
 def show(text):
+    _run_log(text)
     if text and not set(str(text).strip()) <= {"="}:
         try:
             APP.add_note(text)
@@ -5714,6 +5740,14 @@ def _find_quick(u):
             pass
         return True
     u.EnumWindows(ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)(each), 0)
+    if len(found) > 1:   # two windows with this title (e.g. the one waiting off the screen and one that is open): the open one is "the" window, so the button and the menu never look at the spare one
+        spare = MINI_UI.get("prewarmed")
+        for h in found:
+            try:
+                if h != spare and u.IsWindowVisible(h) and not u.IsIconic(h):
+                    return h
+            except Exception:
+                pass
     return found[0] if found else 0
 
 
