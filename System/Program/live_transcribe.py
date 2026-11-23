@@ -6731,7 +6731,7 @@ class MiniButton(threading.Thread):
         g.DeleteObject.argtypes = [wintypes.HANDLE]
         g.DeleteDC.argtypes = [wintypes.HDC]
         st = {"down": None, "shown": False, "corner": "", "pulsed": None, "pulse_until": 0.0, "pulse_on": False,
-              "pt": 0.0, "target": 0, "a_t": 0.0, "anim_timer": False, "sig": None,
+              "pt": 0.0, "target": 0, "a_t": 0.0, "anim_timer": False, "anim_last": 0.0, "err_logged": False, "sig": None,
               "mark_n": APP.mark_n, "saved_n": APP.saved_n, "toast_hwnd": 0, "toast_on": False, "toast_until": 0.0, "toast_kind": ""}
 
         def look():
@@ -6779,7 +6779,7 @@ class MiniButton(threading.Thread):
             u.MoveWindow(self.hwnd, x, y, S, S, True)
             st["corner"] = corner
 
-        def wndproc(hwnd, msg, wp, lp):
+        def _wndproc(hwnd, msg, wp, lp):
             if msg == 0x0021:   # WM_MOUSEACTIVATE: a click does not take the keyboard from the lecture
                 return 3
             if msg == 0x0201:   # button down
@@ -6798,7 +6798,7 @@ class MiniButton(threading.Thread):
             if msg == 0x0113 and wp == 2:   # WM_TIMER 2 (about 60 times a second, only while the button turns)
                 now = time.time()
                 step = (now - st["a_t"]) / MINI_ANIM_S
-                st["a_t"] = now
+                st["a_t"] = st["anim_last"] = now
                 st["pt"] = min(1.0, st["pt"] + step) if st["target"] else max(0.0, st["pt"] - step)
                 draw()
                 if st["pt"] == float(st["target"]):
@@ -6806,6 +6806,10 @@ class MiniButton(threading.Thread):
                     st["anim_timer"] = False
                 return 0
             if msg == 0x0113:   # WM_TIMER (ten times a second): show / hide as the lecture changes, and turn as the window opens and closes
+                if st["anim_timer"] and time.time() - st["anim_last"] > 1.5:   # (the turn takes a fraction of a second: a timer that went quiet left the button on the X for good, found 23.11.2026)
+                    u.KillTimer(hwnd, 2)
+                    st["anim_timer"] = False
+                    st["pt"], st["sig"] = float(st["target"]), None
                 raw = bool(self.wanted())
                 if raw != st.get("raw_was"):   # (said in the black window when it changes: if the button stays when it should go, the reason is there)
                     st["raw_was"] = raw
@@ -6829,7 +6833,7 @@ class MiniButton(threading.Thread):
                 if st["shown"] and target != st["target"]:   # the window opened or closed (from the button, Ctrl+Alt+Q, or its own button): the logo turns to an X, or back
                     st["target"] = target
                     if _motion_allowed():
-                        st["a_t"] = time.time()
+                        st["a_t"] = st["anim_last"] = time.time()
                         if not st["anim_timer"]:
                             u.SetTimer(hwnd, 2, 16, None)
                             st["anim_timer"] = True
@@ -6850,6 +6854,29 @@ class MiniButton(threading.Thread):
                 toast_tick()
                 return 0
             return u.DefWindowProcW(hwnd, msg, wp, lp)
+
+        def wndproc(hwnd, msg, wp, lp):
+            """The button's window procedure. An exception inside a ctypes callback is printed and forgotten, and the picture stayed as it was (the X
+            for good, 23.11.2026): it is written to the error log once, and the turn is reset so the next tick draws the button again."""
+            try:
+                return _wndproc(hwnd, msg, wp, lp)
+            except Exception:
+                if not st["err_logged"]:
+                    st["err_logged"] = True
+                    try:
+                        save_error("floating button")
+                    except Exception:
+                        pass
+                try:
+                    if msg == 0x0113:
+                        if wp == 2:
+                            u.KillTimer(hwnd, 2)
+                        st["anim_timer"] = False
+                        st["pt"], st["sig"] = float(st["target"]), None
+                        return 0
+                    return u.DefWindowProcW(hwnd, msg, wp, lp)
+                except Exception:
+                    return 0
 
         def show_toast(text, glyph, secs, kind):
             """A small card above the place of the floating button (below it when the button is at the top of the screen)."""
