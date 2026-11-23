@@ -24,3 +24,6 @@ System/loading_stuck.txt
 # Impeccable: the shared design files (config.json, design.json) are committed; the private ones are not
 .impeccable/config.local.json
 .impeccable/hook.cache.json
+
+# results of tools/lag-test (a real lecture is played and heard there)
+tools/lag-test/results/

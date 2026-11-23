@@ -196,6 +196,11 @@ MIN_CHUNK_S = 10     # earliest point to cut a chunk (seconds)
 MAX_CHUNK_S = 18     # latest point to cut a chunk
 GPU_MIN_CHUNK_S = 15 # on a GPU: longer chunks = more context = better accuracy
 GPU_MAX_CHUNK_S = 26 #   (Whisper looks at up to 30 s at once)
+WHISPER_WINDOW_S = 30  # Whisper always works on a window of this length: a longer piece is two windows (twice the work), a shorter one still pays for the whole window
+# On the CPU, a Hebrew lecture with the quick draft: longer pieces. Measured 22.11.2026 on an i5-1235U (tools/bench_chunks.py, the same 3 minutes,
+# the same words written): 10-18 s pieces cost 0.82 seconds of work for each second of lecture, 20-28 s pieces 0.50. (LT_CPU_MIN_CHUNK_S / LT_CPU_MAX_CHUNK_S: for tests.)
+CPU_MIN_CHUNK_S = 20
+CPU_MAX_CHUNK_S = 28
 SILENCE_RMS = 0.0002 # chunks quieter than this are skipped (was 0.0015: at 6% playback volume speech is 0.0006 and a whole lecture was skipped, 15.11.2026)
 QUIET_RMS = 0.003    # sound that reaches us but is this quiet (and not silent): the playback volume is probably very low
 QUIET_WARN_S = 45    # ... for this long: say so (once every 3 minutes)
@@ -203,6 +208,14 @@ FAST_ON_LAG_S = 10   # on a GPU, falling this far behind -> fast mode (1 option 
 FAST_OFF_LAG_S = 4   # caught up for 3 pieces in a row -> back to full accuracy
 FAST_MAX_SWITCHES = 2  # after this many slow-downs, stay in fast mode for the rest of the lecture
 LAG_WARN_S = 30      # warn when the transcript is this far behind (at most every 2 minutes)
+LAG_SHOW_S = 10      # the floating window says "running late" over this many seconds (on a GPU)
+LAG_SHOW_MARGIN_S = 5   # on a CPU: over the longest piece plus this. Whisper writes a piece only when it has heard all of it and worked on it, so a lag of
+                        # about half a piece is the normal wait on a CPU that keeps up; it is "late" only when it needs more than a whole piece (decided 22.11.2026)
+
+
+def lag_show_s(on_gpu, longest_piece_s):
+    """Over how many seconds of lag the windows say "running late"."""
+    return LAG_SHOW_S if on_gpu else longest_piece_s + LAG_SHOW_MARGIN_S
 DRAFTS = os.environ.get("LT_DRAFTS", "1") != "0"  # GPU only: quick draft line while a piece is still being heard
 DRAFT_EVERY_S = 3    # refresh the draft this often
 DRAFT_MIN_S = 2      # ...once at least this much new audio is waiting
@@ -674,6 +687,27 @@ def media_status_loop():
         MEDIA_STATUS = status if kind == "session" else None
         if kind == "error":
             return
+
+
+def chunk_limits(on_gpu, lang, yt=False, quick_draft=True, env=None):
+    """(shortest, longest) piece of sound for a live lecture, in seconds. On a GPU: as always. On the CPU, a Hebrew lecture with the quick draft
+    (it covers what was said since the last piece): the long pieces. Anything else - English, a YouTube video, no quick draft on this computer -
+    keeps the short ones, because a longer piece means a longer stretch with no text for a question (English and YouTube have no quick draft).
+    A piece never passes WHISPER_WINDOW_S, and the shortest is always shorter than the longest."""
+    if on_gpu:
+        return GPU_MIN_CHUNK_S, GPU_MAX_CHUNK_S
+    if lang != "he" or yt or not quick_draft:
+        return MIN_CHUNK_S, MAX_CHUNK_S
+    e = os.environ if env is None else env
+
+    def num(name, default):
+        try:
+            return float(e.get(name) or default)
+        except ValueError:
+            return default
+    hi = min(max(num("LT_CPU_MAX_CHUNK_S", CPU_MAX_CHUNK_S), 1.0), WHISPER_WINDOW_S)
+    lo = min(max(num("LT_CPU_MIN_CHUNK_S", CPU_MIN_CHUNK_S), 0.5), hi - 0.5)
+    return lo, hi
 
 
 def find_cut(buf, sr, min_s=MIN_CHUNK_S, max_s=MAX_CHUNK_S):
@@ -3688,9 +3722,13 @@ class LiveNow(threading.Thread):
         self.lines = collections.deque()  # (time, text)
         self.shot = None                   # (time, relative path)
         self.draft = ""
-        self.pending_s = 0.0               # sound heard but not transcribed yet (seconds)
+        self.pending_s = 0.0               # sound heard but not transcribed yet (seconds), without what still waits in the queue
+        self.block_s = 0.0                 # the length of one buffer of sound (seconds), to count the queue
+        self.queue_len = None              # how many buffers wait in the queue (the live loop sets it)
         self.all = []                      # everything since the start (the page shows it)
         self.lag, self.fast, self.ended = 0.0, False, False
+        self.load = 0.0                    # seconds of work Whisper needed for each second of the last piece (below 1 keeps up)
+        self.lag_show = LAG_SHOW_S         # over this lag the windows say "running late" (the live loop sets it: lag_show_s)
         self.info = {}
         self.dirty = True
         self.stop_evt = threading.Event()
@@ -3715,13 +3753,29 @@ class LiveNow(threading.Thread):
 
     quick_on = False   # the quick draft (Zipformer, no GPU) is running in this lecture
 
+    def queued_s(self):
+        """Seconds of sound that still wait in the queue: heard, but the loop has not read them (it does not while Whisper works on a piece,
+        so on a CPU that is some 10 seconds), so they are neither in the transcript nor in the draft."""
+        try:
+            return int(self.queue_len()) * self.block_s if self.queue_len else 0.0
+        except Exception:
+            return 0.0
+
+    def waiting_s(self):
+        """Seconds heard and not in the transcript yet: the piece being collected or transcribed, and the queue."""
+        return self.pending_s + self.queued_s()
+
     def missing_note(self):
-        """Without a draft (no GPU), the last seconds - heard, not transcribed yet: the transcript is written in pieces of
-        10-18 s - are not in what a question gets. The answer comes at once (transcribing them would make the student
-        wait 8-20 s on a CPU, measured 5.11.2026), and Gemini is told they may be missing. "" when nothing is missing."""
-        if self.draft or self.quick_on or getattr(self, "yt", False) or self.pending_s < 3:
-            return ""   # (with the quick draft running, no draft means nothing was said)
-        return (f"(שימו לב: מה שנאמר ב-{int(self.pending_s)} השניות האחרונות עוד לא תומלל, "
+        """The last seconds - heard, not transcribed yet: the transcript is written in pieces of 10-28 s - are not in what a question gets
+        unless a draft covers them. The answer comes at once (transcribing them would make the student wait 8-20 s on a CPU, measured
+        5.11.2026), and Gemini is told what may be missing. With a draft (the quick draft, or a GPU's) only the queue is missing, because the
+        draft holds what the loop has read; with none, the whole piece too. "" when less than 3 seconds."""
+        if getattr(self, "yt", False):
+            return ""
+        missing = self.queued_s() if (self.draft or self.quick_on) else self.waiting_s()
+        if missing < 3:
+            return ""
+        return (f"(שימו לב: מה שנאמר ב-{int(missing)} השניות האחרונות עוד לא תומלל, "
                 "אז יכול להיות שהמשפט האחרון חסר כאן. אם השאלה עליו, לומר את זה בקצרה.)\n")
 
     def text(self):
@@ -3741,8 +3795,8 @@ class LiveNow(threading.Thread):
             (["(לא נאמר כלום בחמש הדקות האחרונות)"] if self.lines else ["(עוד לא נאמר כלום)"])
         if self.draft:
             out += ["", f"ממש עכשיו (טיוטה, עוד לא סופי): {self.draft}"]
-        elif self.pending_s >= 3:
-            out += ["", f"ממש עכשיו: מה שנאמר ב-{int(self.pending_s)} השניות האחרונות עוד בתמלול."]
+        elif self.waiting_s() >= 3:
+            out += ["", f"ממש עכשיו: מה שנאמר ב-{int(self.waiting_s())} השניות האחרונות עוד בתמלול."]
         return "\n".join(out)
 
     def write(self):
@@ -9673,7 +9727,7 @@ def live_state(since):
     if getattr(live, "yt", False):
         pos, playing, alive = live.clock.now()
         with live.lock:
-            out = {"yt": True, "rev": live.rev, "pending": round(live.pending_s, 1), "lag": round(live.lag, 1),
+            out = {"yt": True, "rev": live.rev, "pending": round(live.pending_s, 1), "lag": round(live.lag, 1), "lag_show": live.lag_show,
                    "info": dict(live.info), "ended": live.ended, "pos": round(pos, 1), "playing": playing,
                    "covered": [[round(a, 1), round(b, 1)] for a, b in live_cover(live)]}
             if since != live.rev:
@@ -9683,7 +9737,7 @@ def live_state(since):
     with live.lock:
         items = live.all[since:]
         out = {"total": len(live.all), "since": since, "draft": live.draft, "pending": round(live.pending_s, 1),
-               "lag": round(live.lag, 1), "fast": live.fast, "shot": live.shot[1] if live.shot else None,
+               "lag": round(live.lag, 1), "lag_show": live.lag_show, "load": round(live.load, 2), "fast": live.fast, "shot": live.shot[1] if live.shot else None,
                "info": dict(live.info), "ended": live.ended}
     out["items"] = [{"t": t, "c": datetime.datetime.fromtimestamp(t).strftime("%H:%M:%S"),
                      **({"img": x[len("[צילום מסך: "):-1]} if x.startswith("[צילום מסך: ") else {"x": x})}
@@ -11023,7 +11077,8 @@ def run_live(sess, lang, course=""):
         log("ההרצאה בוטלה לפני שהתחילה - לא נשמר כלום.")
         return
     on_gpu = model_desc.endswith("GPU")
-    min_s, max_s = (GPU_MIN_CHUNK_S, GPU_MAX_CHUNK_S) if on_gpu else (MIN_CHUNK_S, MAX_CHUNK_S)
+    yt = getattr(sess, "yt", None)   # a YouTube video in Hevanti's player (else: a live lecture)
+    min_s, max_s = chunk_limits(on_gpu, LANG, bool(yt), QUICK_DRAFT and DRAFTS)
     q = AudioQueue()   # (a ceiling on the sound that waits: see AudioQueue)
     audio = AudioInput(q)
     told = False
@@ -11045,7 +11100,6 @@ def run_live(sess, lang, course=""):
     speakers_id = speakers.current() if speakers.ok else None
 
     start = datetime.datetime.now()
-    yt = getattr(sess, "yt", None)   # a YouTube video in Hevanti's player (else: a live lecture)
     ldir, old = None, ([], [], Coverage(), 0.0, "", Coverage())
     if yt:
         ldir = find_yt_lecture(course, yt["id"])  # started before: continue in the same lecture
@@ -11215,6 +11269,15 @@ def run_live(sess, lang, course=""):
     if QUICK_DRAFT and DRAFTS and not on_gpu and not yt and LANG == "he":
         start_quick_draft(quick)
 
+    def piece_limits():
+        """(shortest, longest) piece now. The long pieces of the CPU are only for as long as the quick draft is there to cover what was said since the
+        last piece: while it is still loading (or it failed) the short ones are used, so a question is not left with 40 seconds missing."""
+        if not on_gpu and quick[0] is None and (min_s, max_s) != (MIN_CHUNK_S, MAX_CHUNK_S):
+            return MIN_CHUNK_S, MAX_CHUNK_S
+        return min_s, max_s
+
+    now_file.queue_len = q.qsize   # (what is still in the queue is heard too: waiting_s counts it)
+
     def quick_draft(a16=None, restart=False):
         """Feed the quick draft (the new sound, or everything waiting after a piece was taken) and show what it has."""
         qd = quick[0]
@@ -11317,8 +11380,10 @@ def run_live(sess, lang, course=""):
         text = transcribe(model, 1 if state["fast"] else beam, resample(chunk, chunk_sr), state["prev_text"])
         busy = (time.time() - t1) / (len(chunk) / chunk_sr)  # share of the time the real text needs
         state["load"] = busy if state["load"] == 0 else 0.5 * state["load"] + 0.5 * busy
+        now_file.load = busy   # (/api/live: seconds of work for each second of this piece - tools/lag-test reads it)
         lag = time.time() - (heard_until or chunk_t + len(chunk) / chunk_sr)
         state["lag"] = now_file.lag = lag
+        now_file.lag_show = lag_show_s(on_gpu, piece_limits()[1])
         track_lag(lag)
         now_file.fast = state["fast"]
         now_file.set_draft("")
@@ -11395,7 +11460,8 @@ def run_live(sess, lang, course=""):
                 break
             inflight[:] = [(buf[pos:], buf_t + pos / buf_sr, buf_sr)]
             left = len(buf) - pos
-            c = find_cut(buf[pos:], buf_sr, min_s, max_s) if left > max_s * buf_sr else left
+            lo_s, hi_s = piece_limits()
+            c = find_cut(buf[pos:], buf_sr, lo_s, hi_s) if left > hi_s * buf_sr else left
             handle_chunk(buf[pos:pos + c], buf_t + pos / buf_sr, buf_sr)
             pos += c
         inflight.clear()
@@ -11526,9 +11592,10 @@ def run_live(sess, lang, course=""):
             blocks.append(a)
             n += len(a)
             now_file.pending_s = n / sr
+            now_file.block_s = len(a) / sr
             if quick[0] is not None:
                 quick_draft(resample(a, sr))
-            if n < max_s * sr:
+            if n < piece_limits()[1] * sr:
                 if drafts_on and n >= DRAFT_MIN_S * sr and q.qsize() < 8 and draft_fits():
                     state["draft_at"] = time.time()
                     draft(np.concatenate(blocks), sr)
@@ -11556,7 +11623,7 @@ def run_live(sess, lang, course=""):
                 inflight.clear()
                 last_loop = time.monotonic()
                 continue
-            cut = find_cut(buf, sr, min_s, max_s)
+            cut = find_cut(buf, sr, *piece_limits())
             chunk, rest = buf[:cut], buf[cut:]
             chunk_t = t0
             blocks, n, t0 = [rest], len(rest), t0 + cut / sr
