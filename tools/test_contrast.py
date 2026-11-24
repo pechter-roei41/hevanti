@@ -96,6 +96,18 @@ for what, lf, lb, df, db, need in PAIRS:
     check(f"contrast, light: {what}", r_light >= need, f"{r_light:.2f}")
     check(f"contrast, dark: {what}", r_dark >= need, f"{r_dark:.2f}")
 
+# ---- the waiting lines of an answer (ask.js): Board Green Line, a graphic part held to 3:1 on the card they sit on (paper, or a sheet) in both themes.
+# The light that crosses them is Board Green Soft by day and Night Green Shine at night (lighter than the line, so it reads as a shine).
+_ask = open(os.path.join(C.PROG, "ask.js"), encoding="utf-8").read().upper()
+check("ask.js: the waiting lines use the tokens of DESIGN.md (line and shine, light and night)",
+      all(D[t] in _ask for t in ("board-green-line", "board-green-soft", "night-green-line", "night-green-shine")))
+for what, a, bg, need in (("by day on paper", "board-green-line", "paper", GRAPHIC), ("by day on a sheet", "board-green-line", "sheet", GRAPHIC),
+                          ("at night on night paper", "night-green-line", "night-paper", GRAPHIC), ("at night on a night sheet", "night-green-line", "night-sheet", GRAPHIC)):
+    r = C.ratio(D[a], D[bg])
+    print(f"   waiting lines {what}: {r:.2f}:1")
+    check(f"waiting lines {what} keep 3:1 against the card", r >= need, f"{r:.2f}")
+check("the shine is lighter than the line, by day and by night", C.luminance(D["board-green-soft"]) > C.luminance(D["board-green-line"]) and C.luminance(D["night-green-shine"]) > C.luminance(D["night-green-line"]))
+
 # ---- one colour, one meaning: the mark-line is not the now-line (the line being played, or opened at a moment) ----
 check("mark-line is a colour of its own: not the now-line, in DESIGN.md and in the page (light and dark)",
       D["mark-line"] != D["now-line"] and APP_LIGHT["--mark-line"] != APP_LIGHT["--now"] and APP_DARK["--mark-line"] != APP_DARK["--now"],
