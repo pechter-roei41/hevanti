@@ -265,7 +265,7 @@ with sync_playwright() as p:
     pg.context.close()
     # ---- waiting for an answer: three quiet lines, not "חושב... N שניות" (the floating window; ask.js is the same code in the app) ----
     WAITING = """() => { const a = document.querySelector('.askp .qa .a'); if (!a) return null; const ls = [...a.querySelectorAll('.sk')];
-      const st = ls.map(l => getComputedStyle(l)), probe = document.createElement('i'); probe.style.background = 'var(--accent-soft)'; document.body.appendChild(probe);
+      const st = ls.map(l => getComputedStyle(l)), probe = document.createElement('i'); probe.style.background = 'var(--sk)'; document.querySelector('.askp').appendChild(probe);
       const soft = getComputedStyle(probe).backgroundColor; probe.remove();
       return {wait: a.classList.contains('wait'), n: ls.length, hidden: ls.every(l => l.getAttribute('aria-hidden') === 'true'), text: a.textContent.trim(),
               widths: ls.map(l => Math.round(100 * l.offsetWidth / (a.clientWidth - 26))), h: ls.map(l => l.offsetHeight), anim: st.map(x => x.animationName),
@@ -331,7 +331,7 @@ with sync_playwright() as p:
     for why, kw in (("system motion off", {"motion": "reduce"}), ("app motion off (a-still)", {"still": True})):
         pg = waiting_page(**kw)
         w = pg.evaluate(WAITING)
-        check(f"waiting, {why}: the three lines are still there, not animated, plain soft green", w and w["n"] == 3 and set(w["anim"]) == {"none"} and w["bg"] == w["soft"] and min(w["h"]) > 0, w)
+        check(f"waiting, {why}: the three lines are still there, not animated, plain line green", w and w["n"] == 3 and set(w["anim"]) == {"none"} and w["bg"] == w["soft"] and min(w["h"]) > 0, w)
         close_waiting(pg)
     # a narrow screen: the card does not push the page sideways
     pg = waiting_page()

@@ -10,7 +10,7 @@ colors:
   hairline: "#DDD7C4"
   board-green: "#1B6E4B"
   board-green-soft: "#DCEBDF"
-  board-green-shine: "#EEF5EF"
+  board-green-line: "#74907C"
   highlighter: "#F7D44C"
   recording-red: "#C2412D"
   caution-paper: "#FBF0DA"
@@ -25,7 +25,8 @@ colors:
   night-hairline: "#3E3A2E"
   night-green: "#5BC79A"
   night-green-soft: "#25382B"
-  night-green-shine: "#31493A"
+  night-green-line: "#587562"
+  night-green-shine: "#7F9E8B"
   night-highlighter: "#E8C547"
   night-recording: "#FF7A63"
   night-mark-line: "#594E25"
@@ -122,8 +123,8 @@ A cream-and-board-green palette with a highlighter yellow. Neutrals lean warm; t
 
 ### Primary
 - **Board Green** (#1B6E4B, night #5BC79A): the one action per screen, selected states, links. (The logo bubble is the day colour in both themes; it is not this token.) Text on it is white by day and a near-black green (#0E1A14) at night.
-- **Board Green Soft** (#DCEBDF, night #25382B): icon plates, selected tabs, the quiet banner behind a suggestion (for example "install the NVIDIA libraries"), and the three waiting lines of an answer.
-- **Board Green Shine** (#EEF5EF, night #31493A): only the soft light that crosses the waiting lines of an answer; nothing else uses it.
+- **Board Green Soft** (#DCEBDF, night #25382B): icon plates, selected tabs, the quiet banner behind a suggestion (for example "install the NVIDIA libraries").
+- **Board Green Line** (#74907C, night #587562): only the three waiting lines of an answer, a mid green-grey that is 3.1:1 on paper and 3.5:1 on a sheet (night 3.4:1 and 3.1:1). The light that crosses them is Board Green Soft by day and Night Green Shine (#7F9E8B) at night.
 
 ### Secondary
 - **Highlighter** (#F7D44C, night #E8C547): the ★ mark, the highlighter band over a transcript line the student marked (the **Mark Line** token, #F7DD7B, night #594E25: the highlighter at 70% over paper, and at 30% over the night paper; text on it stays ink), and nothing else. Never a button, never decoration.
@@ -241,7 +242,7 @@ A small window in the middle of the screen when Hevanti opens (the name and the 
 Motion is rare, short and never over the lecture. Four small things move, all with the easing `cubic-bezier(0.2, 0.8, 0.2, 1)` (the same as the floating window opening), and nothing else:
 - **A mark made now:** the Mark Line band is drawn over the line said just before the mark, from the right (as Hebrew is read), in 0.6 s, and the ★ pops once (scale 0.4 to 1.3 to 1). Only for a mark that arrives while the lecture runs; a saved lecture opens with the finished band. Yellow is still only the mark.
 - **The selected shape slides:** the "where am I" pill of the top tabs and the Green Soft choice of a segmented group (`glideGroup`) glide to the new place in 0.28 s, instead of jumping. The glide only follows the `aria-current`, `aria-selected` or `aria-pressed` the code already sets; a group that is hidden cannot be measured and keeps its own selected look.
-- **Waiting for an answer:** from the question until the first text (or an error, or a stop) the answer card shows three rounded lines in Board Green Soft (92%, 78% and 55% wide, 9 px high; no words, so no counter and no "I give up in 25 seconds"), with a soft Green Shine light crossing them in a loop of 1.6 s, linear. It is the second loop in the app: it is short (up to about 25 seconds, up to 90 for a whole-lecture task), quiet, moves no text and is gone with the first text. The lines are `aria-hidden`; the status line says "חושב". With motion off the lines stay, still. The lines are decorative and well under 3:1 on the card (1.1 to 1.4:1, measured in `tools/test_contrast.py`); the state is carried by the status line for a screen reader and by the disabled/stop button for the eye.
+- **Waiting for an answer:** from the question until the first text (or an error, or a stop) the answer card shows three rounded lines in Board Green Line (92%, 78% and 55% wide, 9 px high; no words, so no counter and no "I give up in 25 seconds"), with a soft light (Board Green Soft; Night Green Shine at night) crossing them in a loop of 1.6 s, linear. It is the second loop in the app: it is short (up to about 25 seconds, up to 90 for a whole-lecture task), quiet, moves no text and is gone with the first text. The lines are `aria-hidden` and keep 3:1 against the card in both themes; the status line says "חושב" for a screen reader. With motion off the lines stay, still.
 - **The check of "saved":** the check in the Green Soft chip of "ההרצאה נשמרה בהצלחה" is drawn in 0.4 s after the chip pops, a plain check, not the logo.
 
 ### Named Rules

@@ -73,9 +73,9 @@
 .askp .qa{display:grid;gap:6px;background:none;border:0;padding:0}
 .askp .qa .q{justify-self:start;max-width:88%;margin:0;padding:7px 13px;border-radius:16px;background:var(--accent-soft);color:var(--fg);font-weight:600;font-size:calc(14.5px * var(--tx, 1));line-height:1.5}
 .askp .qa .a{justify-self:end;max-width:96%;padding:8px 13px;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
-.askp{--sk:#DCEBDF;--sk-shine:#EEF5EF}   /* the waiting lines: Board Green Soft and its shine (DESIGN.md: green-shine) */
-html[data-theme="dark"] .askp{--sk:#25382B;--sk-shine:#31493A}
-@media (prefers-color-scheme: dark){html:not([data-theme="light"]) .askp{--sk:#25382B;--sk-shine:#31493A}}
+.askp{--sk:#74907C;--sk-shine:#DCEBDF}   /* the waiting lines: Board Green Line and the light that crosses them (DESIGN.md) */
+html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
+@media (prefers-color-scheme: dark){html:not([data-theme="light"]) .askp{--sk:#587562;--sk-shine:#7F9E8B}}
 .askp .qa .a.wait{display:grid;gap:9px;padding:14px 13px;width:min(260px,96%);box-sizing:border-box}
 .askp .sk{display:block;height:9px;border-radius:999px;background:var(--sk)}
 .askp .sk:nth-child(1){width:92%}
