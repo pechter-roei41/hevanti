@@ -96,6 +96,20 @@ for what, lf, lb, df, db, need in PAIRS:
     check(f"contrast, light: {what}", r_light >= need, f"{r_light:.2f}")
     check(f"contrast, dark: {what}", r_dark >= need, f"{r_dark:.2f}")
 
+# ---- the waiting lines of an answer (ask.js): decorative, aria-hidden, so NOT held to 3:1 (WCAG 1.4.11 does not cover decoration; the state is
+# said by the status line "חושב"). Measured on the card they sit on (paper by day; the answer bubble is the page colour) and on a sheet. Known
+# exception, decided 24.11.2026: Board Green Soft on paper is about 1.1:1. The test only keeps the colours the tokens say, and that they stay
+# visible at all (the shine is lighter than the line by day, and not darker at night). A darker line would need about #A9B8AE (3:1): rejected as heavy.
+_ask = open(os.path.join(C.PROG, "ask.js"), encoding="utf-8").read()
+check("ask.js: the waiting lines use the tokens of DESIGN.md (soft green and green shine, light and night)",
+      all(D[t] in _ask.upper() for t in ("board-green-soft", "board-green-shine", "night-green-soft", "night-green-shine")))
+for what, a, bg in (("by day on paper", "board-green-soft", "paper"), ("by day on a sheet", "board-green-soft", "sheet"),
+                    ("at night on night paper", "night-green-soft", "night-paper"), ("at night on a night sheet", "night-green-soft", "night-sheet")):
+    r = C.ratio(D[a], D[bg])
+    print(f"   waiting lines {what}: {r:.2f}:1 (decorative: not held to 3:1)")
+    check(f"waiting lines {what}: the lines can be told from the card at all (above 1.05:1)", r > 1.05, f"{r:.2f}")
+check("the shine is a little lighter than the line by day and by night", C.luminance(D["board-green-shine"]) > C.luminance(D["board-green-soft"]) and C.luminance(D["night-green-shine"]) > C.luminance(D["night-green-soft"]))
+
 # ---- one colour, one meaning: the mark-line is not the now-line (the line being played, or opened at a moment) ----
 check("mark-line is a colour of its own: not the now-line, in DESIGN.md and in the page (light and dark)",
       D["mark-line"] != D["now-line"] and APP_LIGHT["--mark-line"] != APP_LIGHT["--now"] and APP_DARK["--mark-line"] != APP_DARK["--now"],

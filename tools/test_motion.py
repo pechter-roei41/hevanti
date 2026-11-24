@@ -263,6 +263,83 @@ with sync_playwright() as p:
     pg.wait_for_timeout(2500)
     check("small window: with the switch off again, the class is gone", not pg.evaluate("document.documentElement.classList.contains('a-still')"))
     pg.context.close()
+    # ---- waiting for an answer: three quiet lines, not "חושב... N שניות" (the floating window; ask.js is the same code in the app) ----
+    WAITING = """() => { const a = document.querySelector('.askp .qa .a'); if (!a) return null; const ls = [...a.querySelectorAll('.sk')];
+      const st = ls.map(l => getComputedStyle(l)), probe = document.createElement('i'); probe.style.background = 'var(--accent-soft)'; document.body.appendChild(probe);
+      const soft = getComputedStyle(probe).backgroundColor; probe.remove();
+      return {wait: a.classList.contains('wait'), n: ls.length, hidden: ls.every(l => l.getAttribute('aria-hidden') === 'true'), text: a.textContent.trim(),
+              widths: ls.map(l => Math.round(100 * l.offsetWidth / (a.clientWidth - 26))), h: ls.map(l => l.offsetHeight), anim: st.map(x => x.animationName),
+              dur: st[0] ? st[0].animationDuration : '', ease: st[0] ? st[0].animationTimingFunction : '', bg: st[0] ? st[0].backgroundColor : '', soft: soft,
+              img: st[0] ? st[0].backgroundImage : '', live: [...document.querySelectorAll('.askp [role=status]')].map(x => x.textContent).join('|'),
+              body: document.body.textContent.indexOf('שניות') >= 0 && document.querySelector('.askp .qa') && document.querySelector('.askp .qa').textContent.indexOf('שניות') >= 0}; }"""
+    held = []
+
+    def hold_ask(route):
+        held.append(route)
+
+    def waiting_page(motion="no-preference", scheme="light", still=False):
+        pg = page(motion=motion, scheme=scheme, path="/mini")
+        if still:
+            pg.evaluate("document.documentElement.classList.add('a-still')")
+        del held[:]
+        pg.route("**/api/ask", hold_ask)
+        pg.evaluate("void box.askHere('מה זה מומנט כיפוף?')")
+        pg.wait_for_timeout(700)
+        return pg
+
+    def close_waiting(pg):
+        for r in held:
+            try:
+                r.abort()
+            except Exception:
+                pass
+        del held[:]
+        pg.context.close()
+
+    for scheme in ("light", "dark"):
+        pg = waiting_page(scheme=scheme)
+        w = pg.evaluate(WAITING)
+        check(f"waiting, {scheme}: three aria-hidden lines in the answer card, and no words or seconds in it",
+              w and w["wait"] and w["n"] == 3 and w["hidden"] and w["text"] == "" and not w["body"], w)
+        check(f"waiting, {scheme}: the lines are about 92%, 78% and 55% wide, different, and thin", w and [abs(a - b) <= 3 for a, b in zip(w["widths"], (92, 78, 55))] == [True] * 3 and max(w["h"]) <= 10, w)
+        check(f"waiting, {scheme}: they shimmer in a 1.6 s linear loop", w and set(w["anim"]) == {"hv-skshine"} and w["dur"] == "1.6s" and w["ease"] == "linear", w)
+        check(f"waiting, {scheme}: the screen reader's status line says 'חושב' (and only that)", w and w["live"].strip("|") == "חושב", w and w["live"])
+        pg.wait_for_timeout(2100)
+        w2 = pg.evaluate(WAITING)
+        check(f"waiting, {scheme}: two seconds later the card is the same (no counter)", w2 and w2["text"] == "" and not w2["body"] and w2["n"] == 3, w2)
+        # the first text comes
+        held[0].fulfill(status=200, content_type="text/plain; charset=utf-8", body="המרצה הסביר שמומנט כיפוף הוא כוח כפול מרחק.")
+        pg.wait_for_timeout(700)
+        d = pg.evaluate("() => { const a = document.querySelector('.askp .qa .a'); return {sk: a.querySelectorAll('.sk').length, wait: a.classList.contains('wait'), text: a.textContent}; }")
+        check(f"waiting, {scheme}: with the first text the lines are gone and the answer is there", d["sk"] == 0 and not d["wait"] and "מומנט כיפוף" in d["text"], d)
+        check(f"waiting, {scheme}: no script errors", pg.errs == [], pg.errs)
+        pg.context.close()
+    # an error, and a stop (the stop button is the same button while it waits)
+    pg = waiting_page()
+    held[0].fulfill(status=500, content_type="application/json", body=json.dumps({"error": "לא הצלחתי לקבל תשובה."}))
+    pg.wait_for_timeout(700)
+    d = pg.evaluate("() => { const a = document.querySelector('.askp .qa .a'); return {sk: a.querySelectorAll('.sk').length, wait: a.classList.contains('wait'), text: a.textContent, err: a.parentElement.classList.contains('err')}; }")
+    check("waiting: an error replaces the lines with the message", d["sk"] == 0 and not d["wait"] and d["err"] and "לא הצלחתי" in d["text"], d)
+    pg.context.close()
+    pg = waiting_page()
+    pg.click(".askp button.here")
+    pg.wait_for_timeout(500)
+    d = pg.evaluate("() => { const a = document.querySelector('.askp .qa .a'); return {sk: a.querySelectorAll('.sk').length, wait: a.classList.contains('wait'), text: a.textContent}; }")
+    check("waiting: a stop replaces the lines with '(נעצר)'", d["sk"] == 0 and not d["wait"] and "נעצר" in d["text"], d)
+    close_waiting(pg)
+    # motion off: the lines stay, still
+    for why, kw in (("system motion off", {"motion": "reduce"}), ("app motion off (a-still)", {"still": True})):
+        pg = waiting_page(**kw)
+        w = pg.evaluate(WAITING)
+        check(f"waiting, {why}: the three lines are still there, not animated, plain soft green", w and w["n"] == 3 and set(w["anim"]) == {"none"} and w["bg"] == w["soft"] and min(w["h"]) > 0, w)
+        close_waiting(pg)
+    # a narrow screen: the card does not push the page sideways
+    pg = waiting_page()
+    pg.set_viewport_size({"width": 320, "height": 700})
+    pg.wait_for_timeout(200)
+    check("waiting, 320 px: nothing scrolls sideways", pg.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth"))
+    close_waiting(pg)
+
     b.close()
 
 srv.stop() if hasattr(srv, "stop") else None

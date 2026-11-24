@@ -73,6 +73,16 @@
 .askp .qa{display:grid;gap:6px;background:none;border:0;padding:0}
 .askp .qa .q{justify-self:start;max-width:88%;margin:0;padding:7px 13px;border-radius:16px;background:var(--accent-soft);color:var(--fg);font-weight:600;font-size:calc(14.5px * var(--tx, 1));line-height:1.5}
 .askp .qa .a{justify-self:end;max-width:96%;padding:8px 13px;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
+.askp{--sk:#DCEBDF;--sk-shine:#EEF5EF}   /* the waiting lines: Board Green Soft and its shine (DESIGN.md: green-shine) */
+html[data-theme="dark"] .askp{--sk:#25382B;--sk-shine:#31493A}
+@media (prefers-color-scheme: dark){html:not([data-theme="light"]) .askp{--sk:#25382B;--sk-shine:#31493A}}
+.askp .qa .a.wait{display:grid;gap:9px;padding:14px 13px;width:min(260px,96%);box-sizing:border-box}
+.askp .sk{display:block;height:9px;border-radius:999px;background:var(--sk)}
+.askp .sk:nth-child(1){width:92%}
+.askp .sk:nth-child(2){width:78%}
+.askp .sk:nth-child(3){width:55%}
+@media (prefers-reduced-motion: no-preference){html:not(.a-still) .askp .sk{background:linear-gradient(90deg,var(--sk) 30%,var(--sk-shine) 50%,var(--sk) 70%) 100% 0/300% 100%;animation:hv-skshine 1.6s linear infinite}}   /* the one loop besides the recording dot: short, quiet, gone with the first text */
+@keyframes hv-skshine{from{background-position:100% 0}to{background-position:0 0}}
 .askp .qa.err .a{border-color:var(--rec)}
 .askp .src{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:none;padding:0 7px;margin-inline:2px;border-radius:999px;font-family:var(--f-mono,Consolas,"Cascadia Mono",ui-monospace,monospace);font-size:.78em;line-height:1.6;color:var(--muted);direction:ltr;unicode-bidi:isolate;white-space:nowrap;vertical-align:baseline}
 .askp .src::before{content:"";width:.95em;height:.95em;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center/contain no-repeat;flex:none}   /* a drawn clock, not an emoji */
@@ -131,7 +141,7 @@
   }
   // an answer as a few simple blocks: "# heading", "- item", **bold** - always as text (never HTML)
   function renderAnswer(doc, box, text, src) {
-    box.replaceChildren();
+    box.replaceChildren(); box.classList.remove("wait");   // (the waiting lines go with the first text)
     // the AI sometimes puts several times in one bracket ("[08:48:55, 08:51:07]" or a range "[08:48:55-08:51:07]"): each one becomes its own chip
     text = String(text).replace(/\[(\d{1,2}:\d{2}(?::\d{2})?(?:\s*(?:[,;،]|[-–—]|עד|ו)\s*\d{1,2}:\d{2}(?::\d{2})?)+)\]/g,
       (_, inner) => inner.match(/\d{1,2}:\d{2}(?::\d{2})?/g).map(t => "[" + t + "]").join(" "));
@@ -341,7 +351,9 @@
       catch (e) { context = q; }
       // the sources in the answer: clickable only where the page can open the transcript, and only for times that were sent
       const known = timesIn(context), src = {go: opts.onSource || null, known: known.size ? known : null};
-      const qa = mk("div", "qa"), ae = mk("div", "a", "חושב..."), qe = mk("p", "q", shown); qe.dir = "auto"; qa.append(qe, ae);   // dir=auto: a question in English keeps its "?" at the end
+      const qa = mk("div", "qa"), ae = mk("div", "a wait"), qe = mk("p", "q", shown); qe.dir = "auto"; qa.append(qe, ae);   // dir=auto: a question in English keeps its "?" at the end
+      for (let i = 0; i < 3; i++) { const l = mk("span", "sk"); l.setAttribute("aria-hidden", "true"); ae.appendChild(l); }   // the waiting look: three quiet lines (the screen reader gets the word "חושב" from the status line below)
+      sayReady("חושב");
       conv.appendChild(qa); convbar.hidden = !!opts.compact;   // (the small window: "שיחה חדשה" is in its ⋯ menu, not under the box)
       // the small window shows the newest question at the top (read the answer from its start; scroll for the rest)
       const follow = () => { if (opts.compact) conv.scrollTop = qa.offsetTop - conv.offsetTop - 4; else conv.scrollTop = conv.scrollHeight; };
@@ -351,12 +363,6 @@
         where: val(opts.where), f: val(opts.lecture), img: val(opts.image), n: val(opts.shotName), at: val(opts.at)};
       setBusy(true); ctl = new AbortController();
       let text = "", firstChunk = false;
-      // waiting: how long it has been (the live question gives up after about 25 seconds; a whole-lecture task waits longer)
-      const t0 = Date.now(), tick = setInterval(() => {
-        if (text) return;
-        const s = Math.round((Date.now() - t0) / 1000);
-        ae.textContent = "חושב... " + s + " שניות" + (!extra.task && s >= 12 ? " (אחרי כ-25 שניות אני מוותר)" : "");
-      }, 1000);
       try {
         const r = await fetch("/api/ask", {method: "POST", headers: {"Content-Type": "application/json", "X-BZM": "1"},
           body: JSON.stringify(body), signal: ctl.signal});
@@ -377,10 +383,10 @@
       } catch (e) {
         if (e.name === "AbortError") renderAnswer(doc, ae, (text ? text + "\n" : "") + "(נעצר)", src);
         else {
-          qa.classList.add("err"); ae.textContent = e.message || "לא הצלחתי לקבל תשובה."; sayReady(ae.textContent);
+          qa.classList.add("err"); ae.classList.remove("wait"); ae.textContent = e.message || "לא הצלחתי לקבל תשובה."; sayReady(ae.textContent);
           if (e.quota) offerElsewhere(qa, q || DEF_Q, extra, e.wait);   // the free quota is used up
         }
-      } finally { clearInterval(tick); setBusy(false); ctl = null; if (opts.compact) { try { ta.focus(); } catch (e) {} } }
+      } finally { setBusy(false); ctl = null; if (opts.compact) { try { ta.focus(); } catch (e) {} } }
     }
     here.addEventListener("click", () => {
       if (busy) { if (ctl) ctl.abort(); return; }
