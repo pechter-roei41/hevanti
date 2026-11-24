@@ -291,7 +291,7 @@ with sync_playwright() as p:
     perr = []
     pg.on("pageerror", lambda e: perr.append(str(e)))
     top, foot = pg.evaluate("document.querySelector('#verTop').textContent"), pg.evaluate("document.querySelector('#ver').textContent")
-    check("beta: the header says it is a beta, with the version; the footer has only the date (design 3: no second version number)", top.startswith("בטא ") and L.VERSION in top and L.VERSION not in foot and L.VERSION_DATE in foot, (top, foot))
+    check("version: the header shows the version (no beta label); the footer has only the date (design 3: no second version number)", top == L.VERSION and "בטא" not in top and L.VERSION not in foot and L.VERSION_DATE in foot, (top, foot))
     TEST_MAIL = "support@example.test"   # (a made-up address: the real one is set in REPORT_EMAIL when Hevanti has one)
     mail_now = {"v": ""}
 

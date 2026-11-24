@@ -4,7 +4,7 @@
 
 Website and download page: https://hevanti-app.netlify.app
 
-> **Beta.** Hevanti is still being tested, and things may change or break. If something does not work, use "Report a problem" at the bottom of the home screen (it shows the details to copy; you send them in a GitHub issue or by e-mail to hevanti.support@gmail.com, Hevanti sends nothing by itself), or open an [issue](https://github.com/pechter-roei41/hevanti/issues)).
+> Hevanti is still being tested, and things may change or break. If something does not work, use "Report a problem" at the bottom of the home screen (it shows the details to copy; you send them in a GitHub issue or by e-mail to hevanti.support@gmail.com, Hevanti sends nothing by itself), or open an [issue](https://github.com/pechter-roei41/hevanti/issues)).
 
 Hevanti writes down everything said in the lecture, in Hebrew or English, while it runs on your computer. Its core is two things:
 
