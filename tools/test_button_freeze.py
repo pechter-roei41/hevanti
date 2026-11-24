@@ -26,6 +26,15 @@ check("after an exception in a timer the turn is reset and redrawn", 'st["anim_t
 check("a quiet animation timer is noticed by the ten-times-a-second timer", 'time.time() - st["anim_last"] > 1.5' in src)
 check("every tick of the animation timer is remembered", bool(re.search(r'st\["a_t"\] = st\["anim_last"\] = now', src)))
 check("starting the animation sets the same mark", bool(re.search(r'st\["a_t"\] = st\["anim_last"\] = time\.time\(\)', src)))
+# the hover halo (24.11.2026): the mouse messages, the leave message, the timer of the fade, and the window that has room for it
+check("hover: WM_MOUSEMOVE asks for WM_MOUSELEAVE (TrackMouseEvent, TME_LEAVE) and WM_MOUSELEAVE takes the halo away",
+      "msg == 0x0200 and not st[\"hover\"]" in src and "u.TrackMouseEvent" in src and "msg == 0x02A3" in src)
+check("hover: the fade has its own timer (3), stopped when it arrives and when an exception happens in it",
+      'msg == 0x0113 and wp == 3' in src and 'u.KillTimer(hwnd, 3)' in src and 'if wp == 3:' in w)
+check("hover: with motion off the halo comes and goes at once", "hover_to" in src and "_motion_allowed()" in src[src.index("def hover_to"):src.index("def _wndproc")])
+check("hover: the window is S + 2*pad, placed pad up and left, so the circle stays where it was",
+      "W = S + 2 * P" in src and "u.MoveWindow(self.hwnd, x - P, y - P, W, W, True)" in src and "0, 0, W, W, None" in src)
+check("hover: a hidden button forgets the halo (no WM_MOUSELEAVE comes when a window is hidden)", 'st["hover"], st["hv"], st["hv_t"] = False, 0.0, 0.0' in src)
 if fails:
     print("FAILED:", "; ".join(fails))
     sys.exit(1)
