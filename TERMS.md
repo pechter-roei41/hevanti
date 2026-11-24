@@ -4,7 +4,7 @@
 
 ## מה זה
 
-הבנתי היא כלי בקוד פתוח (רישיון MIT, ראו `LICENSE`) שמתמלל את מה שמתנגן במחשב שלך, שומר צילומי מסך של שקופיות ועוזר לך לשאול שאלות על ההרצאה. היא בגרסת בטא: עלולות להיות בה תקלות, והתמלול והתשובות אוטומטיים ועלולים להיות שגויים.
+הבנתי היא כלי בקוד פתוח (רישיון MIT, ראו `LICENSE`) שמתמלל את מה שמתנגן במחשב שלך, שומר צילומי מסך של שקופיות ועוזר לך לשאול שאלות על ההרצאה. עלולות להיות בה תקלות, והתמלול והתשובות אוטומטיים ועלולים להיות שגויים.
 
 ## ההקלטה היא באחריותך
 
@@ -39,7 +39,7 @@
 
 ## In English
 
-Hevanti (version 2.22, 15 Nov 2026) is open-source software (MIT License) that transcribes what plays on your computer, saves slide pictures and helps you ask questions about the lecture. It is a beta: it can have faults, and transcripts and answers are automatic and can be wrong.
+Hevanti (version 2.22, 15 Nov 2026) is open-source software (MIT License) that transcribes what plays on your computer, saves slide pictures and helps you ask questions about the lecture. It can have faults, and transcripts and answers are automatic and can be wrong.
 
 **Recording is your responsibility.** Before you record a lecture, check the rules of your institution and of the lecturer, and the law (for example wiretapping, privacy and copyright law) that applies to recording another person and sharing it. Ask the lecturer for permission where required. Use transcripts, slides and answers for yourself only; do not distribute them. Slides you send to Gemini go to Google (see `PRIVACY.md`) and may show other people. We cannot know what you record and cannot approve or forbid it.
 

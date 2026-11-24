@@ -2252,11 +2252,11 @@ function render(d) {
     else if (!first && to !== undefined) { if (location.hash.slice(1) === to) route(); else location.hash = to; }
   }
   drawGpu(d); drawModels(d);
-  $("#ver").textContent = "עודכנה ב-" + d.date;   /* design 3: the version is in the top bar only */  $("#ver").title = "גרסת בטא: עדיין בבדיקה, ועלולות להיות תקלות. אם משהו לא עובד, יש \"דיווח על תקלה\" בתחתית מסך הבית.";
+  $("#ver").textContent = "עודכנה ב-" + d.date;   /* design 3: the version is in the top bar only */  $("#ver").title = "עדיין בבדיקה, ועלולות להיות תקלות. אם משהו לא עובד, יש \"דיווח על תקלה\" בתחתית מסך הבית.";
   if (!render.themed) { render.themed = true;   // a browser that has no choice of its own yet takes Hevanti's
     let mine = ""; try { mine = localStorage.getItem("bzm.theme") || ""; } catch (e) {}
     if (!mine && d.theme) { bzmTheme(d.theme); drawThemeBtn(); } }
-  $("#verTop").textContent = "בטא " + d.version; $("#verTop").title = "גרסת בטא: עדיין בבדיקה, ועלולות להיות תקלות. אם משהו לא עובד, יש \"דיווח על תקלה\" בתחתית מסך הבית.";
+  $("#verTop").textContent = d.version; $("#verTop").title = "עדיין בבדיקה, ועלולות להיות תקלות. אם משהו לא עובד, יש \"דיווח על תקלה\" בתחתית מסך הבית.";
   const firstApp = !appSeen; appSeen = true;
   if (!curCourse && d.course) { curCourse = d.course; drawCourseSel(); } else if (firstApp && libSeen) drawCourseSel();
   const up = d.update;
