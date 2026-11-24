@@ -6518,7 +6518,34 @@ def _button_layers(S, K=8):
     return logo, xg
 
 
-def _button_image(S, p=0.0, rec=True, side="right", dark=False, dot_scale=1.0, K=8):
+def _button_halo(S, P, hv):
+    """The halo of the hovered button, on a transparent square of S + 2P: a soft green glow that fades out over P pixels, with a thin ring of
+    the soft green right at the edge of the circle (the glow alone is lost on a dark slide, the ring alone on a white one). hv is 0..1 (the fade in)."""
+    hv = round(min(max(hv, 0.0), 1.0) * 8) / 8.0
+    key = ("halo", S, P, hv)
+    if key in _BTN_CACHE:
+        return _BTN_CACHE[key]
+    import numpy as np
+    from PIL import Image
+    W = S + 2 * P
+    yy, xx = np.mgrid[0:W, 0:W]
+    c = (W - 1) / 2.0
+    d = np.hypot(xx - c, yy - c)
+    r0 = S / 2.0
+    t = np.clip((d - r0) / max(P, 1), 0.0, 1.0)
+    glow = 0.60 * (1.0 - t) ** 2 * np.clip(d - r0 + 1.0, 0.0, 1.0) * hv
+    ring = np.clip(r0 + 2.2 * S / 56.0 - d, 0.0, 1.0) * np.clip(d - (r0 - 1.0), 0.0, 1.0) * hv
+    out = np.zeros((W, W, 4), dtype=np.float32)
+    a = glow + ring * (1.0 - glow)
+    for k in range(3):
+        out[..., k] = (BTN_GREEN[k] * glow * (1.0 - ring) + BTN_SOFT[k] * ring) / np.maximum(a, 1e-6)
+    out[..., 3] = a * 255.0
+    im = Image.fromarray(np.clip(out + 0.5, 0, 255).astype(np.uint8), "RGBA")
+    _BTN_CACHE[key] = im
+    return im
+
+
+def _button_image(S, p=0.0, rec=True, side="right", dark=False, dot_scale=1.0, K=8, pad=0, hover=0.0):
     """The floating button as a picture (RGBA, S x S): a solid green circle, and on it the logo (p = 0) or the X (p = 1) - or a moment of the
     turn between them (0 < p < 1, already eased) - and, when a lecture is being recorded, the red dot with a ring in the page's colour, at the
     top on the side of the screen's edge. Outside the circle it is transparent."""
@@ -6560,6 +6587,11 @@ def _button_image(S, p=0.0, rec=True, side="right", dark=False, dot_scale=1.0, K
         d.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], fill=BTN_RING[1 if dark else 0] + (255,))
         d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=BTN_REC + (255,))
         im.alpha_composite(layer.resize((S, S), Image.LANCZOS))
+    if pad:   # the window is a little bigger than the circle, so the halo of the hovered button has room (the circle stays where it was)
+        from PIL import Image
+        full = _button_halo(S, pad, hover).copy() if hover > 0 else Image.new("RGBA", (S + 2 * pad, S + 2 * pad), (0, 0, 0, 0))
+        full.alpha_composite(im, (pad, pad))
+        return full
     return im
 
 
@@ -6572,9 +6604,9 @@ def _warm_button(S):
         save_error("floating button pictures")
 
 
-def _button_rgba(S, p=0.0, rec=True, side="right", dark=False, dot_scale=1.0):
+def _button_rgba(S, p=0.0, rec=True, side="right", dark=False, dot_scale=1.0, pad=0, hover=0.0):
     """The floating button as premultiplied BGRA bytes for UpdateLayeredWindow."""
-    return _premultiplied_bgra(_button_image(S, p, rec, side, dark, dot_scale))
+    return _premultiplied_bgra(_button_image(S, p, rec, side, dark, dot_scale, pad=pad, hover=hover))
 
 
 def _premultiplied_bgra(im):
@@ -6694,6 +6726,8 @@ class MiniButton(threading.Thread):
         except Exception:
             pass
         S, margin = max(self.SIZE, int(round(self.SIZE * scale))), int(round(12 * scale))
+        P = int(round(9 * scale))   # room round the circle for the halo (less than the margin to the edge of the screen, so it is never cut off); the transparent part lets clicks through
+        W = S + 2 * P
         proc_t = ctypes.WINFUNCTYPE(LR, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)
 
         class WNDCLASS(ctypes.Structure):
@@ -6730,7 +6764,10 @@ class MiniButton(threading.Thread):
         g.SelectObject.restype = wintypes.HANDLE
         g.DeleteObject.argtypes = [wintypes.HANDLE]
         g.DeleteDC.argtypes = [wintypes.HDC]
-        st = {"down": None, "shown": False, "corner": "", "pulsed": None, "pulse_until": 0.0, "pulse_on": False,
+        class TME(ctypes.Structure):
+            _fields_ = [("cb", wintypes.DWORD), ("flags", wintypes.DWORD), ("hwnd", wintypes.HWND), ("hover", wintypes.DWORD)]
+        u.TrackMouseEvent.argtypes = [ctypes.c_void_p]
+        st = {"hover": False, "hv": 0.0, "hv_t": 0.0, "hv_last": 0.0, "hv_timer": False, "down": None, "shown": False, "corner": "", "pulsed": None, "pulse_until": 0.0, "pulse_on": False,
               "pt": 0.0, "target": 0, "a_t": 0.0, "anim_timer": False, "anim_last": 0.0, "err_logged": False, "sig": None,
               "mark_n": APP.mark_n, "saved_n": APP.saved_n, "toast_hwnd": 0, "toast_on": False, "toast_until": 0.0, "toast_kind": ""}
 
@@ -6749,19 +6786,22 @@ class MiniButton(threading.Thread):
         def draw(alpha=235, force=False):
             """Put the picture on the window (per-pixel alpha: a smooth round edge, and the corners are see-through)."""
             p, rec, side, dark, dot = look()
-            sig = (round(p, 3), rec, side, dark, dot, alpha)
+            hv = round(st["hv"] * 8) / 8.0
+            if hv > 0:   # hovered: fully solid, a little more than the resting "a little see-through"
+                alpha = int(round(alpha + (255 - alpha) * hv))
+            sig = (round(p, 3), rec, side, dark, dot, alpha, hv)
             if sig == st["sig"] and not force:
                 return
             st["sig"] = sig
-            data = _button_rgba(S, p, rec, side, dark, dot)
+            data = _button_rgba(S, p, rec, side, dark, dot, P, hv)
             screen = u.GetDC(None)
             mdc = g.CreateCompatibleDC(screen)
-            bmi = BMIH(ctypes.sizeof(BMIH), S, -S, 1, 32, 0, 0, 0, 0, 0, 0)   # (negative height: top-down)
+            bmi = BMIH(ctypes.sizeof(BMIH), W, -W, 1, 32, 0, 0, 0, 0, 0, 0)   # (negative height: top-down)
             bits = ctypes.c_void_p()
             hbm = g.CreateDIBSection(mdc, ctypes.byref(bmi), 0, ctypes.byref(bits), None, 0)
             ctypes.memmove(bits, data, len(data))
             old = g.SelectObject(mdc, hbm)
-            size, src = wintypes.SIZE(S, S), wintypes.POINT(0, 0)
+            size, src = wintypes.SIZE(W, W), wintypes.POINT(0, 0)
             blend = BLEND(0, 0, alpha, 1)   # AC_SRC_OVER, a little see-through overall, AC_SRC_ALPHA
             u.UpdateLayeredWindow(self.hwnd, screen, None, ctypes.byref(size), mdc, ctypes.byref(src), 0, ctypes.byref(blend), 2)
             g.SelectObject(mdc, old)
@@ -6776,12 +6816,46 @@ class MiniButton(threading.Thread):
             u.SystemParametersInfoW(0x30, 0, ctypes.byref(area), 0)
             corner = mini_btn_corner()
             x, y = _mini_btn_xy(area, corner, S, margin)
-            u.MoveWindow(self.hwnd, x, y, S, S, True)
+            u.MoveWindow(self.hwnd, x - P, y - P, W, W, True)
             st["corner"] = corner
+
+        def hover_to(target):
+            """The halo fades to target (1 = shown, 0 = gone) in 0.16 s; at once when motion is off."""
+            st["hv_t"] = target
+            if not st["shown"]:
+                st["hv"] = target
+                return
+            if _motion_allowed():
+                st["hv_last"] = time.time()
+                if not st["hv_timer"]:
+                    u.SetTimer(self.hwnd, 3, 16, None)
+                    st["hv_timer"] = True
+            else:
+                st["hv"] = target
+                draw()
 
         def _wndproc(hwnd, msg, wp, lp):
             if msg == 0x0021:   # WM_MOUSEACTIVATE: a click does not take the keyboard from the lecture
                 return 3
+            if msg == 0x0200 and not st["hover"]:   # WM_MOUSEMOVE over the circle (the transparent edge lets the mouse through): the halo comes
+                st["hover"] = True
+                u.TrackMouseEvent(ctypes.byref(TME(ctypes.sizeof(TME), 2, hwnd, 0)))   # TME_LEAVE: WM_MOUSELEAVE when the mouse goes away
+                hover_to(1.0)
+                return 0
+            if msg == 0x02A3:   # WM_MOUSELEAVE: the halo goes
+                st["hover"] = False
+                hover_to(0.0)
+                return 0
+            if msg == 0x0113 and wp == 3:   # WM_TIMER 3: the halo fades in or out (about 60 times a second, only while it changes)
+                now = time.time()
+                step = (now - st["hv_last"]) / 0.16
+                st["hv_last"] = now
+                st["hv"] = min(1.0, st["hv"] + step) if st["hv_t"] else max(0.0, st["hv"] - step)
+                draw()
+                if st["hv"] == st["hv_t"]:
+                    u.KillTimer(hwnd, 3)
+                    st["hv_timer"] = False
+                return 0
             if msg == 0x0201:   # button down
                 st["down"] = True
                 u.SetCapture(hwnd)
@@ -6830,6 +6904,7 @@ class MiniButton(threading.Thread):
                 elif not want and st["shown"]:
                     u.ShowWindow(hwnd, 0)
                     st["shown"] = False
+                    st["hover"], st["hv"], st["hv_t"] = False, 0.0, 0.0   # (hidden: no WM_MOUSELEAVE comes, so the halo is reset here)
                 if st["shown"] and target != st["target"]:   # the window opened or closed (from the button, Ctrl+Alt+Q, or its own button): the logo turns to an X, or back
                     st["target"] = target
                     if _motion_allowed():
@@ -6871,6 +6946,9 @@ class MiniButton(threading.Thread):
                     if msg == 0x0113:
                         if wp == 2:
                             u.KillTimer(hwnd, 2)
+                        if wp == 3:
+                            u.KillTimer(hwnd, 3)
+                            st["hv_timer"], st["hv"] = False, st["hv_t"]
                         st["anim_timer"] = False
                         st["pt"], st["sig"] = float(st["target"]), None
                         return 0
@@ -6952,7 +7030,7 @@ class MiniButton(threading.Thread):
         u.CreateWindowExW.restype = wintypes.HWND
         # WS_EX_TOPMOST | TOOLWINDOW | LAYERED | NOACTIVATE, WS_POPUP
         self.hwnd = u.CreateWindowExW(0x8 | 0x80 | 0x80000 | 0x08000000, "HevantiMiniButton", "הבנתי - כפתור שאלות", 0x80000000,
-                                      0, 0, S, S, None, None, None, None)
+                                      0, 0, W, W, None, None, None, None)
         threading.Thread(target=_warm_button, args=(S,), daemon=True).start()   # (the pictures of the turn, once, in the background)
         draw(force=True)
         u.SetTimer(self.hwnd, 1, 100, None)

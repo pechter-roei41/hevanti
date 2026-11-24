@@ -496,6 +496,22 @@ check("floating button: the ring round the dot is the colour of the page (paper 
 check("floating button: a moment of the turn is neither the logo nor the X", b_mid.tobytes() != b_logo.tobytes() and b_mid.tobytes() != b_x.tobytes())
 check("floating button: it is drawn the same at 125% and 150% (a bigger picture, the same shape: green, the dot, the X)", all(_is_green(L._button_image(S_, 0.0, False).getpixel((int(S_ * 5 / 56), S_ // 2))) and _near(L._button_image(S_, 1.0, False), S_ // 2, S_ // 2, _is_white) and _near(L._button_image(S_, 0.0, True, "right"), int(S_ * 0.8), int(S_ * 0.2), _is_red) for S_ in (70, 84)))
 check("floating button: the bytes for Windows are premultiplied BGRA, S x S x 4", len(L._button_rgba(56, 0.0, True)) == 56 * 56 * 4 and L._button_rgba(56, 0.0, True)[3] == 0)
+# the hovered button: a halo round the circle, in a window a little bigger than the circle (the circle stays where it was)
+for S_ in (56, 70, 84):
+    P_ = int(round(9 * S_ / 56))
+    rest, hov = L._button_image(S_, 0.0, False, pad=P_), L._button_image(S_, 0.0, False, pad=P_, hover=1.0)
+    plain = L._button_image(S_, 0.0, False)
+    c_ = S_ // 2 + P_
+    check(f"hover halo at {S_}: the picture is S + 2*pad wide, the circle in its middle is the same picture, hovered or not",
+          rest.size == hov.size == (S_ + 2 * P_, S_ + 2 * P_) and rest.crop((P_ + S_ // 4, P_ + S_ // 4, P_ + 3 * S_ // 4, P_ + 3 * S_ // 4)).tobytes() == hov.crop((P_ + S_ // 4, P_ + S_ // 4, P_ + 3 * S_ // 4, P_ + 3 * S_ // 4)).tobytes() == plain.crop((S_ // 4, S_ // 4, 3 * S_ // 4, 3 * S_ // 4)).tobytes())
+    check(f"hover halo at {S_}: at rest the edge is see-through; hovered there is a glow just outside the circle that fades out, and the corners stay see-through",
+          rest.getpixel((c_, 1))[3] == 0 and hov.getpixel((c_, P_ - 1))[3] > 60 and hov.getpixel((c_, P_ - 1))[3] > hov.getpixel((c_, 1))[3] > 0
+          and hov.getpixel((0, 0))[3] == 0 and hov.getpixel((hov.width - 1, hov.height - 1))[3] == 0)
+    check(f"hover halo at {S_}: the glow is green and the ring at the edge is the soft green",
+          _is_green(hov.getpixel((c_, P_ - 1))[:3]) or (hov.getpixel((c_, P_ - 1))[1] > hov.getpixel((c_, P_ - 1))[0]), hov.getpixel((c_, P_ - 1)))
+mid_h = L._button_image(56, 0.0, False, pad=9, hover=0.5)
+check("hover halo: halfway in is between none and full (it fades in)", L._button_image(56, 0.0, False, pad=9).getpixel((37, 8))[3] < mid_h.getpixel((37, 8))[3] < L._button_image(56, 0.0, False, pad=9, hover=1.0).getpixel((37, 8))[3])
+check("hover halo: the bytes for Windows are premultiplied BGRA, W x W x 4", len(L._button_rgba(56, 0.0, True, "right", False, 1.0, 9, 1.0)) == 74 * 74 * 4)
 ease = [L._bezier_ease(k / 20.0) for k in range(21)]
 check("animation: the easing curve cubic-bezier(0.2, 0.8, 0.2, 1) starts at 0, ends at 1, never goes back, and starts fast", ease[0] == 0.0 and ease[-1] == 1.0 and all(b >= a for a, b in zip(ease, ease[1:])) and ease[2] > 0.3 and ease[10] > 0.9, ease)
 g0, g1 = L._glyph_params(0.0), L._glyph_params(1.0)
