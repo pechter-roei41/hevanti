@@ -58,6 +58,9 @@ jobs:
       - name: Nothing scrolls sideways at 320 px, and the focus ring of the floating window (browser)
         if: runner.os == 'Windows'
         run: python tools/test_narrow.py
+      - name: The floating window's ask box - the round arrow inside the box, one to four lines, Enter and Shift+Enter, the follow-ups at the end of the answer (browser)
+        if: runner.os == 'Windows'
+        run: python tools/test_mini_send.py
       - name: The quiet motion - the sliding tabs, a mark drawn like a highlighter, the check of the saved card; all off with motion off (browser)
         if: runner.os == 'Windows'
         run: python tools/test_motion.py

@@ -86,13 +86,18 @@ with sync_playwright() as p:
         mn.goto(url + "/mini")
         mn.wait_for_timeout(900)
         got = None
-        for _ in range(16):
+        mn.fill("textarea", "שאלה")   # (the round send button is live only with text, so only then can the keyboard reach it)
+        mn.focus("textarea")
+        for _ in range(4):
             mn.keyboard.press("Tab")
-            r = mn.evaluate("() => { const e = document.activeElement, s = getComputedStyle(e); return [e.textContent.trim(), s.outlineStyle, s.outlineWidth]; }")
-            if r[0] == "תשובה כאן":
+            r = mn.evaluate("() => { const e = document.activeElement, s = getComputedStyle(e); return [e.getAttribute('aria-label'), s.outlineStyle, s.outlineWidth]; }")
+            if r[0] == "שליחה":
                 got = r
                 break
-        check(f"floating window, {theme}: the answer button shows a 2px solid focus ring", got and got[1] == "solid" and got[2] == "2px", got)
+        check(f"floating window, {theme}: the send button (the arrow) shows a 2px solid focus ring", got and got[1] == "solid" and got[2] == "2px", got)
+        mn.focus("textarea")
+        box_ring = mn.evaluate("() => { const s = getComputedStyle(document.querySelector('.inbox')); return [s.outlineStyle, s.outlineWidth]; }")
+        check(f"floating window, {theme}: the writing box shows a 2px solid focus ring while one writes in it", box_ring == ["solid", "2px"], box_ring)
         # a long course name is cut with an ellipsis: the star and the menu stay in the same row as the name
         mn.evaluate("setLec('הרצאה חיה - דינמיקה של גוף קשיח - מתחילה... ועוד שם ארוך מאוד של קורס')")
         rows = mn.evaluate("() => [...document.querySelectorAll('#lec, #markImp, #menuBtn')].map(e => Math.round(e.getBoundingClientRect().top))")

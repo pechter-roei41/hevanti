@@ -639,7 +639,7 @@ with sync_playwright() as p:
     check("floating window: three 'what I missed' buttons", mini.evaluate("[...document.querySelectorAll('#miss button')].map(b => b.dataset.m).join()") == "3,7,15")
     greens = mini.evaluate("""() => { const p = document.createElement('i'); p.style.background = 'var(--accent)'; document.body.appendChild(p); const green = getComputedStyle(p).backgroundColor; p.remove();
         return [...document.querySelectorAll('button')].filter(b => b.offsetParent !== null && getComputedStyle(b).backgroundColor === green).map(b => b.textContent.trim()); }""")
-    check("floating window: exactly one solid green control: 'answer here'", greens == ["תשובה כאן"], greens)
+    check("floating window: exactly one solid green control: the round send button (no text yet: it is dimmed but there)", greens == [""] and mini.evaluate("document.querySelector('.inbox button.send').getAttribute('aria-label')") == "שליחה", greens)
     for n in (3, 7, 15):
         mini.wait_for_selector(f"#miss button[data-m='{n}']", state="visible", timeout=10000)
         mini.click(f"#miss button[data-m='{n}']")
@@ -1037,12 +1037,12 @@ with sync_playwright() as p:
         return lagp.evaluate("[!document.querySelector('#lag').hidden, document.querySelector('#lag').textContent]")
     shown, txt = poll()
     check("floating window: the transcript is 25 seconds behind - it says so, in seconds", shown and "מאחר ב־25 שניות" in txt, (shown, txt))
-    lag_side = lagp.evaluate("""() => { const l = document.querySelector('#lag').getBoundingClientRect(), b = document.querySelector('#box .ais button.here').getBoundingClientRect();
+    lag_side = lagp.evaluate("""() => { const l = document.querySelector('#lag').getBoundingClientRect(), b = document.querySelector('#miss button[data-m="15"]').getBoundingClientRect();
         return {left: Math.round(l.left), right: Math.round(l.right), bLeft: Math.round(b.left), bRight: Math.round(b.right), mid: Math.round((l.top + l.bottom) / 2 - (b.top + b.bottom) / 2), bW: Math.round(b.width), vw: innerWidth,
                 inHeader: !!document.querySelector('#lag').closest('header'), clock: !!document.querySelector('#lag svg[aria-hidden=true]')}; }""")
-    check("...in the row of \"תשובה כאן\" (not in the title row that a long course name needs), at its LEFT, on the same line, with a clock (19.11.2026)",
-          not lag_side["inHeader"] and lag_side["right"] <= lag_side["bLeft"] + 1 and lag_side["bLeft"] - lag_side["right"] <= 16 and abs(lag_side["mid"]) < 12 and lag_side["left"] >= 0 and lag_side["clock"], lag_side)
-    check("...and the answer button still takes most of the row (the full width when there is no warning)", lag_side["bW"] > lag_side["vw"] * 0.4, lag_side)
+    check("...in the row of \"מה פספסתי\" (not in the title row that a long course name needs), at its LEFT (on the same line, or just under it in a narrow window), with a clock (25.11.2026)",
+          not lag_side["inHeader"] and lag_side["left"] >= 0 and lag_side["right"] <= lag_side["vw"] / 2 + 60 and lag_side["clock"]
+          and lagp.evaluate("document.querySelector('#lag').parentElement.id") == "miss", lag_side)
     lagp.hover("#lag")
     check("...pointing at it says what it means: the answer does not include the last seconds yet",
           lagp.evaluate("!document.getElementById('lagHint').hidden") and "השניות האחרונות" in lagp.evaluate("document.getElementById('lagHint').textContent"))
