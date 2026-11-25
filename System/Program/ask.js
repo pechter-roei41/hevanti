@@ -102,7 +102,7 @@
 .askp .alt-box{margin-top:6px;display:grid;gap:6px;font-size:14px;line-height:1.5;color:var(--fg)}
 .askp .conv{gap:12px;padding-block:4px}
 .askp .qa{display:grid;gap:6px;background:none;border:0;padding:0}
-.askp .qa .q{justify-self:start;max-width:88%;margin:0;padding:7px 13px;border-radius:16px;background:var(--accent-soft);color:var(--fg);font-weight:600;font-size:calc(14.5px * var(--tx, 1));line-height:1.5}
+.askp .qa .q{justify-self:start;max-width:min(88%,34ch);white-space:pre-wrap;overflow-wrap:anywhere;margin:0;padding:7px 13px;border-radius:16px;background:var(--accent-soft);color:var(--fg);font-weight:600;font-size:calc(14.5px * var(--tx, 1));line-height:1.5}
 .askp .qa .a{justify-self:end;max-width:96%;padding:8px 13px;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
 .askp{--sk:#74907C;--sk-shine:#DCEBDF}   /* the waiting lines: Board Green Line and the light that crosses them (DESIGN.md) */
 html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
