@@ -77,11 +77,11 @@
 .askp .convwrap .conv::-webkit-scrollbar-button{display:none;width:0;height:0}
 .askp .convwrap .conv::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--muted) 18%,transparent);border-radius:4px}
 .askp .convwrap.scrolling .conv::-webkit-scrollbar-thumb,.askp .convwrap .conv:hover::-webkit-scrollbar-thumb{background:var(--muted)}
-/* the follow-ups stay in view at the bottom of the answers (the end of the last answer; pinned there while the answer is longer than the area) */
-.askp .convwrap .followbar{position:sticky;bottom:-4px;z-index:1;padding:14px 0 6px;background:linear-gradient(transparent,var(--bg) 10px)}
+/* the follow-ups sit at the end of the last answer, in the flow under it (never over the text) */
+.askp .convwrap .followbar{padding-top:2px}
 /* before the first question: what one can ask */
 .askp .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:12px 8px}
-.askp .empty svg{width:30px;height:30px;fill:none;stroke:var(--accent);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.askp .empty svg{width:44px;height:44px;fill:none;stroke:var(--accent);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .askp .empty b{font-size:calc(17px * var(--tx, 1));line-height:1.4}
 .askp .empty p{margin:0;color:var(--muted);font-size:calc(14px * var(--tx, 1))}
 .askp .empty .ex{display:grid;gap:8px;width:min(260px,100%);margin-top:4px}
@@ -348,12 +348,14 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
     // the small window: the box is one line, grows to 4 lines while one writes and then scrolls; the send button is live only with text (or as stop)
     function syncTa() {
       if (!opts.compact) return;
+      here.disabled = !busy && !ta.value.trim();
+      if (!ta.offsetWidth) return;   // (not shown yet: a box of no width would measure the placeholder as many lines; the observer below measures again when it appears)
       ta.style.height = "auto";
       const cs = getComputedStyle(ta), lh = parseFloat(cs.lineHeight) || 1.45 * parseFloat(cs.fontSize) || 24;
       const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0), maxH = Math.round(lh * 4 + pad);
-      ta.style.height = Math.min(ta.scrollHeight, maxH) + "px";
-      ta.style.overflowY = ta.scrollHeight > maxH + 1 ? "auto" : "hidden";
-      here.disabled = !busy && !ta.value.trim();
+      const need = ta.value ? ta.scrollHeight : Math.round(lh + pad);   // (an empty box is one line, whatever its placeholder needs)
+      ta.style.height = Math.min(need, maxH) + "px";
+      ta.style.overflowY = need > maxH + 1 ? "auto" : "hidden";
     }
     // The free quota is used up: the same question, with what was said, goes on in the student's own AI app
     // (the last one used first) - a click copies it and opens that AI, like the three buttons above.
@@ -547,7 +549,7 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
       inbox.append(ta, here);
       // before the first question: a small question mark, what this box is for, and two questions to press (a press asks exactly as if typed and Enter)
       emptyBox = mk("div", "empty"); emptyBox.setAttribute("role", "group"); emptyBox.setAttribute("aria-label", "שאלות לדוגמה");
-      emptyBox.insertAdjacentHTML("afterbegin", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M10 9.4a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9M12 14.2v.1"/></svg>');
+      emptyBox.insertAdjacentHTML("afterbegin", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 16.5H10.3L6.5 20v-3.5H6a2.5 2.5 0 0 1-2.5-2.5V6A2.5 2.5 0 0 1 6 3.5h11.5A2.5 2.5 0 0 1 20 6v3.5"/><path d="M7.6 8h8.8M7.6 11.6h5.4"/><path d="M16.3 14.2a1.9 1.9 0 1 1 2.7 1.7c-.6.3-.9.7-.9 1.3M18.1 20.2v.1"/></svg>');
       const exs = mk("div", "ex");
       for (const c of opts.emptyChips || ["מה הנושא המרכזי עד עכשיו?", "תסביר שוב את מה שנאמר עכשיו"]) {
         const b = mk("button", "", c); b.type = "button"; b.addEventListener("click", () => askHere(c)); exs.appendChild(b);
@@ -564,7 +566,10 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
     // like a chat: the conversation first (it grows downward), the box to write in under it
     if (opts.noHead) head.hidden = true;   // (design 3: a box inside a fold whose title already says it does not repeat the title)
     box.append(head, planBox, conn, convWrap || conv, ready, ...(opts.compact ? [inbox] : [follow2, ta]), keyrow, row, convbar, chips, hint);
-    if (opts.compact) { syncTa(); updEmpty(); }
+    if (opts.compact) {
+      syncTa(); updEmpty();
+      if (window.ResizeObserver) { let lastW = 0; new ResizeObserver(() => { if (ta.offsetWidth !== lastW) { lastW = ta.offsetWidth; syncTa(); } }).observe(ta); }   // (the box is hidden until a lecture runs, and its width changes with the window)
+    }
     // a question made ready (a button of the page): for the built-in answer straight away, otherwise written in the box
     function ask(q, extra) { if (hereDefault()) askHere(q, extra); else { ta.value = q; syncTa(); ta.focus(); } }
     return {focus: () => ta.focus(), textarea: ta, refresh, askHere, ask, builtin: hereDefault, reset: resetChat, hasChat: () => conv.children.length > 0};   // (hasChat: a question was asked in this box and the conversation was not reset: the small window's menu offers "שיחה חדשה" then)

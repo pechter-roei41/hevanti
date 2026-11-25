@@ -61,6 +61,8 @@ with sync_playwright() as p:
     pg.route("**/api/ask", lambda r: (asks.append(json.loads(r.request.post_data or "{}")), r.fulfill(status=200, content_type="text/plain", body=ANS))[1])
     pg.goto(url + "/mini")
     pg.wait_for_selector(".inbox button.send", timeout=10000)
+    pg.wait_for_timeout(600)
+    check("the empty box is one line from the start (also when the window was hidden at first)", pg.evaluate("document.querySelector('.inbox textarea').getBoundingClientRect().height") < 50, pg.evaluate("document.querySelector('.inbox textarea').getBoundingClientRect().height"))
     pg.wait_for_timeout(800)
     H = "() => Math.round(document.querySelector('.inbox textarea').getBoundingClientRect().height)"
     BTN = ".inbox button.send"
@@ -91,7 +93,7 @@ with sync_playwright() as p:
     pg.wait_for_timeout(300)
     check("scrolled text: the fade shows at the top, and the bar shows while scrolling", pg.evaluate("""() => { const w = document.querySelector('.convwrap'); return w.classList.contains('scrolled') && getComputedStyle(w, '::before').opacity === '1' && w.classList.contains('scrolling'); }"""))
     pg.evaluate("document.querySelector('.conv').scrollTop = 0")
-    check("the 'עוד פרטים' / 'תן דוגמה' buttons are in view right after an answer, with no scrolling", pg.evaluate("""() => { const c = document.querySelector('.conv').getBoundingClientRect(), f = document.querySelector('.followbar').getBoundingClientRect(); return f.top >= c.top && f.bottom <= c.bottom + 6 && f.height > 20; }"""))
+    check("the 'עוד פרטים' / 'תן דוגמה' buttons are under the last answer, in the flow: they never cover its text", pg.evaluate("""() => { const f = document.querySelector('.followbar'), q = [...document.querySelectorAll('.qa')].pop().getBoundingClientRect(), r = f.getBoundingClientRect(); return getComputedStyle(f).position === 'static' && r.top >= q.bottom - 1 && r.height > 20; }"""))
     asks.clear()
 
     pg.fill("textarea", "שאלה קצרה")
