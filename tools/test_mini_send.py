@@ -138,14 +138,17 @@ with sync_playwright() as p:
     pg.wait_for_timeout(400)
     check("the arrow sends the question", [a.get("question") for a in asks] == ["שלום\nעולם", "שאלה שנייה"], asks)
     check("the follow-ups moved to the end of the new answer (still one set)", pg.evaluate("""() => { const c = document.querySelector('.conv'); return c.querySelectorAll('.followbar').length === 1 && c.lastElementChild.classList.contains('followbar') && c.children.length === 4; }"""))
+    pg.wait_for_function("!document.querySelector('.inbox button.send').classList.contains('stop')", timeout=8000)
     pg.click(".followbar button:has-text('עוד פרטים')")
     pg.wait_for_function("document.querySelectorAll('.qa').length === 4", timeout=8000)
     pg.wait_for_timeout(300)
+    pg.wait_for_function("!document.querySelector('.inbox button.send').classList.contains('stop')", timeout=8000)
     pg.click(".followbar button:has-text('תן דוגמה')")
     pg.wait_for_function("document.querySelectorAll('.qa').length === 5", timeout=8000)
     check("'עוד פרטים' and 'תן דוגמה' still ask exactly as before", [a.get("question") for a in asks][-2:] == ["עוד פרטים", "תן דוגמה"], asks)
 
     # a question typed in two lines is shown in two lines; a long sentence breaks into lines of about 34 characters at most (25.11.2026)
+    pg.wait_for_function("!document.querySelector('.inbox button.send').classList.contains('stop')", timeout=8000)
     pg.fill("textarea", "שלום")
     pg.keyboard.press("Shift+Enter")
     pg.keyboard.type("עולם")
@@ -153,6 +156,7 @@ with sync_playwright() as p:
     pg.wait_for_function("document.querySelectorAll('.qa').length === 6 && !document.querySelector('.qa .a.wait')", timeout=8000)
     check("a question typed in two lines is shown in two lines (the new line is kept)", pg.evaluate("""() => { const q = [...document.querySelectorAll('.qa .q')].pop();
         return getComputedStyle(q).whiteSpace === 'pre-wrap' && q.textContent === 'שלום\\nעולם' && q.getBoundingClientRect().height > 40; }"""))
+    pg.wait_for_function("!document.querySelector('.inbox button.send').classList.contains('stop')", timeout=8000)
     pg.fill("textarea", "זו שאלה ארוכה מאוד שנכתבת בלי ירידת שורה ידנית ומכילה הרבה מילים כדי לראות איך היא נשברת")
     pg.press("textarea", "Enter")
     pg.wait_for_function("document.querySelectorAll('.qa').length === 7 && !document.querySelector('.qa .a.wait')", timeout=8000)
@@ -160,6 +164,7 @@ with sync_playwright() as p:
         return {w: q.getBoundingClientRect().width, cw: document.querySelector('.conv').clientWidth, wrap: cs.overflowWrap, h: q.getBoundingClientRect().height, fs: parseFloat(cs.fontSize)}; }""")
     check("a long question is a bubble of limited width and wraps to several lines", lw["w"] <= lw["cw"] * 0.88 + 1 and lw["h"] > lw["fs"] * 3 and lw["wrap"] == "anywhere", lw)
 
+    pg.wait_for_function("!document.querySelector('.inbox button.send').classList.contains('stop')", timeout=8000)
     # while an answer comes the arrow is the stop button
     slow = []
     pg.unroute("**/api/ask")
