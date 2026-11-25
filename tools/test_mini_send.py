@@ -74,6 +74,26 @@ with sync_playwright() as p:
     h1 = pg.evaluate(H)
     check("one line by default", h1 < 50, h1)
 
+    # the look of the answers area (25.11.2026)
+    check("a hairline under the 'what did I miss' row, in the border colour", pg.evaluate("""() => { const s = getComputedStyle(document.querySelector('#miss')); return s.borderBottomWidth === '1px' && s.borderBottomStyle === 'solid'; }"""))
+    check("the answers area has a thin round scroll bar (4px, no arrows)", pg.evaluate("""() => { const c = document.querySelector('.conv'); return getComputedStyle(c, '::-webkit-scrollbar').width === '4px' && getComputedStyle(c, '::-webkit-scrollbar-button').display === 'none'; }"""))
+    check("the fade at the top does not block clicks, and is off until the text is scrolled", pg.evaluate("""() => { const w = document.querySelector('.convwrap'), f = getComputedStyle(w, '::before');
+        return f.pointerEvents === 'none' && f.opacity === '0' && f.height === '20px' && f.backgroundImage.includes('linear-gradient'); }"""))
+    check("empty state: a question mark, the sentence, the small line and two example questions", pg.evaluate("""() => { const e = document.querySelector('.empty'); return !e.hidden && !!e.querySelector('svg')
+        && e.textContent.includes('שאל כל דבר על מה שנאמר בהרצאה') && e.textContent.includes('או לחץ על אחת מהשאלות האלה:')
+        && [...e.querySelectorAll('.ex button')].map(b => b.textContent).join('|') === 'מה הנושא המרכזי עד עכשיו?|תסביר שוב את מה שנאמר עכשיו'; }"""))
+    check("empty state is in the middle of the area", pg.evaluate("""() => { const e = document.querySelector('.empty').getBoundingClientRect(), c = document.querySelector('.convwrap').getBoundingClientRect(); return Math.abs((e.top + e.bottom) / 2 - (c.top + c.bottom) / 2) < 30; }"""))
+    check("the small window's transparency starts at 80%", L.mini_opacity() == 80, L.mini_opacity())
+    pg.click(".empty .ex button:first-child")
+    pg.wait_for_selector(".qa .a:not(.wait)", timeout=8000)
+    check("an example question is sent exactly as it is, and the empty state goes", [a.get("question") for a in asks] == ["מה הנושא המרכזי עד עכשיו?"] and pg.evaluate("document.querySelector('.empty').hidden"), asks)
+    pg.evaluate("document.querySelector('.conv').scrollTop = 80")
+    pg.wait_for_timeout(300)
+    check("scrolled text: the fade shows at the top, and the bar shows while scrolling", pg.evaluate("""() => { const w = document.querySelector('.convwrap'); return w.classList.contains('scrolled') && getComputedStyle(w, '::before').opacity === '1' && w.classList.contains('scrolling'); }"""))
+    pg.evaluate("document.querySelector('.conv').scrollTop = 0")
+    check("the 'עוד פרטים' / 'תן דוגמה' buttons are in view right after an answer, with no scrolling", pg.evaluate("""() => { const c = document.querySelector('.conv').getBoundingClientRect(), f = document.querySelector('.followbar').getBoundingClientRect(); return f.top >= c.top && f.bottom <= c.bottom + 6 && f.height > 20; }"""))
+    asks.clear()
+
     pg.fill("textarea", "שאלה קצרה")
     check("with text, the button is live", not pg.is_disabled(BTN))
     check("a short question keeps one line", pg.evaluate(H) == h1, pg.evaluate(H))
@@ -107,20 +127,20 @@ with sync_playwright() as p:
     check("...and not in a fixed row above the box", pg.evaluate("document.querySelectorAll('.followbar').length") == 1)
     check("the answer area takes the height that was freed (down to the writing box)", pg.evaluate("""() => { const c = document.querySelector('.conv').getBoundingClientRect(), i = document.querySelector('.inbox').getBoundingClientRect();
         return i.top - c.bottom < 16 && c.height > 300; }"""))
-    check("the new answer is shown from its start (the question is at the top of the area)", pg.evaluate("""() => { const c = document.querySelector('.conv'), q = c.querySelector('.qa'); return Math.abs(q.getBoundingClientRect().top - c.getBoundingClientRect().top) < 12; }"""))
+    check("the new answer is shown from its start (the question is at the top of the area)", pg.evaluate("""() => { const c = document.querySelector('.conv'), q = [...c.querySelectorAll('.qa')].pop(); return Math.abs(q.getBoundingClientRect().top - c.getBoundingClientRect().top) < 12; }"""))
 
     # the arrow button sends; a second answer moves the follow-ups to its end
     pg.fill("textarea", "שאלה שנייה")
     pg.click(BTN)
-    pg.wait_for_function("document.querySelectorAll('.qa').length === 2 && !document.querySelector('.qa:last-of-type .a.wait')", timeout=8000)
+    pg.wait_for_function("document.querySelectorAll('.qa').length === 3 && !document.querySelector('.qa .a.wait')", timeout=8000)
     pg.wait_for_timeout(400)
     check("the arrow sends the question", [a.get("question") for a in asks] == ["שלום\nעולם", "שאלה שנייה"], asks)
-    check("the follow-ups moved to the end of the new answer (still one set)", pg.evaluate("""() => { const c = document.querySelector('.conv'); return c.querySelectorAll('.followbar').length === 1 && c.lastElementChild.classList.contains('followbar') && c.children.length === 3; }"""))
+    check("the follow-ups moved to the end of the new answer (still one set)", pg.evaluate("""() => { const c = document.querySelector('.conv'); return c.querySelectorAll('.followbar').length === 1 && c.lastElementChild.classList.contains('followbar') && c.children.length === 4; }"""))
     pg.click(".followbar button:has-text('עוד פרטים')")
-    pg.wait_for_function("document.querySelectorAll('.qa').length === 3", timeout=8000)
+    pg.wait_for_function("document.querySelectorAll('.qa').length === 4", timeout=8000)
     pg.wait_for_timeout(300)
     pg.click(".followbar button:has-text('תן דוגמה')")
-    pg.wait_for_function("document.querySelectorAll('.qa').length === 4", timeout=8000)
+    pg.wait_for_function("document.querySelectorAll('.qa').length === 5", timeout=8000)
     check("'עוד פרטים' and 'תן דוגמה' still ask exactly as before", [a.get("question") for a in asks][-2:] == ["עוד פרטים", "תן דוגמה"], asks)
 
     # while an answer comes the arrow is the stop button
