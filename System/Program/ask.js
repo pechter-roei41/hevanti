@@ -66,6 +66,27 @@
 .askp .inbox button.send.stop{background:transparent;color:var(--accent)}
 .askp .inbox button.send.stop svg{fill:currentColor;stroke:none}
 .askp .ais:not(:has(button:not([hidden]))){display:none}
+.askp .convwrap{position:relative;display:flex;flex-direction:column;flex:1;min-height:0}
+.askp .convwrap .conv{flex:1 1 auto;min-height:0}
+/* a soft fade at the top of the conversation: text that has scrolled up goes out gradually, not cut in the middle of a line (only once it is scrolled) */
+.askp .convwrap::before{content:"";position:absolute;top:0;left:0;right:0;height:20px;background:linear-gradient(var(--bg),transparent);pointer-events:none;z-index:2;opacity:0;transition:opacity .15s}
+.askp .convwrap.scrolled::before{opacity:1}
+/* a thin round scroll bar, no arrows and no track; almost clear until one scrolls or points at the answers */
+.askp .convwrap .conv::-webkit-scrollbar{width:4px;background:transparent}
+.askp .convwrap .conv::-webkit-scrollbar-track{background:transparent}
+.askp .convwrap .conv::-webkit-scrollbar-button{display:none;width:0;height:0}
+.askp .convwrap .conv::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--muted) 18%,transparent);border-radius:4px}
+.askp .convwrap.scrolling .conv::-webkit-scrollbar-thumb,.askp .convwrap .conv:hover::-webkit-scrollbar-thumb{background:var(--muted)}
+/* the follow-ups sit at the end of the last answer, in the flow under it (never over the text) */
+.askp .convwrap .followbar{padding-top:2px}
+/* before the first question: what one can ask */
+.askp .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:12px 8px}
+.askp .empty svg{width:44px;height:44px;fill:none;stroke:var(--accent);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.askp .empty b{font-size:calc(17px * var(--tx, 1));line-height:1.4}
+.askp .empty p{margin:0;color:var(--muted);font-size:calc(14px * var(--tx, 1))}
+.askp .empty .ex{display:grid;gap:8px;width:min(260px,100%);margin-top:4px}
+.askp .empty .ex button{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:12px;padding:9px 12px;font:inherit;font-size:calc(14px * var(--tx, 1));cursor:pointer}
+.askp .empty .ex button:hover{border-color:var(--accent)}
 .askp .ais button.here.alt{background:transparent;color:var(--accent);font-weight:600}
 .askp .basis{justify-self:end;max-width:96%;font-size:calc(13px * var(--tx, 1));line-height:1.5;color:var(--muted)}
 .askp .basis .btog{display:inline-flex;align-items:center;gap:4px;border:0;background:none;color:var(--muted);font:inherit;font-weight:600;cursor:pointer;padding:2px 6px;min-height:28px;border-radius:6px}
@@ -81,7 +102,7 @@
 .askp .alt-box{margin-top:6px;display:grid;gap:6px;font-size:14px;line-height:1.5;color:var(--fg)}
 .askp .conv{gap:12px;padding-block:4px}
 .askp .qa{display:grid;gap:6px;background:none;border:0;padding:0}
-.askp .qa .q{justify-self:start;max-width:88%;margin:0;padding:7px 13px;border-radius:16px;background:var(--accent-soft);color:var(--fg);font-weight:600;font-size:calc(14.5px * var(--tx, 1));line-height:1.5}
+.askp .qa .q{justify-self:start;max-width:min(88%,34ch);white-space:pre-wrap;overflow-wrap:anywhere;margin:0;padding:7px 13px;border-radius:16px;background:var(--accent-soft);color:var(--fg);font-weight:600;font-size:calc(14.5px * var(--tx, 1));line-height:1.5}
 .askp .qa .a{justify-self:end;max-width:96%;padding:8px 13px;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
 .askp{--sk:#74907C;--sk-shine:#DCEBDF}   /* the waiting lines: Board Green Line and the light that crosses them (DESIGN.md) */
 html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
@@ -291,6 +312,9 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
     }
     // (a screen reader must not read the answer in pieces while it streams: the answer is not a live region; one short message says when it is ready - audit #38)
     const conv = mk("div", "conv");
+    const convWrap = opts.compact ? mk("div", "convwrap") : null;   // the small window: the conversation, its soft fade and the empty state in one frame
+    let emptyBox = null;
+    function updEmpty() { if (emptyBox) emptyBox.hidden = !AI.builtin || conv.children.length > 0; }
     const ready = mk("div", ""); ready.setAttribute("role", "status"); ready.setAttribute("aria-live", "polite");
     ready.style.cssText = "position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap";
     function sayReady(text) { ready.textContent = ""; setTimeout(() => { ready.textContent = text; }, 60); }
@@ -306,7 +330,7 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
     exBtn.title = "דוגמה להסבר האחרון";
     exBtn.addEventListener("click", () => askHere("תן דוגמה"));
     const follow2 = mk("div", "followbar"); follow2.append(moreBtn, exBtn);   // above the box to write in: a next step for the last answer (the small window: at the end of the last answer, inside the conversation)
-    function resetChat() { if (ctl) { try { ctl.abort(); } catch (e) {} } hist.length = 0; conv.replaceChildren(); convbar.hidden = true; updMore(); }   // (also called from outside: a new lecture or course must not carry the old answers into "more details")
+    function resetChat() { if (ctl) { try { ctl.abort(); } catch (e) {} } hist.length = 0; conv.replaceChildren(); convbar.hidden = true; updMore(); if (convWrap) convWrap.classList.remove("scrolled"); updEmpty(); }   // (also called from outside: a new lecture or course must not carry the old answers into "more details")
     newBtn.addEventListener("click", resetChat);
     convbar.append(newBtn);
     if (!opts.compact) convbar.append(mk("span", "hint", "התשובות נשמרות בתיקיית ההרצאה, ב\"שאלות ותשובות.md\"."));
@@ -324,12 +348,14 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
     // the small window: the box is one line, grows to 4 lines while one writes and then scrolls; the send button is live only with text (or as stop)
     function syncTa() {
       if (!opts.compact) return;
+      here.disabled = !busy && !ta.value.trim();
+      if (!ta.offsetWidth) return;   // (not shown yet: a box of no width would measure the placeholder as many lines; the observer below measures again when it appears)
       ta.style.height = "auto";
       const cs = getComputedStyle(ta), lh = parseFloat(cs.lineHeight) || 1.45 * parseFloat(cs.fontSize) || 24;
       const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0), maxH = Math.round(lh * 4 + pad);
-      ta.style.height = Math.min(ta.scrollHeight, maxH) + "px";
-      ta.style.overflowY = ta.scrollHeight > maxH + 1 ? "auto" : "hidden";
-      here.disabled = !busy && !ta.value.trim();
+      const need = ta.value ? ta.scrollHeight : Math.round(lh + pad);   // (an empty box is one line, whatever its placeholder needs)
+      ta.style.height = Math.min(need, maxH) + "px";
+      ta.style.overflowY = need > maxH + 1 ? "auto" : "hidden";
     }
     // The free quota is used up: the same question, with what was said, goes on in the student's own AI app
     // (the last one used first) - a click copies it and opens that AI, like the three buttons above.
@@ -381,7 +407,7 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
       const qa = mk("div", "qa"), ae = mk("div", "a wait"), qe = mk("p", "q", shown); qe.dir = "auto"; qa.append(qe, ae);   // dir=auto: a question in English keeps its "?" at the end
       for (let i = 0; i < 3; i++) { const l = mk("span", "sk"); l.setAttribute("aria-hidden", "true"); ae.appendChild(l); }   // the waiting look: three quiet lines (the screen reader gets the word "חושב" from the status line below)
       sayReady("חושב");
-      conv.appendChild(qa); if (opts.compact) conv.appendChild(follow2); convbar.hidden = !!opts.compact;   // (the small window: "שיחה חדשה" is in its ⋯ menu, not under the box)
+      conv.appendChild(qa); if (opts.compact) conv.appendChild(follow2); updEmpty(); convbar.hidden = !!opts.compact;   // (the small window: "שיחה חדשה" is in its ⋯ menu, not under the box)
       // the small window shows the newest question at the top (read the answer from its start; scroll for the rest)
       const follow = () => { if (opts.compact) conv.scrollTop = qa.offsetTop - conv.offsetTop - 4; else conv.scrollTop = conv.scrollHeight; };
       follow();
@@ -420,7 +446,7 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
       const q = ta.value.trim(); ta.value = ""; syncTa(); askHere(q);
     });
     function refresh() {
-      here.hidden = !AI.builtin;
+      here.hidden = !AI.builtin; updEmpty();
       here.classList.toggle("alt", AI.builtin && !hereDefault());   // a paid plan: the AI apps first, this one second
       planBox.hidden = !(AI.external && AI.planKnown && !AI.plan);
       const lone = !!(opts.compact && opts.onKey && !AI.builtin);   // the small window, no key
@@ -521,12 +547,29 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
     if (opts.compact) {   // the small window: the send button is inside the writing box, not a row of its own
       inbox = mk("div", "inbox"); here.classList.add("send"); here.innerHTML = SEND_SVG; here.title = "שליחה (Enter)"; here.setAttribute("aria-label", "שליחה"); here.disabled = true;
       inbox.append(ta, here);
+      // before the first question: a small question mark, what this box is for, and two questions to press (a press asks exactly as if typed and Enter)
+      emptyBox = mk("div", "empty"); emptyBox.setAttribute("role", "group"); emptyBox.setAttribute("aria-label", "שאלות לדוגמה");
+      emptyBox.insertAdjacentHTML("afterbegin", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 16.5H10.3L6.5 20v-3.5H6a2.5 2.5 0 0 1-2.5-2.5V6A2.5 2.5 0 0 1 6 3.5h11.5A2.5 2.5 0 0 1 20 6v3.5"/><path d="M7.6 8h8.8M7.6 11.6h5.4"/><path d="M16.3 14.2a1.9 1.9 0 1 1 2.7 1.7c-.6.3-.9.7-.9 1.3M18.1 20.2v.1"/></svg>');
+      const exs = mk("div", "ex");
+      for (const c of opts.emptyChips || ["מה הנושא המרכזי עד עכשיו?", "תסביר שוב את מה שנאמר עכשיו"]) {
+        const b = mk("button", "", c); b.type = "button"; b.addEventListener("click", () => askHere(c)); exs.appendChild(b);
+      }
+      emptyBox.append(mk("b", "", "שאל כל דבר על מה שנאמר בהרצאה"), mk("p", "", "או לחץ על אחת מהשאלות האלה:"), exs);
+      convWrap.append(conv, emptyBox);
+      let scT = 0;
+      conv.addEventListener("scroll", () => {   // the fade shows once the text is scrolled; the thin bar shows while one scrolls
+        convWrap.classList.toggle("scrolled", conv.scrollTop > 2); convWrap.classList.add("scrolling");
+        clearTimeout(scT); scT = setTimeout(() => convWrap.classList.remove("scrolling"), 900);
+      });
     } else row.prepend(here);
     refresh();
     // like a chat: the conversation first (it grows downward), the box to write in under it
     if (opts.noHead) head.hidden = true;   // (design 3: a box inside a fold whose title already says it does not repeat the title)
-    box.append(head, planBox, conn, conv, ready, ...(opts.compact ? [inbox] : [follow2, ta]), keyrow, row, convbar, chips, hint);
-    if (opts.compact) syncTa();
+    box.append(head, planBox, conn, convWrap || conv, ready, ...(opts.compact ? [inbox] : [follow2, ta]), keyrow, row, convbar, chips, hint);
+    if (opts.compact) {
+      syncTa(); updEmpty();
+      if (window.ResizeObserver) { let lastW = 0; new ResizeObserver(() => { if (ta.offsetWidth !== lastW) { lastW = ta.offsetWidth; syncTa(); } }).observe(ta); }   // (the box is hidden until a lecture runs, and its width changes with the window)
+    }
     // a question made ready (a button of the page): for the built-in answer straight away, otherwise written in the box
     function ask(q, extra) { if (hereDefault()) askHere(q, extra); else { ta.value = q; syncTa(); ta.focus(); } }
     return {focus: () => ta.focus(), textarea: ta, refresh, askHere, ask, builtin: hereDefault, reset: resetChat, hasChat: () => conv.children.length > 0};   // (hasChat: a question was asked in this box and the conversation was not reset: the small window's menu offers "שיחה חדשה" then)

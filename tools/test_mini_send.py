@@ -61,6 +61,8 @@ with sync_playwright() as p:
     pg.route("**/api/ask", lambda r: (asks.append(json.loads(r.request.post_data or "{}")), r.fulfill(status=200, content_type="text/plain", body=ANS))[1])
     pg.goto(url + "/mini")
     pg.wait_for_selector(".inbox button.send", timeout=10000)
+    pg.wait_for_timeout(600)
+    check("the empty box is one line from the start (also when the window was hidden at first)", pg.evaluate("document.querySelector('.inbox textarea').getBoundingClientRect().height") < 50, pg.evaluate("document.querySelector('.inbox textarea').getBoundingClientRect().height"))
     pg.wait_for_timeout(800)
     H = "() => Math.round(document.querySelector('.inbox textarea').getBoundingClientRect().height)"
     BTN = ".inbox button.send"
@@ -73,6 +75,26 @@ with sync_playwright() as p:
     check("no resize handle on the box", pg.evaluate("getComputedStyle(document.querySelector('.inbox textarea')).resize") == "none")
     h1 = pg.evaluate(H)
     check("one line by default", h1 < 50, h1)
+
+    # the look of the answers area (25.11.2026)
+    check("a hairline under the 'what did I miss' row, in the border colour", pg.evaluate("""() => { const s = getComputedStyle(document.querySelector('#miss')); return s.borderBottomWidth === '1px' && s.borderBottomStyle === 'solid'; }"""))
+    check("the answers area has a thin round scroll bar (4px, no arrows)", pg.evaluate("""() => { const c = document.querySelector('.conv'); return getComputedStyle(c, '::-webkit-scrollbar').width === '4px' && getComputedStyle(c, '::-webkit-scrollbar-button').display === 'none'; }"""))
+    check("the fade at the top does not block clicks, and is off until the text is scrolled", pg.evaluate("""() => { const w = document.querySelector('.convwrap'), f = getComputedStyle(w, '::before');
+        return f.pointerEvents === 'none' && f.opacity === '0' && f.height === '20px' && f.backgroundImage.includes('linear-gradient'); }"""))
+    check("empty state: a question mark, the sentence, the small line and two example questions", pg.evaluate("""() => { const e = document.querySelector('.empty'); return !e.hidden && !!e.querySelector('svg')
+        && e.textContent.includes('שאל כל דבר על מה שנאמר בהרצאה') && e.textContent.includes('או לחץ על אחת מהשאלות האלה:')
+        && [...e.querySelectorAll('.ex button')].map(b => b.textContent).join('|') === 'מה הנושא המרכזי עד עכשיו?|תסביר שוב את מה שנאמר עכשיו'; }"""))
+    check("empty state is in the middle of the area", pg.evaluate("""() => { const e = document.querySelector('.empty').getBoundingClientRect(), c = document.querySelector('.convwrap').getBoundingClientRect(); return Math.abs((e.top + e.bottom) / 2 - (c.top + c.bottom) / 2) < 30; }"""))
+    check("the small window's transparency starts at 80%", L.mini_opacity() == 80, L.mini_opacity())
+    pg.click(".empty .ex button:first-child")
+    pg.wait_for_selector(".qa .a:not(.wait)", timeout=8000)
+    check("an example question is sent exactly as it is, and the empty state goes", [a.get("question") for a in asks] == ["מה הנושא המרכזי עד עכשיו?"] and pg.evaluate("document.querySelector('.empty').hidden"), asks)
+    pg.evaluate("document.querySelector('.conv').scrollTop = 80")
+    pg.wait_for_timeout(300)
+    check("scrolled text: the fade shows at the top, and the bar shows while scrolling", pg.evaluate("""() => { const w = document.querySelector('.convwrap'); return w.classList.contains('scrolled') && getComputedStyle(w, '::before').opacity === '1' && w.classList.contains('scrolling'); }"""))
+    pg.evaluate("document.querySelector('.conv').scrollTop = 0")
+    check("the 'עוד פרטים' / 'תן דוגמה' buttons are under the last answer, in the flow: they never cover its text", pg.evaluate("""() => { const f = document.querySelector('.followbar'), q = [...document.querySelectorAll('.qa')].pop().getBoundingClientRect(), r = f.getBoundingClientRect(); return getComputedStyle(f).position === 'static' && r.top >= q.bottom - 1 && r.height > 20; }"""))
+    asks.clear()
 
     pg.fill("textarea", "שאלה קצרה")
     check("with text, the button is live", not pg.is_disabled(BTN))
@@ -107,22 +129,42 @@ with sync_playwright() as p:
     check("...and not in a fixed row above the box", pg.evaluate("document.querySelectorAll('.followbar').length") == 1)
     check("the answer area takes the height that was freed (down to the writing box)", pg.evaluate("""() => { const c = document.querySelector('.conv').getBoundingClientRect(), i = document.querySelector('.inbox').getBoundingClientRect();
         return i.top - c.bottom < 16 && c.height > 300; }"""))
-    check("the new answer is shown from its start (the question is at the top of the area)", pg.evaluate("""() => { const c = document.querySelector('.conv'), q = c.querySelector('.qa'); return Math.abs(q.getBoundingClientRect().top - c.getBoundingClientRect().top) < 12; }"""))
+    check("the new answer is shown from its start (the question is at the top of the area)", pg.evaluate("""() => { const c = document.querySelector('.conv'), q = [...c.querySelectorAll('.qa')].pop(); return Math.abs(q.getBoundingClientRect().top - c.getBoundingClientRect().top) < 12; }"""))
 
     # the arrow button sends; a second answer moves the follow-ups to its end
     pg.fill("textarea", "שאלה שנייה")
     pg.click(BTN)
-    pg.wait_for_function("document.querySelectorAll('.qa').length === 2 && !document.querySelector('.qa:last-of-type .a.wait')", timeout=8000)
+    pg.wait_for_function("document.querySelectorAll('.qa').length === 3 && !document.querySelector('.qa .a.wait')", timeout=8000)
     pg.wait_for_timeout(400)
     check("the arrow sends the question", [a.get("question") for a in asks] == ["שלום\nעולם", "שאלה שנייה"], asks)
-    check("the follow-ups moved to the end of the new answer (still one set)", pg.evaluate("""() => { const c = document.querySelector('.conv'); return c.querySelectorAll('.followbar').length === 1 && c.lastElementChild.classList.contains('followbar') && c.children.length === 3; }"""))
+    check("the follow-ups moved to the end of the new answer (still one set)", pg.evaluate("""() => { const c = document.querySelector('.conv'); return c.querySelectorAll('.followbar').length === 1 && c.lastElementChild.classList.contains('followbar') && c.children.length === 4; }"""))
+    pg.wait_for_function("!document.querySelector('.inbox button.send').classList.contains('stop')", timeout=8000)
     pg.click(".followbar button:has-text('עוד פרטים')")
-    pg.wait_for_function("document.querySelectorAll('.qa').length === 3", timeout=8000)
-    pg.wait_for_timeout(300)
-    pg.click(".followbar button:has-text('תן דוגמה')")
     pg.wait_for_function("document.querySelectorAll('.qa').length === 4", timeout=8000)
+    pg.wait_for_timeout(300)
+    pg.wait_for_function("!document.querySelector('.inbox button.send').classList.contains('stop')", timeout=8000)
+    pg.click(".followbar button:has-text('תן דוגמה')")
+    pg.wait_for_function("document.querySelectorAll('.qa').length === 5", timeout=8000)
     check("'עוד פרטים' and 'תן דוגמה' still ask exactly as before", [a.get("question") for a in asks][-2:] == ["עוד פרטים", "תן דוגמה"], asks)
 
+    # a question typed in two lines is shown in two lines; a long sentence breaks into lines of about 34 characters at most (25.11.2026)
+    pg.wait_for_function("!document.querySelector('.inbox button.send').classList.contains('stop')", timeout=8000)
+    pg.fill("textarea", "שלום")
+    pg.keyboard.press("Shift+Enter")
+    pg.keyboard.type("עולם")
+    pg.keyboard.press("Enter")
+    pg.wait_for_function("document.querySelectorAll('.qa').length === 6 && !document.querySelector('.qa .a.wait')", timeout=8000)
+    check("a question typed in two lines is shown in two lines (the new line is kept)", pg.evaluate("""() => { const q = [...document.querySelectorAll('.qa .q')].pop();
+        return getComputedStyle(q).whiteSpace === 'pre-wrap' && q.textContent === 'שלום\\nעולם' && q.getBoundingClientRect().height > 40; }"""))
+    pg.wait_for_function("!document.querySelector('.inbox button.send').classList.contains('stop')", timeout=8000)
+    pg.fill("textarea", "זו שאלה ארוכה מאוד שנכתבת בלי ירידת שורה ידנית ומכילה הרבה מילים כדי לראות איך היא נשברת")
+    pg.press("textarea", "Enter")
+    pg.wait_for_function("document.querySelectorAll('.qa').length === 7 && !document.querySelector('.qa .a.wait')", timeout=8000)
+    lw = pg.evaluate("""() => { const q = [...document.querySelectorAll('.qa .q')].pop(), cs = getComputedStyle(q);
+        return {w: q.getBoundingClientRect().width, cw: document.querySelector('.conv').clientWidth, wrap: cs.overflowWrap, h: q.getBoundingClientRect().height, fs: parseFloat(cs.fontSize)}; }""")
+    check("a long question is a bubble of limited width and wraps to several lines", lw["w"] <= lw["cw"] * 0.88 + 1 and lw["h"] > lw["fs"] * 3 and lw["wrap"] == "anywhere", lw)
+
+    pg.wait_for_function("!document.querySelector('.inbox button.send').classList.contains('stop')", timeout=8000)
     # while an answer comes the arrow is the stop button
     slow = []
     pg.unroute("**/api/ask")

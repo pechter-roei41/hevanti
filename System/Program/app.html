@@ -1792,8 +1792,8 @@ const setPanels = {};
   setPanels.cap.appendChild(pl);
   glideGroup(cs);
   // how see-through the small window is (the lecture behind it stays visible)
-  const ol = el("label", "row miniopt"), oc = el("input"), ov = el("span", "", "60%"); oc.type = "range"; oc.id = "miniOp";
-  oc.min = 30; oc.max = 100; oc.step = 5; oc.value = 60; oc.style.width = "160px"; oc.dir = "ltr"; oc.setAttribute("aria-label", "אטימות החלון הצף");   // dir=ltr: the slider of an RTL page runs backwards (the smallest value at the right), so "left = more see-through" was not true
+  const ol = el("label", "row miniopt"), oc = el("input"), ov = el("span", "", "80%"); oc.type = "range"; oc.id = "miniOp";
+  oc.min = 30; oc.max = 100; oc.step = 5; oc.value = 80; oc.style.width = "160px"; oc.dir = "ltr"; oc.setAttribute("aria-label", "אטימות החלון הצף");   // dir=ltr: the slider of an RTL page runs backwards (the smallest value at the right), so "left = more see-through" was not true
   let opT = 0;
   oc.addEventListener("input", () => {
     ov.textContent = oc.value + "%"; clearTimeout(opT);
@@ -1835,7 +1835,7 @@ function openSettings(id) {
   setTab = id;
   if (view !== "settings") { if (location.hash !== "#settings") history.pushState(null, "", "#settings"); show("settings"); }
   for (const [t] of SET_TABS) { setPanels[t].hidden = t !== id; $("#settab-" + t).setAttribute("aria-selected", t === id ? "true" : "false"); }
-  if (id === "cap") { api("/api/mirror").then(m => { $("#miniAuto").checked = m.mini_auto === true; $("#quickStart").checked = m.quick_start !== false; $("#miniBtn").checked = m.mini_button !== false; drawCorner(m.mini_btn_corner || "br"); const o = m.mini_opacity || 60; $("#miniOp").value = o; $("#miniOp").nextElementSibling.textContent = o + "%"; }).catch(() => {}); capSig = ""; drawCaps(); if (capOf().mode === "window" && !capWinsAt) capLoadWins(); }
+  if (id === "cap") { api("/api/mirror").then(m => { $("#miniAuto").checked = m.mini_auto === true; $("#quickStart").checked = m.quick_start !== false; $("#miniBtn").checked = m.mini_button !== false; drawCorner(m.mini_btn_corner || "br"); const o = m.mini_opacity || 80; $("#miniOp").value = o; $("#miniOp").nextElementSibling.textContent = o + "%"; }).catch(() => {}); capSig = ""; drawCaps(); if (capOf().mode === "window" && !capWinsAt) capLoadWins(); }
   if (id === "key" || id === "tune") { mathSig = ""; drawMath(); }
   if (id === "a11y") a11yDraw();
   if (id === "ai") api("/api/mirror").then(m => { $("#extAi").checked = m.external_ai === true; $("#mathEvery").checked = m.math_every === true; }).catch(() => {});

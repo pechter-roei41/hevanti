@@ -77,7 +77,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 #menu .mi.danger:hover,#menu .mi.danger:focus,#stopBtn.confirm,#stopBtn.confirm:hover{background:var(--surface);border-color:var(--rec)}
 #stopBtn.confirm{font-weight:800}
 #quitBtn.confirm{font-weight:800}
-.miss{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 10px 0;font-size:14px;color:var(--muted)}
+.miss{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 10px 8px;border-bottom:1px solid var(--line);font-size:14px;color:var(--muted)}   /* a hairline under it: the questions and answers are a separate area */
 .miss button{border:1px solid var(--accent);background:none;color:var(--accent);border-radius:999px;padding:1px 11px;cursor:pointer;font-size:14px;font-weight:600}
 .miss button:hover{background:var(--accent-soft)}
 #lag{flex:none;margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:var(--warn-bg);color:var(--warn-fg);font-size:14px;line-height:1.4;font-weight:700;white-space:nowrap;align-self:center}   /* in the row of "מה פספסתי", at its left, a caution pill: never green */
@@ -103,7 +103,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 .miss button{padding:4px 14px;min-height:36px}   /* a trackpad in a dark lecture hall: 36 px high, 8 px apart, so 7 is not pressed for 3 */
 #box{flex:1;min-height:0;padding:8px 10px 10px}
 #box.askp{display:flex;flex-direction:column;height:100%;gap:8px}
-#box.askp .conv{flex:1;min-height:0;max-height:none;align-content:safe end}   /* the conversation sits just above the question box, not hanging from the title */
+#box.askp .conv{flex:1;min-height:0;max-height:none;align-content:safe end}   /* (in .convwrap, which takes the free height) */   /* the conversation sits just above the question box, not hanging from the title */
 #box.askp .head{display:none}
 #box.askp textarea{font-size:17px}   /* (one line to start; the ask box grows it to 4 lines, with the round send button inside the box at its left) */
 #box.askp .inbox{border-radius:14px;margin-top:auto}   /* with no answer yet the box still sits at the bottom */
