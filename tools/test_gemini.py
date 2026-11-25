@@ -120,6 +120,13 @@ class Fake(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body) + 500))
             self.end_headers()
             return self.wfile.write(body)
+        if mode == "no-finish":   # the stream ends early with no size given (as Gemini streams): words, and no finishReason
+            return self._reply(200, sse(text("בהרצאה הוסבר שמשוואות הן משוואות שבהן יש נ"), USAGE), "text/event-stream")
+        if mode == "error-mid":   # the first words, then Google's error inside the stream
+            return self._reply(200, sse(text("שלום "), {"error": {"code": 500, "message": "An internal error has occurred.", "status": "INTERNAL"}}),
+                               "text/event-stream")
+        if mode == "error-start":   # Google's error inside the stream, before any word
+            return self._reply(200, sse({"error": {"code": 503, "message": "The model is overloaded.", "status": "UNAVAILABLE"}}), "text/event-stream")
         if mode == "blocked":
             return self._reply(200, sse({"promptFeedback": {"blockReason": "SAFETY"}}), "text/event-stream")
         if mode == "finish-safety":
@@ -214,6 +221,15 @@ check("an empty answer with no reason: it says so", t == "" and info.get("warn")
 # ------------------------------------------------------------------------------------------ 3. the connection breaks, a model is slow
 t, info, e, _ = stream("cut")
 check("the connection is cut in the middle: what came is kept, and the error says it was cut", t == "שלום " and e is not None and "נותק" in str(e) and not e.other, (t, e and str(e)))
+t, info, e, _ = stream("no-finish")
+check("words with no finishReason (the stream ended early, no size given): what came is kept, and it says it was cut",
+      t.endswith("יש נ") and e is None and "נקטעה" in info.get("warn", ""), (t, info, e and str(e)))
+t, info, e, _ = stream("error-mid")
+check("Google's error inside the stream after the first words: what came is kept, and it says it stopped",
+      t == "שלום " and e is not None and "באמצע" in str(e) and not e.other, (t, e and str(e)))
+t, info, e, _ = stream("error-start")
+check("Google's error inside the stream before any word: said like the same HTTP error (busy, another model is tried)",
+      t == "" and e is not None and "עמוס" in str(e) and e.other, (t, e and str(e)))
 t, info, e, sec = stream("stall-start", timeout=1.0)
 check("a model that does not start in time: 'did not answer in time', the next model is tried", e is not None and "לא ענה בזמן" in str(e) and e.other and t == "" and sec < 3, (e and str(e), sec))
 t, info, e, sec = stream("stall-mid", timeout=1.0, read_timeout=1.0)
@@ -309,6 +325,15 @@ reset()
 BEHAVE[MODELS[0]] = "cut"
 code, body, _ = ask()
 check("a connection cut in the middle: the words that came, then a line saying it was cut", code == 200 and body.startswith("שלום ") and "⚠" in body and "נותק" in body, (code, body))
+
+reset()
+BEHAVE[MODELS[0]] = "no-finish"
+code, body, _ = ask(f=course + "/הרצאה 1")
+check("an answer that stopped with no finishReason (seen on 25.11.2026): the words, then a line saying it was cut",
+      code == 200 and "יש נ" in body and "⚠ התשובה נקטעה" in body, (code, body))
+check("...and the cut answer is not kept as if it were whole", not os.path.exists(os.path.join(lec, L.QA_NAME)))
+rows = [json.loads(x) for x in open(os.path.join(L.LOCAL_DIR, "tokens.jsonl"), encoding="utf-8")]
+check("...and it is not counted as a good answer in the log", rows and rows[-1]["kind"] == "ask" and rows[-1]["ok"] is False, rows[-1:])
 
 reset()
 BEHAVE[MODELS[0]] = "403-disabled"

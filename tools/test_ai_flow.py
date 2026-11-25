@@ -97,9 +97,10 @@ class Fake(BaseHTTPRequestHandler):
         if mode == "thoughts":
             return self._reply(200, sse({"candidates": [{"content": {"parts": [{"text": "מחשב בשקט...", "thought": True}]}}]},
                                         {"candidates": [{"content": {"parts": [{"text": "התשובה "}]}}]},
-                                        {"candidates": [{"content": {"parts": [{"text": "האמיתית"}]}}], **USAGE}), "text/event-stream")
-        self._reply(200, sse({"candidates": [{"content": {"parts": [{"text": "שלום "}]}}]},
-                             {"candidates": [{"content": {"parts": [{"text": "לכולם"}]}}], **USAGE}), "text/event-stream")
+                                        {"candidates": [{"content": {"parts": [{"text": "האמיתית"}]}, "finishReason": "STOP"}], **USAGE}),
+                               "text/event-stream")
+        self._reply(200, sse({"candidates": [{"content": {"parts": [{"text": "שלום "}]}}]},   # (Gemini closes a whole answer with STOP)
+                             {"candidates": [{"content": {"parts": [{"text": "לכולם"}]}, "finishReason": "STOP"}], **USAGE}), "text/event-stream")
 
 
 fake = ThreadingHTTPServer(("127.0.0.1", 0), Fake)
