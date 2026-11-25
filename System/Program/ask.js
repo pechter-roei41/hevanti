@@ -56,6 +56,16 @@
 .askp .plan .btns{display:flex;gap:6px;flex-wrap:wrap}
 .askp .plan button{border:1.5px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;padding:4px 12px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
 .askp .plan button:hover{background:var(--accent);color:var(--accent-ink)}
+/* the small window: the box to write in has the round send button inside it, at its left (the end of the line in Hebrew) */
+.askp .inbox{display:flex;align-items:flex-end;gap:6px;border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:4px 6px 4px 4px}
+.askp .inbox:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+.askp .inbox textarea{flex:1 1 auto;min-width:0;border:0;outline:0;background:transparent;resize:none;min-height:0;padding:6px 8px;overflow-y:hidden;line-height:1.45}
+.askp .inbox button.send{flex:none;width:34px;height:34px;border-radius:50%;padding:0;display:grid;place-items:center;border:1.5px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.askp .inbox button.send svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.askp .inbox button.send:disabled{opacity:.35;cursor:default}
+.askp .inbox button.send.stop{background:transparent;color:var(--accent)}
+.askp .inbox button.send.stop svg{fill:currentColor;stroke:none}
+.askp .ais:not(:has(button:not([hidden]))){display:none}
 .askp .ais button.here.alt{background:transparent;color:var(--accent);font-weight:600}
 .askp .basis{justify-self:end;max-width:96%;font-size:calc(13px * var(--tx, 1));line-height:1.5;color:var(--muted)}
 .askp .basis .btog{display:inline-flex;align-items:center;gap:4px;border:0;background:none;color:var(--muted);font:inherit;font-weight:600;cursor:pointer;padding:2px 6px;min-height:28px;border-radius:6px}
@@ -256,7 +266,7 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
       planBtns.appendChild(pb);
     }
     planBox.appendChild(planBtns);
-    const ta = mk("textarea"); ta.rows = opts.rows || 2; ta.dir = "auto";
+    const ta = mk("textarea"); ta.rows = opts.compact ? 1 : (opts.rows || 2); ta.dir = "auto";
     ta.placeholder = opts.placeholder || "מה לא ברור?";
     ta.setAttribute("aria-label", "השאלה");
     const row = mk("div", "ais"); row.setAttribute("role", "group"); row.setAttribute("aria-label", "לאן לשלוח");
@@ -270,11 +280,13 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
     const buttons = {};
     // ---- the answer inside Hevanti (built-in, free Gemini key) ----
     const here = mk("button", "here", "תשובה כאן"); here.type = "button";
+    const SEND_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>';   // (an arrow to the left: the way a line of Hebrew goes)
+    const STOP_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
     here.title = "Gemini עונה כאן, בתוך הבנתי, עם מה שנאמר" + (opts.hasImage ? " והשקופית שעל המסך" : "") + ". Enter לשליחה, Shift+Enter לשורה חדשה";
     const chips = mk("div", "chips2"); chips.setAttribute("role", "group"); chips.setAttribute("aria-label", "שאלות מוכנות");
     for (const c of opts.chips || ["תסביר בפשטות את מה שנאמר עכשיו", "תן דוגמה", "מה כתוב בשקופית?", "למה זה חשוב?"]) {
       const b = mk("button", "", c); b.type = "button";
-      b.addEventListener("click", () => { if (hereDefault()) askHere(c); else { ta.value = c; ta.focus(); } });
+      b.addEventListener("click", () => { if (hereDefault()) askHere(c); else { ta.value = c; syncTa(); ta.focus(); } });
       chips.appendChild(b);
     }
     // (a screen reader must not read the answer in pieces while it streams: the answer is not a live region; one short message says when it is ready - audit #38)
@@ -293,7 +305,7 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
     const exBtn = mk("button", "more", "תן דוגמה"); exBtn.type = "button"; exBtn.hidden = true;
     exBtn.title = "דוגמה להסבר האחרון";
     exBtn.addEventListener("click", () => askHere("תן דוגמה"));
-    const follow2 = mk("div", "followbar"); follow2.append(moreBtn, exBtn);   // above the box to write in: a next step for the last answer
+    const follow2 = mk("div", "followbar"); follow2.append(moreBtn, exBtn);   // above the box to write in: a next step for the last answer (the small window: at the end of the last answer, inside the conversation)
     function resetChat() { if (ctl) { try { ctl.abort(); } catch (e) {} } hist.length = 0; conv.replaceChildren(); convbar.hidden = true; updMore(); }   // (also called from outside: a new lecture or course must not carry the old answers into "more details")
     newBtn.addEventListener("click", resetChat);
     convbar.append(newBtn);
@@ -302,7 +314,22 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
     let busy = false, ctl = null, typing = false;   // typing: a question was begun (and its picture asked for)
     function updMore() { moreBtn.hidden = exBtn.hidden = busy || !hist.length; }
     function setBusy(on) {
-      busy = on; here.textContent = on ? "■ עצירה" : "תשובה כאן"; here.classList.toggle("stop", on); updMore();
+      busy = on; here.classList.toggle("stop", on); updMore();
+      if (opts.compact) {   // the round button is the stop button while the answer comes
+        here.innerHTML = on ? STOP_SVG : SEND_SVG;
+        here.title = on ? "עצירה" : "שליחה (Enter)"; here.setAttribute("aria-label", on ? "עצירה" : "שליחה");
+        syncTa();
+      } else here.textContent = on ? "■ עצירה" : "תשובה כאן";
+    }
+    // the small window: the box is one line, grows to 4 lines while one writes and then scrolls; the send button is live only with text (or as stop)
+    function syncTa() {
+      if (!opts.compact) return;
+      ta.style.height = "auto";
+      const cs = getComputedStyle(ta), lh = parseFloat(cs.lineHeight) || 1.45 * parseFloat(cs.fontSize) || 24;
+      const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0), maxH = Math.round(lh * 4 + pad);
+      ta.style.height = Math.min(ta.scrollHeight, maxH) + "px";
+      ta.style.overflowY = ta.scrollHeight > maxH + 1 ? "auto" : "hidden";
+      here.disabled = !busy && !ta.value.trim();
     }
     // The free quota is used up: the same question, with what was said, goes on in the student's own AI app
     // (the last one used first) - a click copies it and opens that AI, like the three buttons above.
@@ -354,7 +381,7 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
       const qa = mk("div", "qa"), ae = mk("div", "a wait"), qe = mk("p", "q", shown); qe.dir = "auto"; qa.append(qe, ae);   // dir=auto: a question in English keeps its "?" at the end
       for (let i = 0; i < 3; i++) { const l = mk("span", "sk"); l.setAttribute("aria-hidden", "true"); ae.appendChild(l); }   // the waiting look: three quiet lines (the screen reader gets the word "חושב" from the status line below)
       sayReady("חושב");
-      conv.appendChild(qa); convbar.hidden = !!opts.compact;   // (the small window: "שיחה חדשה" is in its ⋯ menu, not under the box)
+      conv.appendChild(qa); if (opts.compact) conv.appendChild(follow2); convbar.hidden = !!opts.compact;   // (the small window: "שיחה חדשה" is in its ⋯ menu, not under the box)
       // the small window shows the newest question at the top (read the answer from its start; scroll for the rest)
       const follow = () => { if (opts.compact) conv.scrollTop = qa.offsetTop - conv.offsetTop - 4; else conv.scrollTop = conv.scrollHeight; };
       follow();
@@ -390,7 +417,7 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
     }
     here.addEventListener("click", () => {
       if (busy) { if (ctl) ctl.abort(); return; }
-      const q = ta.value.trim(); ta.value = ""; askHere(q);
+      const q = ta.value.trim(); ta.value = ""; syncTa(); askHere(q);
     });
     function refresh() {
       here.hidden = !AI.builtin;
@@ -465,7 +492,7 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
         : "הועתק ונפתח " + a.name + " בשליש המסך. להדביק (Ctrl+V) ולשלוח.") + img);
       return true;
     }
-    async function send(a) { const q = ta.value.trim(); if (await sendQ(a, q)) { ta.value = ""; typing = false; } }
+    async function send(a) { const q = ta.value.trim(); if (await sendQ(a, q)) { ta.value = ""; syncTa(); typing = false; } }
     for (const a of AIS) {
       const bt = mk("button", "", a.name); bt.type = "button"; bt.dataset.ai = a.id;
       bt.title = "מעתיק את השאלה עם ההקשר ופותח את " + a.name + " (האפליקציה אם היא מותקנת, אחרת האתר)";
@@ -475,6 +502,7 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
     // The first key of a question: Hevanti keeps a picture of the screen of this moment (a live lecture) - the slide the
     // question is about may not have been saved yet, or the lecturer may move on while one types.
     ta.addEventListener("input", () => {
+      syncTa();
       if (!ta.value.trim()) { typing = false; return; }
       if (typing) return;
       typing = true;
@@ -485,17 +513,22 @@ html[data-theme="dark"] .askp{--sk:#587562;--sk-shine:#7F9E8B}
       // Enter sends (Shift+Enter is a new line); Ctrl+Enter sends too
       if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
         e.preventDefault();
-        if (hereDefault()) { if (busy) return; const q = ta.value.trim(); ta.value = ""; askHere(q); }
+        if (hereDefault()) { if (busy) return; const q = ta.value.trim(); ta.value = ""; syncTa(); askHere(q); }
         else send(AIS.find(a => a.id === getLast()) || AIS[0]);
       }
     });
-    row.prepend(here);
+    let inbox = null;
+    if (opts.compact) {   // the small window: the send button is inside the writing box, not a row of its own
+      inbox = mk("div", "inbox"); here.classList.add("send"); here.innerHTML = SEND_SVG; here.title = "שליחה (Enter)"; here.setAttribute("aria-label", "שליחה"); here.disabled = true;
+      inbox.append(ta, here);
+    } else row.prepend(here);
     refresh();
     // like a chat: the conversation first (it grows downward), the box to write in under it
     if (opts.noHead) head.hidden = true;   // (design 3: a box inside a fold whose title already says it does not repeat the title)
-    box.append(head, planBox, conn, conv, ready, follow2, ta, keyrow, row, convbar, chips, hint);
+    box.append(head, planBox, conn, conv, ready, ...(opts.compact ? [inbox] : [follow2, ta]), keyrow, row, convbar, chips, hint);
+    if (opts.compact) syncTa();
     // a question made ready (a button of the page): for the built-in answer straight away, otherwise written in the box
-    function ask(q, extra) { if (hereDefault()) askHere(q, extra); else { ta.value = q; ta.focus(); } }
+    function ask(q, extra) { if (hereDefault()) askHere(q, extra); else { ta.value = q; syncTa(); ta.focus(); } }
     return {focus: () => ta.focus(), textarea: ta, refresh, askHere, ask, builtin: hereDefault, reset: resetChat, hasChat: () => conv.children.length > 0};   // (hasChat: a question was asked in this box and the conversation was not reset: the small window's menu offers "שיחה חדשה" then)
   }
   // open an AI for the course page's "פתיחה בשליש": the course's project link, the connected app, or the site

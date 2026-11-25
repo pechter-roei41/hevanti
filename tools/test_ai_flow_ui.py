@@ -234,7 +234,7 @@ with sync_playwright() as p:
     mini.goto(url + "/mini")
     mini.evaluate("localStorage.removeItem('bzm.ai')")
     mini.wait_for_selector("textarea")
-    mini.wait_for_function("[...document.querySelectorAll('.ais button')].some(b => !b.hidden && b.textContent === 'תשובה כאן')", timeout=8000)
+    mini.wait_for_function("[...document.querySelectorAll('button.here')].some(b => !b.hidden && b.getAttribute('aria-label') === 'שליחה')", timeout=8000)
 
     def last_alt():
         return "[...document.querySelectorAll('.alt-box')].pop()"
