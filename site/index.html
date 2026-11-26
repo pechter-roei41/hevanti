@@ -25,13 +25,28 @@
 .try{position:absolute;top:-18px;inset-inline-start:18px;z-index:3;background:#FFD93D;color:#0D1B16;font-family:'Secular One',Assistant,sans-serif;font-size:18px;line-height:1.2;padding:7px 14px;border-radius:8px;transform:rotate(-2deg)}
 @keyframes nudge{0%,100%{box-shadow:0 0 0 0 rgba(255,217,61,0)}50%{box-shadow:0 0 0 7px rgba(255,217,61,.28)}}
 #markBtn[aria-pressed=false]{animation:nudge 2.4s ease-in-out 1.2s 4}
+#winToast{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);width:max-content;max-width:calc(100% - 24px);box-sizing:border-box;background:#16291F;color:#F5F0E3;border:1px solid #33503F;box-shadow:0 2px 10px rgba(0,0,0,.4);padding:9px 16px;border-radius:12px;font-size:15px;line-height:1.4;font-weight:600;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s;z-index:4}
+#winToast.on{opacity:1}
+#winToast .star{display:inline-block;background:#FFD93D;color:#0D1B16;border-radius:6px;padding:0 7px;margin-inline-end:8px}
+@keyframes pop{from{transform:scale(.6)}}
+#winToast.on .star{animation:pop .5s cubic-bezier(.2,.8,.2,1) .05s backwards}
+@media (prefers-reduced-motion: reduce){#winToast{transition:none}#winToast.on .star{animation:none}}
 .sticky{display:none}
 @media (max-width:640px){
  .sticky{display:flex;position:fixed;inset-inline:0;bottom:0;z-index:20;gap:10px;align-items:center;justify-content:space-between;box-sizing:border-box;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:#0D1B16;border-top:1px solid #2F4A3C}
  .sticky a,.sticky button{min-height:44px;border-radius:12px;font-family:inherit;font-weight:800;font-size:16px;padding:0 16px;display:inline-flex;align-items:center;text-decoration:none;cursor:pointer}
- .stk-dl{background:#3DDC97;color:#06140E;border:0;flex:1;justify-content:center}
- .stk-cp{background:transparent;color:#F5F0E3;border:1.5px solid #4C6B5B}
+ .stk-cp{background:#3DDC97;color:#06140E;border:0;flex:1;justify-content:center}
+ .stk-dl{background:transparent;color:#F5F0E3;border:1.5px solid #4C6B5B}
  body{padding-bottom:72px}
+ .pl{flex-basis:100%}
+ .hero{padding:12px 20px 64px!important;gap:28px!important}
+ .hero-col{gap:18px!important}
+ .hero-h1{font-size:38px!important}
+ .hero-sub{font-size:18px!important;line-height:1.55!important}
+ .hero-steps,.hero-warn,.bg{display:none!important}
+ .hwin{margin-top:0!important;margin-inline:0!important;width:100%!important;transform:none!important}
+ .flinks{gap:0 22px!important}
+ .flinks a{display:inline-flex;align-items:center;min-height:44px}
 }
 @media (prefers-reduced-motion: reduce){#markBtn{animation:none!important}}
 [hidden]{display:none!important}
@@ -76,11 +91,11 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 </nav>
 </header>
 
-<section aria-labelledby="h1" style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:36px 24px 120px;display:flex;flex-wrap:wrap;gap:56px 56px;align-items:center">
-<div style="flex:1 1 440px;min-width:0;display:flex;flex-direction:column;gap:26px">
-<h1 id="h1" style="margin:0;font-family:'Secular One',Assistant,sans-serif;font-weight:400;font-size:clamp(44px,7.2vw,88px);line-height:1.06;letter-spacing:-0.015em;text-wrap:balance">חלון צף מעל ההרצאה
+<section class="hero" aria-labelledby="h1" style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:36px 24px 120px;display:flex;flex-wrap:wrap;gap:56px 56px;align-items:center">
+<div class="hero-col" style="flex:1 1 440px;min-width:0;display:flex;flex-direction:column;gap:26px">
+<h1 id="h1" class="hero-h1" style="margin:0;font-family:'Secular One',Assistant,sans-serif;font-weight:400;font-size:clamp(44px,7.2vw,88px);line-height:1.06;letter-spacing:-0.015em;text-wrap:balance">חלון צף מעל ההרצאה
 <span style="display:inline-block;margin-top:10px;background:#FFD93D;color:#0D1B16;padding:0 16px 4px;border-radius:8px;transform:rotate(-1.2deg)">שעונה על מה שפספסת.</span></h1>
-<p style="margin:0;font-size:20px;line-height:1.65;max-width:540px;color:#C9D8CF;text-wrap:pretty">הבנתי מתמללת את הרצאת הזום או ההקלטה שלך, ופותחת חלון צף שנשאר מעל ההרצאה, גם במסך מלא. כותבים שאלה ומקבלים תשובה מהדקות האחרונות ומהשקף שעל המסך, בלי להחליף חלון ובלי לאבד את החוט.</p>
+<p class="hero-sub" style="margin:0;font-size:20px;line-height:1.65;max-width:540px;color:#C9D8CF;text-wrap:pretty">הבנתי מתמללת את הרצאת הזום או ההקלטה שלך, ופותחת חלון צף שנשאר מעל ההרצאה, גם במסך מלא. כותבים שאלה ומקבלים תשובה מהדקות האחרונות ומהשקף שעל המסך, בלי להחליף חלון ובלי לאבד את החוט.</p>
 <p style="margin:0;max-width:540px;font-size:17px;line-height:1.6;color:#CFE0D6;border:1px solid #2F4A3C;border-radius:14px;padding:12px 16px;text-wrap:pretty"><b style="color:#F5F0E3">להרצאות שמתנגנות במחשב:</b> זום חי, הקלטה או יוטיוב. הבנתי שומעת את המחשב ולא את המיקרופון, ולכן היא לא מתאימה לכיתה פיזית.</p>
 <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px 18px">
 <a href="https://github.com/pechter-roei41/hevanti/releases/latest/download/Hevanti-Setup.exe" style="background:#3DDC97;color:#06140E;text-decoration:none;font-weight:800;font-size:20px;padding:15px 28px;border-radius:14px;min-height:44px;box-sizing:border-box;display:inline-flex;align-items:center;gap:10px;box-shadow:0 12px 26px -12px rgba(0,0,0,0.6)">
@@ -91,12 +106,12 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 צפו בסרטון</a>
 </div>
 <div style="color:#93AB9E;font-size:15px;line-height:1.6">Hevanti-Setup.exe · קוד פתוח, רישיון MIT</div>
-<ol style="margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:8px 10px;counter-reset:st">
+<ol class="hero-steps" style="margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:8px 10px;counter-reset:st">
 <li class="step"><b>1</b> מתקינים</li>
 <li class="step"><b>2</b> לוחצים &quot;יצירת מפתח&quot;, והאפליקציה מובילה אותך (כ-2 דקות)</li>
 <li class="step"><b>3</b> לוחצים &quot;התחל תמלול&quot;</li>
 </ol>
-<p style="margin:0;color:#93AB9E;font-size:14px;line-height:1.55;max-width:540px">Windows עשוי להציג פעם אחת &quot;Windows protected your PC&quot;, כי הקובץ עוד לא חתום. בוחרים &quot;מידע נוסף&quot; ואז &quot;הפעל בכל זאת&quot;.</p>
+<p class="hero-warn" style="margin:0;color:#93AB9E;font-size:14px;line-height:1.55;max-width:540px">Windows עשוי להציג פעם אחת &quot;Windows protected your PC&quot;, כי הקובץ עוד לא חתום. בוחרים &quot;מידע נוסף&quot; ואז &quot;הפעל בכל זאת&quot;.</p>
 </div>
 
 <div style="flex:1.2 1 520px;min-width:0;position:relative;display:flex;flex-direction:column">
@@ -106,7 +121,7 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 <svg width="80" height="236" viewBox="0 0 80 236" fill="none" stroke="#FFD93D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-inline-start:8px;margin-top:2px"><path d="M12 4C-2 70 6 150 54 214"/><path d="M36 218L56 218L52 196"/></svg>
 </div>
 
-<div aria-hidden="true" style="background:#FFFFFF;color:#0D1B16;border-radius:20px;padding:22px 26px 210px;box-sizing:border-box;min-height:140px;border:1px solid #DCE5DF">
+<div class="bg" aria-hidden="true" style="background:#FFFFFF;color:#0D1B16;border-radius:20px;padding:22px 26px 210px;box-sizing:border-box;min-height:140px;border:1px solid #DCE5DF">
 <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
 <div style="display:inline-block;background:#E9EEEA;color:#4E5C54;font-size:13px;font-weight:700;line-height:1.4;padding:3px 12px;border-radius:999px">הרצאה בזום · מסך מלא</div>
 <div style="display:flex;gap:6px"><span style="width:26px;height:20px;border-radius:4px;background:#D9E2DC;display:block"></span><span style="width:26px;height:20px;border-radius:4px;background:#C8D5CD;display:block"></span><span style="width:26px;height:20px;border-radius:4px;background:#D9E2DC;display:block"></span></div>
@@ -142,7 +157,7 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 </div>
 </div>
 <div role="group" aria-label="מה פספסתי" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-<span style="font-size:14px;font-weight:700;color:#9DB3A6">מה פספסתי?</span>
+<span class="pl" style="font-size:14px;font-weight:700;color:#9DB3A6">מה פספסתי?</span>
 <span id="pillsMount" style="display:contents"></span>
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
@@ -154,6 +169,7 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 <div id="ansSrc" style="margin-top:6px;font-size:14px;color:#8EF0C3;font-weight:700"></div>
 </div>
 <div id="hintBox" style="background:#16291F;border-radius:12px;padding:12px 14px;font-size:15px;line-height:1.55;color:#A9BDB2">לחצו על &quot;תשובה כאן&quot;, על אחד מכפתורי הדקות, על ★ כדי לסמן רגע, או על ⋯ לתפריט.</div>
+<div style="position:relative;height:0;margin-top:-13px"><div id="winToast" role="status" aria-live="polite"><span class="star" aria-hidden="true">★</span><span id="winToastTxt"></span></div></div>
 </div>
 <p style="margin:16px 4px 0;font-size:14px;line-height:1.5;color:#93AB9E">דוגמה להמחשה: החלון מעל הרצאה במסך מלא. בהרצאה אמיתית התשובה נשענת על התמלול ועל השקף שלכם.</p>
 </div>
@@ -437,8 +453,8 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 
 <footer style="background:#0D1B16;color:#A9BDB2">
 <div style="max-width:1200px;margin:0 auto;box-sizing:border-box;padding:32px 24px 44px;display:flex;flex-direction:column;gap:12px;font-size:14px;line-height:1.7">
-<div style="display:flex;flex-wrap:wrap;gap:6px 22px">
-<a href="https://github.com/pechter-roei41/hevanti" style="color:#F5F0E3;font-weight:700;text-decoration:none;border-bottom:1px solid #4C6B5B">קוד המקור ב-GitHub</a>
+<div class="flinks" style="display:flex;flex-wrap:wrap;gap:6px 22px">
+<a href="https://github.com/pechter-roei41/hevanti"style="color:#F5F0E3;font-weight:700;text-decoration:none;border-bottom:1px solid #4C6B5B">קוד המקור ב-GitHub</a>
 <a href="https://github.com/pechter-roei41/hevanti/blob/main/PRIVACY.md" style="color:#F5F0E3;font-weight:700;text-decoration:none;border-bottom:1px solid #4C6B5B">מדיניות פרטיות</a>
 <a href="https://github.com/pechter-roei41/hevanti/blob/main/TERMS.md" style="color:#F5F0E3;font-weight:700;text-decoration:none;border-bottom:1px solid #4C6B5B">תנאי שימוש</a>
 <a href="https://github.com/pechter-roei41/hevanti/issues" style="color:#F5F0E3;font-weight:700;text-decoration:none;border-bottom:1px solid #4C6B5B">דיווח על תקלה</a>
@@ -535,7 +551,13 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
     var again=document.querySelector('#pillsMount button[data-k="'+ans+'"]'); if(again) again.focus();
   });
   document.getElementById('askBtn').addEventListener('click',function(){ans='q';renderPills();renderAns();});
-  document.getElementById('markBtn').addEventListener('click',function(){now=!now;renderNow();});
+  var toastEl=document.getElementById('winToast'), toastTimer=null;
+  function markToast(){
+    document.getElementById('winToastTxt').textContent='סומן';
+    toastEl.classList.remove('on'); void toastEl.offsetWidth; toastEl.classList.add('on');
+    clearTimeout(toastTimer); toastTimer=setTimeout(function(){toastEl.classList.remove('on');now=false;renderNow();},1800);
+  }
+  document.getElementById('markBtn').addEventListener('click',function(){now=true;renderNow();markToast();});
   renderLines();renderPills();renderAns();renderNow();
 })();
 </script>
