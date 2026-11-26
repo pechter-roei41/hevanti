@@ -7,6 +7,9 @@ version is on [GitHub Releases](https://github.com/pechter-roei41/hevanti/releas
 
 - **Also in 2.23:** a long course name no longer pushes the ★ and menu to a second row; the "new conversation" link under the box is gone (it is in the ⋯ menu); one name, "the floating window", everywhere; a lecture starts only when its transcription model is on the computer (the quick-start window offers the download and shows its progress); home: the marks button is its own button, "all courses" is a pill, hover and focus states; the settings tip stays closed after the X; closing the black window stops the floating and quick-start windows too; the installer is in Hebrew regardless of the Windows language; uninstall leaves other programs' folders alone.
 
+- **New demo video:** `System/Program/media/teaser.mp4` and `site/assets/teaser.mp4` (with their posters) were filmed again on a test copy
+  with the new floating window: the round button over a full-screen lecture, a question and its answer, "what did I miss" for 7 minutes,
+  a ★ and the lecture page with the mark. 35 s, 1920x1080 (was 1280x720), no audio, captions, 4.5 MB. The lecturer's face is blurred.
 - **Share image (WhatsApp, link previews):** `site/assets/og-share.png` (1200x630, 122 KB) says "a floating window over the lecture" like the page title, with the floating window and an answer. It has a new file name so apps that cached the old picture fetch the new one; the old `og.png` is gone.
 - **Floating window answers:** a question typed in English keeps its question mark at the end (`dir="auto"` on the question bubble); the
   times in an answer are small pills with a drawn clock instead of an emoji and a monospace run (soft green and clickable when the page can

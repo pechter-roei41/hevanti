@@ -100,7 +100,7 @@ Then open `http://127.0.0.1:8765/` (and `/mini` for the floating window) with Pl
 
 ## The how-to video
 
-`System/Program/media/teaser.mp4` (poster `teaser-poster.jpg`): 35 s, 1280x720, **no audio**, captions on screen, 1.7 MB. It shows a full-screen lecture, the green round button at the bottom right, a question, "מה פספסתי" (7 minutes) and a ★. The lecture is by Dvir Ross (CC BY), credited under the video and on the website. It is served at `/teaser.mp4` and `/teaser.jpg` and is the only video in the app and on the site.
+`System/Program/media/teaser.mp4` (poster `teaser-poster.jpg`): 35 s, 1920x1080, **no audio**, captions on screen, 4.5 MB (filmed again for 2.23 with the new floating window). It shows a full-screen lecture, the green round button at the bottom right, a question and its answer, "מה פספסתי" (7 minutes), a ★ and the lecture page with the mark. The lecture is by Dvir Ross (CC BY), credited under the video and on the website; the lecturer's face is blurred. It is served at `/teaser.mp4` and `/teaser.jpg` and is the only video in the app and on the site.
 
 The earlier one-minute video (`howto.mp4`, version 2.20, with clickable chapters) was removed on 15.11.2026. Its recording tools were removed too; the teaser was made outside the repository.
 

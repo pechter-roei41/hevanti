@@ -55,7 +55,7 @@ The full policy is [PRIVACY.md](PRIVACY.md) and the terms of use are [TERMS.md](
 | `System/Program/player.html` | The player for recorded lectures |
 | `System/Program/mini.html` | The small always-on-top question window (Ctrl+Alt+Q) |
 | `System/Program/quick.html` | The quick-start window: course, kind of lecture, "Start" (opens in the middle of the screen when Hevanti starts) |
-| `System/Program/media/teaser.mp4` | A half-minute silent video at the top of the how-to page (the floating window over a full-screen lecture, a question, "what did I miss", a ★; 35 s, 1280x720, lecture by Dvir Ross, CC BY, credited on the page). Also on the website. |
+| `System/Program/media/teaser.mp4` | A half-minute silent video at the top of the how-to page (the floating window over a full-screen lecture, a question, "what did I miss", a ★ and the marked lecture; 35 s, 1920x1080, lecture by Dvir Ross, CC BY, credited on the page, the lecturer's face blurred). Also on the website. |
 | `System/Program/fonts/` | The two fonts of the app, Secular One and Assistant (SIL Open Font License, the licences are in the folder) |
 | `System/Program/katex/` | [KaTeX](https://katex.org) (MIT), draws the formulas in the answers |
 | `System/Program/ask.js` | The "ask AI" box |
