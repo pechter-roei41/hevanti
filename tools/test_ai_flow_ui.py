@@ -70,8 +70,9 @@ class Fake(BaseHTTPRequestHandler):
             return self._reply(429, quota(mode == "quota-day"))
         if mode == "503":
             return self._reply(503, error(503, "The model is overloaded."))
-        chunks = "".join("data: " + json.dumps({"candidates": [{"content": {"parts": [{"text": t}]}}]}, ensure_ascii=False) + "\n\n"
-                         for t in ("שלום ", "לכולם"))
+        chunks = "".join("data: " + json.dumps({"candidates": [{"content": {"parts": [{"text": t}]}, **({"finishReason": "STOP"} if t == "לכולם" else {})}]},
+                                               ensure_ascii=False) + "\n\n"
+                         for t in ("שלום ", "לכולם"))   # (Gemini closes a whole answer with STOP)
         self._reply(200, chunks.encode("utf-8"), "text/event-stream")
 
 
