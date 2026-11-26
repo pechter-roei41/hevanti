@@ -18,6 +18,7 @@ def main():
     path = sys.argv[1]
     total = float(sys.argv[2]) if len(sys.argv) > 2 else 90.0
     chunk = float(sys.argv[3]) if len(sys.argv) > 3 else 15.0
+    L.load_real_av()   # (faster-whisper still passes metadata_errors= to PyAV: the app wraps av.open the same way)
     from faster_whisper import decode_audio
     audio = decode_audio(path, sampling_rate=L.TARGET_SR)
     audio = audio[:int(total * L.TARGET_SR)]
