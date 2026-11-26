@@ -3,7 +3,7 @@
 Short, in English. The full notes, in Hebrew, newest first, are in `System/VERSION.txt` (the app shows them too). The released
 version is on [GitHub Releases](https://github.com/pechter-roei41/hevanti/releases); 2.20 and 2.21 were never released apart.
 
-## 2.23 (23.11.2026)
+## 2.23 (26.11.2026)
 
 - **Also in 2.23:** a long course name no longer pushes the ★ and menu to a second row; the "new conversation" link under the box is gone (it is in the ⋯ menu); one name, "the floating window", everywhere; a lecture starts only when its transcription model is on the computer (the quick-start window offers the download and shows its progress); home: the marks button is its own button, "all courses" is a pill, hover and focus states; the settings tip stays closed after the X; closing the black window stops the floating and quick-start windows too; the installer is in Hebrew regardless of the Windows language; uninstall leaves other programs' folders alone.
 
