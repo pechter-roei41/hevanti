@@ -86,6 +86,16 @@ with sync_playwright() as p:
         && [...e.querySelectorAll('.ex button')].map(b => b.textContent).join('|') === 'מה הנושא המרכזי עד עכשיו?|תסביר שוב את מה שנאמר עכשיו'; }"""))
     check("empty state is in the middle of the area", pg.evaluate("""() => { const e = document.querySelector('.empty').getBoundingClientRect(), c = document.querySelector('.convwrap').getBoundingClientRect(); return Math.abs((e.top + e.bottom) / 2 - (c.top + c.bottom) / 2) < 30; }"""))
     check("the small window's transparency starts at 80%", L.mini_opacity() == 80, L.mini_opacity())
+    # a short window (or big text): the example questions never run over the question box (the bug of 26.11.2026)
+    for hh in (700, 520, 440, 380, 330):
+        pg.set_viewport_size({"width": 380, "height": hh})
+        pg.wait_for_timeout(250)
+        ok = pg.evaluate("""() => { const e = document.querySelector('.empty'), i = document.querySelector('.inbox').getBoundingClientRect(), r = e.getBoundingClientRect();
+            const bs = [...e.querySelectorAll('.ex button')].filter(b => b.offsetParent !== null).map(b => b.getBoundingClientRect());
+            return {box: r.bottom <= i.top + 1, buttons: bs.every(b => b.bottom <= i.top + 1), n: bs.length}; }""")
+        check(f"empty state, window {hh} px high: nothing runs over the question box", ok["box"] and ok["buttons"] and ok["n"] >= 1, ok)
+    pg.set_viewport_size({"width": 380, "height": 640})
+    pg.wait_for_timeout(250)
     pg.click(".empty .ex button:first-child")
     pg.wait_for_selector(".qa .a:not(.wait)", timeout=8000)
     check("an example question is sent exactly as it is, and the empty state goes", [a.get("question") for a in asks] == ["מה הנושא המרכזי עד עכשיו?"] and pg.evaluate("document.querySelector('.empty').hidden"), asks)

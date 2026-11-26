@@ -3,6 +3,13 @@
 Short, in English. The full notes, in Hebrew, newest first, are in `System/VERSION.txt` (the app shows them too). The released
 version is on [GitHub Releases](https://github.com/pechter-roei41/hevanti/releases); 2.20 and 2.21 were never released apart.
 
+## Unreleased
+
+- **Floating window, short window:** before the first question the example questions no longer run over the question box when the window is
+  short or the text is large. The empty state now shrinks with the free height (a size container on `.convwrap`: the question mark goes first,
+  then the small line, then the second example) and scrolls as a last resort (`min-height: 0`, `justify-content: safe center`). A test in
+  `tools/test_mini_send.py` checks five window heights and fails without the change.
+
 ## 2.24 (26.11.2026)
 
 - **The end of what was said is written when the sound stops:** when the speakers go completely idle (a paused video, a lecturer who stopped
