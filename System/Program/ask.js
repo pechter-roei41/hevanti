@@ -66,7 +66,7 @@
 .askp .inbox button.send.stop{background:transparent;color:var(--accent)}
 .askp .inbox button.send.stop svg{fill:currentColor;stroke:none}
 .askp .ais:not(:has(button:not([hidden]))){display:none}
-.askp .convwrap{position:relative;display:flex;flex-direction:column;flex:1;min-height:0}
+.askp .convwrap{position:relative;display:flex;flex-direction:column;flex:1;min-height:0;container-type:size}   /* (size container: the empty state below shrinks with the free height) */
 .askp .convwrap .conv{flex:1 1 auto;min-height:0}
 /* a soft fade at the top of the conversation: text that has scrolled up goes out gradually, not cut in the middle of a line (only once it is scrolled) */
 .askp .convwrap::before{content:"";position:absolute;top:0;left:0;right:0;height:20px;background:linear-gradient(var(--bg),transparent);pointer-events:none;z-index:2;opacity:0;transition:opacity .15s}
@@ -80,7 +80,10 @@
 /* the follow-ups sit at the end of the last answer, in the flow under it (never over the text) */
 .askp .convwrap .followbar{padding-top:2px}
 /* before the first question: what one can ask */
-.askp .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:12px 8px}
+.askp .empty{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:safe center;gap:8px;text-align:center;padding:12px 8px}   /* (min-height:0 and scrolling: a short window never lets the example questions run over the question box - 26.11.2026) */
+@container (max-height: 330px){ .askp .empty svg{display:none} }
+@container (max-height: 270px){ .askp .empty p{display:none} }
+@container (max-height: 200px){ .askp .empty .ex button:nth-child(2){display:none} }
 .askp .empty svg{width:44px;height:44px;fill:none;stroke:var(--accent);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .askp .empty b{font-size:calc(17px * var(--tx, 1));line-height:1.4}
 .askp .empty p{margin:0;color:var(--muted);font-size:calc(14px * var(--tx, 1))}
