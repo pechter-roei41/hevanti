@@ -2691,24 +2691,29 @@ def _gemini_http_error(e):
         raw = e.read().decode("utf-8", "replace")
     except Exception:
         raw = ""
+    return _gemini_error(e.code, raw)
+
+
+def _gemini_error(code, raw):
+    """Google's error (the HTTP code and the body), in words. Also for an error Google sends inside a stream."""
     msg, status, reasons = _google_error(raw)
     low = msg.lower()
-    if e.code == 429:   # (the free quota is per model: another model may still answer)
+    if code == 429:   # (the free quota is per model: another model may still answer)
         if "perday" in raw.lower().replace("_", "").replace(" ", ""):   # the day's quota: a minute will not help
             return MathError("המכסה החינמית של Gemini נגמרה להיום.", 900, other=True, kind="quota")
         m = re.search(r'"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"', raw)   # (Google says how long to wait)
         wait = min(int(float(m.group(1))) + 1, 300) if m else 65
         return MathError("הגעת למכסה החינמית של Gemini לדקה הזו.", wait, other=True, kind="quota")
-    if e.code == 407:   # a proxy that wants a sign-in, not Google
+    if code == 407:   # a proxy that wants a sign-in, not Google
         return MathError("הרשת דורשת הזדהות בשרת הביניים (פרוקסי) לפני שאפשר להגיע ל-Google. אפשר לנסות רשת אחרת, או להעתיק את השאלה לאפליקציית ה-AI שלך.")
-    if e.code == 404:
+    if code == 404:
         return MathError("המודל הזה של Gemini כבר לא זמין.", other=True)
     key_bad = "API_KEY_INVALID" in reasons or "api key not valid" in low or "api key expired" in low or "api_key_invalid" in raw.lower()
-    if e.code in (400, 401, 403) and (key_bad or e.code == 401):
+    if code in (400, 401, 403) and (key_bad or code == 401):
         return MathError("Gemini לא קיבל את המפתח. לבדוק אותו (aistudio.google.com/apikey).")
     if "location is not supported" in low or "user location" in low:   # (Google's 400 FAILED_PRECONDITION, or a 403)
         return MathError("Gemini לא זמין באזור שבו המחשב נמצא (" + _short(msg) + ").")
-    if e.code == 403:   # a key that is fine, and Google still says no: say why, in Google's words
+    if code == 403:   # a key that is fine, and Google still says no: say why, in Google's words
         if "SERVICE_DISABLED" in reasons or "has not been used in project" in low or "is disabled" in low:
             return MathError("Gemini לא מופעל בחשבון Google של המפתח. להפעיל אותו ב-Google AI Studio ולנסות שוב (" + _short(msg) + ").")
         if "model" in low or "resource" in low:   # (this model, not the key: another model may answer)
@@ -2716,9 +2721,9 @@ def _gemini_http_error(e):
         if not msg and not status:   # not Google's own answer: something on the way (a school or office network, a proxy) said no
             return MathError("משהו ברשת חסם את הבקשה ל-Google (למשל מסנן של מוסד או של רשת ציבורית). אפשר לנסות רשת אחרת, ואז לשמור שוב: המפתח עצמו לא נבדק.")
         return MathError("Gemini סירב (403): " + (_short(msg) or status) + ".")
-    if e.code >= 500:
-        return MathError(f"Gemini עמוס כרגע ({e.code}). לנסות שוב עוד רגע.", 60, other=True)
-    return MathError(f"Gemini החזיר שגיאה {e.code}: {_short(msg, 160)}")
+    if code >= 500:
+        return MathError(f"Gemini עמוס כרגע ({code}). לנסות שוב עוד רגע.", 60, other=True)
+    return MathError(f"Gemini החזיר שגיאה {code}: {_short(msg, 160)}")
 
 
 def gemini_models(key, timeout=30):
@@ -3225,9 +3230,14 @@ _FINISH_WHY = {   # why Gemini stopped, in words (finishReason / promptFeedback.
 
 
 def _stream_warning(text_seen, block, finish):
-    """The line to show when the answer did not come out whole (None when it did): why, and the code Google gave."""
+    """The line to show when the answer did not come out whole (None when it did): why, and the code Google gave.
+    Gemini closes every whole answer with a finishReason (STOP when all is well), so text with no finishReason at all
+    is an answer that stopped in the middle (the stream ended early), not a short one."""
     why_code = block or (finish if finish not in ("", "STOP", "FINISH_REASON_UNSPECIFIED") else "")
     if not why_code:
+        if text_seen and not finish:
+            log("Gemini סיים את התשובה בלי סיבת סיום: היא נקטעה באמצע")
+            return "התשובה נקטעה: Gemini הפסיק באמצע. לנסות שוב."
         return None if text_seen else "Gemini לא החזיר תשובה."
     why = _FINISH_WHY.get(why_code, "Gemini עצר אותה")
     log("Gemini עצר את התשובה, הקוד של Google: " + why_code)   # (the code is for the log, not for the student)
@@ -3290,6 +3300,16 @@ def gemini_stream(key, model, body, usage=None, timeout=None, read_timeout=None,
                 continue
             if not isinstance(d, dict):
                 continue
+            if isinstance(d.get("error"), dict):   # Google's error inside the stream (it can come after the first words)
+                err = d["error"]
+                try:
+                    code = int(err.get("code") or 500)
+                except (TypeError, ValueError):
+                    code = 500
+                log(f"Gemini שלח שגיאה באמצע התשובה: {code} {err.get('status') or ''}".rstrip())
+                if text_seen:
+                    raise MathError("Gemini הפסיק באמצע התשובה. לנסות שוב.")
+                raise _gemini_error(code, json.dumps(d))
             if usage is not None and isinstance(d.get("usageMetadata"), dict):
                 usage.update(d["usageMetadata"])
             block = block or str((d.get("promptFeedback") or {}).get("blockReason") or "")
@@ -10324,7 +10344,7 @@ def _app_handler():
                     self.wfile.write(("\n\n⚠ " + info["warn"]).encode("utf-8"))
                 except OSError:
                     pass
-            log_tokens(used, usage, chars, ok and bool(answer), started)
+            log_tokens(used, usage, chars, ok and bool(answer) and not info.get("warn"), started)   # (a cut answer is not "ok")
             if ok and answer and not info.get("warn"):   # (a cut or blocked answer is not kept: a cut summary must not replace a good one)
                 tutor_save(d, answer, ld_at_start)
 

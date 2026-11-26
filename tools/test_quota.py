@@ -63,8 +63,9 @@ class Fake(BaseHTTPRequestHandler):
         if mode.startswith("quota"):
             return self._reply(429, quota_body(mode == "quota-day"))
         if stream:
-            chunks = "".join("data: " + json.dumps({"candidates": [{"content": {"parts": [{"text": t}]}}], **USAGE}, ensure_ascii=False) + "\n\n"
-                             for t in ("שלום ", "לכולם"))
+            chunks = "".join("data: " + json.dumps({"candidates": [{"content": {"parts": [{"text": t}]}, **({"finishReason": "STOP"} if t == "לכולם" else {})}],
+                                                    **USAGE}, ensure_ascii=False) + "\n\n"
+                             for t in ("שלום ", "לכולם"))   # (Gemini closes a whole answer with STOP)
             return self._reply(200, chunks.encode("utf-8"), "text/event-stream")
         self._reply(200, json.dumps({"candidates": [{"content": {"parts": [{"text": "OK"}]}}]}).encode("utf-8"))
 

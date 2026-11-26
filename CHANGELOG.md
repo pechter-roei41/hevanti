@@ -10,6 +10,11 @@ version is on [GitHub Releases](https://github.com/pechter-roei41/hevanti/releas
 - **New demo video:** `System/Program/media/teaser.mp4` and `site/assets/teaser.mp4` (with their posters) were filmed again on a test copy
   with the new floating window: the round button over a full-screen lecture, a question and its answer, "what did I miss" for 7 minutes,
   a ★ and the lecture page with the mark. 35 s, 1920x1080 (was 1280x720), no audio, captions, 4.5 MB. The lecturer's face is blurred.
+- **Cut answers are said to be cut:** a Gemini stream that ends with words but no `finishReason` (Gemini closes every whole answer with
+  one; its streams give no size, so the old "shorter than promised" check never fired) now shows "⚠ התשובה נקטעה" and is not saved to
+  "שאלות ותשובות.md" or counted as a good answer in `tokens.jsonl`. Google's `error` event inside a stream is no longer skipped: before
+  the first word it is said like the same HTTP error (`_gemini_error`), after it "Gemini stopped in the middle". Seen in a real run on
+  25.11.2026 (33 tokens, cut in the middle of a word). Tests in `test_gemini.py`; the fake streams in other tests now end with STOP.
 - **Share image (WhatsApp, link previews):** `site/assets/og-share.png` (1200x630, 122 KB) says "a floating window over the lecture" like the page title, with the floating window and an answer. It has a new file name so apps that cached the old picture fetch the new one; the old `og.png` is gone.
 - **Floating window answers:** a question typed in English keeps its question mark at the end (`dir="auto"` on the question bubble); the
   times in an answer are small pills with a drawn clock instead of an emoji and a monospace run (soft green and clickable when the page can
