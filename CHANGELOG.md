@@ -7,6 +7,9 @@ version is on [GitHub Releases](https://github.com/pechter-roei41/hevanti/releas
 
 - **Also in 2.23:** a long course name no longer pushes the ★ and menu to a second row; the "new conversation" link under the box is gone (it is in the ⋯ menu); one name, "the floating window", everywhere; a lecture starts only when its transcription model is on the computer (the quick-start window offers the download and shows its progress); home: the marks button is its own button, "all courses" is a pill, hover and focus states; the settings tip stays closed after the X; closing the black window stops the floating and quick-start windows too; the installer is in Hebrew regardless of the Windows language; uninstall leaves other programs' folders alone.
 
+- **New demo video:** `System/Program/media/teaser.mp4` and `site/assets/teaser.mp4` (with their posters) were filmed again on a test copy
+  with the new floating window: the round button over a full-screen lecture, a question and its answer, "what did I miss" for 7 minutes,
+  a ★ and the lecture page with the mark. 35 s, 1920x1080 (was 1280x720), no audio, captions, 4.5 MB. The lecturer's face is blurred.
 - **Cut answers are said to be cut:** a Gemini stream that ends with words but no `finishReason` (Gemini closes every whole answer with
   one; its streams give no size, so the old "shorter than promised" check never fired) now shows "⚠ התשובה נקטעה" and is not saved to
   "שאלות ותשובות.md" or counted as a good answer in `tokens.jsonl`. Google's `error` event inside a stream is no longer skipped: before
