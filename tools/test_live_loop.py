@@ -123,6 +123,7 @@ L.AudioInput, L.DefaultSpeakers, L.PauseHotkey = FakeAudio, NoSpeakers, NoHotkey
 L.media_status_loop = lambda: None
 L.start_quick_draft = lambda slot: None   # (the Zipformer has its own test: no download and no pip here)
 L.MIN_CHUNK_S, L.MAX_CHUNK_S, L.GPU_MIN_CHUNK_S, L.GPU_MAX_CHUNK_S = 2, 4, 3, 5
+L.IDLE_FLUSH_S = 30.0
 logged = []
 real_log = L.log
 L.log = lambda msg: (logged.append(str(msg)), real_log(msg))[0]
@@ -179,6 +180,22 @@ check("what was said is kept for the questions (live.all)", len(live.all) >= len
 wB = FakeWhisper()
 live, audio, tr = run("קצר", [speech(2.5)], wB)
 check("stopped before a piece was full: what was heard is still written", len(spoken(tr)) == 1 and tr[-1].startswith("# סוף"), tr)
+
+# --------------------------------------------- B2: the speakers go idle (no sound at all): the end of what was said is written by itself
+L.IDLE_FLUSH_S = 1.0
+wB2, seen_mid = FakeWhisper(), []
+
+
+def idle_wait(live, audio):
+    time.sleep(3.0)   # (the sound is over; nothing arrives; the lecture is NOT stopped yet)
+    seen_mid.append((len(live.all), wB2.n, live.lag))
+
+
+live, audio, tr = run("שקט", [speech(2.5)], wB2, during=idle_wait)
+check("the sound stops (an idle device sends nothing): the piece still filling is written after a few seconds, before anyone stops the lecture",
+      seen_mid and seen_mid[0][0] == 1 and seen_mid[0][1] == 1, seen_mid)
+check("...and it is written once (stopping later does not add it again)", len(spoken(tr)) == 1, tr)
+L.IDLE_FLUSH_S = 30.0
 
 # ------------------------------------------------------------------------------------- C: the device disconnects
 wC = FakeWhisper()

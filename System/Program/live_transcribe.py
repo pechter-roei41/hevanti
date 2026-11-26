@@ -36,7 +36,7 @@ try:
 except Exception:  # lets "uninstall" run even if the install never finished
     np = None
 
-VERSION = "2.23"
+VERSION = "2.24"
 VERSION_DATE = "26.11.2026"
 PRODUCT = "הבנתי"
 RELEASES_URL = "https://github.com/pechter-roei41/hevanti/releases/latest"
@@ -201,6 +201,7 @@ WHISPER_WINDOW_S = 30  # Whisper always works on a window of this length: a long
 # the same words written): 10-18 s pieces cost 0.82 seconds of work for each second of lecture, 20-28 s pieces 0.50. (LT_CPU_MIN_CHUNK_S / LT_CPU_MAX_CHUNK_S: for tests.)
 CPU_MIN_CHUNK_S = 20
 CPU_MAX_CHUNK_S = 28
+IDLE_FLUSH_S = float(os.environ.get("LT_IDLE_FLUSH_S") or 4.0)   # no sound at all for this long (the speakers went idle: a paused video, the lecturer stopped and Zoom sends nothing): the piece that is still filling is written now, not when the next sound arrives (found 26.11.2026: the last sentence of an English lecture came a minute late, with a false "late by 60 seconds")
 SILENCE_RMS = 0.0002 # chunks quieter than this are skipped (was 0.0015: at 6% playback volume speech is 0.0006 and a whole lecture was skipped, 15.11.2026)
 QUIET_RMS = 0.003    # sound that reaches us but is this quiet (and not silent): the playback volume is probably very low
 QUIET_WARN_S = 45    # ... for this long: say so (once every 3 minutes)
@@ -11416,6 +11417,7 @@ def run_live(sess, lang, course=""):
     sess.ready = True
 
     blocks, n, t0 = [], 0, None
+    heard_end = None   # (when the newest sound we have arrived)
     inflight = []  # the sound being transcribed right now - done again if Ctrl+C stops it in the middle
     state = {"prev_text": "", "fast": False, "calm": 0, "fast_count": 0, "warned_at": 0.0,
              "draft_at": 0.0, "draft_cost": 0.0, "load": 0.0, "lag": 0.0, "batch_ok": True}
@@ -11739,6 +11741,19 @@ def run_live(sess, lang, course=""):
                 g, t, data = q.get(timeout=0.5)
             except queue.Empty:
                 g = None
+            if g is None and n >= sr // 2 and not inflight and q.qsize() == 0 and now - last_audio >= IDLE_FLUSH_S:
+                # the speakers are idle (no sound arrives at all): what is waiting is the end of what was said. Write it now.
+                chunk, chunk_t = np.concatenate(blocks), t0
+                blocks, n, t0 = [], 0, None
+                now_file.pending_s = 0.0
+                inflight[:] = [(chunk, chunk_t, sr)]
+                handle_chunk(chunk, chunk_t, sr, heard_until=heard_end)
+                inflight.clear()
+                if quick[0] is not None:
+                    quick[3] = ""
+                    quick_draft(restart=True)
+                last_loop = time.monotonic()
+                continue
             if g is None or g != audio.gen:  # nothing new, or audio from a device we already left
                 if g is None and q.qsize() == 0 and not inflight and (state["lag"] or now_file.lag):
                     state["lag"] = now_file.lag = 0.0   # nothing waits to be transcribed: not behind (a value left from the last piece must not stay on the screen when the sound stops)
@@ -11751,6 +11766,7 @@ def run_live(sess, lang, course=""):
                 t0 = t
             blocks.append(a)
             n += len(a)
+            heard_end = t + len(a) / sr
             now_file.pending_s = n / sr
             now_file.block_s = len(a) / sr
             if quick[0] is not None:
